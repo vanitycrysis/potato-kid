@@ -66,7 +66,8 @@ test('a released kid stays where it was dropped (no snap-back)', async ({ page }
   const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 200, 1500));
   await page.waitForTimeout(150);
   const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-  const to = await page.evaluate(() => window.__PK__!.worldToScreen(850, 900));
+  // Open ground, clear of the Garden's scenery reserve (map v2), so nothing deflects it.
+  const to = await page.evaluate(() => window.__PK__!.worldToScreen(850, 1500));
   await page.mouse.move(from.x, from.y - 20);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 10 });
@@ -190,7 +191,7 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
   expect(errors).toEqual([]);
 });
 
-test('dropping a kid onto a non-partner never overlaps them (D-039)', async ({ page }) => {
+test('dropping a kid onto a non-partner never overlaps them (D-039, D-043)', async ({ page }) => {
   const errors = await boot(page, '?seed=12&debug=1&calm=1');
   const { fire, snow } = await page.evaluate(() => ({
     fire: window.__PK__!.debugAdd!('fire', 540, 1100),
@@ -208,7 +209,10 @@ test('dropping a kid onto a non-partner never overlaps them (D-039)', async ({ p
   const kids = await page.evaluate(() => window.__PK__!.kids());
   const a = kids.find((k) => k.id === fire)!;
   const b = kids.find((k) => k.id === snow)!;
-  expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(a.radius + b.radius - 0.01);
+  // Their silhouette boxes (D-043) don't intersect: separated on at least one axis.
+  const dx = Math.max(a.x + a.box.left - (b.x + b.box.right), b.x + b.box.left - (a.x + a.box.right));
+  const dy = Math.max(a.y + a.box.top - (b.y + b.box.bottom), b.y + b.box.top - (a.y + a.box.bottom));
+  expect(Math.max(dx, dy)).toBeGreaterThanOrEqual(-0.01);
   // The kid already standing there wasn't shoved.
   expect(a.x).toBeCloseTo(540, 0);
   expect(a.y).toBeCloseTo(1100, 0);

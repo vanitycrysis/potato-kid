@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { content } from '../content';
 import { createRng } from './rng';
-import { addKid, createWorld, stepWander } from './world';
+import { addKid, createWorld, stepWander as rawStep, STEP, type World } from './world';
+import type { Rng } from './rng';
+import type { WanderBalance } from '../content/types';
+
+function stepWander(world: World, rng: Rng, w: WanderBalance) {
+  rawStep(world, rng, w, STEP, () => ({ kind: 'pause', left: 1 }), () => false);
+}
 
 const bounds = { minX: 0, minY: 0, maxX: 1080, maxY: 1480 };
 const wander = content.balance.wander;

@@ -1,26 +1,25 @@
 import { Assets, type Texture } from 'pixi.js';
 
-// Real art exported by `npm run art:export` (ASSETS.md). Vite resolves these
-// at build time, so a missing file just means "use the placeholder".
-const kidUrls = import.meta.glob('../../assets/sprites/kids/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Every exported runtime PNG (kids, buildings, FX, map tiles and decor), keyed by asset
+// name. Vite resolves the URLs at build time. GUI art is native DOM SVG and isn't here.
+const urls = import.meta.glob('../../assets/{sprites,maps}/**/*.png', { eager: true, query: '?url', import: 'default' }) as Record<
+  string,
+  string
+>;
 
-export interface Art {
-  /** Kid layer textures keyed by asset name, e.g. `kid_plain_body`. */
-  kids: Map<string, Texture>;
-}
-
-function assetName(path: string): string {
+export function assetName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1, -'.png'.length);
 }
 
-/** Loads whatever real art exists; the scene falls back to placeholders per asset. */
-export async function loadArt(): Promise<Art> {
-  const kids = new Map<string, Texture>();
+/** Names of all exported runtime PNGs (for the D-036 coverage check). */
+export const exportedNames = new Set(Object.keys(urls).map(assetName));
+
+export async function loadTextures(): Promise<Map<string, Texture>> {
+  const out = new Map<string, Texture>();
   await Promise.all(
-    Object.entries(kidUrls).map(async ([path, url]) => {
-      kids.set(assetName(path), await Assets.load<Texture>(url));
+    Object.entries(urls).map(async ([path, url]) => {
+      out.set(assetName(path), await Assets.load<Texture>(url));
     }),
   );
-  // The single map plate is superseded by tiles + decor (D-040); those load here once Codex delivers them.
-  return { kids };
+  return out;
 }

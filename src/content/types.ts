@@ -24,6 +24,8 @@ export interface WanderBalance {
   turnChancePerSecond: number;
   idleChancePerSecond: number;
   idleSeconds: [number, number];
+  /** Chance a resting kid does a rig ambient (look around, sit, sleep) instead of a plain pause. */
+  ambientChance: number;
 }
 
 export interface SpawnBalance {

@@ -84,6 +84,10 @@ function validateWander(w: unknown): string[] {
   const errors: string[] = [];
   if (typeof w !== 'object' || w === null) return ['balance.wander is missing'];
   const o = w as Record<string, unknown>;
+  const chance = o.ambientChance;
+  if (typeof chance !== 'number' || !Number.isFinite(chance) || chance < 0 || chance > 1) {
+    errors.push('balance.wander.ambientChance must be a number from 0 to 1');
+  }
   for (const key of ['speed', 'turnChancePerSecond', 'idleChancePerSecond'] as const) {
     const v = o[key];
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) errors.push(`balance.wander.${key} must be a finite number >= 0`);
