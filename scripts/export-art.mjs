@@ -218,7 +218,11 @@ for (const f of dataFiles) {
     } else if (Array.isArray(v)) v.forEach(walk);
     else if (v && typeof v === 'object') Object.values(v).forEach(walk);
   };
-  walk(json);
+  // `delivery` declares what a sample slice deliberately does NOT include
+  // (deferredAssets, deferredClips...), so its names are expected to be missing.
+  const { delivery, ...rest } = json && typeof json === 'object' && !Array.isArray(json) ? json : { delivery: undefined };
+  void delivery;
+  walk(Array.isArray(json) ? json : rest);
   for (const m of missing) problems.push(`${label}: references "${m}", which has no source in art/src`);
   if (f === 'kid_rig_v2.json') problems.push(...rigProblems(json, label));
   pending.push({ out: join(ROOT, DATA_OUT, f), text: JSON.stringify(json, null, 2) + '\n' });
