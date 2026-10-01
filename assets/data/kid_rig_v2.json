@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "v2-slice-1",
+  "revision": "v2-faces-2",
   "status": "style_sample",
   "delivery": {
     "scope": "sample_slice",
@@ -1521,26 +1521,26 @@
           "asset": "kid_water_front_hood",
           "status": "style_sample",
           "layer": "front",
-          "attachTo": "torso",
+          "attachTo": "face_centre",
           "sourcePivot": [
             128,
-            166
+            116
           ],
           "fitByBody": {
             "round": [
-              1,
+              1.16,
               1
             ],
             "tall": [
-              0.86,
-              0.93
+              1.16,
+              1
             ],
             "squat": [
-              1.08,
-              0.9
+              1.16,
+              1
             ],
             "bean": [
-              1,
+              1.16,
               1
             ]
           }

@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid face dreamy blink</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-slice-1.</desc>
-  <path d="M83 117 l6 0" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M162 114 l6 0" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M120 126 C126 126 133 126 138 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-faces-2.</desc>
+  <path d="M100 118 l8 0" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M148 118 l8 0" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M119 130 C125 130 131 130 137 127" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

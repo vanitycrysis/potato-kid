@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid face wide open</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-slice-1.</desc>
-  <circle cx="82" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="174" cy="117" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-faces-2.</desc>
+  <circle cx="74" cy="122" r="3.75" fill="#1a1a1a"/>
+  <circle cx="182" cy="122" r="3.75" fill="#1a1a1a"/>
+  <path d="M117 130 C123 130 130 130 135 128" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
