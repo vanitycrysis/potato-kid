@@ -83,6 +83,30 @@ test('a released kid stays where it was dropped (no snap-back)', async ({ page }
   expect(errors).toEqual([]);
 });
 
+test('a kid dropped outside the play area lands clamped without a jump', async ({ page }) => {
+  const errors = await boot(page, '?seed=8&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('snow', 540, 1200));
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  // Release far below the bottom of the play area (world y ≈ 2000).
+  const below = await page.evaluate(() => window.__PK__!.worldToScreen(540, 2070));
+  await page.mouse.move(p.x, p.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(below.x, below.y, { steps: 8 });
+  await page.mouse.up();
+  const ys = await page.evaluate(async (k) => {
+    const out: number[] = [];
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      out.push(window.__PK__!.screenPointOf(k)!.y);
+    }
+    return out;
+  }, id);
+  // Every rendered frame after release sits at the same clamped landing height.
+  expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
 test('an OS-cancelled touch releases the kid and dragging still works', async ({ page }) => {
   const errors = await boot(page, '?seed=6&debug=1&calm=1');
   const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 300, 1200));

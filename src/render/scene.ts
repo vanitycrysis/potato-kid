@@ -2,7 +2,7 @@ import { Application, Container, FederatedPointerEvent, Graphics, type Texture }
 import type { Content } from '../content/types';
 import { Game, type Command, type GameEvent } from '../sim/game';
 import { createRng } from '../sim/rng';
-import { STEP, type Bounds, type Kid } from '../sim/world';
+import { clampToBounds, STEP, type Bounds, type Kid } from '../sim/world';
 import { KidView } from './kidView';
 import { buildPlaceholderTextures } from './placeholderArt';
 
@@ -162,7 +162,11 @@ export class MapScene {
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     if (!kid) return;
     const w = this.toWorld(e);
-    this.drag = { kidId, pointerId: e.pointerId, startX: kid.x, startY: kid.y, x: w.x, y: w.y - HOLD_LIFT };
+    // If this kid was just dropped and the sim hasn't applied it yet, that landing
+    // spot is where it really is: cancelling must return it there (Codex review, PR #5).
+    const start = this.placing.get(kidId) ?? { x: kid.x, y: kid.y };
+    this.placing.delete(kidId);
+    this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT };
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.setHeld(true);
   }
@@ -196,7 +200,8 @@ export class MapScene {
     this.pending.push(cmd);
     // Draw the kid exactly where the command puts it (the release point for a drop,
     // the start for a cancel) until the sim applies it (Codex review, PR #5).
-    this.placing.set(this.drag.kidId, { x: cmd.x, y: cmd.y });
+    // Clamped exactly as the sim will clamp it, so the preview never jumps on landing.
+    this.placing.set(this.drag.kidId, clampToBounds(PLAY_BOUNDS, cmd.x, cmd.y));
     this.drag = undefined;
   }
 
