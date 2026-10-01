@@ -43,4 +43,13 @@ describe('validateContent', () => {
     c.balance.spawnWeights.fire = 0;
     expect(validateContent(c)).toContain('spawn weight for "fire" must be > 0, got 0');
   });
+
+  it('rejects malformed wander settings', () => {
+    const c = structuredClone(content) as unknown as { balance: { wander: Record<string, unknown> } };
+    delete c.balance.wander.speed;
+    c.balance.wander.idleSeconds = [3, 1];
+    const errors = validateContent(c as unknown as Content);
+    expect(errors).toContain('balance.wander.speed must be a finite number >= 0');
+    expect(errors).toContain('balance.wander.idleSeconds must be [min, max] with 0 <= min <= max');
+  });
 });

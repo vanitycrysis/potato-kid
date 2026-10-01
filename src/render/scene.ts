@@ -54,11 +54,18 @@ export class MapScene {
     app.ticker.add((t) => this.frame(t.deltaMS / 1000));
   }
 
-  /** Fits the 1080-wide world to the screen width and centres the safe band vertically. */
+  /**
+   * Fits the whole 1080 × 1920 safe band on screen and centres it. On phones in
+   * portrait the width is the limit (the usual case); on short or landscape
+   * viewports the height is, and the background bleed fills the sides. This
+   * keeps every playable position visible (Codex review, PR #4).
+   */
   private layout(): void {
-    const scale = this.app.screen.width / WORLD_WIDTH;
+    const { width, height } = this.app.screen;
+    const scale = Math.min(width / WORLD_WIDTH, height / SAFE_HEIGHT);
     this.camera.scale.set(scale);
-    this.camera.y = (this.app.screen.height - SAFE_HEIGHT * scale) / 2;
+    this.camera.x = (width - WORLD_WIDTH * scale) / 2;
+    this.camera.y = (height - SAFE_HEIGHT * scale) / 2;
   }
 
   spawnRandom(count: number): void {
@@ -96,7 +103,8 @@ export class MapScene {
 /** Stand-in for ChatGPT's garden plate: cream ground, sage blobs in the bleed and margins. */
 function drawPlaceholderBackground(): Graphics {
   const g = new Graphics();
-  g.rect(0, -BLEED, WORLD_WIDTH, SAFE_HEIGHT + BLEED * 2).fill('#f4efe2');
+  // Generous side bleed for landscape / wide viewports (fit-by-height).
+  g.rect(-WORLD_WIDTH * 2, -BLEED, WORLD_WIDTH * 5, SAFE_HEIGHT + BLEED * 2).fill('#f4efe2');
   const rng = createRng(2024);
   for (let i = 0; i < 26; i++) {
     const edge = rng.next() < 0.5;

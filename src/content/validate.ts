@@ -48,6 +48,8 @@ export function validateContent(content: Content): string[] {
     if (!Number.isFinite(w) || w <= 0) errors.push(`spawn weight for "${id}" must be > 0, got ${w}`);
   }
 
+  errors.push(...validateWander(content.balance.wander));
+
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));
   let changed = true;
@@ -69,5 +71,30 @@ export function validateContent(content: Content): string[] {
     if (!reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
   }
 
+  return errors;
+}
+
+/**
+ * JSON bypasses TypeScript (content/index.ts casts it), so check the balance
+ * shape at runtime: a missing or malformed value would otherwise put NaN into
+ * kid coordinates (Codex review, PR #4).
+ */
+function validateWander(w: unknown): string[] {
+  const errors: string[] = [];
+  if (typeof w !== 'object' || w === null) return ['balance.wander is missing'];
+  const o = w as Record<string, unknown>;
+  for (const key of ['speed', 'turnChancePerSecond', 'idleChancePerSecond'] as const) {
+    const v = o[key];
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) errors.push(`balance.wander.${key} must be a finite number >= 0`);
+  }
+  const idle = o.idleSeconds;
+  if (
+    !Array.isArray(idle) ||
+    idle.length !== 2 ||
+    !idle.every((v) => typeof v === 'number' && Number.isFinite(v) && v >= 0) ||
+    (idle[0] as number) > (idle[1] as number)
+  ) {
+    errors.push('balance.wander.idleSeconds must be [min, max] with 0 <= min <= max');
+  }
   return errors;
 }
