@@ -48,3 +48,17 @@ describe('resolveDrawn (render-time separation, D-043)', () => {
   });
 });
 
+describe('findFreeSpot cost', () => {
+  it('gives up quickly when a small allowed area is full (no per-frame freeze)', async () => {
+    const { findFreeSpot } = await import('./space');
+    const world = createWorld({ minX: 0, minY: 0, maxX: 2160, maxY: 3840 });
+    // A row of kids fills a 200-unit-tall band completely.
+    for (let x = 60; x < 2160; x += 120) addKid(world, 'plain', x, 1000, createRng(x), 0, defaultBox(60));
+    const limit = { minX: 0, minY: 990, maxX: 2160, maxY: 1010 };
+    const t0 = performance.now();
+    for (let i = 0; i < 60; i++) expect(findFreeSpot(world, defaultBox(60), 1000, 1000, undefined, limit)).toBeNull();
+    // 60 calls (a second of frames) stay far below a frame budget each.
+    expect((performance.now() - t0) / 60).toBeLessThan(8);
+  });
+});
+
