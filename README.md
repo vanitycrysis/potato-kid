@@ -12,4 +12,4 @@ npm run e2e        # browser smoke test (run `npx playwright install chromium` o
 npm run build      # typecheck + production build into dist/
 ```
 
-Every merge to `main` deploys a playable build to GitHub Pages.
+Every CI run uploads a playable web build (`potato-kid-web` artifact). Serve it with any static server, e.g. `npx serve dist`.

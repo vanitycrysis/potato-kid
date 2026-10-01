@@ -1,8 +1,9 @@
-name: Deploy playable build
+name: Deploy playable build (GitHub Pages)
 
+# Manual only: Pages is unavailable while the repo is private on the current
+# plan (see DECISIONS D-025). Switch back to `push: branches: [main]` if the
+# owner makes the repo public.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
