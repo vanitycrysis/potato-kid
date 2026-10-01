@@ -1,6 +1,7 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
 import type { Content } from './content/types';
+import { loadArt } from './render/art';
 import { MapScene } from './render/scene';
 import { Hud } from './ui/hud';
 
@@ -35,7 +36,7 @@ async function boot(): Promise<void> {
   // Test-only `?calm=1`: no starting kids and no wandering, so e2e drags are deterministic
   // even on CI's slow software renderer.
   const gameContent = params.get('calm') === '1' ? calmed(content) : content;
-  const scene = new MapScene(app, gameContent, Number.isFinite(seed) ? seed : 1);
+  const scene = new MapScene(app, gameContent, Number.isFinite(seed) ? seed : 1, await loadArt());
   new Hud(scene, content);
 
   window.__PK__ = {

@@ -1,9 +1,10 @@
-import { Application, Container, FederatedPointerEvent, Graphics, type Texture } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { Content } from '../content/types';
 import { Game, type Command, type GameEvent } from '../sim/game';
 import { createRng } from '../sim/rng';
 import { clampToBounds, STEP, type Bounds, type Kid } from '../sim/world';
 import { KidView } from './kidView';
+import type { Art } from './art';
 import { buildPlaceholderTextures } from './placeholderArt';
 
 /** World layout (ENGINEERING_PLAN.md §5): 1080 wide, 1920 safe band, 240 bleed above and below. */
@@ -68,10 +69,21 @@ export class MapScene {
     private readonly app: Application,
     content: Content,
     seed: number,
+    art: Art = { kids: new Map(), map: undefined },
   ) {
     this.game = new Game(content, PLAY_BOUNDS, GARDEN, seed);
+    // Real art wins per asset; anything not yet delivered stays a placeholder.
     this.textures = buildPlaceholderTextures(app.renderer, content.kids);
-    this.camera.addChild(drawPlaceholderBackground(), drawPlaceholderGarden(), this.kidLayer);
+    for (const [name, tex] of art.kids) this.textures.set(name, tex);
+    this.camera.addChild(drawPlaceholderBackground());
+    if (art.map) {
+      // The 1080 × 2400 plate: safe band y = 240..2160 maps to world y = 0..1920.
+      const map = new Sprite(art.map);
+      map.position.set(0, -BLEED);
+      map.setSize(WORLD_WIDTH, SAFE_HEIGHT + BLEED * 2);
+      this.camera.addChild(map);
+    }
+    this.camera.addChild(drawPlaceholderGarden(), this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
