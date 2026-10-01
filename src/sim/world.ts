@@ -23,8 +23,10 @@ export interface Kid {
   idle: number;
   /** Seconds left before this newborn may fuse. */
   grace: number;
-  /** Being dragged by the player: does not wander or fuse. */
+  /** Being dragged by the player: does not wander, fuse or collide. */
   held: boolean;
+  /** Body footprint around the ground point, world units (D-039: discs never overlap). */
+  radius: number;
 }
 
 export interface World {
@@ -37,8 +39,8 @@ export function createWorld(bounds: Bounds): World {
   return { kids: [], nextKidId: 1, bounds };
 }
 
-export function addKid(world: World, type: KidId, x: number, y: number, rng: Rng, grace = 0): Kid {
-  const kid: Kid = { id: world.nextKidId++, type, x, y, heading: rng.next() * Math.PI * 2, idle: 0, grace, held: false };
+export function addKid(world: World, type: KidId, x: number, y: number, rng: Rng, grace = 0, radius = 60): Kid {
+  const kid: Kid = { id: world.nextKidId++, type, x, y, heading: rng.next() * Math.PI * 2, idle: 0, grace, held: false, radius };
   world.kids.push(kid);
   return kid;
 }
@@ -62,14 +64,15 @@ export function stepWander(world: World, rng: Rng, w: WanderBalance, dt: number 
     }
     let nx = kid.x + Math.cos(kid.heading) * w.speed * dt;
     let ny = kid.y + Math.sin(kid.heading) * w.speed * dt;
-    // Reflect off the bounds so kids stay inside the play area.
-    if (nx < minX || nx > maxX) {
+    // Reflect off the bounds so the whole body stays inside the play area.
+    const r = kid.radius;
+    if (nx < minX + r || nx > maxX - r) {
       kid.heading = Math.PI - kid.heading;
-      nx = Math.min(maxX, Math.max(minX, nx));
+      nx = Math.min(maxX - r, Math.max(minX + r, nx));
     }
-    if (ny < minY || ny > maxY) {
+    if (ny < minY + r || ny > maxY - r) {
       kid.heading = -kid.heading;
-      ny = Math.min(maxY, Math.max(minY, ny));
+      ny = Math.min(maxY - r, Math.max(minY + r, ny));
     }
     kid.x = nx;
     kid.y = ny;

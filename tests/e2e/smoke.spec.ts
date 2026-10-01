@@ -5,7 +5,15 @@ async function boot(page: Page, query: string): Promise<string[]> {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/${query}`);
   await page.waitForFunction(() => window.__PK__?.ready === true);
+  // The world scrolls (D-040): debug tests place kids around world (540, 1100), so look there.
+  if (query.includes('debug=1')) await page.evaluate(() => window.__PK__!.centerOn(540, 1100));
   return errors;
+}
+
+async function frames(page: Page, n: number): Promise<void> {
+  await page.evaluate(async (count) => {
+    for (let i = 0; i < count; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
+  }, n);
 }
 
 test('boots, renders and spawns from the Garden', async ({ page }) => {
@@ -88,8 +96,8 @@ test('a kid dropped outside the play area lands clamped without a jump', async (
   const id = await page.evaluate(() => window.__PK__!.debugAdd!('snow', 540, 1200));
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-  // Release far below the bottom of the play area (world y ≈ 2000).
-  const below = await page.evaluate(() => window.__PK__!.worldToScreen(540, 2070));
+  // Release up in the Garden's zone, above where kids may stand (world y 250).
+  const below = await page.evaluate(() => window.__PK__!.worldToScreen(540, 250));
   await page.mouse.move(p.x, p.y - 20);
   await page.mouse.down();
   await page.mouse.move(below.x, below.y, { steps: 8 });
@@ -148,3 +156,112 @@ test('40+ kids render without errors', async ({ page }) => {
   expect(fps).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
+
+test('dragging empty ground pans the map (D-040)', async ({ page }) => {
+  const errors = await boot(page, '?seed=9&debug=1&calm=1');
+  const before = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  // calm mode has no kids, so this press lands on empty ground.
+  await page.mouse.move(200, 600);
+  await page.mouse.down();
+  await page.mouse.move(200, 300, { steps: 8 });
+  await page.mouse.up();
+  await frames(page, 2);
+  const after = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  // The map followed the finger up (at least most of the 300 px; inertia may add more).
+  expect(before.y - after.y).toBeGreaterThan(250);
+  expect(errors).toEqual([]);
+});
+
+test('holding a kid at the screen edge scrolls the map and carries the kid along', async ({ page }) => {
+  const errors = await boot(page, '?seed=10&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1100));
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const size = page.viewportSize()!;
+  await page.mouse.move(p.x, p.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(size.width / 2, size.height - 6, { steps: 8 });
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
+  // It was carried well below where the starting view ended.
+  expect(kid.y).toBeGreaterThan(2300);
+  expect(errors).toEqual([]);
+});
+
+test('dropping a kid onto a non-partner never overlaps them (D-039)', async ({ page }) => {
+  const errors = await boot(page, '?seed=12&debug=1&calm=1');
+  const { fire, snow } = await page.evaluate(() => ({
+    fire: window.__PK__!.debugAdd!('fire', 540, 1100),
+    snow: window.__PK__!.debugAdd!('snow', 540, 1600),
+  }));
+  await page.waitForTimeout(150);
+  const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, snow);
+  const onto = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, fire);
+  const liftPx = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  await page.mouse.move(from.x, from.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(onto.x, onto.y + liftPx, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  const kids = await page.evaluate(() => window.__PK__!.kids());
+  const a = kids.find((k) => k.id === fire)!;
+  const b = kids.find((k) => k.id === snow)!;
+  expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(a.radius + b.radius - 0.01);
+  // The kid already standing there wasn't shoved.
+  expect(a.x).toBeCloseTo(540, 0);
+  expect(a.y).toBeCloseTo(1100, 0);
+  expect(errors).toEqual([]);
+});
+
+test('a pan that pauses before release does not fling', async ({ page }) => {
+  const errors = await boot(page, '?seed=13&debug=1&calm=1');
+  await page.mouse.move(200, 700);
+  await page.mouse.down();
+  await page.mouse.move(200, 400, { steps: 6 });
+  await page.waitForTimeout(400); // finger rests
+  const rested = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  expect(Math.abs(after.y - rested.y)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('rotating the screen keeps the same world point centred', async ({ page }) => {
+  const errors = await boot(page, '?seed=14&debug=1&calm=1');
+  await page.evaluate(() => window.__PK__!.centerOn(1080, 2000));
+  await page.setViewportSize({ width: 915, height: 413 });
+  await page.waitForTimeout(300);
+  const c = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 2000));
+  expect(Math.abs(c.x - 915 / 2)).toBeLessThan(3);
+  expect(Math.abs(c.y - 413 / 2)).toBeLessThan(3);
+  expect(errors).toEqual([]);
+});
+
+test('backgrounding mid-pan does not lock input', async ({ page }) => {
+  const errors = await boot(page, '?seed=15&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1100));
+  await page.mouse.move(200, 700);
+  await page.mouse.down();
+  await page.mouse.move(200, 650, { steps: 3 });
+  // Simulate the app being hidden mid-gesture (the pointerup never arrives).
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  // A fresh drag of the kid must work.
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  await page.mouse.move(p.x, p.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(p.x + 120, p.y - 20, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
+  expect(kid.x).toBeGreaterThan(560);
+  expect(errors).toEqual([]);
+});
+

@@ -57,10 +57,10 @@ describe('validateContent', () => {
     const c = structuredClone(content);
     c.balance.spawn.intervalSeconds = 0;
     c.balance.spawn.startingKids = 99;
-    c.balance.contactRadius = Number.NaN;
+    c.balance.body.radius = Number.NaN;
     const errors = validateContent(c);
     expect(errors).toContain('balance.spawn.intervalSeconds must be a finite number > 0');
     expect(errors).toContain('balance.spawn.startingKids must not exceed capacity');
-    expect(errors).toContain('balance.contactRadius must be a finite number > 0');
+    expect(errors).toContain('balance.body.radius must be a finite number > 0');
   });
 });

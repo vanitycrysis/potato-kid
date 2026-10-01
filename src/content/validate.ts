@@ -103,8 +103,11 @@ function validateWander(w: unknown): string[] {
 function validateSpawn(balance: unknown): string[] {
   const errors: string[] = [];
   const b = balance as Record<string, unknown>;
-  const r = b.contactRadius;
-  if (typeof r !== 'number' || !Number.isFinite(r) || r <= 0) errors.push('balance.contactRadius must be a finite number > 0');
+  const body = b.body as Record<string, unknown> | undefined;
+  const r = body?.radius;
+  const slack = body?.touchSlack;
+  if (typeof r !== 'number' || !Number.isFinite(r) || r <= 0) errors.push('balance.body.radius must be a finite number > 0');
+  if (typeof slack !== 'number' || !Number.isFinite(slack) || slack < 0) errors.push('balance.body.touchSlack must be a finite number >= 0');
   const s = b.spawn;
   if (typeof s !== 'object' || s === null) return [...errors, 'balance.spawn is missing'];
   const o = s as Record<string, unknown>;

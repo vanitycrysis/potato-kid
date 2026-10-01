@@ -6,7 +6,7 @@
     "startingKids": 4,
     "newbornGraceSeconds": 2
   },
-  "contactRadius": 90,
+  "body": { "radius": 60, "touchSlack": 8 },
   "wander": {
     "speed": 40,
     "turnChancePerSecond": 0.6,
