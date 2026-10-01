@@ -1,6 +1,6 @@
 # Art and audio plan
 
-Author: ChatGPT. Art direction v2 specification, 2026-10-01. Task ART-V2-SPEC. **Proposed for Claude's technical review; no new finished art is delivered here.** PR #8 contains the existing r2 sources. Gate 2 remains pending (D-042).
+Author: ChatGPT. Art direction v2 specification, 2026-10-01. Tasks ART-V2-SPEC / ART-V2-SLICE. **Claude accepted the spec; ChatGPT accepts his silhouette-box counterproposal. The v2 sample slice is authored and awaiting exporter/rendered review.** PR #8 retains the historical r2 sources. Gate 2 remains pending (D-042).
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md` and D-036..D-042 in `.codex-out/decisions-gate2.md`. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. Cream fill is approved; revised samples still need gate 2. ChatGPT authors all visual work, including placeholders and motion data. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 
@@ -10,16 +10,16 @@ The 22 references, inspected through the reference contact sheet, establish irre
 
 Four independently drawn body families, four faces and three uniform sizes yield **48 appearances**. Costume/tier/earning power never select physique. Choose once at birth using a separate cosmetic RNG and persist `{bodyId, faceId, scale}`; no reroll per render/reload. Fusion and compendium births get fresh appearances; existing saves get a deterministic assignment from stable kid ID once. Gameplay RNG and spawn weights are untouched. No mirroring or nonuniform random scaling. Dex uses one fixed round/classic/1.00 neutral exemplar from the same components.
 
-| Body ID / birth weight | Drawing | Stand/walk radius | Sit/sleep radius | Wave radius | Held/settle radius |
-| --- | --- | ---: | ---: | ---: | ---: |
-| round / 40 | Uneven left shoulder, shallow right dent, off-centre belly; successor to r2 | 220 | 220 | 228 | 228 |
-| tall / 20 | Narrow upright potato, one high shoulder, three unequal nubs | 224 | 224 | 232 | 232 |
-| squat / 20 | Broad low belly, flatter base, short unequal feet | 216 | 224 | 224 | 224 |
-| bean / 20 | Leaning pear/bean, heavy left hip, small right shoulder notch | 220 | 224 | 228 | 228 |
+| Body ID / birth weight | Drawing | Slice lifetime boundsPx [left, top, right, bottom] |
+| --- | --- | --- |
+| round / 40 | Uneven left shoulder, shallow right dent, off-centre belly; successor to r2 | [16,12,240,236] |
+| tall / 20 | Narrow upright potato, one high shoulder, unequal nubs | [24,8,232,236] |
+| squat / 20 | Broad low belly, flatter base, short unequal feet | [8,26,248,236] |
+| bean / 20 | Leaning bean, heavy left hip, small right shoulder notch | [12,14,244,236] |
 
-Radii are **source-canvas pixels about (128,224)**, not world units or half-width. They conservatively reserve the entire visible kid: body, feet, nubs, costume and permitted motion. Ground is at the bottom of an upright image, so half-width circles would allow vertically adjacent silhouettes to overlap. Costumes must fit these same envelopes across all poses; redraw an overflowing prop rather than give a type a different collision advantage.
+**Agreed revision:** use axis-aligned silhouette boxes, accepted from Claude's technical review of 4e5d06d. Each frame declares `boundsPx: [left,top,right,bottom]` in absolute 256-canvas coordinates. It conservatively contains the body, every permitted follower after fitting, and concurrent clip deltas. Each clip supplies `boundsPxByBody`; each body's `boundsPx` is their lifetime union, shared across all costumes. Sitting never releases the space needed for standing. Deferred production poses must fit the same reserve or receive an explicitly reviewed envelope revision before integration.
 
-Declare per-frame/per-clip radii but reserve the **lifetime maximum**: round 228, tall 232, squat 224, bean 228. Sitting never releases space that waking/waving needs. At the current 180-world-unit canvas size, `radiusWorld = radiusPx * 180/256 * appearanceScale`; maximum is 179.44 world units (Tall, scale 1.10). This generous spacing is the explicit cost of literal no-visible-overlap; Claude should review density before production. Shadows and transient FX may overlap; kid silhouettes may not.
+Map a source endpoint to world with `worldGround + (endpoint - [128,224]) * (180/256) * appearanceScale`. Transform all box corners when validating authored rotations; retain the conservative world AABB. The widest slice reserve is 185.625 world units (Squat, size 1.10), versus the discarded circle proposal's roughly 2.5 body-width neighbour spacing. Costumes may not change a body's reserve by type. Keep whole boxes inside world bounds. Shadows and transient FX may overlap; kid silhouettes may not.
 
 | Face ID / weight | Eyes relative to face-centre | Treatment |
 | --- | --- | --- |
@@ -28,13 +28,15 @@ Declare per-frame/per-clip radii but reserve the **lifetime maximum**: round 228
 | crooked / 25 | (-37,-3), (42,3), radius 3.75 | One eye higher, smirk tips up 2 px |
 | dreamy / 10 | (-42,1), (37,-2), radius 3.25 | Small dots, mouth shifted 3 px right |
 
-Each has open, blink (two short ticks) and asleep (two shallow arcs) states: 12 face textures. Preserve the mouth unchanged through blinking, rather than squashing the entire face. Source face pivot (128,116); body-frame attachments position it. Wide must fit Tall too. Size choices 0.90 / 1.00 / 1.10, weights 25 / 50 / 25; transform every layer uniformly about ground and multiply collision radius by the same scale.
+Each has open, blink (two short ticks) and asleep (two shallow arcs) states: 12 face textures. Preserve the mouth unchanged through blinking, rather than squashing the entire face. Source face pivot (128,116); body-frame attachments position it. Wide must fit Tall too. Size choices 0.90 / 1.00 / 1.10, weights 25 / 50 / 25; transform every layer uniformly about ground and scale both collision-box axes by the same factor.
 
 ## Pose and animation format
 
-Keep 256 x 256 sRGB RGBA kid layers, ground anchor (128,224), at least 8 px clear source padding, logical order **back -> body -> face -> front**. Four bodies each have eight drawings: `stand`, `step_left`, `step_right`, `sit`, `wave_low`, `wave_high`, `held`, `settle` = 32 body images. Walk front-facing with tiny alternating feet; no directional body sets. Sleep uses the compact sitting body, not a sideways image.
+Keep 256 x 256 sRGB RGBA kid layers, ground anchor (128,224), at least 8 px clear source padding, logical order **back -> body -> face -> front**. Full production targets eight drawings per body: `stand`, `step_left`, `step_right`, `sit`, `wave_low`, `wave_high`, `held`, `settle` = 32 body images. Walk front-facing with tiny alternating feet; no directional body sets. Sleep uses the compact sitting body, not a sideways image.
 
-Counts below are timeline entries; repeated texture references do not add PNGs. ChatGPT authors timings/transforms in JSON. All attachment followers move when the body/frame changes unless explicitly listed otherwise.
+The sample delivers stand/step_left/step_right/sit for all four bodies (16 textures), all 12 face states, and idle/blink/walk/look/sit/seated/sleep/wake clips. Other poses/event clips and FX are explicitly deferred in the sidecar; held uses a static stand at the resolved free point. Slice sit_down/wake use a two-pose transition until settle is drawn. This is a review slice, not full animation delivery.
+
+Counts below are full-production timeline entries; repeated texture references do not add PNGs. ChatGPT authors timings/transforms in JSON. All attachment followers move when the body/frame changes unless explicitly listed otherwise.
 
 | Clip | Entries / fps / duration | Sequence and layers touched |
 | --- | --- | --- |
@@ -56,7 +58,7 @@ Counts below are timeline entries; repeated texture references do not add PNGs. 
 
 After 6-10 s stationary choose look 50%, wave 20%, sit 20%, sleep 10%. Seated hold 3-6 s; sleep hold 6-10 s then wake. Separate cosmetic scheduler, randomized phase; no effect on income/fusion. Priority: consumed > held/pickup/drop > spawn > walk > wake/ambient. Pickup interrupts any pose immediately; use held by next presentation frame. Reduced motion uses stand/sit holds and short opacity transitions; no looping sway/breath or discovery bursts.
 
-Replace current procedural hop/squash, squash-blink, 1.12 held scale and pop overshoot where these clips apply. Applying both would breach envelopes. Interpolate authored transforms only. Render/interpolation, held positions and pending drop previews must also preserve separation: show the resolved free position, not an overlapping pointer-follow sprite until the next sim tick. `distance >= rA+rB`; valid fusion contact is `distance <= rA+rB+touchSlack`. Use the same reserved radii for both. FX may bridge the visible gap left by conservative circles. Resolve child position against remaining kids after consumption, and spawn only when space exists. Remove parent silhouettes immediately before showing the child; fading parent ghosts would need their own collision reservations and are excluded from v2. Keep kid ground disks inside world bounds, including the maximum radius at edges.
+Replace current procedural hop/squash, squash-blink, 1.12 held scale and pop overshoot where these clips apply. Applying both would breach envelopes. Interpolate authored transforms only. Render/interpolation, held positions and pending drop previews must also preserve separation: show the resolved free position, not an overlapping pointer-follow sprite until the next sim tick. Grounded lifetime boxes must not intersect. Resolve any penetration along the axis of least penetration; ties need a deterministic rule. Fusion contact is a box gap <= `touchSlack` on one axis with overlapping intervals on the other, including exact corner contact with a deterministic tolerance. Use the same lifetime boxes for separation and contact. Never use centre distance or a half-width radius for v2 kids. Resolve child position against remaining kids after consumption, and spawn only when space exists. Remove parent silhouettes immediately before showing the child; fading parent ghosts would need reservations and are excluded. Keep kid boxes inside world bounds.
 
 Attachments in every body frame: `ground`, `head_top`, `face_centre`, `torso`, `hand_left`, `hand_right`. Each records absolute source `position:[x,y]`, clockwise `rotationDeg`, `scale:[sx,sy]`. Ground is always [128,224], 0 degrees, [1,1]. Illustrative round/stand: head [128,56], face [128,116], torso [128,166], left hand [52,168], right hand [202,168]. Actual values for all 32 drawings are authored in production, never inferred from alpha bounds.
 
@@ -64,7 +66,7 @@ Back/front are logical layers that may contain multiple independently attached c
 
 ASSETS.md assigns **26 front + 7 back components**, shared across every physique, face and pose. Picnic has three front parts and therefore five kid sprites including body/face. Performance fixtures must cover five sprites, not assume four draws from four logical layers. Fire flicker is authored <=2-degree rotation and 0.98-1.00 scale on existing back/head components, included in envelope; no additional fire frames.
 
-**Bigger Fire:** increase connected rear flame visible area approximately 15%, foreground crest approximately 10% from r2. Broaden middle/secondary tongues; the existing high tip is near the border, so do not simply scale the layer. Keep the asymmetric central mass, exposed side nubs and warm accents. Validate transformed padding/radius and inspect 48/64 px/grayscale beside Water and Firefighter.
+**Bigger Fire:** increase connected rear flame visible area approximately 15%, foreground crest approximately 10% from r2. Broaden middle/secondary tongues; the existing high tip is near the border, so do not simply scale the layer. Keep the asymmetric central mass, exposed side nubs and warm accents. Validate transformed padding/bounds and inspect 48/64 px/grayscale beside Water and Firefighter.
 
 ## Scrolling garden
 
@@ -83,7 +85,7 @@ Three transparent **256** path decals: straight (opposite ports), bend (adjacent
 
 Six **256** small decor sources: tuft, clover, flower, pebble, twig, mushroom. Source pivot [128,224], display scale 0.45-0.60 (normally 128 world units wide). Add 32 perimeter instances: for i=0..15, left x=96+(i mod 3)*28, right x=2064-(i mod 3)*28, y=220+i*220. Cycle the six IDs by i, deterministic jitter <=12 units per axis. Final alpha must remain inside world. Cap 44 small instances including accents; skip conflicts instead of filling gaps.
 
-Draw scenery behind kids; reserve radius 90 world units for each small instance, 280 for landmarks, 300 Garden. Require kid radius + decor radius +16 world units clearance to prevent plant/hat tangencies. Paths/ground reserve none. Keep x=480..1680 free of tall decor except Garden. Only Garden is a gameplay building: Capacity, Bias, Compendium remain tray controls. No terrain hazards or extra mechanics.
+Draw scenery behind kids; reserve radius 90 world units for each small instance, 280 for landmarks, 300 Garden. Require a 16-world-unit gap from scenery silhouette boxes, plus circle-vs-kid-box clearance for the ground reserves: distance from scenery centre to the nearest point on the kid box >= decor reserve radius +16. Both exclusions apply. Garden's tall roof extends above its 300-unit ground reserve, so the circle alone is insufficient. Instance boundsPx in the map sidecar enclose the visible source art. Paths/ground reserve none. Keep x=480..1680 free of tall decor except Garden. Only Garden is a gameplay building: Capacity, Bias, Compendium remain tray controls. No terrain hazards or extra mechanics.
 
 ChatGPT supplies `art/data/map_garden_v2.json`: world/cell sizes, seed/weights, ports/path cells, final explicit instances with asset ID, ground position, scale, rotation, exclusion and draw order. Claude implements these authored rules/placements, not improvised scenery. Review all four camera quadrants, seams, edges, crowded Garden outlet and 16:9/20:9 drag auto-scroll. Never rasterize the whole world into a persistent intermediate texture.
 
@@ -128,21 +130,21 @@ Load neither legacy map plate/shared aliases nor flattened portraits, launch mas
 
 ## JSON sidecar and exporter contract
 
-ChatGPT authors `art/data/kid_rig_v2.json`, schemaVersion 2, with canvas, ground anchor, world canvas size, weighted appearance, bodies/frames/attachments/radii, faces/states/pivots, costumes/components/pivots/fitByBody/status, clips/fps/loop/frames/clip maxima, effects and reduced-motion alternatives. See `.codex-out/art-v2-spec-notes.md` for a concrete JSON subset and transform order. Claude generates runtime paths/mappings from validated exports; no hand-maintained runtime manifest. Source coordinates remain authoritative if an atlas trims alpha; record trim offsets without changing pivots.
+ChatGPT authors `art/data/kid_rig_v2.json`, schemaVersion 2, with canvas, ground anchor, world canvas size, weighted appearance, bodies/frames/attachments/boundsPx, faces/states/pivots, costumes/components/pivots/fitByBody/status, clips/fps/loop/frames/clip maxima, effects and reduced-motion alternatives. See `.codex-out/art-v2-spec-notes.md` for a concrete JSON subset and transform order. Claude generates runtime paths/mappings from validated exports; no hand-maintained runtime manifest. Source coordinates remain authoritative if an atlas trims alpha; record trim offsets without changing pivots.
 
 New checks required in `npm run art:export` (current exporter only knows legacy shared layers/map):
 
 1. Recognize body/frame, face/state, back/front component, ground/path/decor/landmark families and SVG-only UI. Validate unique names/IDs, legal roster references, source sizes/viewBoxes, required attachments, finite numbers, positive scales/fps/weights, complete frames/clips, and source existence. Missing optional layers have no empty files; missing required assets fail.
-2. Validate opaque body interiors and ground, nonempty layers, alpha/padding; transform all allowed body/face/costume/pose combinations, checking face obstruction, >=8 px composed padding, radius envelope and interpolation extrema. Clip maximum >= transformed frame maximum; body lifetime radius >= every clip. Exact ground anchor is invariant. Reject costume fit/rotation clipping, not merely source padding.
+2. Validate opaque body interiors and ground, nonempty layers, alpha/padding; transform all allowed body/face/costume/pose combinations, checking face obstruction, >=8 px composed padding, boundsPx envelopes and interpolation extrema. Each clip box contains its transformed frames; the body lifetime box contains every clip box. Exact ground anchor is invariant. Reject costume fit/rotation clipping, not merely source padding.
 3. Validate tile-edge RGBA equality, decal transparency, rotated path ports/connectivity, world instance bounds and exclusions, seed/placement completeness. Check all quadrant/camera preview coverage; no giant map plate enters the v2 runtime manifest.
 4. Preserve atomic writes and check-only mode. Copy DOM SVG without PNG siblings; reject scripts/external URLs/fonts/unsafe paths. Generate manifest including component order/pivots/trim offsets/timing/status. Report raw bytes and actual allocated pages/render targets; fail >32 MiB or placeholder/final coexistence/duplicate legacy loads. Generated stale-file cleanup stays scoped to prior manifest.
-5. Existing content validator checks proposed IDs/recipes for strict tier increase and spawn reachability once Claude accepts them. Assert every roster type has final or ChatGPT placeholder coverage. Make deterministic 48/64/96 px/gray contact sheets and a 40-kid nonoverlapping crowd using actual radii; the current randomly overlapping crowd does not prove D-039.
+5. Existing content validator checks proposed IDs/recipes for strict tier increase and spawn reachability once Claude accepts them. Assert every roster type has final or ChatGPT placeholder coverage. Make deterministic 48/64/96 px/gray contact sheets and a 40-kid nonoverlapping crowd using actual lifetime boxes; the current randomly overlapping crowd does not prove D-039.
 
 Manual review still judges reference character, bigger Fire, face readability, costume tangencies and acting. Claude should test fixed-step and interpolated neighbours, pose changes, held pointer/cancel/drop previews, congested Garden, fusion children and camera edges; simulation-only spacing does not prove render-time spacing. Measure five-sprite worst case and real allocated texture bytes on S26 Ultra and existing 4x CPU-throttle/performance targets.
 
 ## Delivery and gates
 
-First Claude reviews technical fit: rig/draw count, conservative spacing, camera/UI layout, exporter migration and allocated memory. Next art slice: four-body/four-face sheets, bigger Fire, R1 costume fit, a small pose strip, tiled garden sample and GUI mockups; quick roster placeholders may accompany it. Claude reviews, then presents revised samples for owner **gate 2**, still pending. Full final roster/animation production follows approval. Gate 3 remains first playable on the owner's phone; gate 4 remains MVP before polish/extra content. Preserve provenance for every source/export, references/tool/version/licence/revision. No source/runtime art or engine changes in this spec task.
+Claude accepted technical fit, including his silhouette-box revision. The authored sample slice now provides four-body/four-face sheets, bigger Fire, R1 costume fit, a pose strip, tiled garden sample, GUI mockups and all 12 missing types' placeholder components. Claude reviews, then presents revised samples for owner **gate 2**, still pending. Full final roster/animation production follows approval. Gate 3 remains first playable on the owner's phone; gate 4 remains MVP before polish/extra content. Preserve provenance for every source/export, references/tool/version/licence/revision. Source SVG/JSON sample art is now delivered; runtime export/engine integration remain Claude's work.
 
 ## Audio production and handoff
 

@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 2,
+  "revision": "v2-slice-1",
+  "status": "style_sample",
+  "runtimeMode": "native_dom_svg",
+  "palette": {
+    "paper": "#fff1d5",
+    "world": "#f4efe2",
+    "ink": "#1a1a1a",
+    "sage": "#e2e8d4",
+    "sceneryInk": "#686b55",
+    "discovery": "#e8a06b",
+    "disabled": "#686b55",
+    "water": "#96bbc0",
+    "fire": "#e8a06b",
+    "firefighter": "#bd655b"
+  },
+  "typography": {
+    "family": "Patrick Hand",
+    "fallback": "system-ui, sans-serif",
+    "fontDelivery": "not included in slice; use locally bundled licensed font when available",
+    "labelPx": 18,
+    "countPx": 22,
+    "minimumTextPx": 16
+  },
+  "spacing": {
+    "outerMargin": 8,
+    "gap": 8,
+    "corner": 8,
+    "minimumHitTarget": 44,
+    "trayCellMinimumHeight": 56,
+    "dexTabSize": 48
+  },
+  "surfaceInsets": {
+    "viewBox": [
+      0,
+      0,
+      24,
+      24
+    ],
+    "borderImageSlice": 8,
+    "cornerPx": 8,
+    "contract": "Preserve eight-pixel corners with nine-slice CSS border-image; never stretch entire surface or pictogram."
+  },
+  "states": {
+    "normal": "ui_button_normal",
+    "pressed": "ui_button_pressed",
+    "disabled": "ui_button_disabled",
+    "selected": "ui_button_selected",
+    "focus": "ui_focus",
+    "spawnFull": "ui_spawn_full"
+  },
+  "surfaces": {
+    "panel": "ui_panel",
+    "tray": "ui_tray",
+    "toast": "ui_toast"
+  },
+  "icons": {
+    "materials": "icon_materials",
+    "potatokens": "icon_potatokens",
+    "kids": "icon_kids",
+    "garden": "icon_garden",
+    "capacity": "icon_capacity",
+    "bias": "icon_bias",
+    "compendium": "icon_compendium",
+    "dex": "icon_dex",
+    "settings": "icon_settings",
+    "audio_on": "icon_audio_on",
+    "audio_off": "icon_audio_off",
+    "unknown": "icon_unknown",
+    "timer": "icon_timer",
+    "close": "icon_close",
+    "discovery": "icon_discovery"
+  },
+  "tierMarks": {
+    "1": "badge_tier_1",
+    "2": "badge_tier_2",
+    "3": "badge_tier_3",
+    "4": "badge_tier_4"
+  },
+  "feedbackMarks": {
+    "held": "ui_hold_ring",
+    "clear": "ui_place_clear",
+    "blocked": "ui_place_blocked"
+  },
+  "breakpoints": {
+    "threeDexColumnsMinWidth": 360,
+    "below360DexColumns": 2,
+    "currencyWrapBelow": 360
+  },
+  "layout": {
+    "safeInsets": "device env(safe-area-inset-*)",
+    "hud": {
+      "topInsetPx": 24,
+      "heightPx": 128,
+      "rows": 2,
+      "populationRowY": 8,
+      "currencyRowY": 8,
+      "countdownRowY": 66,
+      "settingsTarget": [
+        44,
+        44
+      ],
+      "spawnTarget": [
+        80,
+        44
+      ],
+      "progressTrackHeight": 6
+    },
+    "tray": {
+      "heightPx": 96,
+      "bottomSafeInsetPx": 24,
+      "cells": 4,
+      "iconPx": 28
+    },
+    "toast": {
+      "belowHudGap": 8,
+      "maxHeight": 96,
+      "portraitPx": 56,
+      "durationSeconds": 2.5
+    },
+    "dex": {
+      "maxUsableHeightFraction": 0.8,
+      "portraitPx": 80
+    }
+  },
+  "mockups": [
+    {
+      "source": "art/previews/ui/ui_hud_v2_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true
+    },
+    {
+      "source": "art/previews/ui/ui_hud_v2_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true
+    }
+  ],
+  "delivery": {
+    "deferredLayouts": [
+      "dex_sheet",
+      "upgrade_sheet",
+      "toast_layout"
+    ],
+    "note": "All 15 icons, 9 surfaces/states, 3 feedback marks and 4 tier marks supplied as style samples. Two HUD/tray layout mockups. All mockup lettering is review-only; engine uses live DOM text."
+  }
+}

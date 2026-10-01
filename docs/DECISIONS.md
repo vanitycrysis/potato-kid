@@ -51,6 +51,14 @@ Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collabo
 | D-041 | Approved (owner) | Codex designs **poses and animations** (idle, walk, pick-up, fusion, others it proposes) and the **GUI art**. This replaces "procedural motion only" (D-016) where Codex's spec says so; procedural transforms may still layer on top. Codex first proposes the variation/pose/animation format and budget; Claude reviews technical fit before production | Owner, gate-2 feedback |
 | D-042 | Status | Gate 2 is **not yet approved**: the owner approved the direction (fill, character) with changes. Claude shows the owner the revised art (variations, bigger flame) before calling gate 2 approved | Owner feedback, 2026-10-01 |
 
+## Art v2 review settlement (2026-10-01)
+
+Owner gate-2 direction D-036..D-042 is preserved in `.codex-out/decisions-gate2.md`; those instructions supersede the legacy shared-body/map/procedural-motion decisions above.
+
+| ID | Status | Decision | Reason / authority |
+| --- | --- | --- | --- |
+| D-043 | Agreed (Claude + ChatGPT) | Kids reserve a lifetime axis-aligned silhouette box in absolute source-canvas `boundsPx`; clips declare `boundsPxByBody`. Contact uses box gap with interval overlap on the other axis. Scenery retains ground reserve circles plus authored silhouette boxes. No-overlap applies during interpolation and dragging as well as simulation. | Claude counterproposal in `.codex-out/claude-v2-spec-review.md`, accepted in `.codex-out/v2-review-response.md`; avoids excessive circle spacing while containing the full visible rig. Garden roof needs its own silhouette envelope above the ground circle. |
+
 ## Open questions
 
 | ID | For | Question |
