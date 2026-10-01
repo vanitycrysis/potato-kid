@@ -344,3 +344,30 @@ test('a held kid never disappears behind the HUD while scrolling up', async ({ p
   expect(errors).toEqual([]);
 });
 
+for (const [w, h] of [[640, 360], [568, 320]] as const) {
+  test(`on a ${w}x${h} screen a held kid stays visible below the HUD`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    const errors = await boot(page, '?seed=20&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1080, 1500));
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 1500));
+    await page.waitForTimeout(150);
+    const hudBottom = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
+    const bottom = await page.evaluate(() =>
+      Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top),
+    );
+    const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(0, 100).y - window.__PK__!.worldToScreen(0, 0).y) / 100);
+    const kid0 = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
+    // The compact layout leaves room for at least one kid between HUD and tray.
+    expect(bottom - hudBottom).toBeGreaterThan((kid0.box.bottom - kid0.box.top) * zoom);
+    const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    await page.mouse.move(p.x, p.y - 5);
+    await page.mouse.down();
+    await page.mouse.move(p.x, hudBottom + 2, { steps: 4 });
+    await page.waitForTimeout(150);
+    const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    expect(at.y + kid0.box.top * zoom).toBeGreaterThanOrEqual(hudBottom - 1);
+    await page.mouse.up();
+    expect(errors).toEqual([]);
+  });
+}
+

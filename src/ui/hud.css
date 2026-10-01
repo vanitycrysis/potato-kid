@@ -149,3 +149,55 @@
     transition: none;
   }
 }
+
+/*
+ * Short screens (landscape browsers; the Android app itself is portrait-locked): a one-row
+ * HUD and an icon-only tray with the Dex button inside it, so a usable play band remains
+ * between them (Codex review, PR #15). Hit targets stay >= 44 px.
+ */
+@media (max-height: 520px) {
+  :root {
+    --ui-safe-top: max(8px, env(safe-area-inset-top));
+    --ui-safe-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .hud {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px;
+  }
+  .hud-row {
+    min-height: 44px;
+  }
+  .hud-row:first-child {
+    order: 3;
+    margin-left: auto;
+  }
+  .hud-track {
+    flex: 1;
+    order: 2;
+  }
+  .tray {
+    min-height: 0;
+    right: calc(var(--ui-gap) + 60px);
+  }
+  .tray-cell {
+    min-height: 44px;
+  }
+  .tray-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .dex-button {
+    bottom: var(--ui-safe-bottom);
+    right: var(--ui-gap);
+    min-height: 60px;
+  }
+  .toast {
+    top: calc(var(--ui-safe-top) + 64px + var(--ui-gap));
+  }
+}
+

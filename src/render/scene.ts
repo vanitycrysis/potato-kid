@@ -354,7 +354,10 @@ export class MapScene {
         minY: this.cam.y + this.insets.top / z - kid.box.top,
         maxY: this.cam.y + (height - this.insets.bottom) / z - kid.box.bottom,
       };
-      if (limit.minY <= limit.maxY) this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
+      // If the band is shorter than the kid, keep its top just below the HUD rather than
+      // letting an impossible limit be ignored (Codex review, PR #15).
+      if (limit.minY > limit.maxY) limit.maxY = limit.minY;
+      this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
     }
     const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn, limit);
     if (spot) this.drag.spot = spot;
