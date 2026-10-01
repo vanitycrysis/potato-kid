@@ -215,3 +215,53 @@ test('dropping a kid onto a non-partner never overlaps them (D-039)', async ({ p
   expect(errors).toEqual([]);
 });
 
+test('a pan that pauses before release does not fling', async ({ page }) => {
+  const errors = await boot(page, '?seed=13&debug=1&calm=1');
+  await page.mouse.move(200, 700);
+  await page.mouse.down();
+  await page.mouse.move(200, 400, { steps: 6 });
+  await page.waitForTimeout(400); // finger rests
+  const rested = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  expect(Math.abs(after.y - rested.y)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('rotating the screen keeps the same world point centred', async ({ page }) => {
+  const errors = await boot(page, '?seed=14&debug=1&calm=1');
+  await page.evaluate(() => window.__PK__!.centerOn(1080, 2000));
+  await page.setViewportSize({ width: 915, height: 413 });
+  await page.waitForTimeout(300);
+  const c = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 2000));
+  expect(Math.abs(c.x - 915 / 2)).toBeLessThan(3);
+  expect(Math.abs(c.y - 413 / 2)).toBeLessThan(3);
+  expect(errors).toEqual([]);
+});
+
+test('backgrounding mid-pan does not lock input', async ({ page }) => {
+  const errors = await boot(page, '?seed=15&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1100));
+  await page.mouse.move(200, 700);
+  await page.mouse.down();
+  await page.mouse.move(200, 650, { steps: 3 });
+  // Simulate the app being hidden mid-gesture (the pointerup never arrives).
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  // A fresh drag of the kid must work.
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  await page.mouse.move(p.x, p.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(p.x + 120, p.y - 20, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
+  expect(kid.x).toBeGreaterThan(560);
+  expect(errors).toEqual([]);
+});
+

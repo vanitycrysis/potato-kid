@@ -66,6 +66,8 @@ export class MapScene {
   private dragScreen = { x: 0, y: 0 };
   /** Camera: world point at the screen's top-left, and world → CSS px scale. */
   private cam = { x: 0, y: 0, zoom: 1 };
+  /** Screen size the camera was last laid out for, to keep the view centre across resizes. */
+  private laidOut = { width: 0, height: 0 };
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
   private panVelocity = { x: 0, y: 0 };
   /**
@@ -107,8 +109,13 @@ export class MapScene {
       if (this.pan && e.pointerId === this.pan.pointerId) this.pan = undefined;
     });
     // Leaving the app mid-drag counts as a cancelled touch (plan §2).
+    // Panning is dropped too: the gesture's pointerup may never arrive, which would
+    // otherwise lock all input after resume (Codex review, PR #11).
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.drag) this.cancelActiveDrag();
+      if (!document.hidden) return;
+      if (this.drag) this.cancelActiveDrag();
+      this.pan = undefined;
+      this.panVelocity = { x: 0, y: 0 };
     });
 
     this.layout();
@@ -152,7 +159,13 @@ export class MapScene {
    */
   private layout(): void {
     const { width, height } = this.app.screen;
-    const centre = { x: this.cam.x + width / this.cam.zoom / 2, y: this.cam.y + height / this.cam.zoom / 2 };
+    // The centre must come from the *previous* viewport: app.screen already has the new size
+    // (Codex review, PR #11). The first layout has no previous viewport, so centre is moot.
+    const centre = {
+      x: this.cam.x + this.laidOut.width / this.cam.zoom / 2,
+      y: this.cam.y + this.laidOut.height / this.cam.zoom / 2,
+    };
+    this.laidOut = { width, height };
     this.cam.zoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
     this.app.stage.hitArea = this.app.screen;
     this.centerOn(centre.x, centre.y);
@@ -253,8 +266,11 @@ export class MapScene {
 
   private endPointer(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
     if (this.pan && e.pointerId === this.pan.pointerId) {
-      // Fling: keep coasting with the finger's last velocity unless the gesture was cancelled.
-      this.panVelocity = kind === 'drop' ? { x: this.pan.vx, y: this.pan.vy } : { x: 0, y: 0 };
+      // Fling with the finger's recent velocity, decayed by however long it then rested,
+      // so a pause before lifting doesn't fling (Codex review, PR #11). Cancels never fling.
+      const rested = (performance.now() - this.pan.lastT) / 1000;
+      const keep = kind === 'drop' && rested < 0.1 ? Math.exp(-PAN_FRICTION * 4 * rested) : 0;
+      this.panVelocity = { x: this.pan.vx * keep, y: this.pan.vy * keep };
       this.pan = undefined;
       return;
     }
