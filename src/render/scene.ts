@@ -154,8 +154,8 @@ export class MapScene {
   }
 
   /** Debug/test hook (only exposed with `?debug=1`): place a kid at a world point. */
-  debugAdd(type: string, x: number, y: number): number {
-    const kid = this.game.debugAddKid(type, x, y);
+  debugAdd(type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }): number {
+    const kid = this.game.debugAddKid(type, x, y, look);
     this.addView(kid);
     return kid.id;
   }

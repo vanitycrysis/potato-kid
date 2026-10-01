@@ -308,9 +308,9 @@ export class Game {
     events.push({ type: 'spawned', kid });
   }
 
-  /** Debug/test only: place a kid directly, bypassing the Garden and capacity. */
-  debugAddKid(type: KidId, x: number, y: number): Kid {
-    const look = this.rollLook();
+  /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */
+  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
+    const look = this.forceLook(this.rollLook(), force);
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
     this.discover(type);
@@ -336,6 +336,15 @@ export class Game {
     const s = size.scale;
     const b = body.box;
     return { body: body.id, face: face.id, scale: s, box: { left: b.left * s, top: b.top * s, right: b.right * s, bottom: b.bottom * s } };
+  }
+
+  private forceLook(look: Look & { box: Box }, force?: Partial<Look>): Look & { box: Box } {
+    if (!force) return look;
+    const body = this.looks.bodies.find((b) => b.id === (force.body ?? look.body)) ?? this.looks.bodies[0]!;
+    const face = force.face ?? look.face;
+    const s = force.scale ?? look.scale;
+    const b = body.box;
+    return { body: body.id, face, scale: s, box: { left: b.left * s, top: b.top * s, right: b.right * s, bottom: b.bottom * s } };
   }
 
   /** The next look, without consuming it (spawn checks room first). */
