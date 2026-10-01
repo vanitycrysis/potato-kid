@@ -6,8 +6,8 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 
 | PR | Branch | State |
 |---|---|---|
-| #1 Engineering plan | `claude/project-plan` | **rev. 4 approved by Codex** (four review rounds); merging. |
-| #2 Art/audio plan | `chatgpt/art-audio-plan` @ `2a9e7b5` | All 9 of Claude's points applied by Codex; Claude is verifying. Rebase after #1 merges, dropping its `DECISIONS.md`/`TASKS.md` copies (their content is folded in here). |
+| #1 Engineering plan | — | **Merged** (rev. 4, approved by Codex after four rounds). |
+| #2 Art/audio plan | — | **Merged** (rev. 2, approved by Claude; rebased with content byte-identical). |
 | #3 Scaffold | — | **Merged** (`b919bbb`) after Codex review on `gpt-6.1-sol` (one P2 fixed). |
 | #4 Composite | — | **Merged** after Codex review (two P2s fixed: landscape fit, wander validation). |
 | #5 First playable | `claude/playable` | Open, targets `main`. Spawn, drag and drop, R1 fusion, HUD, CI debug APK. Waiting for Codex review. |
@@ -26,15 +26,15 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 | ID | Owner | Task | Status | Done when |
 |---|---|---|---|---|
 | PLAN-ENG | Claude | Stack, architecture, milestones, roster/recipes | **done** (PR #1 rev. 4, approved by Codex) | — |
-| PLAN-ART | ChatGPT | Art and audio pipeline + asset list | review (PR #2 rev. 2) | Claude verifies the revised docs |
+| PLAN-ART | ChatGPT | Art and audio pipeline + asset list | **done** (PR #2) | — |
 | REVIEW-ENG | ChatGPT | Critical review of PR #1 | **done**: rev. 4 confirmed; Codex approved PR #1 for merge | — |
-| REVIEW-ART | Claude | Critical review of PR #2 | round 2: verifying | Concerns resolved or escalated |
-| PLAN-JOINT | Claude | Finalize `PROJECT_PLAN.md` after PRs #1 and #2 merge | blocked on #1, #2 | One combined plan with review links |
+| REVIEW-ART | Claude | Critical review of PR #2 | **done** (approved rev. 2) | — |
+| PLAN-JOINT | Claude | Finalize `PROJECT_PLAN.md` after PRs #1 and #2 merge | review (this PR) | One combined plan with review links |
 | GATE-1 | Owner | Approve the project plan | mostly done: stack, rules, Android, test device, private repo approved | Roster and asset list acknowledged in the gate-2 summary |
 | SCAFFOLD | Claude | Repo scaffold, tests, CI | **done** (PR #3) | — |
 | COMPOSITE | Claude | Layered kids, procedural wander, content validator | **done** (PR #4) | — |
 | BUILD-PLAYABLE | Claude | Spawn, wander, drag and drop, R1 `plain + water → firefighter`, debug APK | review (PR #5) | Codex review; e2e drag-to-fuse passes (done locally) |
-| ART-STYLE | ChatGPT | Plain, Fire, Water, Firefighter, garden map; 48/64/96 px and crowded previews | todo (next Codex task) | Claude review passes |
+| ART-STYLE | ChatGPT | Plain, Fire, Water, Firefighter, garden map; 48/64/96 px and crowded previews | doing (Codex, `chatgpt/art-style`) | Claude review passes |
 | GATE-2 | Owner | Approve the art style | todo | Explicit approval |
 | ASSET-PLAYABLE | ChatGPT | R1 kids, Garden, basic UI, shared effects, essential cues | todo | Claude review passes |
 | GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | todo | Explicit approval |
