@@ -1,8 +1,14 @@
 [
-  { "a": "plain", "b": "water", "result": "firefighter" },
-  { "a": "plain", "b": "fire", "result": "chef" },
-  { "a": "plain", "b": "snow", "result": "snowman" },
-  { "a": "fire", "b": "water", "result": "steam" },
-  { "a": "fire", "b": "firefighter", "result": "hero" },
-  { "a": "chef", "b": "snowman", "result": "sundae" }
+  {"a": "plain", "b": "water", "result": "firefighter"},
+  {"a": "plain", "b": "fire", "result": "chef"},
+  {"a": "plain", "b": "snow", "result": "snowman"},
+  {"a": "fire", "b": "water", "result": "steam"},
+  {"a": "fire", "b": "firefighter", "result": "hero"},
+  {"a": "chef", "b": "snowman", "result": "sundae"},
+  {"a": "water", "b": "snow", "result": "sprout"},
+  {"a": "plain", "b": "sprout", "result": "gardener"},
+  {"a": "water", "b": "steam", "result": "raincloud"},
+  {"a": "fire", "b": "steam", "result": "glassblower"},
+  {"a": "hero", "b": "glassblower", "result": "lantern"},
+  {"a": "sundae", "b": "gardener", "result": "picnic"}
 ]

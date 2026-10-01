@@ -36,7 +36,8 @@ function drawFace(g: Graphics): void {
 }
 
 function drawOverlay(g: Graphics, kid: KidDef, layer: 'overlay_back' | 'overlay_front'): boolean {
-  const c = kid.accent;
+  // Types added after D-036 have no code-drawn overlay (default case) and no accent.
+  const c = kid.accent ?? INK;
   const line = { color: INK, width: STROKE - 2, join: 'round' as const, cap: 'round' as const };
   switch (`${kid.id}:${layer}`) {
     case 'fire:overlay_front':

@@ -1,12 +1,18 @@
 [
-  { "id": "plain", "tier": 1, "name": "Potato Kid", "accent": "#c9a66b" },
-  { "id": "fire", "tier": 1, "name": "Fire Kid", "accent": "#e8613c" },
-  { "id": "water", "tier": 1, "name": "Water Kid", "accent": "#3c8fe8" },
-  { "id": "snow", "tier": 1, "name": "Snow Kid", "accent": "#8fc7e8" },
-  { "id": "chef", "tier": 2, "name": "Chef Kid", "accent": "#f2f2f2" },
-  { "id": "firefighter", "tier": 2, "name": "Firefighter Kid", "accent": "#d63c3c" },
-  { "id": "snowman", "tier": 2, "name": "Snowman Kid", "accent": "#e6f2fa" },
-  { "id": "steam", "tier": 2, "name": "Steam Kid", "accent": "#b8b8c8" },
-  { "id": "hero", "tier": 3, "name": "Hero Kid", "accent": "#f2c230" },
-  { "id": "sundae", "tier": 3, "name": "Sundae Kid", "accent": "#f28cb8" }
+  {"id": "plain", "tier": 1, "name": "Potato Kid", "accent": "#c9a66b"},
+  {"id": "fire", "tier": 1, "name": "Fire Kid", "accent": "#e8613c"},
+  {"id": "water", "tier": 1, "name": "Water Kid", "accent": "#3c8fe8"},
+  {"id": "snow", "tier": 1, "name": "Snow Kid", "accent": "#8fc7e8"},
+  {"id": "chef", "tier": 2, "name": "Chef Kid", "accent": "#f2f2f2"},
+  {"id": "firefighter", "tier": 2, "name": "Firefighter Kid", "accent": "#d63c3c"},
+  {"id": "snowman", "tier": 2, "name": "Snowman Kid", "accent": "#e6f2fa"},
+  {"id": "steam", "tier": 2, "name": "Steam Kid", "accent": "#b8b8c8"},
+  {"id": "hero", "tier": 3, "name": "Hero Kid", "accent": "#f2c230"},
+  {"id": "sundae", "tier": 3, "name": "Sundae Kid", "accent": "#f28cb8"},
+  {"id": "sprout", "tier": 2, "name": "Sprout Kid"},
+  {"id": "gardener", "tier": 3, "name": "Gardener Kid"},
+  {"id": "raincloud", "tier": 3, "name": "Raincloud Kid"},
+  {"id": "glassblower", "tier": 3, "name": "Glassblower Kid"},
+  {"id": "lantern", "tier": 4, "name": "Lantern Kid"},
+  {"id": "picnic", "tier": 4, "name": "Picnic Kid"}
 ]
