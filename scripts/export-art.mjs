@@ -47,10 +47,6 @@ function listSvgs(dir) {
 }
 
 const svgs = listSvgs(SRC);
-if (svgs.length === 0) {
-  console.log('No SVG sources in art/src; nothing to export.');
-  process.exit(0);
-}
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
@@ -189,6 +185,7 @@ if (!checkOnly) {
 
 await browser.close();
 for (const p of exported) console.log(`exported ${p}`);
+if (svgs.length === 0) console.log('No SVG sources in art/src.');
 if (problems.length) {
   console.error(`\n${problems.length} contract problem(s):`);
   for (const p of problems) console.error(`  - ${p}`);
