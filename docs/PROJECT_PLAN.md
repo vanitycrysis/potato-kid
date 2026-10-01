@@ -1,63 +1,72 @@
-# Combined project plan draft: check-in 1
+# Combined project plan: revised consolidation draft
 
-Status: draft consolidation, not owner-approved. Prepared by ChatGPT on 2026-10-01 from [Claude's engineering proposal, PR #1](https://github.com/vanitycrysis/potato-kid/pull/1) and [ChatGPT's art/audio proposal, PR #2](https://github.com/vanitycrysis/potato-kid/pull/2). Claude's response to ChatGPT's engineering review and Claude's reciprocal art review are pending. This document is the concrete shared plan for review, not a claim that both collaborators have signed off.
+Prepared by ChatGPT, 2026-10-01, from [PR #1 engineering rev. 2](https://github.com/vanitycrysis/potato-kid/pull/1) and [PR #2 art/audio revision](https://github.com/vanitycrysis/potato-kid/pull/2). Status: draft, **PR #1 changes requested**; Claude must verify PR #2 revisions and finalize the merged plan. Owner approval of stack/rules is recorded in Claude's consolidated DECISIONS.md; review and approval of the complete asset list/roster are not implied. No production assets were created in this task.
 
-## Game and MVP scope
+## Game, roster and MVP scope
 
-A phone-first, portrait, freely wandering potato ecosystem. The player picks up and places kids to discover sparse hidden recipes. Each successful recipe consumes exactly two parents and produces one higher-tier kid. Preserve the same lumpy body and dot-eyes/smirk identity across costumes. No grid.
+Phone-first portrait ecosystem, free wandering, no grid. Pick up/place kids to discover hidden recipes. Every fusion consumes two parents and makes one kid above both parent tiers. All costumes retain the same lumpy body and dot-eyes/smirk identity.
 
-MVP includes capacity, Garden spawning/upgrades, passive Materials, Potatokens and instant spawning, offline progress, save/recovery, four building roles (Garden, capacity, spawn bias, compendium), Potato-Dex discoveries/recipes, paid re-acquisition of known kids, and a starter budget of ten types/six recipes. Claude must specify the actual IDs, tiers, spawn pool, recipe table, and building definitions before the content contract is complete. Adventures, endgame/prestige/events, cloud saves, extra skins, cap-extension upgrades, and polish beyond the MVP gate remain deferred.
+MVP: Garden spawn/upgrades, capacity, spawn bias, Materials/Potatokens, instant spawns, Dex/hidden recipes, compendium re-acquisition, offline progress, saving/recovery. Garden is the only map building; Capacity/Bias/Compendium use tray icons and DOM panels. No construction timers, IAP, offline fusion or cap-extension upgrades. Adventures, endgame/prestige/events, cloud saves and extra skins remain deferred.
 
-## Proposed stack and architecture
+| Tier | Stable IDs / themes |
+| --- | --- |
+| 1, spawn pool | plain (base), fire (flame), water (droplet), snow (beanie/scarf) |
+| 2, recipe results | chef (hat/pan), firefighter (helmet/hose), snowman (snowball costume), steam (vapour crest) |
+| 3, recipe results | hero (rescue cape/medal), sundae (dessert bowl/topping) |
 
-Adopt Claude's proposal: strict TypeScript, PixiJS v8 rendering, Vite, Capacitor Android-first packaging, Howler audio, Vitest for simulation/economy/save behavior, Playwright browser smoke/visual checks, GitHub Actions, and a GitHub Pages browser build. Pin compatible dependency versions during the approved scaffold rather than installing anything now. Android build-toolchain availability must be checked; native iOS tooling/distribution is a separate dependency. DOM versus Pixi UI remains to be resolved by Claude, with live text and adequate touch targets required.
+| Recipe | Parents -> result |
+| --- | --- |
+| R1, first playable | plain + water -> firefighter |
+| R2 | plain + fire -> chef |
+| R3 | plain + snow -> snowman |
+| R4 | fire + water -> steam |
+| R5 | fire + firefighter -> hero |
+| R6 | chef + snowman -> sundae |
 
-Keep simulation independent of rendering and audio. Commands enter a fixed-step simulation; events drive visual/audio feedback. Seeded RNG and data-driven content enable deterministic checks. Use atomic consume-two/produce-one resolution, stable tie-breaking, no fusion while dragging, and a playtested newborn grace period. Rendering interpolates movement; layer transforms keep costumes attached to the canonical body/face.
+Spawn weights plain/fire/water/snow = 40/20/20/20. Garden starts at 12 s, capacity at 12. Materials income is tier-scaled; balance values remain tunable. Potatokens come from discoveries/Dex milestones and pay for instant spawns or alternative compendium payment. Upgrades are instant. Balance simulation measures first-recipe/tier timing and starvation.
 
-The proposed offline mode does not replay wandering or fusions. Persist spawn phase, RNG, and reconciliation time; admit only capacity-limited spawns and credit each new kid's income for the time it actually existed. Specify cap behavior and prevent duplicate catch-up from multiple resume signals. Saving needs schema version, monotonic revision, serialized alternating-slot writes, integrity validation, defined recovery/migration order, and storage-error handling. These details are requested corrections to Claude's initial plan, awaiting Claude's response in PR #1.
+## Stack, simulation and delivery
 
-Economy starts from Claude's proposed 12-second spawn interval, capacity 12, tier-scaled passive income, upgrade costs, and spawn bias. These are tuning proposals, not validated balance. Claude's headless economy simulator will measure first-recipe timing, progression, and starvation before acceptance. The Materials faucet, premium-currency scope, and offline cap/fusion policy require owner sign-off below.
+Owner-approved TypeScript + PixiJS v8 + Vite + Capacitor, Android first. Accept Claude's DOM UI overlay with live text and >=44 CSS px targets. Howler audio, Vitest simulation/economy/save/content checks, Playwright browser flows, GitHub Actions. Claude reports local Android SDK/JDK availability; CI supplies its toolchain. Repo stays private. Deliver web ZIP and debug APK as CI artifacts, not a Pages dependency. iOS remains later with separate native tooling/distribution requirements.
 
-## Art and audio pipeline and asset list
+Pure fixed-step 10 Hz simulation, seeded RNG, commands in/events out, interpolated rendering. Stable IDs and atomic consumption prevent double fusion; dragged kids are excluded and cancellations return to drag origin. Require an actual distance/contact predicate before fusion, not only spatial-hash proximity. CI checks unique IDs/pairs, higher result tiers, reachable recipes, valid weights, required assets and Dex entries.
 
-ChatGPT owns editable SVG body/face/costume source, coherent PNG layers and flattened review previews, UI art, map/building art, shared effects, and original audio. Claude reviews reference consistency and dimensions/formats/naming/transparency, then owns engine import, atlas packing, integration, and procedural motion. See `ART_AUDIO_PLAN.md` and `ASSETS.md` for the detailed deliverable contract.
+Offline: owner-approved eight-hour cap, excess discarded and reported, no wandering/fusion replay. Persist spawn phase/RNG and the time through which income/spawns were accounted. Credit existing income over eligible elapsed time and new kids only from their admission times. At capacity, phase advances only with elapsed time up to one banked interval. Exact phase handling, online/offline boundary ownership and hidden short absences still need the corrections in ChatGPT's round-2 review.
 
-- Ten kid types: base, Fire, Water, Firefighter, and six slots named by Claude. Runtime budget is one shared body, one shared face, nine overlays; 256 x 256 RGBA with proposed ground anchor (128,224). No per-type frame sets.
-- One quiet 1080 x 2340 garden master; four building sprites; one shadow; eleven shared spawn/fusion/discovery effect frames. Safe areas/camera/cropping await technical agreement.
-- Twelve UI icons, one shared panel, three button states, and a provisional three-tier badge set. Dex portraits reuse the character composites. Live text and layouts stay in code.
-- Eight short effects and one 60-90 second original instrumental loop. ChatGPT has no dedicated music-generation tool; use reproducible note/MIDI composition and scripted synthesis, subject to listening review. WAV masters, proposed Ogg/M4A runtime alternatives, actual target-runtime decode/loop checks, and separate music/SFX controls.
+Save proposal: schema/checksum/revision, serialized alternating-slot writes, highest valid revision, future-schema overwrite protection, load -> migrate -> reconcile -> save. Before acceptance, define storage-read versus corrupt-data failures, migration/state-validation failure and durable quarantine before replacement. Storage errors must not silently cause loss or fresh-save overwrite.
 
-Black/near-black ink and a cream body fill with restrained type accents are proposed. The original references are transparent line drawings; the filled-body adaptation must be approved through actual art-style samples. Test costumes at 48/64/96 logical pixels and in a crowded garden. The initial decoded art-texture target is <=32 MiB, subject to atlas/renderer/device measurement.
+## Art/audio contract and asset budget
 
-## Milestones and review gates
+ChatGPT owns editable source, aligned exports, previews, provenance and original audio; Claude reviews fidelity/import fit and owns integration, atlas packing, generated manifest, codecs and motion. Detailed contract: ART_AUDIO_PLAN.md and ASSETS.md.
+
+- Ten kid types: shared body/face, nine front costumes and up to five back costumes (16 textures total). Each 256 x 256 RGBA, anchor (128,224), >=8 px padding. Draw back -> body -> face -> front; absent layers omitted. Procedural animation, no per-type frame sets; Dex reuses composites.
+- Start export strokes near 7-8 px. Warm opaque fill and bolder stroke require actual art-gate approval. Preview 48/64/96 CSS px and a crowded 40-kid scene.
+- Opaque Garden map 1080 x 2400, safe band y=240..2160; decorative 240 px bleed at each end. Width-fit centred camera. Nominal wander y=400..1880 after top160/bottom280 world-unit HUD/tray insets; further constrain for kid radius, Garden footprint and actual visible unobscured viewport/native insets.
+- One 512 x 512 Garden map sprite, one shared shadow, eleven shared effect frames. Capacity/Bias/Compendium use icons. Twelve UI icons, shared panel/three button surfaces and three tier marks; live text/layout/hit areas stay in DOM.
+- Locally bundled Patrick Hand Regular font, [SIL OFL licence](https://github.com/google/fonts/blob/main/ofl/patrickhand/OFL.txt), retained copyright/licence and system sans-serif fallback. Device text/number/glyph/reflow review.
+- M4 Android adaptive foreground/background 432 x 432, essential content in central 264 px diameter circle. Static splash SVG and 1152 x 1152 PNG preview/master, essential content in 768 px circle, for Android's 288/192 dp no-icon-background option. Claude generates native resources and verifies masks/launch; M2 may use placeholders. Specs/source links in ART_AUDIO_PLAN.md.
+- Procedural held-kid outline/ring and in-bounds shape feedback; no extra bitmap. Never reveal an undiscovered recipe through valid-match highlighting.
+- Eight SFX and one original 60-90 s loop, reproducible note/MIDI/scripted synthesis. No dedicated music generator available here; finished music depends on listening acceptance. WAV 48 kHz/16-bit masters only from ChatGPT; Claude builds Ogg Vorbis/M4A AAC with ffmpeg. Peak/listening SFX checks, music starting near -18 LUFS, runtime codec/seam audition and persisted separate volume/mute/unlock/pause/resume controls.
+- Claude generates runtime manifest paths/dimensions/layer mappings from exports. ChatGPT supplies assets/PROVENANCE.md for sources/tools/prompts/licences/revisions; no manually maintained runtime manifest.
+
+Initial <=32 MiB decoded texture target includes map, atlases, effects and UI. Test worst-case four-layer kids, 40 population, HUD/input/effects on the owner's Galaxy S26 Ultra; measure frame-time percentiles/memory. Four-times CPU-throttled browser testing is an additional proxy, not proof of another phone's performance. Target 60 fps; set an explicit measurement window/pass threshold before device acceptance.
+
+## Milestones and owner gates
 
 | Milestone | Work | Exit |
 | --- | --- | --- |
-| M0: plan | Exchange proposals, resolve review findings and interfaces, consolidate tracking docs | Owner gate 1 approves this final reviewed plan; pending |
-| M1: art style and skeleton | ChatGPT makes base + Fire/Water/Firefighter + map; Claude creates scaffold/CI/browser build and tests placeholder composition | Claude reviews assets; owner gate 2 approves the actual visual samples |
-| M2: first playable | Spawn, wander, pick up/place, one working recipe with approved parents/result and basic feedback | ChatGPT reviews code/behavior; owner gate 3 approves playable |
-| M3: systems | Currencies, buildings, Dex/compendium, offline progress, saving, starter content, balance simulator | Engineering checks, art/audio delivery, reciprocal reviews; no separate owner gate |
-| M4: MVP complete | Android build, full audio, device performance/readability/listening, balance and recovery checks | Owner gate 4 approves complete MVP before polish or extra content |
+| M0 plan | Resolve engineering findings, verify revised art plan, consolidate shared records | Owner stack/rules already approved; finalize complete reviewed plan and acknowledge roster/asset list |
+| M1 art style + skeleton | Plain/Fire/Water/Firefighter/map and small/crowded previews; Claude scaffold/CI/placeholder compositing | Claude reviews imports/style; owner gate 2 approves actual samples |
+| M2 first playable | Spawn, wander, pick up/place, R1, debug APK, essential feedback | ChatGPT engineering/readability review; owner gate 3 |
+| M3 systems | Currencies, building roles, Dex/compendium, offline/save, full roster/audio, balance simulator | Tests/imports/listening and reciprocal reviews |
+| M4 MVP | Balance/device/recovery checks, final font/launch art, candidate APK | Owner gate 4 before polish or extra content |
 
-All work uses separate collaborator branches/worktrees and GitHub PRs. Reviews must be critical; neither collaborator merges their own work without the other's review. If a disagreement survives one discussion round, present both cases to the owner. Consolidate shared `TASKS.md`, `DECISIONS.md`, and `ASSETS.md` without discarding either collaborator's requirements.
+Owner answers recorded in PR #1 include stack/Android first, tier-scaled passive Materials, Potatoken scope/no IAP/instant upgrades, eight-hour cap/no offline fusion, private repo and Galaxy S26 Ultra. Do not re-request these answers. Style, first-playable and MVP gates remain. Claude must present the final roster/asset list and clearly record any remaining gate-1 acknowledgment.
 
-## Validation and acceptance
+## Review status and next work
 
-Claude's implementation checks must cover atomic consumption, higher-tier/valid/reachable recipe content, save recovery/migration, offline partial intervals/tier income/capacity/resume idempotence/clock handling, and resource transaction behavior. Browser smoke tests exercise dragging and discovery. Art acceptance covers alpha, anchors, coherent layers, clipping, small-scale silhouettes, and crowded portraits. Audio acceptance includes actual listening, decoding, unlock/resume, event prioritization, volume controls, and loop continuity.
+Round-1 engineering review is historical in ENGINEERING_REVIEW.md. [Claude's PR #1 response](https://github.com/vanitycrysis/potato-kid/pull/1#issuecomment-5940047945) was checked against current remote rev. 2. ChatGPT's round-2 report is .codex-out/pr1-round2-review.md, awaiting Claude's verbatim PR posting: changes requested for timer/lifecycle, save-error and contact-contract issues. Accept D-009/D-011/D-022/D-023/D-024/D-025; no roster renames.
 
-A headless screenshot is a visual check, not a phone-performance result. Measure frame times and texture memory with full capacity, effects, HUD, input, and simulation on an identified phone; 60 fps is a target to validate. Record tooling/device limitations honestly. No game tests have run at planning stage.
+[Claude's PR #2 review](https://github.com/vanitycrysis/potato-kid/pull/2#issuecomment-5940058569) points 1-9 are applied; .codex-out/pr2-response.md records each response and proposed decision updates. Claude must verify these revisions. This document incorporates both reviews without claiming engineering approval.
 
-## Pending collaborator work before owner check-in 1
-
-1. Claude responds to the [engineering review](https://github.com/vanitycrysis/potato-kid/pull/1#issuecomment-5939846296), revises the plan, and supplies the concrete roster/recipes, capacity spawn policy, save/offline contract, and device/UI/audio acceptance details.
-2. Claude reviews PR #2's art/audio proposal and confirms or revises technical interfaces; ChatGPT resolves the feedback.
-3. Consolidate both PRs' shared tracking records and update this draft to agreed status, with review links and remaining owner choices. No construction of game systems or production assets starts before project-plan approval.
-
-## Owner choices at the completed gate
-
-- Approve or revise stack, Android-first milestone scope, and asset budget; identify the phone for playable/device testing.
-- Confirm tier-scaled passive Materials income, or choose a replacement.
-- Confirm Potatokens earned through discoveries/milestones, instant-spawn availability, no real-money purchases in MVP, and the specific time-skip behavior to include. Construction timers are not silently added to scope.
-- Approve or revise no offline fusions and the proposed eight-hour catch-up cap; time beyond that cap and return behavior must be explicit in the final reviewed plan.
-
-These are the brief's milestone decisions, collected for the completed gate. They are not being asked on this incomplete draft.
+Claude merges PR #1 only after resolving/escalating the round-2 findings. Then rebase PR #2, retain art/assets/review/joint-plan docs, and preserve the updated ChatGPT handoff within Claude's consolidated TASKS.md before dropping conflicting branch copies. DECISIONS.md is untouched here. PRs #3/#4 remain separate unreviewed implementation work in this task. After plan consolidation, art-style samples are next; no style approval or game tests are claimed.

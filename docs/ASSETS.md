@@ -1,60 +1,73 @@
 # Asset list
 
-Owner: ChatGPT. Reviewer/integration: Claude. Status: proposed for check-in 1; no production assets made. All sizes and counts await technical agreement. See `ART_AUDIO_PLAN.md` for reference findings, source workflow, delivery, and acceptance.
+Owner: ChatGPT. Reviewer/integration: Claude. Revision 2, 2026-10-01: Claude's nine review points applied; awaiting verification. No production assets exist. Specifications below define delivery; actual appearance/fill/stroke require owner gate 2. See ART_AUDIO_PLAN.md for workflow.
 
 ## Characters and environment
 
-| Stable planning ID | Asset / count | Proposed spec | Needed for | Status / done means |
+Every kid uses shared kid_plain_body.png and kid_plain_face.png, 256 x 256 sRGB RGBA, ground anchor (128,224), at least 8 px clear padding. Optional costumes use `kid_<id>_overlay_back.png` / `kid_<id>_overlay_front.png`. Order: back -> body -> face -> front. Front artwork leaves eyes/smirk visible; absent layers have no PNG. Editable SVG and flattened previews accompany exports.
+
+| Type / asset ID | Tier / source | Theme / planned costume layers | Needed for | Status / done means |
 | --- | --- | --- | --- | --- |
-| kid_base | Base Potato Kid / 1 type | Editable SVG; shared body and face PNG RGBA, 256 x 256, ground anchor (128,224); no overlay needed | Art gate | Proposed; same lumpy body/dot eyes/smirk/nubs as references, approved by owner |
-| kid_fire | Fire / 1 type | Flame costume/object overlay; 256 x 256 RGBA aligned with shared base/face | Art gate | Proposed; recognizable silhouette and visible canonical face |
-| kid_water | Water / 1 type | Water costume/object overlay; same aligned-layer export | Art gate | Proposed; distinct at small size without depending on color |
-| kid_firefighter | Firefighter / 1 type | Helmet/tool overlay; same aligned-layer export | Art gate | Proposed; same face/body and clean prop bounds |
-| kid_reserved_a-f | Reserved starter types / 6 slots | Shared base/face plus one aligned overlay per type | First playable / MVP | Names/tiers/spawn and recipe roles await Claude; budget slots, not invented recipes |
-| map_garden | Garden map / 1 | Opaque PNG, provisionally 1080 x 2340; quiet open play area; editable source | Art gate | Proposed; camera/safe areas agreed, crowded kids readable |
-| building_garden | Potato Garden / 1 | PNG RGBA, provisional 512 x 512; bottom-center anchor with 8 px padding | First playable | Proposed; recognizable spawn building, correct scale/import |
-| building_capacity | Capacity building / 1 | Same building spec | MVP | Visual form awaits Claude's building definition |
-| building_spawn_bias | Spawn-bias building / 1 | Same building spec | MVP | Visual form follows agreed targeted spawn pool |
-| building_compendium | Compendium building / 1 | Same building spec | MVP | Recognizable rediscovery/re-acquisition role |
-| fx_shadow | Shared ground shadow / 1 | PNG RGBA 128 x 64, subtle oval | First playable | Proposed; supports anchoring and lift feedback |
-| fx_spawn | Spawn puff / 3 frames | PNG RGBA 256 x 256; centered shared effect, separate from kid | First playable | Proposed; brief and unobtrusive |
-| fx_fusion | Recipe fusion puff / 4 frames | Same shared-effect spec | First playable | Proposed; two parents becoming one stays legible |
-| fx_discovery | First-discovery sparkle / 4 frames | Same shared-effect spec | MVP | Proposed; distinguish first discovery from repeat fusion |
+| kid_plain | 1 / spawn | Shared lumpy body, dot eyes/smirk/nubs; no costume | Art gate / R1 | Planned; reference identity approved by owner |
+| kid_fire | 1 / spawn | Flame tips behind body, small flame crest in front; warm accent | Art gate | Planned; reads as flame at 48/64 px |
+| kid_water | 1 / spawn | Droplet hood/object in front; cool accent | Art gate / R1 | Planned; distinct from flame and steam without colour |
+| kid_snow | 1 / spawn | Beanie and scarf in front, based on snow references | MVP | Planned; distinct from snowman |
+| kid_chef | 2 / R2 | Chef hat and pan/spoon in front, based on cook references | MVP | Planned; prop inside padding, face unchanged |
+| kid_firefighter | 2 / R1 | Hose tail behind; helmet/nozzle in front | Art gate / R1 | Planned; helmet/hose legible and aligned |
+| kid_snowman | 2 / R3 | Compact snowball plinth behind; snow buttons/accessory in front | MVP | Planned; fits frame without shrinking shared body or replacing face |
+| kid_steam | 2 / R4 | Curling vapour crest in front; restrained pale accent | MVP | Planned; silhouette distinct from Water and fusion puff |
+| kid_hero | 3 / R5 | Cape behind; medal in front; firefighter rescue theme | MVP | Planned; costume consistent with Fire + Firefighter |
+| kid_sundae | 3 / R6 | Bowl rear behind; bowl rim/topping in front; chilled dessert theme | MVP | Planned; face clear, distinct from snowman |
+| map_garden | — | Opaque PNG 1080 x 2400; central 1080 x 1920 safe band y=240..2160; top/bottom decorative bleed; editable source | Art gate | Planned; 16:9/20:9 and safe-inset crowded previews pass |
+| building_garden | — | RGBA PNG 512 x 512; bottom-centre ground anchor (256,480), >=8 px clear padding | First playable | Planned; recognizable spawn building and agreed footprint |
+| fx_shadow | — | Shared subtle oval, RGBA PNG 128 x 64 | First playable | Planned; anchoring/lift legible |
+| fx_spawn | — | 3 shared RGBA 256 x 256 frames, fx_spawn_01..03.png | First playable | Planned; brief/unobtrusive, engine timing reviewed |
+| fx_fusion | — | 4 shared RGBA 256 x 256 frames, fx_fusion_01..04.png | First playable | Planned; consume-two/make-one legible |
+| fx_discovery | — | 4 shared RGBA 256 x 256 frames, fx_discovery_01..04.png | MVP | Planned; first discovery distinct from repeat fusion |
 
-Budget: ten kid types represented by one shared body, one shared face, and nine overlays; one map, four buildings, one shadow, eleven effect frames. Six recipes follow Claude's proposed MVP budget and await a concrete table. Dex portraits reuse the same composite; flattened previews of all ten types are review artifacts, not ten additional drawings. Idle/wander/pick-up/drop use Claude's restrained procedural transforms, so no per-type animation frame sets are budgeted.
+Ten types: two shared textures, nine front costumes and up to five back costumes = at most 16 kid textures. One map, one Garden building, one shadow, eleven effect frames. Capacity/Bias/Compendium have tray icons only. Dex portraits reuse composites; ten flattened previews are review artifacts. Procedural movement/pick-up/drop, no per-type frame sets. Nominal wandering bounds y=400..1880 also respect sprite radii, Garden footprint and actual unobscured viewport.
 
-## UI art
+Recipes retained without renames: R1 plain + water -> firefighter (first playable); R2 plain + fire -> chef; R3 plain + snow -> snowman; R4 fire + water -> steam; R5 fire + firefighter -> hero; R6 chef + snowman -> sundae. Spawn weights: plain 40, fire/water/snow 20 each. Claude owns rules/balance, ChatGPT names/themes.
 
-| Asset group | Count and spec | Needed for | Status / done means |
+## UI and platform art
+
+| ID / group | Count and spec | Needed for | Status / done means |
 | --- | --- | --- | --- |
-| Currency icons | 2: `icon_materials`, `icon_potatokens`; editable SVG and 128 x 128 PNG RGBA | First playable / MVP | Proposed; currencies remain distinct at 24-32 logical pixels |
-| Navigation/status icons | 10: Garden, capacity, spawn bias, compendium, Dex, settings, audio on, audio off, unknown kid/recipe, timer; SVG and 128 x 128 PNG RGBA | MVP | Proposed; one coherent outline weight, no recipe spoilers, labels supplied by code |
-| Shared panel surface | 1; SVG and provisional 256 x 256 PNG with agreed nine-slice insets | First playable / MVP | Proposed; Claude confirms whether native UI rendering is preferable |
-| Shared button surfaces | 3 states: normal, pressed, disabled; SVG/PNG and agreed insets | First playable / MVP | Proposed; states distinguishable and live labels legible |
-| Rarity badge marks | Budget 3; SVG/64 x 64 PNG RGBA | MVP | Tier count/names await Claude; each uses shape plus color |
+| icon_materials, icon_potatokens | 2; editable SVG + 128 x 128 RGBA PNG | First playable / MVP | Planned; distinct at 24-32 CSS px |
+| Navigation/status icons | 10: icon_garden, icon_capacity, icon_bias, icon_compendium, icon_dex, icon_settings, icon_audio_on, icon_audio_off, icon_unknown, icon_timer; SVG + 128 x 128 RGBA PNG | Essential subset first playable; full set MVP | Planned; coherent ink; no hidden-recipe hints; timer means spawn/offline time, not construction |
+| ui_panel | 1; SVG + 256 x 256 PNG surface | First playable / MVP | Planned; DOM decoration, CSS/insets agreed with Claude |
+| ui_button_normal, ui_button_pressed, ui_button_disabled | 3; SVG + 256 x 256 PNG surfaces | First playable / MVP | Planned; live labels/states legible |
+| badge_tier_1, badge_tier_2, badge_tier_3 | 3; SVG + 64 x 64 RGBA PNG | MVP | Planned; shape plus colour identifies tier |
+| font_patrick_hand_regular | 1 locally bundled font, full OFL.txt/copyright; source revision/hash in provenance | First UI / M4 final | Selected, not downloaded; device labels/numbers/glyphs/reflow/fallback reviewed |
+| android_launcher_foreground | 1 SVG + transparent 432 x 432 PNG; key art inside central 264 px diameter circle | M4 | Planned; face/sprouts survive circle/squircle masks |
+| android_launcher_background | 1 SVG + opaque 432 x 432 PNG | M4 | Planned; full bleed, quiet contrast |
+| android_splash_logo | 1 SVG + transparent 1152 x 1152 PNG; key art inside central 768 px diameter circle | M4 | Planned; native vector conversion and masked launch checked |
 
-Dex cards, recipe layout, offline summary, upgrades, settings, and compendium reuse these surfaces/icons. Text, layout, hit targets, and resource amounts stay in the UI implementation. No store screenshots, app-store marketing, adventure assets, prestige art, or extra skins are included in this MVP list.
+Patrick Hand Regular uses [SIL OFL 1.1](https://github.com/google/fonts/blob/main/ofl/patrickhand/OFL.txt); bundle licence alongside the font, use system sans-serif fallback. Font files are not textures. Android PNG dimensions are 4x art masters; Claude generates density-specific/native resources. Splash uses the no-icon-background 288/192 dp option in [Android's dimensions](https://developer.android.com/develop/ui/views/launch/splash-screen#dimensions), with an opaque cream window background in code. See ART_AUDIO_PLAN.md for adaptive-icon source and packaging responsibilities.
+
+DOM text, layout, hit targets (>=44 CSS px), quantities and focus stay in code. Dex/cards/offline/upgrades/settings reuse surfaces/icons. Drag outline/ring and in-bounds feedback are procedural and shape-based; recipe-specific hints may only reference already-discovered recipes. No dedicated drag bitmap. No store screenshots, marketing, adventures, prestige art or extra skins.
 
 ## Audio
 
-| ID | Cue | Proposed master / duration | Needed for | Status / done means |
+| ID | Cue | Master / duration | Needed for | Status / done means |
 | --- | --- | --- | --- | --- |
-| sfx_ui_tap | Soft UI confirmation | Mono WAV PCM 48 kHz/16-bit; 0.08-0.15 s | First playable | Proposed; quiet and pleasant when repeated |
-| sfx_pick_up | Lift | Same; 0.10-0.25 s | First playable | Proposed; clear interaction feedback |
-| sfx_place | Set down | Same; 0.10-0.25 s | First playable | Proposed; distinct from lift |
-| sfx_spawn | New kid appears | Same; 0.20-0.40 s | First playable | Proposed; restrained repeated cue |
-| sfx_fusion | Successful recipe | Same; 0.25-0.50 s | First playable | Proposed; communicates success without harshness |
-| sfx_discovery | First discovery flourish | Same; 0.60-1.20 s | MVP | Proposed; distinct reward, no simultaneous duplicate fusion cue |
-| sfx_upgrade | Building upgrade | Same; 0.25-0.50 s | MVP | Proposed; satisfying confirmation |
-| sfx_spend | Resource spend | Same; 0.10-0.25 s | MVP | Proposed; use when no more specific success cue applies |
-| music_garden | Original ambient instrumental loop / 1 | Stereo WAV PCM 48 kHz/16-bit; 60-90 s; note/MIDI source and loop boundaries | MVP | Proposed scripted composition/render; seamless and non-fatiguing after listening review |
+| sfx_ui_tap | Soft confirmation | Mono WAV PCM 48 kHz/16-bit; 0.08-0.15 s | First playable | Planned; quiet repeated cue |
+| sfx_pick_up | Lift | Same; 0.10-0.25 s | First playable | Planned; clear lift |
+| sfx_place | Set down | Same; 0.10-0.25 s | First playable | Planned; distinct from lift |
+| sfx_spawn | New kid | Same; 0.20-0.40 s | First playable | Planned; restrained repetition |
+| sfx_fusion | Successful recipe | Same; 0.25-0.50 s | First playable | Planned; gentle success |
+| sfx_discovery | First discovery | Same; 0.60-1.20 s | MVP | Planned; replaces same-event fusion cue |
+| sfx_upgrade | Building upgrade | Same; 0.25-0.50 s | MVP | Planned; clear confirmation |
+| sfx_spend | Resource spend | Same; 0.10-0.25 s | MVP | Planned; only without a more specific success cue |
+| music_garden | Original instrumental loop | Stereo WAV PCM 48 kHz/16-bit; 60-90 s; note/MIDI source + loop sample boundaries | MVP | Planned scripted composition; seamless/non-fatiguing after listening |
 
-Proposed runtime files: Ogg and M4A alternatives with target-browser/WebView decoding and actual loop audition, plus retained WAV masters. Keep music/SFX separately controllable and do not sonify every passive-income tick. No audio assets exist yet; tool limitations and proposed music route are recorded in `ART_AUDIO_PLAN.md`.
+ChatGPT delivers WAV masters and reproducible source only. Claude's ffmpeg build generates Ogg Vorbis/M4A AAC and verifies decode/looping on Howler/Android WebView. Listening/peak checks for SFX, near -18 LUFS starting target for music; no short-SFX LUFS requirement. Separate music/SFX controls and no passive-income tick cues.
 
 ## Acceptance for every delivery
 
-- Source, preview, runtime export, provenance/license, and manifest agree on asset IDs and revision.
-- Correct dimensions, alpha behavior, padding, anchors, frame order, and timing; no clipped outlines or unintended empty frames.
-- Preview transparent art on light/dark backgrounds and in a crowded portrait scene at actual display sizes. Outline and face remain readable.
-- Confirm audio decodes in Claude's target runtime; check peaks, clicks, loop boundaries, and listening balance on headphones and phone speakers.
-- Claude posts review of reference consistency and technical fit in GitHub. Art-gate samples additionally require owner approval before full production.
+- Stable IDs match source, previews, exports and assets/PROVENANCE.md (source/tool/prompts/licence/revision); include font licence. Claude's build generates runtime paths/dimensions/layer mappings; no hand-maintained runtime manifest.
+- CI checks naming/dimensions/alpha. Review anchors, padding, layer alignment, effect order/timing, clipping, correct opaque map/body and no empty optional exports.
+- Inspect on light/dark backgrounds and at 48/64/96 CSS px in crowded portrait layouts. Check outline, face and costume silhouettes; art-gate owner approval includes fill and 7-8 px stroke.
+- Measure <=32 MiB decoded textures including atlas overhead; test 40 kids with four-layer cases and HUD/input/effects on the owner-named phone. Source PNG sizes are not performance evidence.
+- Audition WAV and build codecs on headphones/phone speakers; check decode, peaks, clicks, seam repetition, balance, mute/unlock/pause/resume.
+- Claude reviews reference fidelity and technical fit in GitHub; actual art-gate samples need owner approval before roster production.
