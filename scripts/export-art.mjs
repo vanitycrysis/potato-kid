@@ -120,7 +120,7 @@ for (const file of svgs) {
     const text = readFileSync(file, 'utf8');
     // Parse as XML in the browser (Codex review, PR #13): substring checks would accept
     // a truncated file the DOM can't render.
-    const check = await page.evaluate((src) => {
+    const check = await page.evaluate(async (src) => {
       const doc = new DOMParser().parseFromString(src, 'image/svg+xml');
       if (doc.getElementsByTagName('parsererror').length) return 'is not well-formed XML';
       const root = doc.documentElement;
@@ -131,7 +131,23 @@ for (const file of svgs) {
       for (const el of doc.getElementsByTagName('*')) {
         for (const a of el.attributes) if (/^on/i.test(a.name)) return 'may not contain event handlers';
       }
-      return null;
+      // Still deliver the original SVG, but it must actually draw something
+      // (Codex review, PR #13): an empty or fully transparent icon would pass otherwise.
+      const img = new Image();
+      img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(src)))}`;
+      try {
+        await img.decode();
+      } catch {
+        return 'cannot be decoded as an image';
+      }
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = Math.max(1, Math.round((128 * vb[3]) / vb[2]));
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const { data } = ctx.getImageData(0, 0, c.width, c.height);
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) return null;
+      return 'renders nothing visible';
     }, text);
     if (check) problems.push(`${name}: GUI SVG ${check}`);
     pending.push({ out: join(ROOT, fam.dir, `${name}.svg`), text });
