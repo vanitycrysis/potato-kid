@@ -94,3 +94,5 @@ I will write a **balance simulator** (a headless script that plays the economy w
 - Approve the stack: TypeScript + PixiJS + Capacitor.
 - **Android first?** iOS needs a Mac and a paid Apple developer account for any device build. Which phone will you test on?
 - Confirm or replace: the passive Materials faucet; Potatokens as a speed-up only, with no IAP in the MVP; no fusions while offline.
+
+**Owner answers (2026-10-01):** Android first. Stack approved. The passive faucet, speed-up-only Potatokens with no IAP, and no offline fusions are all confirmed. See DECISIONS D1, D5–D9.
