@@ -21,6 +21,10 @@ export interface Kid {
   heading: number;
   /** Seconds left standing still; 0 means walking. */
   idle: number;
+  /** Seconds left before this newborn may fuse. */
+  grace: number;
+  /** Being dragged by the player: does not wander or fuse. */
+  held: boolean;
 }
 
 export interface World {
@@ -33,8 +37,8 @@ export function createWorld(bounds: Bounds): World {
   return { kids: [], nextKidId: 1, bounds };
 }
 
-export function addKid(world: World, type: KidId, x: number, y: number, rng: Rng): Kid {
-  const kid: Kid = { id: world.nextKidId++, type, x, y, heading: rng.next() * Math.PI * 2, idle: 0 };
+export function addKid(world: World, type: KidId, x: number, y: number, rng: Rng, grace = 0): Kid {
+  const kid: Kid = { id: world.nextKidId++, type, x, y, heading: rng.next() * Math.PI * 2, idle: 0, grace, held: false };
   world.kids.push(kid);
   return kid;
 }
@@ -43,6 +47,7 @@ export function addKid(world: World, type: KidId, x: number, y: number, rng: Rng
 export function stepWander(world: World, rng: Rng, w: WanderBalance, dt: number = STEP): void {
   const { minX, minY, maxX, maxY } = world.bounds;
   for (const kid of world.kids) {
+    if (kid.held) continue;
     if (kid.idle > 0) {
       kid.idle = Math.max(0, kid.idle - dt);
       continue;
@@ -69,4 +74,8 @@ export function stepWander(world: World, rng: Rng, w: WanderBalance, dt: number 
     kid.x = nx;
     kid.y = ny;
   }
+}
+
+export function clampToBounds(b: Bounds, x: number, y: number): { x: number; y: number } {
+  return { x: Math.min(b.maxX, Math.max(b.minX, x)), y: Math.min(b.maxY, Math.max(b.minY, y)) };
 }

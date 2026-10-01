@@ -49,6 +49,7 @@ export function validateContent(content: Content): string[] {
   }
 
   errors.push(...validateWander(content.balance.wander));
+  errors.push(...validateSpawn(content.balance));
 
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));
@@ -95,6 +96,30 @@ function validateWander(w: unknown): string[] {
     (idle[0] as number) > (idle[1] as number)
   ) {
     errors.push('balance.wander.idleSeconds must be [min, max] with 0 <= min <= max');
+  }
+  return errors;
+}
+
+function validateSpawn(balance: unknown): string[] {
+  const errors: string[] = [];
+  const b = balance as Record<string, unknown>;
+  const r = b.contactRadius;
+  if (typeof r !== 'number' || !Number.isFinite(r) || r <= 0) errors.push('balance.contactRadius must be a finite number > 0');
+  const s = b.spawn;
+  if (typeof s !== 'object' || s === null) return [...errors, 'balance.spawn is missing'];
+  const o = s as Record<string, unknown>;
+  const num = (key: string, ok: (v: number) => boolean, rule: string) => {
+    const v = o[key];
+    if (typeof v !== 'number' || !Number.isFinite(v) || !ok(v)) errors.push(`balance.spawn.${key} must be ${rule}`);
+  };
+  num('intervalSeconds', (v) => v > 0, 'a finite number > 0');
+  num('capacity', (v) => Number.isInteger(v) && v >= 2, 'an integer >= 2');
+  num('startingKids', (v) => Number.isInteger(v) && v >= 0, 'an integer >= 0');
+  num('newbornGraceSeconds', (v) => v >= 0, 'a finite number >= 0');
+  const cap = o.capacity;
+  const start = o.startingKids;
+  if (typeof cap === 'number' && typeof start === 'number' && start > cap) {
+    errors.push('balance.spawn.startingKids must not exceed capacity');
   }
   return errors;
 }

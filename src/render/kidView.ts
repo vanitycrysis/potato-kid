@@ -11,6 +11,7 @@ const HOP_RATE = 9; // radians per second of the hop cycle
 const MAX_TILT = 0.08;
 /** Eye line on the 256 canvas; agreed with ChatGPT as part of the face layer. */
 const EYE_Y = 116;
+const POP_SECONDS = 0.35;
 
 /**
  * One kid on screen: the shared body and face plus the type's overlays,
@@ -24,6 +25,8 @@ export class KidView {
   private phase: number;
   private blinkIn: number;
   private blinkLeft = 0;
+  private held = false;
+  private pop = POP_SECONDS;
 
   constructor(kid: Kid, textures: Map<string, Texture>) {
     this.phase = (kid.id * 1.7) % (Math.PI * 2);
@@ -47,10 +50,26 @@ export class KidView {
     this.root.addChild(this.rig);
   }
 
+  /** Lifted kids draw above everything and grow slightly, so the player sees what they hold. */
+  setHeld(held: boolean): void {
+    this.held = held;
+    this.root.cursor = held ? 'grabbing' : 'grab';
+  }
+
+  /** Short scale-up when a kid is born (spawn or fusion). */
+  popIn(): void {
+    this.pop = 0;
+  }
+
   /** Position comes from the sim (already interpolated); `dt` is real frame time in seconds. */
   update(x: number, y: number, walking: boolean, dirX: number, dt: number): void {
     this.root.position.set(x, y);
-    this.root.zIndex = y;
+    this.root.zIndex = this.held ? 1e6 : y;
+    if (this.pop < POP_SECONDS) this.pop = Math.min(POP_SECONDS, this.pop + dt);
+    const t = this.pop / POP_SECONDS;
+    // Ease-out-back: overshoot a little, then settle.
+    const popScale = t >= 1 ? 1 : 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
+    this.root.scale.set((this.held ? 1.12 : 1) * popScale);
 
     if (walking) this.phase += HOP_RATE * dt;
     const hop = walking ? Math.abs(Math.sin(this.phase)) : 0;

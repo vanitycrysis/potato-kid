@@ -9,7 +9,7 @@ export const ANCHOR_Y = 224 / LAYER_SIZE;
 export const LAYER_ORDER = ['overlay_back', 'body', 'face', 'overlay_front'] as const;
 export type LayerName = (typeof LAYER_ORDER)[number];
 
-/** Body and face are shared by every kid; overlays are per type and optional. */
+/** Body and face are shared by every kid (`kid_plain_*`, ASSETS.md); overlays are per type and optional. */
 export function layerAssetName(kidType: string, layer: LayerName): string {
-  return layer === 'body' || layer === 'face' ? `kid_base_${layer}` : `kid_${kidType}_${layer}`;
+  return layer === 'body' || layer === 'face' ? `kid_plain_${layer}` : `kid_${kidType}_${layer}`;
 }
