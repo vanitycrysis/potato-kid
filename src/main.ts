@@ -10,9 +10,10 @@ declare global {
     __PK__?: {
       ready: boolean;
       fps: () => number;
-      kids: () => { id: number; type: string }[];
+      kids: () => { id: number; type: string; x: number; y: number; radius: number }[];
       discoveredRecipes: () => string[];
       screenPointOf: (kidId: number) => { x: number; y: number } | undefined;
+      centerOn: (x: number, y: number) => void;
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
       debugAdd?: (type: string, x: number, y: number) => number;
@@ -42,10 +43,11 @@ async function boot(): Promise<void> {
   window.__PK__ = {
     ready: true,
     fps: () => app.ticker.FPS,
-    kids: () => scene.game.state.world.kids.map((k) => ({ id: k.id, type: k.type })),
+    kids: () => scene.game.state.world.kids.map((k) => ({ id: k.id, type: k.type, x: k.x, y: k.y, radius: k.radius })),
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     screenPointOf: (id) => scene.screenPointOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
+    centerOn: (x, y) => scene.centerOn(x, y),
     ...(params.get('debug') === '1' ? { debugAdd: (t: string, x: number, y: number) => scene.debugAdd(t, x, y) } : {}),
   };
 }

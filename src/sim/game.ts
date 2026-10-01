@@ -1,6 +1,7 @@
 import { pairKey } from '../content/validate';
 import type { Content, KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
+import { findFreeSpot, innerBounds, separate } from './space';
 import { addKid, clampToBounds, createWorld, STEP, stepWander, type Bounds, type Kid, type World } from './world';
 
 /** Player input, applied at the start of the next sim step. */
@@ -58,8 +59,9 @@ export class Game {
       discoveredRecipes: [],
     };
     for (let i = 0; i < content.balance.spawn.startingKids; i++) {
-      const p = clampToBounds(bounds, bounds.minX + this.rng.next() * (bounds.maxX - bounds.minX), bounds.minY + this.rng.next() * (bounds.maxY - bounds.minY));
-      this.discover(addKid(this.state.world, this.rollSpawnType(), p.x, p.y, this.rng).type);
+      // Starting kids appear around the Garden, each on a free spot (D-039).
+      const p = this.freeSpot(garden.x + (this.rng.next() - 0.5) * 600, garden.y + 260 + this.rng.next() * 400);
+      if (p) this.discover(addKid(this.state.world, this.rollSpawnType(), p.x, p.y, this.rng, 0, this.radius).type);
     }
     this.state.rngState = this.rng.state;
   }
@@ -72,20 +74,45 @@ export class Game {
     return this.content.balance.spawn.capacity;
   }
 
+  /** Body radius for new kids; per-variant radii arrive with the art spec (ART-V2). */
+  private get radius(): number {
+    return this.content.balance.body.radius;
+  }
+
+  private freeSpot(x: number, y: number, ignore?: number): { x: number; y: number } | null {
+    return findFreeSpot(this.state.world, x, y, this.radius, ignore);
+  }
+
   /** Advances one fixed step. */
   step(commands: Command[], dt: number = STEP): GameEvent[] {
     const events: GameEvent[] = [];
-    this.applyCommands(commands, events);
+    const placed = this.applyCommands(commands, events);
     for (const kid of this.state.world.kids) kid.grace = Math.max(0, kid.grace - dt);
     stepWander(this.state.world, this.rng, this.content.balance.wander, dt);
+    // Touching recipe pairs fuse first, so a kid dropped onto its partner fuses
+    // rather than being pushed away.
     this.resolveFusions(events);
+    // A placed kid that didn't fuse slides to the nearest free spot instead of
+    // shoving others (D-039); then any remaining contact from wandering is separated.
+    for (const id of placed) {
+      const kid = this.state.world.kids.find((k) => k.id === id);
+      if (!kid) continue; // consumed by a fusion
+      const p = findFreeSpot(this.state.world, kid.x, kid.y, kid.radius, kid.id);
+      if (p) {
+        kid.x = p.x;
+        kid.y = p.y;
+      }
+    }
+    separate(this.state.world);
     this.advanceSpawn(dt, events);
     this.state.rngState = this.rng.state;
     return events;
   }
 
-  private applyCommands(commands: Command[], events: GameEvent[]): void {
+  /** Applies player commands; returns the ids of kids placed back on the ground. */
+  private applyCommands(commands: Command[], events: GameEvent[]): number[] {
     const { world } = this.state;
+    const placed: number[] = [];
     for (const c of commands) {
       const kid = world.kids.find((k) => k.id === c.kidId);
       if (!kid) continue; // e.g. consumed before the command arrived
@@ -94,27 +121,32 @@ export class Game {
         kid.idle = 0;
         events.push({ type: 'pickedUp', kidId: kid.id });
       } else {
-        const p = clampToBounds(world.bounds, c.x, c.y);
+        // The whole body stays inside the world (D-039), exactly as the scene previews it.
+        const p = clampToBounds(innerBounds(world.bounds, kid.radius), c.x, c.y);
         kid.x = p.x;
         kid.y = p.y;
         kid.held = false;
+        placed.push(kid.id);
         if (c.type === 'drop') events.push({ type: 'dropped', kidId: kid.id });
       }
     }
+    return placed;
   }
 
   /**
-   * Contact → fusion, per the plan's contact contract: candidates sorted by
-   * (distance, lower id, higher id); a kid consumed earlier in this step is
-   * skipped, so no kid can fuse twice.
+   * Contact → fusion (D-039): two kids touch when their bodies are within
+   * `rA + rB + touchSlack`. Candidates are sorted by (gap between bodies, lower id,
+   * higher id); a kid consumed earlier in this step is skipped, so no kid can fuse twice.
    */
   private resolveFusions(events: GameEvent[]): void {
     const { world } = this.state;
-    const r = this.content.balance.contactRadius;
+    const slack = this.content.balance.body.touchSlack;
     const eligible = world.kids.filter((k) => !k.held && k.grace === 0);
     const candidates: { d: number; a: Kid; b: Kid; result: KidId }[] = [];
+    // Cell size covers the largest possible touching distance, so only neighbouring cells can touch.
+    const r = Math.max(1, ...eligible.map((k) => k.radius)) * 2 + slack;
 
-    // Spatial hash with cell size = contact radius: only neighbouring cells can touch.
+    // Spatial hash: neighbouring cells only. The touch predicate below decides contact.
     const cells = new Map<string, Kid[]>();
     const cellOf = (k: Kid) => [Math.floor(k.x / r), Math.floor(k.y / r)] as const;
     for (const k of eligible) {
@@ -130,8 +162,9 @@ export class Game {
         for (let dy = -1; dy <= 1; dy++) {
           for (const b of cells.get(`${cx + dx},${cy + dy}`) ?? []) {
             if (b.id <= a.id) continue; // each pair once
-            const d = Math.hypot(a.x - b.x, a.y - b.y);
-            if (d > r) continue;
+            // Gap between the two bodies (negative while overlapping, e.g. right after a drop).
+            const d = Math.hypot(a.x - b.x, a.y - b.y) - a.radius - b.radius;
+            if (d > slack) continue;
             const result = this.recipes.get(pairKey(a.type, b.type));
             if (result) candidates.push({ d, a, b, result });
           }
@@ -146,7 +179,9 @@ export class Game {
       consumed.add(c.a.id);
       consumed.add(c.b.id);
       world.kids = world.kids.filter((k) => k.id !== c.a.id && k.id !== c.b.id);
-      const child = addKid(world, c.result, (c.a.x + c.b.x) / 2, (c.a.y + c.b.y) / 2, this.rng, this.content.balance.spawn.newbornGraceSeconds);
+      // Both parents just left, so there is always room near where they stood.
+      const at = this.freeSpot((c.a.x + c.b.x) / 2, (c.a.y + c.b.y) / 2) ?? { x: c.a.x, y: c.a.y };
+      const child = addKid(world, c.result, at.x, at.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, this.radius);
       const key = pairKey(c.a.type, c.b.type);
       const firstDiscovery = !this.state.discoveredRecipes.includes(key);
       if (firstDiscovery) this.state.discoveredRecipes.push(key);
@@ -168,19 +203,25 @@ export class Game {
       s.spawnProgress = Math.min(this.interval, raw);
       return;
     }
+    // Emerge just below the Garden, on the nearest free spot (D-039). No room at all
+    // counts as full: the spawn stays banked, exactly like reaching capacity.
+    const angle = this.rng.next() * Math.PI;
+    const p = this.freeSpot(this.garden.x + Math.cos(angle) * 120, this.garden.y + 160 + Math.sin(angle) * 60);
+    if (!p) {
+      s.spawnProgress = Math.min(this.interval, raw);
+      return;
+    }
     // Keep the overshoot so spawn timing doesn't drift with the step size.
     s.spawnProgress = Math.max(0, Math.min(this.interval, raw - this.interval));
-    const angle = this.rng.next() * Math.PI * 2;
-    const p = clampToBounds(s.world.bounds, this.garden.x + Math.cos(angle) * 60, this.garden.y + 40 + Math.abs(Math.sin(angle)) * 40);
-    const kid = addKid(s.world, this.rollSpawnType(), p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds);
+    const kid = addKid(s.world, this.rollSpawnType(), p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, this.radius);
     this.discover(kid.type);
     events.push({ type: 'spawned', kid });
   }
 
   /** Debug/test only: place a kid directly, bypassing the Garden and capacity. */
   debugAddKid(type: KidId, x: number, y: number): Kid {
-    const p = clampToBounds(this.state.world.bounds, x, y);
-    const kid = addKid(this.state.world, type, p.x, p.y, this.rng);
+    const p = this.freeSpot(x, y) ?? clampToBounds(this.state.world.bounds, x, y);
+    const kid = addKid(this.state.world, type, p.x, p.y, this.rng, 0, this.radius);
     this.discover(type);
     this.state.rngState = this.rng.state;
     return kid;

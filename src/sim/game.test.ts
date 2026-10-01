@@ -17,7 +17,7 @@ function testContent(overrides: Partial<Content['balance']['spawn']> = {}): Cont
 }
 
 function place(game: Game, type: string, x: number, y: number) {
-  return addKid(game.state.world, type, x, y, createRng(0));
+  return addKid(game.state.world, type, x, y, createRng(0), 0, content.balance.body.radius);
 }
 
 function run(game: Game, seconds: number): GameEvent[] {
@@ -37,26 +37,26 @@ describe('fusion', () => {
     expect(fused).toMatchObject({ type: 'fused', firstDiscovery: true });
   });
 
-  it('uses ground-point distance as the contact predicate, inclusive at the radius (D-030)', () => {
-    const r = content.balance.contactRadius;
-    // Exactly at the radius: contact.
+  it('fuses only when bodies touch: gap <= touchSlack (D-039)', () => {
+    const { radius: r, touchSlack } = content.balance.body;
+    // Bodies exactly touching (gap 0): contact.
     const at = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
     place(at, 'plain', 300, 300);
-    place(at, 'water', 300 + r, 300);
+    place(at, 'water', 300 + 2 * r, 300);
     at.step([]);
     expect(at.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
-    // Just beyond the radius but in an adjacent spatial-hash cell: no contact.
+    // Gap exactly touchSlack: still contact.
+    const slackGap = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
+    place(slackGap, 'plain', 300, 300);
+    place(slackGap, 'water', 300 + 2 * r + touchSlack, 300);
+    slackGap.step([]);
+    expect(slackGap.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
+    // Just beyond: no contact, both stay.
     const beyond = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
     place(beyond, 'plain', 300, 300);
-    place(beyond, 'water', 300 + r + 0.5, 300);
+    place(beyond, 'water', 300 + 2 * r + touchSlack + 0.5, 300);
     beyond.step([]);
     expect(beyond.state.world.kids.map((k) => k.type).sort()).toEqual(['plain', 'water']);
-    // Diagonal neighbours whose cells touch but whose distance exceeds the radius: no contact.
-    const diag = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
-    place(diag, 'plain', 300, 300);
-    place(diag, 'water', 300 + r * 0.8, 300 + r * 0.8);
-    diag.step([]);
-    expect(diag.state.world.kids).toHaveLength(2);
   });
 
   it('does nothing for a pair with no recipe', () => {
@@ -179,7 +179,8 @@ describe('spawning', () => {
   });
 
   it('only spawns types from the spawn pool', () => {
-    const game = new Game(testContent({ intervalSeconds: 1, capacity: 500 }), bounds, garden, 9);
+    const roomy = { minX: 0, minY: 0, maxX: 4000, maxY: 4000 };
+    const game = new Game(testContent({ intervalSeconds: 1, capacity: 500 }), roomy, garden, 9);
     const types = new Set(run(game, 200).flatMap((e) => (e.type === 'spawned' ? [e.kid.type] : [])));
     expect([...types].sort()).toEqual(['fire', 'plain', 'snow', 'water']);
   });
@@ -191,5 +192,70 @@ describe('spawning', () => {
     run(a, 120);
     run(b, 120);
     expect(a.state).toEqual(b.state);
+  });
+});
+
+describe('no overlap (D-039)', () => {
+  function minGap(game: Game): number {
+    const ks = game.state.world.kids.filter((k) => !k.held);
+    let min = Infinity;
+    for (let i = 0; i < ks.length; i++) {
+      for (let j = i + 1; j < ks.length; j++) {
+        const a = ks[i]!;
+        const b = ks[j]!;
+        min = Math.min(min, Math.hypot(a.x - b.x, a.y - b.y) - a.radius - b.radius);
+      }
+    }
+    return min;
+  }
+
+  it('never lets grounded kids overlap while a busy map runs', () => {
+    const big = { minX: 0, minY: 0, maxX: 2160, maxY: 3840 };
+    const c = structuredClone(content);
+    c.balance.spawn = { ...c.balance.spawn, capacity: 40, startingKids: 12, intervalSeconds: 2 };
+    const game = new Game(c, big, { x: 1080, y: 300 }, 21);
+    for (let s = 0; s < 3000; s++) {
+      game.step([]);
+      expect(minGap(game)).toBeGreaterThanOrEqual(-1e-3);
+    }
+  });
+
+  it('a kid dropped onto a non-partner slides to a free spot instead of overlapping', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
+    const fire = place(game, 'fire', 500, 500);
+    const snow = place(game, 'snow', 200, 200); // fire + snow is not a recipe
+    game.step([{ type: 'pickUp', kidId: snow.id }]);
+    game.step([{ type: 'drop', kidId: snow.id, x: 505, y: 500 }]);
+    expect(game.state.world.kids).toHaveLength(2);
+    expect(minGap(game)).toBeGreaterThanOrEqual(-1e-3);
+    // The kid that was already there didn't get shoved.
+    expect(fire.x).toBe(500);
+    expect(fire.y).toBe(500);
+  });
+
+  it('a kid dropped onto its recipe partner fuses', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
+    place(game, 'water', 500, 500);
+    const plain = place(game, 'plain', 200, 200);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    game.step([{ type: 'drop', kidId: plain.id, x: 505, y: 500 }]);
+    expect(game.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
+  });
+
+  it('spawns land on free spots even when the Garden area is crowded', () => {
+    const game = new Game(testContent({ intervalSeconds: 1, capacity: 30 }), bounds, garden, 4);
+    for (let s = 0; s < 400; s++) game.step([]);
+    expect(game.state.world.kids.length).toBeGreaterThan(20);
+    expect(minGap(game)).toBeGreaterThanOrEqual(-1e-3);
+  });
+
+  it('when there is no room left, spawning waits with the spawn banked', () => {
+    const tiny = { minX: 0, minY: 0, maxX: 300, maxY: 300 };
+    const game = new Game(testContent({ intervalSeconds: 1, capacity: 50 }), tiny, { x: 150, y: 0 }, 2);
+    for (let s = 0; s < 200; s++) game.step([]);
+    // Only a handful of 60-radius bodies fit in 300 x 300; the rest is waiting, not overlapping.
+    expect(game.state.world.kids.length).toBeLessThan(10);
+    expect(game.state.spawnProgress).toBe(1);
+    expect(minGap(game)).toBeGreaterThanOrEqual(-1e-3);
   });
 });

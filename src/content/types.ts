@@ -34,11 +34,18 @@ export interface SpawnBalance {
   newbornGraceSeconds: number;
 }
 
+export interface BodyBalance {
+  /** Default body radius around the ground point, world units, until art variants supply their own. */
+  radius: number;
+  /** Bodies within `rA + rB + touchSlack` are touching, which is what triggers a recipe. */
+  touchSlack: number;
+}
+
 export interface Balance {
   spawnWeights: Record<KidId, number>;
   spawn: SpawnBalance;
-  /** Two kids closer than this (ground point to ground point, world units) are in contact. */
-  contactRadius: number;
+  /** Body footprint and contact (D-039). */
+  body: BodyBalance;
   wander: WanderBalance;
 }
 

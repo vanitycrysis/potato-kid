@@ -1,32 +1,37 @@
-import { Application, Container, FederatedPointerEvent, Graphics, Sprite, type Texture } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, type Texture } from 'pixi.js';
 import type { Content } from '../content/types';
 import { Game, type Command, type GameEvent } from '../sim/game';
-import { createRng } from '../sim/rng';
 import { clampToBounds, STEP, type Bounds, type Kid } from '../sim/world';
+import { innerBounds } from '../sim/space';
 import { KidView } from './kidView';
 import type { Art } from './art';
 import { buildPlaceholderTextures } from './placeholderArt';
 
-/** World layout (ENGINEERING_PLAN.md §5): 1080 wide, 1920 safe band, 240 bleed above and below. */
-export const WORLD_WIDTH = 1080;
-export const SAFE_HEIGHT = 1920;
-export const BLEED = 240;
-const HUD_TOP = 160;
-const TRAY_BOTTOM = 280;
-const SIDE_MARGIN = 70;
+/**
+ * Scrollable world (D-040): about 2 × 2 portrait screens. The camera shows a
+ * 1080-unit-wide window on portrait phones and pans over the rest.
+ */
+export const WORLD_WIDTH = 2160;
+export const WORLD_HEIGHT = 3840;
+/** Width of world shown across a portrait screen; height follows the screen's aspect. */
+const VIEW_WIDTH = 1080;
+/** On short/landscape screens, at least this much world height stays visible. */
+const VIEW_MIN_HEIGHT = 1920;
 
-export const PLAY_BOUNDS: Bounds = {
-  minX: SIDE_MARGIN,
-  minY: HUD_TOP + 300, // below the Garden and leaving room for a kid's height
-  maxX: WORLD_WIDTH - SIDE_MARGIN,
-  maxY: SAFE_HEIGHT - TRAY_BOTTOM,
-};
+/** The Garden sits near the top centre of the world; kids emerge just below it. */
+export const GARDEN = { x: WORLD_WIDTH / 2, y: 360 };
 
-/** The Garden sits top-centre; kids emerge just below it. */
-export const GARDEN = { x: WORLD_WIDTH / 2, y: HUD_TOP + 200 };
+/** Where kids can be: the whole world below the Garden (bodies stay inside, D-039). */
+export const PLAY_BOUNDS: Bounds = { minX: 0, minY: GARDEN.y + 120, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT };
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
 const HOLD_LIFT = 70;
+/** Dragging a kid within this many CSS px of a screen edge scrolls the map that way. */
+const EDGE_ZONE = 56;
+/** Edge auto-scroll speed at the very edge, world units per second. */
+const EDGE_SPEED = 1100;
+/** Pan inertia decay rate per second (higher stops sooner). */
+const PAN_FRICTION = 6;
 
 interface Prev {
   x: number;
@@ -57,6 +62,12 @@ export class MapScene {
   private readonly textures: Map<string, Texture>;
   private readonly pending: Command[] = [];
   private drag: Drag | undefined;
+  /** Last screen position of the dragging pointer, so edge scroll can keep the kid under it. */
+  private dragScreen = { x: 0, y: 0 };
+  /** Camera: world point at the screen's top-left, and world → CSS px scale. */
+  private cam = { x: 0, y: 0, zoom: 1 };
+  private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
+  private panVelocity = { x: 0, y: 0 };
   /**
    * Kids released by the player whose drop/cancel the sim hasn't applied yet,
    * with where to keep drawing them meanwhile. Without this a released kid would
@@ -69,34 +80,31 @@ export class MapScene {
     private readonly app: Application,
     content: Content,
     seed: number,
-    art: Art = { kids: new Map(), map: undefined },
+    art: Art = { kids: new Map() },
   ) {
     this.game = new Game(content, PLAY_BOUNDS, GARDEN, seed);
     // Real art wins per asset; anything not yet delivered stays a placeholder.
     this.textures = buildPlaceholderTextures(app.renderer, content.kids);
     for (const [name, tex] of art.kids) this.textures.set(name, tex);
-    this.camera.addChild(drawPlaceholderBackground());
-    if (art.map) {
-      // The 1080 × 2400 plate: safe band y = 240..2160 maps to world y = 0..1920.
-      const map = new Sprite(art.map);
-      map.position.set(0, -BLEED);
-      map.setSize(WORLD_WIDTH, SAFE_HEIGHT + BLEED * 2);
-      this.camera.addChild(map);
-    }
-    this.camera.addChild(drawPlaceholderGarden(), this.kidLayer);
+    // Plain ground until Codex's map tiles and decor arrive (D-040, D-036).
+    this.camera.addChild(drawGround(), drawPlaceholderGarden(), this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
     app.stage.eventMode = 'static';
     app.stage.hitArea = app.screen;
+    // A press on empty ground pans the map; a press on a kid picks it up (the kid
+    // handler stops propagation, so this only sees ground presses).
+    app.stage.on('pointerdown', (e) => this.startPan(e));
     app.stage.on('globalpointermove', (e) => this.onPointerMove(e));
-    app.stage.on('pointerup', (e) => this.endDrag(e, 'drop'));
-    app.stage.on('pointerupoutside', (e) => this.endDrag(e, 'drop'));
-    app.stage.on('pointercancel', (e) => this.endDrag(e, 'cancelDrag'));
+    app.stage.on('pointerup', (e) => this.endPointer(e, 'drop'));
+    app.stage.on('pointerupoutside', (e) => this.endPointer(e, 'drop'));
+    app.stage.on('pointercancel', (e) => this.endPointer(e, 'cancelDrag'));
     // Pixi doesn't forward a native pointercancel (e.g. the OS taking over a touch) to the
     // stage, which would leave the kid held forever (Codex review, PR #5).
     app.canvas.addEventListener('pointercancel', (e) => {
       if (this.drag && e.pointerId === this.drag.pointerId) this.cancelActiveDrag();
+      if (this.pan && e.pointerId === this.pan.pointerId) this.pan = undefined;
     });
     // Leaving the app mid-drag counts as a cancelled touch (plan §2).
     document.addEventListener('visibilitychange', () => {
@@ -104,6 +112,7 @@ export class MapScene {
     });
 
     this.layout();
+    this.centerOn(GARDEN.x, GARDEN.y + 700);
     app.renderer.on('resize', () => this.layout());
     app.ticker.add((t) => this.frame(t.deltaMS / 1000));
   }
@@ -129,26 +138,71 @@ export class MapScene {
     return { x: p.x, y: p.y };
   }
 
+  /** Moves the camera so world (x, y) is at the centre of the screen (clamped to the world). */
+  centerOn(x: number, y: number): void {
+    const { width, height } = this.app.screen;
+    this.cam.x = x - width / this.cam.zoom / 2;
+    this.cam.y = y - height / this.cam.zoom / 2;
+    this.applyCamera();
+  }
+
   /**
-   * Fits the whole 1080 × 1920 safe band on screen and centres it. On phones in
-   * portrait the width is the limit (the usual case); on short or landscape
-   * viewports the height is, and the background bleed fills the sides. This
-   * keeps every playable position visible (Codex review, PR #4).
+   * Zoom shows 1080 world units across a portrait screen; short or landscape screens
+   * zoom out so at least 1920 units of height stay visible.
    */
   private layout(): void {
     const { width, height } = this.app.screen;
-    const scale = Math.min(width / WORLD_WIDTH, height / SAFE_HEIGHT);
-    this.camera.scale.set(scale);
-    this.camera.x = (width - WORLD_WIDTH * scale) / 2;
-    this.camera.y = (height - SAFE_HEIGHT * scale) / 2;
+    const centre = { x: this.cam.x + width / this.cam.zoom / 2, y: this.cam.y + height / this.cam.zoom / 2 };
+    this.cam.zoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
     this.app.stage.hitArea = this.app.screen;
+    this.centerOn(centre.x, centre.y);
+  }
+
+  /** Keeps the view inside the world (centred if the world is smaller than the view). */
+  private applyCamera(): void {
+    const { width, height } = this.app.screen;
+    const z = this.cam.zoom;
+    const vw = width / z;
+    const vh = height / z;
+    this.cam.x = vw >= WORLD_WIDTH ? (WORLD_WIDTH - vw) / 2 : Math.min(WORLD_WIDTH - vw, Math.max(0, this.cam.x));
+    this.cam.y = vh >= WORLD_HEIGHT ? (WORLD_HEIGHT - vh) / 2 : Math.min(WORLD_HEIGHT - vh, Math.max(0, this.cam.y));
+    this.camera.scale.set(z);
+    this.camera.position.set(-this.cam.x * z, -this.cam.y * z);
+  }
+
+  // --- Panning -------------------------------------------------------------
+
+  private startPan(e: FederatedPointerEvent): void {
+    if (this.drag || this.pan) return;
+    this.panVelocity = { x: 0, y: 0 };
+    this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
+  }
+
+  private movePan(e: FederatedPointerEvent): void {
+    const pan = this.pan!;
+    const dx = e.global.x - pan.lastX;
+    const dy = e.global.y - pan.lastY;
+    const now = performance.now();
+    const dt = Math.max(1, now - pan.lastT) / 1000;
+    // Smoothed finger velocity in world units per second, for the release fling.
+    pan.vx = pan.vx * 0.6 + (-dx / this.cam.zoom / dt) * 0.4;
+    pan.vy = pan.vy * 0.6 + (-dy / this.cam.zoom / dt) * 0.4;
+    pan.lastX = e.global.x;
+    pan.lastY = e.global.y;
+    pan.lastT = now;
+    this.cam.x -= dx / this.cam.zoom;
+    this.cam.y -= dy / this.cam.zoom;
+    this.applyCamera();
   }
 
   private addView(kid: Kid): KidView {
     const view = new KidView(kid, this.textures);
     view.root.eventMode = 'static';
     view.root.cursor = 'grab';
-    view.root.on('pointerdown', (e) => this.startDrag(kid.id, e));
+    view.root.on('pointerdown', (e) => {
+      e.stopPropagation(); // a kid press is a pickup, never a pan
+      this.startDrag(kid.id, e);
+    });
     this.views.set(kid.id, view);
     this.prev.set(kid.id, { x: kid.x, y: kid.y });
     this.kidLayer.addChild(view.root);
@@ -170,7 +224,9 @@ export class MapScene {
   }
 
   private startDrag(kidId: number, e: FederatedPointerEvent): void {
-    if (this.drag) return; // one kid at a time; a second finger is ignored
+    if (this.drag || this.pan) return; // one gesture at a time; a second finger is ignored
+    this.panVelocity = { x: 0, y: 0 };
+    this.dragScreen = { x: e.global.x, y: e.global.y };
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     if (!kid) return;
     const w = this.toWorld(e);
@@ -184,10 +240,25 @@ export class MapScene {
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
+    if (this.pan && e.pointerId === this.pan.pointerId) {
+      this.movePan(e);
+      return;
+    }
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    this.dragScreen = { x: e.global.x, y: e.global.y };
     const w = this.toWorld(e);
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
+  }
+
+  private endPointer(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
+    if (this.pan && e.pointerId === this.pan.pointerId) {
+      // Fling: keep coasting with the finger's last velocity unless the gesture was cancelled.
+      this.panVelocity = kind === 'drop' ? { x: this.pan.vx, y: this.pan.vy } : { x: 0, y: 0 };
+      this.pan = undefined;
+      return;
+    }
+    this.endDrag(e, kind);
   }
 
   private endDrag(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
@@ -213,24 +284,24 @@ export class MapScene {
     // Draw the kid exactly where the command puts it (the release point for a drop,
     // the start for a cancel) until the sim applies it (Codex review, PR #5).
     // Clamped exactly as the sim will clamp it, so the preview never jumps on landing.
-    this.placing.set(this.drag.kidId, clampToBounds(PLAY_BOUNDS, cmd.x, cmd.y));
+    const radius = this.game.state.world.kids.find((k) => k.id === cmd.kidId)?.radius ?? 0;
+    this.placing.set(this.drag.kidId, clampToBounds(innerBounds(PLAY_BOUNDS, radius), cmd.x, cmd.y));
     this.drag = undefined;
   }
 
   // --- Frame loop --------------------------------------------------------
 
   private frame(dt: number): void {
+    this.updateCamera(dt);
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are
     // offline catch-up's job (M3), not the frame loop's.
     this.acc += Math.min(dt, 0.25);
     while (this.acc >= STEP) {
       for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
       const events = this.game.step(this.pending.splice(0));
-      // Placed kids start their interpolation from where they were put down.
-      for (const id of this.placing.keys()) {
-        const k = this.game.state.world.kids.find((kid) => kid.id === id);
-        if (k) this.prev.set(id, { x: k.x, y: k.y });
-      }
+      // Placed kids interpolate from where they were put down, so a kid that had to
+      // slide off an occupied spot (D-039) visibly slides instead of teleporting.
+      for (const [id, at] of this.placing) this.prev.set(id, at);
       this.placing.clear();
       for (const e of events) this.handle(e);
       this.acc -= STEP;
@@ -250,6 +321,37 @@ export class MapScene {
       }
       const p = this.prev.get(k.id) ?? k;
       view.update(p.x + (k.x - p.x) * alpha, p.y + (k.y - p.y) * alpha, k.idle === 0 && !k.held, Math.cos(k.heading), dt);
+    }
+  }
+
+  /** Pan inertia, and edge auto-scroll while a kid is held near a screen edge. */
+  private updateCamera(dt: number): void {
+    const step = Math.min(dt, 0.1);
+    if (this.drag) {
+      const { width, height } = this.app.screen;
+      const edge = (pos: number, size: number) =>
+        pos < EDGE_ZONE ? -(1 - pos / EDGE_ZONE) : pos > size - EDGE_ZONE ? 1 - (size - pos) / EDGE_ZONE : 0;
+      const ex = edge(this.dragScreen.x, width);
+      const ey = edge(this.dragScreen.y, height);
+      if (ex || ey) {
+        this.cam.x += ex * EDGE_SPEED * step;
+        this.cam.y += ey * EDGE_SPEED * step;
+        this.applyCamera();
+        // The map moved under a still finger: keep the held kid under it.
+        const w = this.camera.toLocal(this.dragScreen);
+        this.drag.x = w.x;
+        this.drag.y = w.y - HOLD_LIFT;
+      }
+      return;
+    }
+    if (!this.pan && (this.panVelocity.x || this.panVelocity.y)) {
+      this.cam.x += this.panVelocity.x * step;
+      this.cam.y += this.panVelocity.y * step;
+      this.applyCamera();
+      const decay = Math.exp(-PAN_FRICTION * step);
+      this.panVelocity.x *= decay;
+      this.panVelocity.y *= decay;
+      if (Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5) this.panVelocity = { x: 0, y: 0 };
     }
   }
 
@@ -273,19 +375,9 @@ export class MapScene {
   }
 }
 
-/** Stand-in for ChatGPT's garden plate: cream ground, sage blobs in the bleed and margins. */
-function drawPlaceholderBackground(): Graphics {
-  const g = new Graphics();
-  // Generous side bleed for landscape / wide viewports (fit-by-height).
-  g.rect(-WORLD_WIDTH * 2, -BLEED, WORLD_WIDTH * 5, SAFE_HEIGHT + BLEED * 2).fill('#f4efe2');
-  const rng = createRng(2024);
-  for (let i = 0; i < 26; i++) {
-    const edge = rng.next() < 0.5;
-    const x = edge ? (rng.next() < 0.5 ? rng.next() * 60 : WORLD_WIDTH - rng.next() * 60) : rng.next() * WORLD_WIDTH;
-    const y = edge ? rng.next() * SAFE_HEIGHT : rng.next() < 0.5 ? -BLEED + rng.next() * 380 : SAFE_HEIGHT - 140 + rng.next() * 380;
-    g.ellipse(x, y, 30 + rng.next() * 40, 16 + rng.next() * 20).fill({ color: '#b9c9a3', alpha: 0.6 });
-  }
-  return g;
+/** Flat ground across the world until Codex's tiles and decor arrive (not art: a single fill). */
+function drawGround(): Graphics {
+  return new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill('#f4efe2');
 }
 
 /** Stand-in for `building_garden`: a doodle soil mound with sprouts. */
