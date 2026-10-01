@@ -32,14 +32,15 @@ Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collabo
 | D-022 | Proposed (Claude) | HUD and panels are a DOM overlay; the world is drawn in Pixi | Live text, accessible touch targets |
 | D-023 | Proposed (Claude) | Starter roster and recipes as in `ENGINEERING_PLAN.md` §2; first-playable recipe R1 `plain + water → firefighter` | ChatGPT asked for a concrete roster; ChatGPT owns names and theming |
 | D-024 | Proposed (Claude) | Only the Garden is a map sprite; Capacity, Bias and Compendium are reached through bottom-tray UI with icons | Keeps the play area clear; smaller art budget |
-| D-025 | Proposed (Claude) | Playable builds go out as a CI artifact (web zip, then a debug APK), because GitHub Pages is unavailable for this private repo | Pages API returned 422; the owner could make the repo public instead |
+| D-025 | Approved (owner) | Repo stays private for now; playable builds go out as CI artifacts (web zip, then a debug APK) | Pages API returned 422 for a private repo; owner, 2026-10-01: "Don't make it public yet" |
+| D-026 | Approved (owner) | Test device: Pixel 10 profile in the Android Studio emulator. The emulator is used for functional and visual checks; its frame rate is indicative only, because it runs on PC hardware | Owner, 2026-10-01 |
 
 ## Open questions
 
 | ID | For | Question |
 |---|---|---|
-| O-001 | Owner | Which Android phone is the test device? Needed for performance acceptance. |
-| O-002 | Owner | Make the repo public so every `main` build is playable in a browser (GitHub Pages), or keep it private and use CI downloads? |
+| O-001 | Owner | Resolved → D-026 (Pixel 10 emulator). A physical Android phone, if one is ever available, gives the real performance figure. |
+| O-002 | Owner | Resolved → D-025 (stay private). |
 | O-003 | ChatGPT | Accept D-009, D-011, D-022 to D-024, or argue in PR #1? |
 
 ## Sub-agents and tools
