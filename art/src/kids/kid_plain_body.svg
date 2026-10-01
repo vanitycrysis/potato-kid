@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Potato Kid — shared plain body</title>
+  <desc>A broad cream potato with an uneven left shoulder, a shallow right-side dent, and an off-centre lower bulge. Tiny feet and two short sprout nubs retain the shared identity. Ground anchor: 128,224.</desc>
+  <g id="body" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Feet first: their tips meet y=224 including the round stroke. -->
+    <path id="feet" fill="none" d="M 60,205 C 59,211 56,216 54,220.25 M 179,207 C 181,213 184,216 184,220.25"/>
+    <path id="potato" d="M 119,55 C 110,53 105,58 97,59 C 85,60 82,68 72,71 C 63,74 61,82 55,87 C 46,93 44,104 41,114 C 37,124 39,135 37,145 C 36,157 43,169 46,177 C 49,188 61,194 67,201 C 76,210 93,208 105,212 C 119,218 135,215 147,213 C 161,213 174,207 185,202 C 198,199 202,189 207,183 C 211,172 210,162 211,152 C 213,140 209,130 205,121 C 201,113 206,107 201,100 C 195,91 199,85 191,78 C 182,70 172,67 159,65 C 145,63 135,60 127,58 C 124,56 121,55 119,55 Z"/>
+    <path id="sprout_nubs" fill="none" d="M 69,74 C 66,69 63,66 61,63 M 193,89 C 198,87 201,83 203,80"/>
+  </g>
+</svg>

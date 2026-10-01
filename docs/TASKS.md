@@ -35,6 +35,8 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 | COMPOSITE | Claude | Layered kids, procedural wander, content validator | **done** (PR #4) | — |
 | BUILD-PLAYABLE | Claude | Spawn, wander, drag and drop, R1 `plain + water → firefighter`, debug APK | review (PR #5) | Codex review; e2e drag-to-fuse passes (done locally) |
 | ART-STYLE | ChatGPT | Plain, Fire, Water, Firefighter, garden map; 48/64/96 px and crowded previews | doing (Codex, `chatgpt/art-style`) | Claude review passes |
+| ART-V2-SPEC | ChatGPT | Art direction v2 spec | **done**: Claude review accepted; boundsPx counterproposal accepted | Collision-shape counterproposal settled in .codex-out/v2-review-response.md |
+| ART-V2-SLICE | ChatGPT | v2 sample slice + placeholders for all types without final art | review: authored SVG/JSON delivered, rendered validation pending | Claude validates and reviews; then owner sees it for gate 2 |
 | GATE-2 | Owner | Approve the art style | todo | Explicit approval |
 | ASSET-PLAYABLE | ChatGPT | R1 kids, Garden, basic UI, shared effects, essential cues | todo | Claude review passes |
 | GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | todo | Explicit approval |

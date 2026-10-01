@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Fire Kid — rising rear flame</title>
+  <desc>One asymmetric flame mass rises behind the top centre of the shared potato. Unequal curling tongues stay away from the side nubs, avoiding a paired-ear silhouette.</desc>
+  <g id="flame_tips" fill="#e8a06b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <path id="rising_flame" d="M 75,89 C 73,77 77,66 85,58 C 92,51 96,46 95,40 C 103,43 109,50 110,57 C 113,43 119,36 126,30 C 134,23 138,20 139,16 C 147,29 145,40 140,48 C 151,46 161,39 164,31 C 176,43 178,60 171,72 C 177,69 181,63 182,57 C 190,78 182,93 167,105 L 94,107 C 85,103 78,98 75,89 Z"/>
+  </g>
+</svg>

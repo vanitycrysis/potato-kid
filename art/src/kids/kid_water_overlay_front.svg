@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Water Kid — open droplet hood</title>
+  <desc>A single smooth droplet point and rounded side lobes frame an open face window. The window is transparent, exposing the shared body and face.</desc>
+  <path id="droplet_hood" d="M 128,19 C 133,34 144,46 160,62 C 183,84 203,104 210,127 C 214,140 211,154 205,164 C 201,171 195,174 188,173 C 182,170 178,163 182,154 C 187,139 187,119 177,104 C 165,87 147,81 129,81 C 110,82 91,87 77,103 C 66,119 64,138 69,153 C 72,163 73,170 67,174 C 59,175 51,171 47,164 C 40,152 39,139 43,126 C 50,103 71,83 94,62 C 111,47 124,33 128,19 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path id="water_glint" d="M 143,59 C 149,64 155,70 159,76" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

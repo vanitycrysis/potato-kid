@@ -1,0 +1,1774 @@
+{
+  "schemaVersion": 2,
+  "revision": "v2-slice-1",
+  "status": "style_sample",
+  "delivery": {
+    "scope": "sample_slice",
+    "deferredAssets": [
+      "landmark_pebble_patch",
+      "landmark_picnic_stump"
+    ],
+    "note": "Full deterministic tiled world and route; landmarks absent and unreserved. All six small decor sources delivered."
+  },
+  "worldSize": [
+    2160,
+    3840
+  ],
+  "tileSize": 256,
+  "seed": 20261001,
+  "groundRules": {
+    "origin": [
+      0,
+      0
+    ],
+    "edgeBandPx": 16,
+    "fringeWidthWorld": 160,
+    "classifyBy": "cell_centre",
+    "fringeWeights": {
+      "ground_sage": 65,
+      "ground_cream": 25,
+      "ground_speckle": 10
+    },
+    "interiorWeights": {
+      "ground_cream": 90,
+      "ground_speckle": 10
+    },
+    "rotationDeg": 0,
+    "clipPartialEdgeCells": true,
+    "selection": "explicit groundCells are authoritative; weights explain authored seeded selection"
+  },
+  "groundAssets": [
+    "ground_cream",
+    "ground_sage",
+    "ground_speckle"
+  ],
+  "groundCells": [
+    {
+      "col": 0,
+      "row": 0,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 0,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 2,
+      "row": 0,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 0,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 4,
+      "row": 0,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 0,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 6,
+      "row": 0,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 7,
+      "row": 0,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 0,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 1,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 1,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 0,
+      "row": 2,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 2,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 0,
+      "row": 3,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 3,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 3,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 0,
+      "row": 4,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 4,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 4,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 0,
+      "row": 5,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 5,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 5,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 3,
+      "row": 5,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 5,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 5,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 5,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 5,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 5,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 6,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 1,
+      "row": 6,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 6,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 6,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 6,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 6,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 6,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 6,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 8,
+      "row": 6,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 1,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 7,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 7,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 0,
+      "row": 8,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 8,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 7,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 8,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 0,
+      "row": 9,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 1,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 9,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 9,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 1,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 10,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 6,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 10,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 10,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 11,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 11,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 2,
+      "row": 11,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 11,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 11,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 5,
+      "row": 11,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 11,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 11,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 11,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 12,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 2,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 12,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 12,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 13,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 1,
+      "row": 13,
+      "asset": "ground_speckle"
+    },
+    {
+      "col": 2,
+      "row": 13,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 3,
+      "row": 13,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 4,
+      "row": 13,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 13,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 6,
+      "row": 13,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 7,
+      "row": 13,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 8,
+      "row": 13,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 0,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 1,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 2,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 3,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 4,
+      "row": 14,
+      "asset": "ground_cream"
+    },
+    {
+      "col": 5,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 6,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 7,
+      "row": 14,
+      "asset": "ground_sage"
+    },
+    {
+      "col": 8,
+      "row": 14,
+      "asset": "ground_sage"
+    }
+  ],
+  "pathGridOrigin": [
+    56,
+    0
+  ],
+  "pathAssets": {
+    "path_straight": {
+      "ports": [
+        "N",
+        "S"
+      ],
+      "edgeIntervalsPx": {
+        "N": [
+          92,
+          164
+        ],
+        "S": [
+          92,
+          164
+        ]
+      }
+    },
+    "path_bend": {
+      "ports": [
+        "N",
+        "E"
+      ],
+      "edgeIntervalsPx": {
+        "N": [
+          92,
+          164
+        ],
+        "E": [
+          92,
+          164
+        ]
+      }
+    },
+    "path_fork": {
+      "ports": [
+        "N",
+        "E",
+        "W"
+      ],
+      "edgeIntervalsPx": {
+        "N": [
+          92,
+          164
+        ],
+        "E": [
+          92,
+          164
+        ],
+        "W": [
+          92,
+          164
+        ]
+      }
+    }
+  },
+  "pathCells": [
+    {
+      "col": 4,
+      "row": 3,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": true
+    },
+    {
+      "col": 4,
+      "row": 4,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 4,
+      "row": 5,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 4,
+      "row": 6,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 4,
+      "row": 7,
+      "asset": "path_bend",
+      "rotationDeg": 270,
+      "ports": [
+        "W",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 3,
+      "row": 7,
+      "asset": "path_fork",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "W",
+        "E"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 3,
+      "row": 8,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 3,
+      "row": 9,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 3,
+      "row": 10,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 3,
+      "row": 11,
+      "asset": "path_bend",
+      "rotationDeg": 0,
+      "ports": [
+        "N",
+        "E"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 4,
+      "row": 11,
+      "asset": "path_straight",
+      "rotationDeg": 270,
+      "ports": [
+        "W",
+        "E"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 5,
+      "row": 11,
+      "asset": "path_bend",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "W"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 5,
+      "row": 12,
+      "asset": "path_straight",
+      "rotationDeg": 180,
+      "ports": [
+        "S",
+        "N"
+      ],
+      "openEndpoint": true
+    },
+    {
+      "col": 2,
+      "row": 7,
+      "asset": "path_straight",
+      "rotationDeg": 270,
+      "ports": [
+        "W",
+        "E"
+      ],
+      "openEndpoint": false
+    },
+    {
+      "col": 1,
+      "row": 7,
+      "asset": "path_straight",
+      "rotationDeg": 270,
+      "ports": [
+        "W",
+        "E"
+      ],
+      "openEndpoint": true
+    }
+  ],
+  "instances": [
+    {
+      "id": "garden",
+      "asset": "building_garden",
+      "status": "style_sample",
+      "worldGround": [
+        1080,
+        620
+      ],
+      "sourcePivot": [
+        256,
+        480
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 300,
+      "drawOrder": 20,
+      "boundsPx": [
+        72,
+        32,
+        440,
+        480
+      ]
+    },
+    {
+      "id": "perimeter_left_00",
+      "asset": "decor_tuft",
+      "status": "style_sample",
+      "worldGround": [
+        96,
+        220
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_00",
+      "asset": "decor_tuft",
+      "status": "style_sample",
+      "worldGround": [
+        2064,
+        220
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_01",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        124,
+        440
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_01",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        2036,
+        440
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_02",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        152,
+        660
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_02",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        2008,
+        660
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_03",
+      "asset": "decor_pebble",
+      "status": "style_sample",
+      "worldGround": [
+        96,
+        880
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_03",
+      "asset": "decor_pebble",
+      "status": "style_sample",
+      "worldGround": [
+        2064,
+        880
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_04",
+      "asset": "decor_twig",
+      "status": "style_sample",
+      "worldGround": [
+        124,
+        1100
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_04",
+      "asset": "decor_twig",
+      "status": "style_sample",
+      "worldGround": [
+        2036,
+        1100
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_05",
+      "asset": "decor_mushroom",
+      "status": "style_sample",
+      "worldGround": [
+        152,
+        1320
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_06",
+      "asset": "decor_tuft",
+      "status": "style_sample",
+      "worldGround": [
+        96,
+        1540
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_06",
+      "asset": "decor_tuft",
+      "status": "style_sample",
+      "worldGround": [
+        2064,
+        1540
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_07",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        124,
+        1760
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_07",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        2036,
+        1760
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_08",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        152,
+        1980
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_08",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        2008,
+        1980
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_09",
+      "asset": "decor_pebble",
+      "status": "style_sample",
+      "worldGround": [
+        96,
+        2200
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_09",
+      "asset": "decor_pebble",
+      "status": "style_sample",
+      "worldGround": [
+        2064,
+        2200
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_10",
+      "asset": "decor_twig",
+      "status": "style_sample",
+      "worldGround": [
+        124,
+        2420
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_10",
+      "asset": "decor_twig",
+      "status": "style_sample",
+      "worldGround": [
+        2036,
+        2420
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_11",
+      "asset": "decor_mushroom",
+      "status": "style_sample",
+      "worldGround": [
+        2008,
+        2640
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_12",
+      "asset": "decor_tuft",
+      "status": "style_sample",
+      "worldGround": [
+        96,
+        2860
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_12",
+      "asset": "decor_tuft",
+      "status": "style_sample",
+      "worldGround": [
+        2064,
+        2860
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_13",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        124,
+        3080
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_14",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        152,
+        3300
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_14",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        2008,
+        3300
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_left_15",
+      "asset": "decor_pebble",
+      "status": "style_sample",
+      "worldGround": [
+        96,
+        3520
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "perimeter_right_15",
+      "asset": "decor_pebble",
+      "status": "style_sample",
+      "worldGround": [
+        2064,
+        3520
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 10,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "accent_0",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        300,
+        860
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 11,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "accent_1",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        1860,
+        1280
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 11,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "accent_2",
+      "asset": "decor_flower",
+      "status": "style_sample",
+      "worldGround": [
+        260,
+        2700
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 11,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    },
+    {
+      "id": "accent_3",
+      "asset": "decor_clover",
+      "status": "style_sample",
+      "worldGround": [
+        1910,
+        3000
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "scale": 0.5,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 90,
+      "drawOrder": 11,
+      "boundsPx": [
+        56,
+        128,
+        192,
+        228
+      ]
+    }
+  ],
+  "exclusions": {
+    "smallDecorRadiusWorld": 90,
+    "gardenRadiusWorld": 300,
+    "kidSceneryGapWorld": 16,
+    "sceneryShape": "union_of_authored_silhouette_box_and_ground_reserve_circle",
+    "kidShape": "boundsPx",
+    "rule": "Require separation from BOTH scenery world boundsPx (16 gap) and circle: nearest kid-box point distance >= exclusionRadiusWorld + 16. A ground circle alone does not enclose tall Garden roof. Ground/path reserve none."
+  },
+  "camera": {
+    "initialCentre": [
+      1080,
+      950
+    ],
+    "worldWidthVisible": 1080
+  },
+  "garden": {
+    "instanceId": "garden",
+    "worldGround": [
+      1080,
+      620
+    ],
+    "spawnOutlet": [
+      1080,
+      1120
+    ],
+    "resolveSpawn": "nearest free box outside all scenery envelopes and other kid boxes"
+  },
+  "skippedInstances": [
+    {
+      "id": "perimeter_right_05",
+      "reason": "ground reserve conflicts with accent_1"
+    },
+    {
+      "id": "perimeter_left_11",
+      "reason": "ground reserve conflicts with accent_2"
+    },
+    {
+      "id": "perimeter_right_13",
+      "reason": "ground reserve conflicts with accent_3"
+    }
+  ]
+}

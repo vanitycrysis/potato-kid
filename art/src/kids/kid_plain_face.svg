@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Potato Kid — shared dot eyes and smirk</title>
+  <desc>Two small ink dots on the y=116 blink line and a short, almost-flat mouth. All other pixels are transparent.</desc>
+  <g id="eyes" fill="#1a1a1a">
+    <circle cx="83" cy="116" r="3.75"/>
+    <circle cx="163" cy="116" r="3.75"/>
+  </g>
+  <path id="smirk" d="M 117,126 C 123,126 130,126 135,124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Firefighter Kid — helmet and hose nozzle</title>
+  <desc>A muted red firefighter helmet has a raised front shield, a domed crown with a ridge, and a long brim sloping down at the right rear. A side nozzle and broad hose coupling leave the shared eyes and mouth clear.</desc>
+  <g id="helmet" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <path id="helmet_crown" d="M 68,79 C 68,61 78,44 93,38 C 106,33 124,33 137,35 C 156,36 170,45 180,59 C 185,66 187,73 188,83 Z" fill="#bd655b"/>
+    <path id="helmet_ridge" d="M 137,36 C 150,46 157,62 158,79" fill="none"/>
+    <path id="helmet_brim" d="M 55,79 C 78,76 104,78 129,80 C 153,80 176,79 193,82 C 207,85 218,94 230,98 L 227,108 C 211,105 195,96 179,94 C 159,91 143,91 127,90 C 105,90 85,89 64,91 C 56,92 49,89 49,85 C 49,82 51,80 55,79 Z" fill="#bd655b"/>
+    <path id="helmet_patch" d="M 104,26 C 113,20 124,19 133,23 L 140,35 L 137,62 C 133,69 124,76 120,78 C 114,75 107,69 103,62 L 100,37 Z" fill="#fff1d5"/>
+  </g>
+  <g id="nozzle" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Broad coupling overlaps the short rear hose at (210,130). -->
+    <path id="hose_connector" d="M 205,133 L 220,139 L 226,123 L 211,117 Z" fill="#c6ad82"/>
+    <path id="nozzle_barrel" d="M 195,130 L 181,111 L 189,100 L 212,117 Z" fill="#a8b8ae"/>
+    <path id="nozzle_mouth" d="M 175,112 L 187,96 L 196,103 L 184,118 Z" fill="#fff1d5"/>
+  </g>
+</svg>
