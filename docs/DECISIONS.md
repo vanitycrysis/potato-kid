@@ -34,6 +34,7 @@ Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collabo
 | D-024 | Proposed (Claude) | Only the Garden is a map sprite; Capacity, Bias and Compendium are reached through bottom-tray UI with icons | Keeps the play area clear; smaller art budget |
 | D-025 | Approved (owner) | Repo stays private for now; playable builds go out as CI artifacts (web zip, then a debug APK) | Pages API returned 422 for a private repo; owner, 2026-10-01: "Don't make it public yet" |
 | D-026 | Approved (owner) | Test device: the owner's **Samsung Galaxy S26 Ultra** (physical). It is a flagship, so passing on it does not prove mid-range performance. We also check with Chrome DevTools 4× CPU throttling as a pessimistic proxy | Owner, 2026-10-01 |
+| D-027 | Approved (owner) | **Trial arrangement:** the owner talks only to Claude. ChatGPT's role is filled by Codex, called through the Claude Code Codex plugin: `/codex:rescue` for ChatGPT's tasks (with the `TASKS.md` entry), `/codex:review` on every Claude PR before merging to `main`. Codex works in its own worktree on `chatgpt/` branches; Claude pushes its commits unchanged and posts its reviews verbatim. Claude still reviews all art and audio. Disagreements: one PR round, then the owner | Owner instruction, 2026-10-01; the owner may switch back to separate ChatGPT sessions |
 
 ## Open questions
 
@@ -47,4 +48,4 @@ Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collabo
 
 | Agent | Used by | Purpose |
 |---|---|---|
-| Codex CLI (Claude Code `codex` plugin) | Claude | Installed for optional second-opinion code reviews or diagnosis. It does **not** stand in for ChatGPT, which works independently through its own PRs. |
+| Codex CLI (Claude Code `codex` plugin) | Claude | **Fills the ChatGPT role** under D-027: art/audio owner and reviewer of Claude's code. `/codex:rescue` for tasks, `/codex:review` for PR reviews. Worktree `../potato-kid-chatgpt`. |
