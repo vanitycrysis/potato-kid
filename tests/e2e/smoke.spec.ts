@@ -21,7 +21,8 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
   await expect(page.locator('canvas')).toBeVisible();
   const start = await page.evaluate(() => window.__PK__!.kids().length);
   expect(start).toBeGreaterThan(0);
-  await expect(page.locator('.hud-count')).toContainText(`${start} / 12 kids`);
+  await expect(page.locator('.hud-value')).toHaveText(`${start}/12`);
+  await expect(page.locator('.hud-countdown')).toContainText('Next kid');
   await page.screenshot({ path: 'test-results/boot.png' });
   expect(errors).toEqual([]);
 });

@@ -1,0 +1,151 @@
+/*
+ * GUI v2 layout from ChatGPT/Codex's ui_v2.json and HUD mock-ups (art/previews/ui/).
+ * Colours/type come from its tokens (set as --ui-* by hud.ts); surfaces use its SVGs as
+ * nine-slice border images with 8 px corners, never stretched. Text stays live DOM.
+ */
+:root {
+  --ui-gap: 8px;
+  --ui-safe-top: max(24px, env(safe-area-inset-top));
+  --ui-safe-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.ui-surface {
+  border: 8px solid transparent;
+  border-image: var(--ui-panel) 8 fill / 8px stretch;
+  color: var(--ui-ink, #1a1a1a);
+  font-family: 'Patrick Hand', system-ui, sans-serif;
+}
+.ui-tray {
+  border-image-source: var(--ui-tray);
+}
+.ui-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+.hud {
+  position: fixed;
+  top: var(--ui-safe-top);
+  left: var(--ui-gap);
+  right: var(--ui-gap);
+  padding: 4px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.hud-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+.hud-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+}
+.hud-countdown {
+  font-size: 18px;
+}
+.hud-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ui-sage, #e2e8d4);
+  overflow: hidden;
+}
+.hud-bar {
+  height: 100%;
+  width: 0;
+  background: var(--ui-sceneryInk, #686b55);
+  opacity: 0.55;
+}
+
+.ui-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 8px solid transparent;
+  border-image: var(--ui-button) 8 fill / 8px stretch;
+  background: none;
+  pointer-events: auto;
+}
+.ui-button:active:not(:disabled) {
+  border-image-source: var(--ui-button-pressed);
+}
+.ui-button:disabled {
+  border-image-source: var(--ui-button-disabled);
+  opacity: 0.75;
+}
+
+.dex-button {
+  position: fixed;
+  right: calc(var(--ui-gap) + 4px);
+  bottom: calc(var(--ui-safe-bottom) + 96px + var(--ui-gap));
+}
+
+.tray {
+  position: fixed;
+  bottom: var(--ui-safe-bottom);
+  left: var(--ui-gap);
+  right: var(--ui-gap);
+  min-height: 80px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.tray-cell {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 16px;
+  color: inherit;
+}
+.tray-cell:disabled {
+  color: var(--ui-disabled, #686b55);
+}
+.tray-cell:disabled .ui-icon {
+  opacity: 0.6;
+}
+
+.toast {
+  position: fixed;
+  top: calc(var(--ui-safe-top) + 128px + var(--ui-gap));
+  left: 50%;
+  transform: translate(-50%, -8px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  text-wrap: balance;
+  padding: 6px 12px;
+  border: 8px solid transparent;
+  border-image: var(--ui-toast) 8 fill / 8px stretch;
+  font-family: 'Patrick Hand', system-ui, sans-serif;
+  font-size: 20px;
+  color: var(--ui-ink, #1a1a1a);
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
+}
