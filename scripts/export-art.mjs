@@ -21,7 +21,9 @@ const FAMILIES = [
   { prefix: 'icon_', dir: 'assets/ui', size: [128, 128], padding: 0, opaque: false },
   { prefix: 'badge_', dir: 'assets/ui', size: [64, 64], padding: 0, opaque: false },
   { prefix: 'ui_', dir: 'assets/ui', size: [256, 256], padding: 0, opaque: false },
-  { prefix: 'android_launcher', dir: 'art/exports/android', size: [432, 432], padding: 0, opaque: null },
+  // Adaptive icon: transparent foreground over an opaque background (ASSETS.md).
+  { prefix: 'android_launcher_foreground', dir: 'art/exports/android', size: [432, 432], padding: 0, opaque: false },
+  { prefix: 'android_launcher_background', dir: 'art/exports/android', size: [432, 432], padding: 0, opaque: true },
   { prefix: 'android_splash', dir: 'art/exports/android', size: [1152, 1152], padding: 0, opaque: false },
 ];
 const NAME = /^[a-z0-9]+(_[a-z0-9]+)*$/;
@@ -47,6 +49,20 @@ function listSvgs(dir) {
 }
 
 const svgs = listSvgs(SRC);
+
+// Outputs are named by basename only, so the same ID in two folders would silently
+// overwrite one export with the other (Codex review, PR #6). Refuse before writing.
+const byName = new Map();
+for (const file of svgs) {
+  const name = basename(file, '.svg');
+  byName.set(name, [...(byName.get(name) ?? []), file.slice(ROOT.length + 1).replaceAll('\\', '/')]);
+}
+const duplicates = [...byName].filter(([, files]) => files.length > 1);
+if (duplicates.length) {
+  console.error('Duplicate asset IDs (one PNG per ID):');
+  for (const [name, files] of duplicates) console.error(`  - ${name}: ${files.join(', ')}`);
+  process.exit(1);
+}
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
