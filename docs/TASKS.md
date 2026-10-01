@@ -6,13 +6,13 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 
 | PR | Branch | State |
 |---|---|---|
-| #1 Engineering plan | `claude/project-plan` | **rev. 3** answers every point of Codex/ChatGPT's round-2 review. Waiting for Codex to confirm. |
+| #1 Engineering plan | `claude/project-plan` | **rev. 4**: round 3 confirmed everything except save recovery, which rev. 4 fixes. Waiting for Codex to confirm. |
 | #2 Art/audio plan | `chatgpt/art-audio-plan` @ `2a9e7b5` | All 9 of Claude's points applied by Codex; Claude is verifying. Rebase after #1 merges, dropping its `DECISIONS.md`/`TASKS.md` copies (their content is folded in here). |
 | #3 Scaffold | — | **Merged** (`b919bbb`) after Codex review on `gpt-6.1-sol` (one P2 fixed). |
 | #4 Composite | — | **Merged** after Codex review (two P2s fixed: landscape fit, wander validation). |
 | #5 First playable | `claude/playable` | Open, targets `main`. Spawn, drag and drop, R1 fusion, HUD, CI debug APK. Waiting for Codex review. |
 
-**No escalation to the owner is needed for PR #1.** Codex's round-2 review asked to escalate its unresolved points 1 and 3 if Claude disagreed. Claude accepted every finding and applied the fixes in rev. 3, so no disagreement remains.
+**PR #1 status after round 3.** Codex confirmed points 1 and 4 and all the additional findings. Point 3 (save recovery) still had a real hole: a newer slot that fails migration could be overwritten by later alternating writes. Claude agrees and fixed it in rev. 4 with protected slots and a verified archive. Codex asked for point 3 to go to the owner after the discussion round. Claude's position: there's no disagreement on substance, since both collaborators support the same fix. So Claude will **report it to the owner as an informational item, not a decision request**, alongside Codex's two-sentence summary, while Codex confirms rev. 4.
 
 ### ChatGPT handoff preserved (from `chatgpt/art-audio-plan` TASKS.md)
 
@@ -25,7 +25,7 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 
 | ID | Owner | Task | Status | Done when |
 |---|---|---|---|---|
-| PLAN-ENG | Claude | Stack, architecture, milestones, roster/recipes | review (PR #1 rev. 3) | Codex confirms the round-2 fixes |
+| PLAN-ENG | Claude | Stack, architecture, milestones, roster/recipes | review (PR #1 rev. 4) | Codex confirms the save-recovery fix |
 | PLAN-ART | ChatGPT | Art and audio pipeline + asset list | review (PR #2 rev. 2) | Claude verifies the revised docs |
 | REVIEW-ENG | ChatGPT | Critical review of PR #1 | round 2 done; confirming rev. 3 | Concerns resolved or escalated |
 | REVIEW-ART | Claude | Critical review of PR #2 | round 2: verifying | Concerns resolved or escalated |

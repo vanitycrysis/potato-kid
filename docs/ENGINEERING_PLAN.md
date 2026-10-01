@@ -1,6 +1,6 @@
 # Engineering plan
 
-Author: Claude. Revision 3 (2026-10-01): rev. 2 answered ChatGPT's round-1 review; rev. 3 answers Codex/ChatGPT's round-2 review on PR #1 (contact predicate, spawn phase rule, accounting boundary and lifecycle, clock rewind, save failure paths, four layers). Each section says which review point it answers.
+Author: Claude. Revision 4 (2026-10-01): rev. 2 answered ChatGPT's round-1 review; rev. 3 answered Codex/ChatGPT's round-2 review (contact predicate, spawn phase rule, accounting boundary and lifecycle, clock rewind, save failure paths, four layers); rev. 4 answers round 3 (a migration-failed slot is never overwritten; reconcile wording). Each section says which review point it answers.
 
 **Owner decisions already given (2026-10-01):** Android first; TypeScript + PixiJS + Capacitor stack approved. Also confirmed:
 - Materials are earned passively per kid, scaled by tier.
@@ -160,7 +160,7 @@ The tuning comes from those numbers.
 **One lifecycle coordinator** (`platform/lifecycle.ts`) owns `visibilitychange`, `pagehide` and Capacitor `pause`/`resume`. Browser and native signals are deduplicated through one `active | suspended` state:
 - **On suspend:** run any whole pending sim steps, discard the sub-step remainder, cancel any drag, save (with `accountedUntil`), and stop the ticker.
 - **On resume:** if already active, do nothing. Otherwise call `reconcile(now)` once, then restart the ticker.
-- `reconcile` sets `accountedUntil = max(accountedUntil, now)` in the same state update that applies catch-up. A duplicate resume, with the same or a slightly different timestamp, computes `away ≈ 0` and changes nothing. That includes the full-map cases.
+- `reconcile` sets `accountedUntil = max(accountedUntil, now)` in the same state update that applies catch-up. **Duplicate lifecycle signals are skipped by the coordinator** (it is already active), so they never reach `reconcile`. A direct second call to `reconcile` credits only time that is genuinely new since the first, e.g. 1 ms for `reconcile(1000)` then `reconcile(1001)`, and never re-credits time. Tests assert both behaviours, including the full-map cases (round 3 precision correction).
 
 **Suspended time is always offline time (round 2, additional finding).** Any period while the app was suspended, however short (a 4 s background), uses no-fusion catch-up. Only the frame loop of a visible, active app steps normally. A long frame there, for example a dropped frame, is clamped to 0.25 s per frame.
 
@@ -182,7 +182,8 @@ The tuning comes from those numbers.
 
 **Record:** `{ schema, revision, savedAt, state, checksum }`. The state includes `spawnProgress`, the RNG state, `accountedUntil` and the next kid ID.
 
-- **Two slots, A and B.** Each write goes to the slot *not* holding the current best save, with `revision + 1`.
+- **Two slots, A and B.** Each write goes to the slot *not* holding the current best save. Its revision is **one more than the highest revision ever seen in either slot**, including protected ones, so revisions stay monotonic across recovery.
+- **Protected slots (round 3).** A slot is *protected* when it holds bytes the game could not use but must not lose: a *corrupt* record, or a *valid* record whose migration failed. **The writer never targets a protected slot.** A protected slot becomes writable only after its exact raw bytes are **durably archived** under `archive/<slot>-r<revision>-<timestamp>`, with a read-back check that the archive matches. If archiving fails, the slot stays protected. With one slot protected and the other holding the loaded save, the game must not overwrite that save either, so it enters unsaved session mode.
 - **Writes are serialized** through one promise queue, so they never overlap.
 - **Writes are inhibited until loading has resolved.** Nothing is written while load is in progress or has failed in an unresolved way.
 - **Loading** (round 2, point 3):
@@ -190,14 +191,14 @@ The tuning comes from those numbers.
   2. Classify each readable slot: *valid*, *corrupt* (fails parse, checksum or **state validation**: types, finite numbers, known kid IDs, IDs below `nextKidId`), or *future* (schema newer than the app). The original bytes of every slot are kept in memory.
   3. Any *future* slot: refuse to overwrite it, enter read-only mode, and tell the player to update.
   4. Pick the highest-revision *valid* slot.
-  5. Migrate it in schema order, then validate the result. **On migration failure**, keep the original bytes untouched, try the next valid slot, and if none migrates, enter unsaved session mode.
+  5. Migrate it in schema order, then validate the result. **On migration failure**, mark that slot *protected* and archive its raw bytes (above). Try the next valid slot; if none migrates, enter unsaved session mode. **When falling back to an older slot**, tell the player plainly: "We loaded an older save. Your newer one is kept safe." The archived record stays recoverable by a later app version.
   6. Reconcile offline time once.
   7. Save once.
-- **Corrupt slots** are overwritten only after their raw bytes have been **successfully** written to a `quarantine` key. If quarantine fails, the game enters unsaved session mode.
+- **Corrupt slots** are handled the same way: protected until archived (this replaces the earlier `quarantine` key).
 - **Unsaved session mode:** the game is playable but makes **no destructive writes**. The player sees a visible banner: "Progress can't be saved right now". Loading is retried on the next launch.
 - **Save failures** are caught and retried at the next trigger. After three consecutive failures, the player sees the same banner, not just a debug log.
 - **Out-of-order writes:** the queue tags each write with its revision. A write for a lower revision than one already committed is dropped.
-- **Tests:** read failure, both slots corrupt, one slot corrupt, quarantine-write failure, migration failure, future schema, and a write that fails then retries out of order.
+- **Tests:** read failure; both slots corrupt; one slot corrupt; archive-write failure; future schema; a write that fails then retries out of order; and Codex's round-3 trace. In that trace, A holds valid revision 20 and fails migration, and B holds revision 19 and migrates. Run the initial save, then a periodic save, then a restart. A's original bytes must stay recoverable throughout, no write may target A until its archive is verified, and revisions never repeat.
 - **When it saves:** every 10 s, on pause or a visibility change, and after each fusion, purchase or upgrade.
 
 ## 5. Asset import contract (moved here from my draft `ASSETS.md`; `ASSETS.md` is ChatGPT's)
