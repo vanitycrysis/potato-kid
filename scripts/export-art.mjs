@@ -118,9 +118,22 @@ for (const file of svgs) {
   }
   if (fam.copySvg) {
     const text = readFileSync(file, 'utf8');
-    if (!/<svg[\s>]/.test(text)) problems.push(`${name}: not an SVG document`);
-    else if (!/\bviewBox\s*=/.test(text)) problems.push(`${name}: GUI SVGs need a viewBox so the DOM can scale them`);
-    if (/<script[\s>]/i.test(text) || /\son[a-z]+\s*=/i.test(text)) problems.push(`${name}: GUI SVGs may not contain scripts or event handlers`);
+    // Parse as XML in the browser (Codex review, PR #13): substring checks would accept
+    // a truncated file the DOM can't render.
+    const check = await page.evaluate((src) => {
+      const doc = new DOMParser().parseFromString(src, 'image/svg+xml');
+      if (doc.getElementsByTagName('parsererror').length) return 'is not well-formed XML';
+      const root = doc.documentElement;
+      if (root.localName !== 'svg' || root.namespaceURI !== 'http://www.w3.org/2000/svg') return 'root element must be an SVG <svg>';
+      const vb = (root.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
+      if (vb.length !== 4 || vb.some((n) => !Number.isFinite(n)) || vb[2] <= 0 || vb[3] <= 0) return 'needs a valid viewBox so the DOM can scale it';
+      if (doc.getElementsByTagName('script').length) return 'may not contain scripts';
+      for (const el of doc.getElementsByTagName('*')) {
+        for (const a of el.attributes) if (/^on/i.test(a.name)) return 'may not contain event handlers';
+      }
+      return null;
+    }, text);
+    if (check) problems.push(`${name}: GUI SVG ${check}`);
     pending.push({ out: join(ROOT, fam.dir, `${name}.svg`), text });
     continue;
   }
@@ -209,10 +222,23 @@ function rigProblems(rig, label) {
       }
     }
   }
+  // Known asset fields are checked directly, whatever their spelling (Codex review,
+  // PR #13): the generic ID scan only sees strings with a known prefix.
+  const need = (where, asset) => {
+    if (typeof asset !== 'string' || !asset) out.push(`${label}: ${where} has no asset`);
+    else if (!sourceNames.has(asset)) out.push(`${label}: ${where} uses "${asset}", which has no source in art/src`);
+  };
   for (const [bodyName, body] of bodies) {
-    for (const [frameName, frame] of Object.entries(body.frames ?? {})) {
-      if (!frame.asset) out.push(`${label}: body "${bodyName}" frame "${frameName}" has no asset`);
-    }
+    for (const [frameName, frame] of Object.entries(body.frames ?? {})) need(`body "${bodyName}" frame "${frameName}"`, frame.asset);
+  }
+  for (const [faceName, face] of Object.entries(rig.faces ?? {})) {
+    for (const [state, asset] of Object.entries(face.states ?? {})) need(`face "${faceName}" state "${state}"`, asset);
+  }
+  for (const [type, costume] of Object.entries(rig.costumes ?? {})) {
+    for (const [i, c] of (costume.components ?? []).entries()) need(`costume "${type}" component ${i}`, c.asset);
+  }
+  for (const [fxName, fx] of Object.entries(rig.effects ?? {})) {
+    for (const [i, asset] of (fx.assets ?? []).entries()) need(`effect "${fxName}" frame ${i}`, asset);
   }
   return out;
 }
@@ -244,7 +270,12 @@ if (writeOutputs) {
 
 // Review previews: every kid composited back→body→face→front, at 48/64/96 CSS px on
 // light and dark grounds, plus a crowded 40-kid portrait scene on the map if present.
-if (writeOutputs) {
+// This composer only knows the legacy r2 layers. A v2 delivery (kid_rig_v2.json) is
+// previewed by rendering the real engine instead, so this step neither deletes nor
+// regenerates previews then, to avoid stale or wrong artwork (Codex review, PR #13).
+const hasV2Rig = dataFiles.includes('kid_rig_v2.json');
+if (hasV2Rig && writeOutputs) console.log('v2 rig present: kid previews come from the engine capture, not this composer.');
+if (writeOutputs && !hasV2Rig) {
   const kidsJson = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8'));
   const kidDir = join(ROOT, 'assets/sprites/kids');
   const layerUrl = (n) => {

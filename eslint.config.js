@@ -9,7 +9,7 @@ export default tseslint.config(
     // Node scripts that also run code inside Playwright's browser page.
     files: ['scripts/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly', document: 'readonly', Image: 'readonly' },
+      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly', document: 'readonly', Image: 'readonly', DOMParser: 'readonly' },
     },
   },
 );
