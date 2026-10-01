@@ -180,6 +180,12 @@ if (writeOutputs) {
     }))
     .filter((k) => k.hasOwnArt && k.layers.length > 0);
 
+  if (kids.length === 0) {
+    // No kid art left: remove generated previews so they never show art that no longer exists.
+    for (const f of ['kids_sizes.png', 'crowd_40.png']) {
+      if (existsSync(join(PREVIEWS, f))) rmSync(join(PREVIEWS, f));
+    }
+  }
   if (kids.length > 0) {
     mkdirSync(PREVIEWS, { recursive: true });
     const kidHtml = (k, px) =>
