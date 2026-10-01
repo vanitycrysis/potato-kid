@@ -406,10 +406,12 @@ export class MapScene {
     const step = Math.min(dt, 0.1);
     if (this.drag) {
       const { width, height } = this.app.screen;
-      const edge = (pos: number, size: number) =>
-        pos < EDGE_ZONE ? -(1 - pos / EDGE_ZONE) : pos > size - EDGE_ZONE ? 1 - (size - pos) / EDGE_ZONE : 0;
-      const ex = edge(this.dragScreen.x, width);
-      const ey = edge(this.dragScreen.y, height);
+      // Edge zones sit at the edges of the *visible* play area, inside the HUD and tray
+      // (Codex review, PR #15), so the held kid stays in view while it scrolls the map.
+      const edge = (pos: number, lo: number, hi: number) =>
+        pos < lo + EDGE_ZONE ? -Math.min(1, 1 - (pos - lo) / EDGE_ZONE) : pos > hi - EDGE_ZONE ? Math.min(1, 1 - (hi - pos) / EDGE_ZONE) : 0;
+      const ex = edge(this.dragScreen.x, 0, width);
+      const ey = edge(this.dragScreen.y, this.insets.top, height - this.insets.bottom);
       if (ex || ey) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;

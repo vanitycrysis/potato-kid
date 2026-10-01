@@ -74,7 +74,12 @@ export class Hud {
     this.toast.setAttribute('role', 'status');
     document.body.append(top, this.toast, dex, tray);
     // The camera must be able to bring any kid out from under the HUD and tray.
-    const measure = () => scene.setInsets(top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
+    // The Dex button sits above the tray's right end, so it counts too (Codex review, PR #15).
+    const measure = () =>
+      scene.setInsets(
+        top.getBoundingClientRect().bottom,
+        window.innerHeight - Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top),
+      );
     new ResizeObserver(measure).observe(document.body);
     measure();
     this.render();

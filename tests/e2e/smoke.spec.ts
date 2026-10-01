@@ -182,7 +182,9 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
   const size = page.viewportSize()!;
   await page.mouse.move(p.x, p.y - 20);
   await page.mouse.down();
-  await page.mouse.move(size.width / 2, size.height - 6, { steps: 8 });
+  // Hold just inside the visible play area's bottom edge (above the tray), not behind it.
+  const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
+  await page.mouse.move(size.width / 2, trayTop - 10, { steps: 8 });
   await page.waitForTimeout(700);
   await page.mouse.up();
   await page.waitForTimeout(250);
@@ -278,6 +280,17 @@ test('a kid at the bottom edge of the world can be scrolled out from under the t
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
   expect(p.y).toBeLessThanOrEqual(trayTop + 1); // its feet are visible above the tray
+  expect(errors).toEqual([]);
+});
+
+test('a kid in the bottom-right corner can be scrolled out from under the Dex button', async ({ page }) => {
+  const errors = await boot(page, '?seed=17&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2080, 3830));
+  await page.evaluate(() => window.__PK__!.centerOn(99999, 99999)); // as far down-right as allowed
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const dexTop = await page.locator('.dex-button').evaluate((e) => e.getBoundingClientRect().top);
+  expect(p.y).toBeLessThanOrEqual(dexTop + 1);
   expect(errors).toEqual([]);
 });
 
