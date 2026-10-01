@@ -1,28 +1,27 @@
-import { Application, Container, FederatedPointerEvent, Graphics, type Texture } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, type Texture } from 'pixi.js';
+import type { KidRig, MapData } from '../content/artData';
 import type { Content } from '../content/types';
-import { Game, type Command, type GameEvent } from '../sim/game';
-import { clampToBounds, STEP, type Bounds, type Kid } from '../sim/world';
-import { innerBounds } from '../sim/space';
-import { KidView } from './kidView';
-import type { Art } from './art';
-import { buildPlaceholderTextures } from './placeholderArt';
+import { Game, type Ambient, type Command, type GameEvent, type LookTable } from '../sim/game';
+import { STEP, type Kid, type Obstacle } from '../sim/world';
+import { rectAt, resolveDrawn, touching } from '../sim/space';
+import { buildMap } from './mapView';
+import { KidRigView } from './rigView';
 
-/**
- * Scrollable world (D-040): about 2 × 2 portrait screens. The camera shows a
- * 1080-unit-wide window on portrait phones and pans over the rest.
- */
-export const WORLD_WIDTH = 2160;
-export const WORLD_HEIGHT = 3840;
-/** Width of world shown across a portrait screen; height follows the screen's aspect. */
+/** Width of world shown across a portrait screen; height follows the screen's aspect (D-040). */
 const VIEW_WIDTH = 1080;
 /** On short/landscape screens, at least this much world height stays visible. */
 const VIEW_MIN_HEIGHT = 1920;
 
-/** The Garden sits near the top centre of the world; kids emerge just below it. */
-export const GARDEN = { x: WORLD_WIDTH / 2, y: 360 };
-
-/** Where kids can be: the whole world below the Garden (bodies stay inside, D-039). */
-export const PLAY_BOUNDS: Bounds = { minX: 0, minY: GARDEN.y + 120, maxX: WORLD_WIDTH, maxY: WORLD_HEIGHT };
+/** Everything the scene needs from ChatGPT/Codex's art (D-036: the engine draws none itself). */
+export interface SceneArt {
+  rig: KidRig;
+  map: MapData;
+  textures: Map<string, Texture>;
+  looks: LookTable;
+  ambient: Ambient;
+  obstacles: Obstacle[];
+  reducedMotion: boolean;
+}
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
 const HOLD_LIFT = 70;
@@ -43,8 +42,11 @@ interface Drag {
   pointerId: number;
   startX: number;
   startY: number;
+  /** Where the finger wants the kid (lifted pointer position, world units). */
   x: number;
   y: number;
+  /** Where the kid is drawn: the nearest free spot to (x, y), so it never overlaps (D-039). */
+  spot: { x: number; y: number };
 }
 
 /**
@@ -57,9 +59,10 @@ export class MapScene {
   onEvent: (e: GameEvent) => void = () => {};
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
-  private readonly views = new Map<number, KidView>();
+  private readonly views = new Map<number, KidRigView>();
   private readonly prev = new Map<number, Prev>();
-  private readonly textures: Map<string, Texture>;
+  private readonly worldWidth: number;
+  private readonly worldHeight: number;
   private readonly pending: Command[] = [];
   private drag: Drag | undefined;
   /** Last screen position of the dragging pointer, so edge scroll can keep the kid under it. */
@@ -77,19 +80,31 @@ export class MapScene {
    */
   private readonly placing = new Map<number, { x: number; y: number }>();
   private acc = 0;
+  /** Where each kid was drawn last frame, for render-time separation of held/placed previews. */
+  private readonly drawn = new Map<number, { x: number; y: number }>();
 
   constructor(
     private readonly app: Application,
     content: Content,
     seed: number,
-    art: Art = { kids: new Map() },
+    private readonly art: SceneArt,
   ) {
-    this.game = new Game(content, PLAY_BOUNDS, GARDEN, seed);
-    // Real art wins per asset; anything not yet delivered stays a placeholder.
-    this.textures = buildPlaceholderTextures(app.renderer, content.kids);
-    for (const [name, tex] of art.kids) this.textures.set(name, tex);
-    // Plain ground until Codex's map tiles and decor arrive (D-040, D-036).
-    this.camera.addChild(drawGround(), drawPlaceholderGarden(), this.kidLayer);
+    const [w, h] = art.map.worldSize;
+    this.worldWidth = w;
+    this.worldHeight = h;
+    const [sx, sy] = art.map.garden.spawnOutlet;
+    this.game = new Game(
+      content,
+      {
+        bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
+        spawnAt: { x: sx, y: sy },
+        obstacles: art.obstacles,
+        looks: art.looks,
+        ambient: art.ambient,
+      },
+      seed,
+    );
+    this.camera.addChild(buildMap(art.map, art.textures), this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -119,7 +134,7 @@ export class MapScene {
     });
 
     this.layout();
-    this.centerOn(GARDEN.x, GARDEN.y + 700);
+    this.centerOn(art.map.camera.initialCentre[0], art.map.camera.initialCentre[1]);
     app.renderer.on('resize', () => this.layout());
     app.ticker.add((t) => this.frame(t.deltaMS / 1000));
   }
@@ -177,8 +192,10 @@ export class MapScene {
     const z = this.cam.zoom;
     const vw = width / z;
     const vh = height / z;
-    this.cam.x = vw >= WORLD_WIDTH ? (WORLD_WIDTH - vw) / 2 : Math.min(WORLD_WIDTH - vw, Math.max(0, this.cam.x));
-    this.cam.y = vh >= WORLD_HEIGHT ? (WORLD_HEIGHT - vh) / 2 : Math.min(WORLD_HEIGHT - vh, Math.max(0, this.cam.y));
+    const W = this.worldWidth;
+    const H = this.worldHeight;
+    this.cam.x = vw >= W ? (W - vw) / 2 : Math.min(W - vw, Math.max(0, this.cam.x));
+    this.cam.y = vh >= H ? (H - vh) / 2 : Math.min(H - vh, Math.max(0, this.cam.y));
     this.camera.scale.set(z);
     this.camera.position.set(-this.cam.x * z, -this.cam.y * z);
   }
@@ -208,8 +225,8 @@ export class MapScene {
     this.applyCamera();
   }
 
-  private addView(kid: Kid): KidView {
-    const view = new KidView(kid, this.textures);
+  private addView(kid: Kid): KidRigView {
+    const view = new KidRigView(kid, this.art.rig, this.art.textures, this.art.reducedMotion);
     view.root.eventMode = 'static';
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
@@ -223,6 +240,7 @@ export class MapScene {
   }
 
   private removeView(kidId: number): void {
+    this.drawn.delete(kidId);
     this.views.get(kidId)?.destroy();
     this.views.delete(kidId);
     this.prev.delete(kidId);
@@ -247,9 +265,8 @@ export class MapScene {
     // spot is where it really is: cancelling must return it there (Codex review, PR #5).
     const start = this.placing.get(kidId) ?? { x: kid.x, y: kid.y };
     this.placing.delete(kidId);
-    this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT };
+    this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT, spot: start };
     this.pending.push({ type: 'pickUp', kidId });
-    this.views.get(kidId)?.setHeld(true);
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
@@ -284,7 +301,28 @@ export class MapScene {
       return;
     }
     const w = this.toWorld(e);
-    this.finishDrag({ type: 'drop', kidId: this.drag.kidId, x: w.x, y: w.y - HOLD_LIFT });
+    this.drag.x = w.x;
+    this.drag.y = w.y - HOLD_LIFT;
+    this.resolveHeld();
+    // Drop exactly where the kid is shown: the resolved free spot. Kids it visibly touches
+    // there (their drawn boxes) travel with the command, so a seen touch can fuse.
+    const { kidId, spot } = this.drag;
+    const kid = this.game.state.world.kids.find((k) => k.id === kidId);
+    const slack = this.game.touchSlack;
+    const seen = kid
+      ? [...this.drawn].filter(([id, at]) => {
+          const other = this.game.state.world.kids.find((k) => k.id === id);
+          return id !== kidId && !!other && touching(rectAt(kid.box, spot.x, spot.y), rectAt(other.box, at.x, at.y), slack);
+        })
+      : [];
+    this.finishDrag({ type: 'drop', kidId, x: spot.x, y: spot.y, touching: seen.map(([id]) => id) });
+  }
+
+  /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
+  private resolveHeld(): void {
+    if (!this.drag) return;
+    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn);
+    if (spot) this.drag.spot = spot;
   }
 
   private cancelActiveDrag(): void {
@@ -295,13 +333,11 @@ export class MapScene {
 
   private finishDrag(cmd: Extract<Command, { type: 'drop' | 'cancelDrag' }>): void {
     if (!this.drag) return;
-    this.views.get(this.drag.kidId)?.setHeld(false);
     this.pending.push(cmd);
-    // Draw the kid exactly where the command puts it (the release point for a drop,
-    // the start for a cancel) until the sim applies it (Codex review, PR #5).
-    // Clamped exactly as the sim will clamp it, so the preview never jumps on landing.
-    const radius = this.game.state.world.kids.find((k) => k.id === cmd.kidId)?.radius ?? 0;
-    this.placing.set(this.drag.kidId, clampToBounds(innerBounds(PLAY_BOUNDS, radius), cmd.x, cmd.y));
+    // Draw the kid exactly where the sim will put it until the command is applied
+    // (Codex review, PR #5): the same free-spot answer, so it never jumps or overlaps.
+    const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn) ?? { x: cmd.x, y: cmd.y };
+    this.placing.set(this.drag.kidId, spot);
     this.drag = undefined;
   }
 
@@ -323,20 +359,27 @@ export class MapScene {
       this.acc -= STEP;
     }
     const alpha = this.acc / STEP;
-    for (const k of this.game.state.world.kids) {
+    // This frame's drawn positions first (interpolated, overlap-free), then the held kid
+    // resolves against exactly those (Codex review, PR #14), then everything is drawn.
+    const kids = this.game.state.world.kids;
+    const interpolated = new Map<number, { x: number; y: number }>();
+    for (const k of kids) {
+      const p = this.prev.get(k.id) ?? k;
+      interpolated.set(k.id, { x: p.x + (k.x - p.x) * alpha, y: p.y + (k.y - p.y) * alpha });
+    }
+    const drawn = resolveDrawn(kids, interpolated, this.placing, this.art.obstacles);
+    this.drawn.clear();
+    for (const [id, pos] of drawn) this.drawn.set(id, pos);
+    if (this.drag) this.resolveHeld();
+    for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
       if (this.drag?.kidId === k.id) {
-        view.update(this.drag.x, this.drag.y, false, 0, dt);
+        view.update(this.drag.spot.x, this.drag.spot.y, k.activity, true, dt);
         continue;
       }
-      const placed = this.placing.get(k.id);
-      if (placed) {
-        view.update(placed.x, placed.y, false, 0, dt);
-        continue;
-      }
-      const p = this.prev.get(k.id) ?? k;
-      view.update(p.x + (k.x - p.x) * alpha, p.y + (k.y - p.y) * alpha, k.idle === 0 && !k.held, Math.cos(k.heading), dt);
+      const at = drawn.get(k.id) ?? k;
+      view.update(at.x, at.y, k.activity, k.held, dt);
     }
   }
 
@@ -374,14 +417,14 @@ export class MapScene {
   private handle(e: GameEvent): void {
     switch (e.type) {
       case 'spawned':
-        this.addView(e.kid).popIn();
+        this.addView(e.kid);
         break;
       case 'fused':
         for (const p of e.parents) {
           if (this.drag?.kidId === p.id) this.drag = undefined;
           this.removeView(p.id);
         }
-        this.addView(e.child).popIn();
+        this.addView(e.child);
         break;
       case 'pickedUp':
       case 'dropped':
@@ -389,23 +432,4 @@ export class MapScene {
     }
     this.onEvent(e);
   }
-}
-
-/** Flat ground across the world until Codex's tiles and decor arrive (not art: a single fill). */
-function drawGround(): Graphics {
-  return new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill('#f4efe2');
-}
-
-/** Stand-in for `building_garden`: a doodle soil mound with sprouts. */
-function drawPlaceholderGarden(): Graphics {
-  const ink = { color: '#1a1a1a', width: 6, cap: 'round' as const, join: 'round' as const };
-  const g = new Graphics();
-  const { x, y } = GARDEN;
-  g.ellipse(x, y, 170, 60).fill('#a67c52').stroke(ink);
-  for (const dx of [-90, -30, 30, 90]) {
-    g.moveTo(x + dx, y - 20).lineTo(x + dx, y - 70).stroke(ink);
-    g.ellipse(x + dx - 14, y - 72, 16, 9).fill('#8fbf6a').stroke(ink);
-    g.ellipse(x + dx + 14, y - 76, 16, 9).fill('#8fbf6a').stroke(ink);
-  }
-  return g;
 }

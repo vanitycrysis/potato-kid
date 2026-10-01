@@ -9,6 +9,8 @@ export interface Rng {
   int(min: number, max: number): number;
   /** Current state, for saving. */
   readonly state: number;
+  /** Rewinds or restores to a saved state. */
+  setState(state: number): void;
 }
 
 export function createRng(seed: number): Rng {
@@ -26,6 +28,9 @@ export function createRng(seed: number): Rng {
     },
     get state() {
       return s;
+    },
+    setState(state) {
+      s = state >>> 0;
     },
   };
 }

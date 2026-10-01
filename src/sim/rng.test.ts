@@ -26,4 +26,13 @@ describe('createRng', () => {
       expect(n).toBeLessThanOrEqual(5);
     }
   });
+
+  it('setState rewinds to a saved state', () => {
+    const r = createRng(11);
+    r.next();
+    const saved = r.state;
+    const a = [r.next(), r.next()];
+    r.setState(saved);
+    expect([r.next(), r.next()]).toEqual(a);
+  });
 });

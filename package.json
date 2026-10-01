@@ -15,7 +15,8 @@
     "e2e": "playwright test",
     "android": "npm run build && cap sync android",
     "art:export": "node scripts/export-art.mjs",
-    "art:check": "node scripts/export-art.mjs --check-only"
+    "art:check": "node scripts/export-art.mjs --check-only",
+    "art:preview": "npm run build && playwright test -c playwright.preview.config.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
