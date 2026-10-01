@@ -29,4 +29,13 @@ describe('resolveDrawn (render-time separation, D-043)', () => {
     expect(out.get(a.id)).toEqual({ x: 302, y: 300 });
     expect(out.get(b.id)).toEqual({ x: 880, y: 900 });
   });
+
+  it('draws a just-released kid (still held in the sim) at its pending drop position', () => {
+    const world = createWorld({ minX: 0, minY: 0, maxX: 2000, maxY: 2000 });
+    const k = addKid(world, 'plain', 300, 300, createRng(1), 0, defaultBox(60));
+    k.held = true; // released, but the drop command hasn't been applied yet
+    const out = resolveDrawn(world.kids, new Map(), new Map([[k.id, { x: 1200, y: 900 }]]));
+    expect(out.get(k.id)).toEqual({ x: 1200, y: 900 });
+  });
 });
+

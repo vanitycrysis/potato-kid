@@ -215,7 +215,9 @@ export function resolveDrawn(
 ): Map<number, { x: number; y: number }> {
   const out = new Map<number, { x: number; y: number }>();
   const snapped = new Set<number>();
-  const grounded = kids.filter((k) => !k.held);
+  // A just-released kid is still `held` in the sim until its drop is applied, but it has a
+  // fixed pending position and must be drawn there (Codex review, PR #14: no snap-back).
+  const grounded = kids.filter((k) => !k.held || fixed.has(k.id));
   for (const k of grounded) out.set(k.id, fixed.get(k.id) ?? interpolated.get(k.id) ?? { x: k.x, y: k.y });
   for (let pass = 0; pass <= grounded.length; pass++) {
     let changed = false;
