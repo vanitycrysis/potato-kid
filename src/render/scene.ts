@@ -56,6 +56,12 @@ export class MapScene {
   private readonly textures: Map<string, Texture>;
   private readonly pending: Command[] = [];
   private drag: Drag | undefined;
+  /**
+   * Kids released by the player whose drop/cancel the sim hasn't applied yet,
+   * with where to keep drawing them meanwhile. Without this a released kid would
+   * snap back to its pickup point for a frame, then slide (Codex review, PR #5).
+   */
+  private readonly placing = new Map<number, { x: number; y: number }>();
   private acc = 0;
 
   constructor(
@@ -179,10 +185,12 @@ export class MapScene {
     this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY });
   }
 
-  private finishDrag(cmd: Command): void {
+  private finishDrag(cmd: Extract<Command, { type: 'drop' | 'cancelDrag' }>): void {
     if (!this.drag) return;
     this.views.get(this.drag.kidId)?.setHeld(false);
     this.pending.push(cmd);
+    // A drop stays where it was released; a cancel goes straight back to its start.
+    this.placing.set(this.drag.kidId, cmd.type === 'drop' ? { x: this.drag.x, y: this.drag.y } : { x: cmd.x, y: cmd.y });
     this.drag = undefined;
   }
 
@@ -195,6 +203,12 @@ export class MapScene {
     while (this.acc >= STEP) {
       for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
       const events = this.game.step(this.pending.splice(0));
+      // Placed kids start their interpolation from where they were put down.
+      for (const id of this.placing.keys()) {
+        const k = this.game.state.world.kids.find((kid) => kid.id === id);
+        if (k) this.prev.set(id, { x: k.x, y: k.y });
+      }
+      this.placing.clear();
       for (const e of events) this.handle(e);
       this.acc -= STEP;
     }
@@ -204,6 +218,11 @@ export class MapScene {
       if (!view) continue;
       if (this.drag?.kidId === k.id) {
         view.update(this.drag.x, this.drag.y, false, 0, dt);
+        continue;
+      }
+      const placed = this.placing.get(k.id);
+      if (placed) {
+        view.update(placed.x, placed.y, false, 0, dt);
         continue;
       }
       const p = this.prev.get(k.id) ?? k;

@@ -4,10 +4,8 @@ const config: CapacitorConfig = {
   appId: 'com.vanitycrysis.potatokid',
   appName: 'Potato Kid',
   webDir: 'dist',
-  android: {
-    // Debug builds allow Chrome remote debugging for frame-time and memory checks (plan §7).
-    webContentsDebuggingEnabled: true,
-  },
+  // WebView debugging is left at Capacitor's default: on for debug APKs (used for
+  // device frame-time and memory checks, plan §7), off for release builds.
 };
 
 export default config;

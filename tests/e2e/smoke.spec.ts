@@ -53,6 +53,30 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   expect(errors).toEqual([]);
 });
 
+test('a released kid stays where it was dropped (no snap-back)', async ({ page }) => {
+  const errors = await boot(page, '?seed=5&debug=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 200, 1500));
+  await page.waitForTimeout(150);
+  const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const to = await page.evaluate(() => window.__PK__!.worldToScreen(850, 900));
+  await page.mouse.move(from.x, from.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 10 });
+  await page.mouse.up();
+  // Sample the rendered position over the next frames: it must never jump back toward the start.
+  const samples = await page.evaluate(async (k) => {
+    const out: { x: number; y: number }[] = [];
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      out.push(window.__PK__!.screenPointOf(k)!);
+    }
+    return out;
+  }, id);
+  const startDist = Math.hypot(to.x - from.x, to.y - from.y);
+  for (const p of samples) expect(Math.hypot(p.x - to.x, p.y - to.y)).toBeLessThan(startDist * 0.25);
+  expect(errors).toEqual([]);
+});
+
 test('40+ kids render without errors', async ({ page }) => {
   const errors = await boot(page, '?seed=7&debug=1');
   await page.evaluate(() => {
