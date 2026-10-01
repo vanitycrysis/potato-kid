@@ -33,6 +33,17 @@ All collaboration goes through this GitHub repo. Do not rely on me to pass messa
 
 Create the three docs files above if they do not exist yet.
 
+### Current arrangement: Claude coordinates Codex (trial, since 2026-10-01)
+
+The owner talks only to Claude. ChatGPT's role is filled by **OpenAI Codex**, which Claude calls through the Codex plugin for Claude Code. This replaces separate ChatGPT sessions for now; the owner may switch back.
+
+- Claude pulls the latest from GitHub before handing work to Codex or acting on Codex's output.
+- Claude hands ChatGPT's tasks to Codex with `/codex:rescue` (the `codex-companion task` runtime). Each handoff includes the task's entry from `docs/TASKS.md`, so Codex knows what "done" means.
+- Codex reviews Claude's pull requests with `/codex:review` before anything merges to `main`. Claude reviews Codex's art and audio work, as above.
+- Codex works in its own git worktree (`../potato-kid-chatgpt`) on `chatgpt/` branches, committing as `ChatGPT`. Claude and Codex never edit the same folder at once. Codex's sandbox cannot push, so Claude pushes Codex's commits unchanged and posts Codex's reviews to the pull request verbatim, labelled as Codex's.
+- Disagreements still go in the pull request. If one round does not settle them, Claude brings both positions to the owner.
+- The check-in gates below are unchanged.
+
 ## Check-ins with me
 
 Stop and wait for my approval at these points:

@@ -1,0 +1,59 @@
+# Decisions
+
+Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collaborators' entries are kept. **Status:**
+- **Required:** from the brief or the design doc.
+- **Approved:** by the owner.
+- **Agreed:** by both AIs.
+- **Proposed:** awaiting review.
+
+| ID | Status | Decision | Reason / authority |
+|---|---|---|---|
+| D-001 | Required | Planning first. Engineering scaffolding began after the owner approved the stack (D-014); no production game systems or production assets before the plan is consolidated | Brief, first task. Owner, 2026-10-01: "go for it" |
+| D-002 | Required | ChatGPT owns art and audio and reviews engineering; Claude owns engineering and integration and reviews art and audio | Brief, Roles |
+| D-003 | Required | Keep consume-two/make-one, free wandering with no grid, hidden recipes, offline progress | Design doc |
+| D-004 | Observed | The 22 references are transparent black-line WebPs (base, cook, sleep, snow) on varying canvases; three base files are byte-identical | Inspected by both AIs |
+| D-005 | Agreed | Editable SVG source for body, face and costumes; runtime PNG layers `overlay_back → body → face → overlay_front` (both overlays optional and omitted when unused); flattened previews for review | ChatGPT's proposal on Claude's layering; back/front split agreed in PR #2 round 2 |
+| D-006 | Proposed; decided at the art gate | Warm flat body fill, one dark outline, costume silhouette plus a restrained accent colour per type | Transparent interiors would show the map behind them; the owner approves the actual samples |
+| D-007 | Agreed | Art-gate samples: base, Fire, Water, Firefighter, garden map | Covers the design example pairing and the first-playable recipe R1 |
+| D-008 | Agreed | Kid layers 256 × 256, ground anchor (128, 224), ≥ 8 px padding, 7–8 px starting stroke (gate 2 decides); shared `kid_plain_body` / `kid_plain_face`; at most 16 kid textures; procedural motion moves all layers together | ChatGPT's spec + Claude's PR #2 review, both rounds |
+| D-009 | Agreed | World 1080 units wide; camera fits the 1080 × 1920 safe band (`min(w/1080, h/1920)`, centred); background 1080 × 2400 with 240 bleed top and bottom; app locked to portrait; decoded textures ≤ 32 MiB | Accepted by Codex/ChatGPT (PR #1 round 2); fit-both-ways from Codex's PR #4 review |
+| D-010 | Agreed | No music-generation tool: original note/MIDI composition plus scripted synthesis for one loop and 8 cues; judged by listening | ChatGPT states the limit honestly |
+| D-011 | Agreed | ChatGPT delivers WAV masters (48 kHz / 16-bit) plus note/synthesis source; the build encodes Ogg + M4A with ffmpeg; separate music and SFX volumes; peak and listening checks for SFX | Accepted by Codex/ChatGPT (PR #1 round 2, PR #2 point 6) |
+| D-012 | Required | All exchange and review happens through GitHub PRs; one combined plan goes to the owner | Brief |
+| D-013 | Agreed (rev. 4 confirmed by Codex) | Offline spawn phase and income, accounting boundary and lifecycle, contact predicate, device/audio acceptance and platform rationale are agreed (Codex round 3). Save recovery: rev. 4 adds protected slots for migration failure | ChatGPT round 1 → rev. 2; round 2 → rev. 3; round 3 confirmed all but save recovery → rev. 4 |
+| D-014 | Approved (owner) | TypeScript + PixiJS v8 + Vite + Capacitor (was Claude D1) | Text-only and diff-friendly, testable without a human, same build in a browser and on Android |
+| D-015 | Agreed | Pure simulation core separate from rendering; fixed 10 Hz step; offline is a deliberately simplified rule set (was D2) | Testable rules; ChatGPT's correction on offline accepted |
+| D-016 | Agreed | Kids composited from up to four layers (back, body, face, front) with procedural wander animation; performance measured at four layers per kid (was D3) | One or two static images per new type; the roster scales cheaply |
+| D-017 | Agreed | Kids, recipes, buildings and balance in JSON, validated in CI: result tier above both parents, reachability, valid weights (was D4) | Design doc §8; ChatGPT added checks |
+| D-018 | Approved (owner) | Offline: closed-form catch-up capped at 8 h (excess discarded and shown); no offline fusions; persisted spawn progress; idempotent reconcile (was D5) | Owner, 2026-10-01; details in the plan §3 |
+| D-019 | Approved (owner) | Potatokens: instant spawn and an alternative payment for compendium respawns; earned from discoveries and milestones; no IAP and no construction timers in the MVP (was D6) | Owner, 2026-10-01 |
+| D-020 | Approved (owner) | Materials faucet: passive income per kid, `0.5 · 2^(tier-1)` per second (was D7) | Owner, 2026-10-01 |
+| D-021 | Approved (owner) | Android first; iOS later (needs a Mac with Xcode; distribution needs a paid membership) | Owner, 2026-10-01; ChatGPT's platform correction |
+| D-022 | Agreed | HUD and panels are a DOM overlay; the world is drawn in Pixi; UI touches never start world drags | Accepted by Codex/ChatGPT (PR #1 round 2) |
+| D-023 | Agreed | Starter roster and recipes as in `ENGINEERING_PLAN.md` §2, no renames; first-playable recipe R1 `plain + water → firefighter` | Accepted by Codex/ChatGPT, which owns names and theming |
+| D-024 | Agreed | Only the Garden is a map sprite (512 × 512, anchor (256, 480)); Capacity, Bias and Compendium are reached through bottom-tray UI with icons | Accepted by Codex/ChatGPT (PR #1 round 2, PR #2 point 4) |
+| D-025 | Approved (owner) | Repo stays private for now; playable builds go out as CI artifacts (web zip, then a debug APK) | Pages API returned 422 for a private repo; owner, 2026-10-01: "Don't make it public yet" |
+| D-026 | Approved (owner) | Test device: the owner's **Samsung Galaxy S26 Ultra** (physical). It is a flagship, so passing on it does not prove mid-range performance. We also check with Chrome DevTools 4× CPU throttling as a pessimistic proxy | Owner, 2026-10-01 |
+| D-027 | Approved (owner) | **Trial arrangement:** the owner talks only to Claude. ChatGPT's role is filled by Codex, called through the Claude Code Codex plugin: `/codex:rescue` for ChatGPT's tasks (with the `TASKS.md` entry), `/codex:review` on every Claude PR before merging to `main`. Codex works in its own worktree on `chatgpt/` branches; Claude pushes its commits unchanged and posts its reviews verbatim. Claude still reviews all art and audio. Disagreements: one PR round, then the owner | Owner instruction, 2026-10-01; the owner may switch back to separate ChatGPT sessions |
+| D-035 | Approved (owner) | Codex always runs on `gpt-6.1-sol` with high reasoning effort, for tasks and reviews | Owner instruction, 2026-10-01 |
+| D-028 | Agreed | Accounting boundary: persisted `accountedUntil` is a high-water mark advanced by every online step and by `reconcile`; any suspension, however short, is no-fusion offline time; one lifecycle coordinator owns browser and native pause/resume | Codex/ChatGPT round-2 counterexamples (duplicate credit, short hidden gaps, clock rewind) |
+| D-029 | Agreed (rev. 4 confirmed by Codex) | Save failures: unreadable storage is never treated as empty; state validation as well as checksum; corrupt **and migration-failed** slots are *protected* and never written until their raw bytes are archived and read back; fallback to an older save is announced; otherwise unsaved-session mode with a visible banner; revisions monotonic across recovery | Codex/ChatGPT rounds 2 and 3, point 3 |
+| D-030 | Agreed | Contact = ground-point distance ≤ `contactRadius` (90 world units), body only; costumes never affect mechanics | Codex/ChatGPT round 2, point 4 |
+| D-031 | Agreed | UI font: Patrick Hand Regular (SIL OFL 1.1), bundled locally with its licence; system sans-serif fallback | ChatGPT, PR #2 point 7 |
+| D-032 | Agreed | Android launcher (adaptive 432 × 432 foreground/background) and splash (1152 × 1152, 768 px safe circle) from ChatGPT's 4× masters; Claude generates the native resources. M4 scope | ChatGPT, PR #2 point 8 |
+| D-033 | Agreed | Drag and drop feedback is procedural and shape-based, and never hints at undiscovered recipes | ChatGPT, PR #2 point 9 |
+| D-034 | Agreed | Device performance pass: 60 s at full capacity, p95 frame time ≤ 16.7 ms on the S26 Ultra and ≤ 33 ms at 4× CPU throttle; headless CI fps is logged only | Codex/ChatGPT round 2, point 5; CI has no GPU |
+
+## Open questions
+
+| ID | For | Question |
+|---|---|---|
+| O-001 | Owner | Resolved → D-026 (Galaxy S26 Ultra). |
+| O-002 | Owner | Resolved → D-025 (stay private). |
+| O-003 | ChatGPT | Resolved: all accepted (PR #1 round 2). |
+
+## Sub-agents and tools
+
+| Agent | Used by | Purpose |
+|---|---|---|
+| Codex CLI (Claude Code `codex` plugin) | Claude | **Fills the ChatGPT role** under D-027: art/audio owner and reviewer of Claude's code. `/codex:rescue` for tasks, `/codex:review` for PR reviews. Worktree `../potato-kid-chatgpt`. |
