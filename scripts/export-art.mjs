@@ -3,7 +3,7 @@
 // previews. Uses Playwright's Chromium so SVG rendering matches the game's
 // WebView. Usage: npm run art:export [-- --check-only]
 import { chromium } from '@playwright/test';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
 const ROOT = process.cwd();
@@ -25,6 +25,15 @@ const FAMILIES = [
   { prefix: 'android_splash', dir: 'art/exports/android', size: [1152, 1152], padding: 0, opaque: false },
 ];
 const NAME = /^[a-z0-9]+(_[a-z0-9]+)*$/;
+/** Generated files from the previous run, so removed or renamed sources don't leave stale PNGs. */
+const MANIFEST = join(ROOT, 'art/.export-manifest.json');
+
+/**
+ * Kid layer order and names. Must match src/render/layers.ts (LAYER_ORDER and
+ * layerAssetName): shared `kid_plain_body` / `kid_plain_face`, optional
+ * `kid_<id>_overlay_back` / `_front` (ASSETS.md). layers.test.ts pins the engine side.
+ */
+const kidLayerNames = (id) => [`kid_${id}_overlay_back`, 'kid_plain_body', 'kid_plain_face', `kid_${id}_overlay_front`];
 
 function familyOf(name) {
   return FAMILIES.find((f) => name.startsWith(f.prefix));
@@ -103,6 +112,21 @@ for (const file of svgs) {
   }
 }
 
+// Remove outputs from the previous run whose source no longer exists. Only files this
+// tool generated (listed in the manifest) are ever deleted.
+if (!checkOnly) {
+  const previous = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : [];
+  const current = new Set(exported);
+  for (const rel of previous) {
+    if (!current.has(rel) && existsSync(join(ROOT, rel))) {
+      rmSync(join(ROOT, rel));
+      console.log(`removed stale ${rel}`);
+    }
+  }
+  mkdirSync(dirname(MANIFEST), { recursive: true });
+  writeFileSync(MANIFEST, JSON.stringify([...current].sort(), null, 2) + '\n');
+}
+
 // Review previews: every kid composited back→body→face→front, at 48/64/96 CSS px on
 // light and dark grounds, plus a crowded 40-kid portrait scene on the map if present.
 if (!checkOnly) {
@@ -115,7 +139,7 @@ if (!checkOnly) {
   const kids = kidsJson
     .map((k) => ({
       id: k.id,
-      layers: [`kid_${k.id}_overlay_back`, 'kid_plain_body', 'kid_plain_face', `kid_${k.id}_overlay_front`].map(layerUrl).filter(Boolean),
+      layers: kidLayerNames(k.id).map(layerUrl).filter(Boolean),
       hasOwnArt: k.id === 'plain' || !!layerUrl(`kid_${k.id}_overlay_front`) || !!layerUrl(`kid_${k.id}_overlay_back`),
     }))
     .filter((k) => k.hasOwnArt && k.layers.length > 0);
