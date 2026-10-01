@@ -19,7 +19,7 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
 });
 
 test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ page }) => {
-  const errors = await boot(page, '?seed=3&debug=1');
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
   // Place the pair far apart so they can't touch by wandering first.
   const { plain, water } = await page.evaluate(() => ({
     plain: window.__PK__!.debugAdd!('plain', 250, 1500),
@@ -54,7 +54,7 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
 });
 
 test('a released kid stays where it was dropped (no snap-back)', async ({ page }) => {
-  const errors = await boot(page, '?seed=5&debug=1');
+  const errors = await boot(page, '?seed=5&debug=1&calm=1');
   const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 200, 1500));
   await page.waitForTimeout(150);
   const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
@@ -80,6 +80,33 @@ test('a released kid stays where it was dropped (no snap-back)', async ({ page }
   }, id);
   const startDist = Math.hypot(to.x - from.x, to.y - from.y);
   for (const p of samples) expect(Math.hypot(p.x - landing.x, p.y - landing.y)).toBeLessThan(startDist * 0.1);
+  expect(errors).toEqual([]);
+});
+
+test('an OS-cancelled touch releases the kid and dragging still works', async ({ page }) => {
+  const errors = await boot(page, '?seed=6&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 300, 1200));
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  // Start a drag, then deliver a native pointercancel straight to the canvas.
+  await page.mouse.move(p.x, p.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(p.x + 60, p.y - 20, { steps: 4 });
+  await page.evaluate(() => {
+    document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, bubbles: true }));
+  });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  // The kid is back near its start, and a fresh drag works.
+  const back = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  expect(Math.hypot(back.x - p.x, back.y - p.y)).toBeLessThan(5);
+  await page.mouse.move(back.x, back.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(back.x + 100, back.y - 20, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  const moved = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  expect(moved.x - back.x).toBeGreaterThan(60);
   expect(errors).toEqual([]);
 });
 

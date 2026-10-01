@@ -81,6 +81,11 @@ export class MapScene {
     app.stage.on('pointerup', (e) => this.endDrag(e, 'drop'));
     app.stage.on('pointerupoutside', (e) => this.endDrag(e, 'drop'));
     app.stage.on('pointercancel', (e) => this.endDrag(e, 'cancelDrag'));
+    // Pixi doesn't forward a native pointercancel (e.g. the OS taking over a touch) to the
+    // stage, which would leave the kid held forever (Codex review, PR #5).
+    app.canvas.addEventListener('pointercancel', (e) => {
+      if (this.drag && e.pointerId === this.drag.pointerId) this.cancelActiveDrag();
+    });
     // Leaving the app mid-drag counts as a cancelled touch (plan §2).
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.drag) this.cancelActiveDrag();
