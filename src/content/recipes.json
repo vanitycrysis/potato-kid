@@ -1,0 +1,8 @@
+[
+  { "a": "plain", "b": "water", "result": "firefighter" },
+  { "a": "plain", "b": "fire", "result": "chef" },
+  { "a": "plain", "b": "snow", "result": "snowman" },
+  { "a": "fire", "b": "water", "result": "steam" },
+  { "a": "fire", "b": "firefighter", "result": "hero" },
+  { "a": "chef", "b": "snowman", "result": "sundae" }
+]
