@@ -1,45 +1,148 @@
 # Art and audio plan
 
-Author: ChatGPT. Revision 2, 2026-10-01. All nine points of [Claude's PR #2 review](https://github.com/vanitycrysis/potato-kid/pull/2#issuecomment-5940058569) are applied, awaiting Claude's verification. Owner direction on stack and game rules is recorded on PR #1; engineering corrections and joint consolidation remain. No production assets have been made. Actual style samples require owner gate 2.
+Author: ChatGPT. Art direction v2 specification, 2026-10-01. Task ART-V2-SPEC. **Proposed for Claude's technical review; no new finished art is delivered here.** PR #8 contains the existing r2 sources. Gate 2 remains pending (D-042).
 
-## Reference findings and visual direction
+Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md` and D-036..D-042 in `.codex-out/decisions-gate2.md`. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. Cream fill is approved; revised samples still need gate 2. ChatGPT authors all visual work, including placeholders and motion data. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 
-All 22 WebP references were inspected on a light background. They contain black line art with transparent interiors. The base has an uneven rounded body, tiny dot eyes, a short nearly flat smirk, and small nubs. Cook adds a hat and prop; sleep and snow include whole scenes and restrained accessory changes. Canvases vary: base 364 x 340, cook 418 x 374, sleep 737 x 588 or 644 x 422, snow 626 x 559. These are references, not timed or import-ready animation sets. Preserve them unchanged.
+## Direction and persistent individuality
 
-Keep the same body and face for every type: one nearly black outline, irregular contours, few nubs, one clear costume silhouette and restrained accent colour. Keep the eyes and smirk visible. Test a warm opaque potato fill to prevent the map showing through. Fill and bolder export strokes are production adaptations requiring the owner's style review.
+The 22 references, inspected through the reference contact sheet, establish irregular potato contours, dot eyes, a small off-centre smirk and tiny nubs. Cook, sleep and snow suggest restrained acting. Keep cream bodies `#fff1d5`, near-black round ink `#1a1a1a` at nominal 7.5 px on 256, and restrained costume accents. Draw a scruffy garden club: different potato shapes, still the same dryly amused little character. Avoid perfect ovals, symmetric sprouts, detailed pupils and large mouths.
 
-Start outlines at about 7-8 px on the 256 px canvas: about 1.3-1.5 CSS px at 48 px display and 1.75-2 px at 64 px. Compare with the references at the art gate, including small face marks; broadening must retain the doodle character. Preview 48/64/96 CSS px and a crowded 40-kid map. Use silhouettes and shapes as well as colour.
+Four independently drawn body families, four faces and three uniform sizes yield **48 appearances**. Costume/tier/earning power never select physique. Choose once at birth using a separate cosmetic RNG and persist `{bodyId, faceId, scale}`; no reroll per render/reload. Fusion and compendium births get fresh appearances; existing saves get a deterministic assignment from stable kid ID once. Gameplay RNG and spawn weights are untouched. No mirroring or nonuniform random scaling. Dex uses one fixed round/classic/1.00 neutral exemplar from the same components.
 
-Keep Claude's roster IDs: plain, fire, water, snow (tier 1); chef, firefighter, snowman, steam (tier 2); hero, sundae (tier 3). No renames proposed. Themes and layer allocations are in ASSETS.md. Snow's beanie/scarf and Snowman's snowball costume must differ at small sizes. Steam needs a vapour silhouette distinct from Water's droplet. Art-gate samples remain Plain, Fire, Water, Firefighter and Garden map, covering R1 plain + water -> firefighter without another type.
+| Body ID / birth weight | Drawing | Stand/walk radius | Sit/sleep radius | Wave radius | Held/settle radius |
+| --- | --- | ---: | ---: | ---: | ---: |
+| round / 40 | Uneven left shoulder, shallow right dent, off-centre belly; successor to r2 | 220 | 220 | 228 | 228 |
+| tall / 20 | Narrow upright potato, one high shoulder, three unequal nubs | 224 | 224 | 232 | 232 |
+| squat / 20 | Broad low belly, flatter base, short unequal feet | 216 | 224 | 224 | 224 |
+| bean / 20 | Leaning pear/bean, heavy left hip, small right shoulder notch | 220 | 224 | 228 | 228 |
 
-Use a quiet cream/sage garden, sparse perimeter plants and a low-detail play area, with no grid. Only the Garden appears as a map building; Capacity, Bias and Compendium use bottom-tray icons. Unknown Dex entries use one generic placeholder that reveals no costumes or recipes.
+Radii are **source-canvas pixels about (128,224)**, not world units or half-width. They conservatively reserve the entire visible kid: body, feet, nubs, costume and permitted motion. Ground is at the bottom of an upright image, so half-width circles would allow vertically adjacent silhouettes to overlap. Costumes must fit these same envelopes across all poses; redraw an overflowing prop rather than give a type a different collision advantage.
 
-## Source and runtime contract
+Declare per-frame/per-clip radii but reserve the **lifetime maximum**: round 228, tall 232, squat 224, bean 228. Sitting never releases space that waking/waving needs. At the current 180-world-unit canvas size, `radiusWorld = radiusPx * 180/256 * appearanceScale`; maximum is 179.44 world units (Tall, scale 1.10). This generous spacing is the explicit cost of literal no-visible-overlap; Claude should review density before production. Shadows and transient FX may overlap; kid silhouettes may not.
 
-1. Establish editable SVG paths with shared body/face and optional overlay_back / overlay_front groups. Hand-adjust paths to retain irregularity. Make style samples before extending the roster; Claude reviews imports and consistency, then the owner approves gate 2.
-2. Composite in order: overlay_back -> body -> face -> overlay_front. Both costume layers are optional; Plain uses neither. Share kid_plain_body.png and kid_plain_face.png; use `kid_<id>_overlay_back.png` and `kid_<id>_overlay_front.png` only when needed. An absent layer means no texture/draw, not an empty PNG.
-3. Export sRGB RGBA PNGs, each 256 x 256, ground anchor (128,224), at least 8 px clear edge padding. Body stays opaque inside its outline; other layers are transparent outside their marks. Hold body scale and face placement constant; props fit without clipping during motion. Flattened previews are review artifacts, not duplicate runtime portraits.
-4. Claude moves layers together for procedural bob/wobble/tilt, lift, placement and spawn. No per-type animation sets or directional/combat scenes. Share the shadow and eleven spawn/fusion/discovery frames. Claude owns frame timing in engine content data, atlas packing and extrusion.
-5. Map master: opaque 1080 x 2400. Coordinates start at the top left. Central safe band: x=0..1080, y=240..2160. Top/bottom 240 px are decorative bleed. Garden and essential landmarks stay in the safe band. Nominal wandering bounds subtract top 160 and bottom 280 world-unit HUD/tray insets: y=400..1880 before kid-radius and Garden-footprint exclusions.
-6. Claude's camera fits the 1080-unit world to drawable viewport width and centres vertically. Preview 16:9 and 20:9 including native safe insets and DOM overlays. Wander/drop bounds also intersect the visible unobscured area; the nominal safe band alone cannot guarantee visibility on shorter usable viewports. Never stretch kids or place interactive content in bleed. Claude confirms this during integration.
-7. Production paths: art/src/, art/previews/, assets/sprites/kids/, assets/sprites/buildings/, assets/ui/, assets/maps/, assets/fonts/, assets/platform/android/, audio/source/, assets/audio/. Use lowercase snake_case and stable roster IDs.
-8. Claude generates runtime paths, dimensions and layer mappings from exports at build time and validates naming, size and alpha in CI. ChatGPT does not hand-maintain a runtime manifest. ChatGPT supplies one assets/PROVENANCE.md: stable ID, author/source, tool/version, prompts/references if used, licence/attribution, revision and corresponding source/export. Anchors and effect timing are shared engine contracts, not inferred from image dimensions.
+| Face ID / weight | Eyes relative to face-centre | Treatment |
+| --- | --- | --- |
+| classic / 40 | (-40,0), (40,0), dots radius 3.75 | Familiar nearly flat smirk |
+| wide / 25 | (-46,0), (46,1), radius 3.75 | Slightly vacant, wider spacing |
+| crooked / 25 | (-37,-3), (42,3), radius 3.75 | One eye higher, smirk tips up 2 px |
+| dreamy / 10 | (-42,1), (37,-2), radius 3.25 | Small dots, mouth shifted 3 px right |
 
-Initial budget: nine front costume layers, up to five back layers, two shared layers = at most 16 kid textures. Back layers are planned for Fire, Firefighter, Snowman, Hero and Sundae; omit them where occlusion does not require them. Source/review previews do not add runtime textures. Worst-case kids have four layers, so performance checks must exercise that case.
+Each has open, blink (two short ticks) and asleep (two shallow arcs) states: 12 face textures. Preserve the mouth unchanged through blinking, rather than squashing the entire face. Source face pivot (128,116); body-frame attachments position it. Wide must fit Tall too. Size choices 0.90 / 1.00 / 1.10, weights 25 / 50 / 25; transform every layer uniformly about ground and multiply collision radius by the same scale.
 
-Bitmap generation is optional for map concepts after consolidation; record prompts/references and clean up to the agreed style. Canonical characters/icons use editable paths. Do not generate animation frames independently and accept shifting identity.
+## Pose and animation format
 
-## UI and Android launch art
+Keep 256 x 256 sRGB RGBA kid layers, ground anchor (128,224), at least 8 px clear source padding, logical order **back -> body -> face -> front**. Four bodies each have eight drawings: `stand`, `step_left`, `step_right`, `sit`, `wave_low`, `wave_high`, `held`, `settle` = 32 body images. Walk front-facing with tiny alternating feet; no directional body sets. Sleep uses the compact sitting body, not a sideways image.
 
-Claude's DOM overlay supplies live text and at least 44 CSS px touch targets. Supply twelve icons, shared panel/button decoration and three tier marks; code owns layout, CSS/nine-slice application, focus and hit areas. Dex portraits reuse composites. No baked labels or undiscovered-recipe hints.
+Counts below are timeline entries; repeated texture references do not add PNGs. ChatGPT authors timings/transforms in JSON. All attachment followers move when the body/frame changes unless explicitly listed otherwise.
 
-Select **Patrick Hand Regular** for live game labels, subject to 16-18 CSS px text and currency-number checks on device. It is licensed under [SIL OFL 1.1 in the Google Fonts source](https://github.com/google/fonts/blob/main/ofl/patrickhand/OFL.txt). Bundle locally, retain copyright and full OFL file, and pin source revision/hash in provenance; no runtime download. Use a system sans-serif fallback. Claude checks reflow, glyph coverage, changing number widths and font-loading failure. Revise typography at the art review if dense text is unreadable.
+| Clip | Entries / fps / duration | Sequence and layers touched |
+| --- | --- | --- |
+| idle | 4 / 2 / 2 s loop | stand x4; body, face and followers breathe <=1 px |
+| blink | 3 / 12 / 0.25 s | Face open/blink/open only; every 3-7 s |
+| walk | 4 / 8 / 0.50 s loop | stand, step_left, stand, step_right; body + followers, open face |
+| look_around | 4 / 6 / 0.67 s | stand x4; face offset x=0,-3,+3,0 only |
+| sit_down | 3 / 8 / 0.375 s | stand, settle, sit; body + followers |
+| seated | 4 / 2 / 2 s loop | sit x4; body + followers breathe <=1 px |
+| sleep | 4 / 1 / 4 s loop | sit x4; asleep face, <=1 px breath, no Z text |
+| wake | 3 / 8 / 0.375 s | sit, settle, stand; face asleep/blink/open + followers |
+| wave | 4 / 8 / 0.50 s | stand, wave_low, wave_high, stand; body + hand followers, unchanged face |
+| pick_up | 2 / 12 / 0.167 s | stand, held; body + followers |
+| held | 4 / 4 / 1 s loop | held x4; rig lean <=2 degrees, lift <=6 canvas px; open face |
+| drop | 3 / 12 / 0.25 s | held, settle, stand; body + followers; drawn squash, no root enlargement |
+| spawn | 3 / 10 / 0.30 s | settle, held, stand, opacities 0.4/0.8/1; all kid layers + 3 FX at 10 fps |
+| fusion | 4 / 12 / 0.333 s | 4 shared FX; parents disappear on consumption; child uses spawn at resolved free ground; no parent convergence |
+| discovery | 4 / 8 / 0.50 s | 4 shared FX above child; kid stays posed; first discovery only, then DOM toast |
 
-Add M4 adaptive launcher foreground/background at 432 x 432 each; essential face/sprouts fit the central 264 px diameter circle (66 dp safe zone at 4x). Supply editable SVG and PNG masters/previews. Claude generates native densities/resources and checks circle/squircle masks. [Android adaptive-icon guidance](https://developer.android.google.cn/develop/ui/compose/system/icon_design_adaptive?hl=en) defines these proportions.
+After 6-10 s stationary choose look 50%, wave 20%, sit 20%, sleep 10%. Seated hold 3-6 s; sleep hold 6-10 s then wake. Separate cosmetic scheduler, randomized phase; no effect on income/fusion. Priority: consumed > held/pickup/drop > spawn > walk > wake/ambient. Pickup interrupts any pose immediately; use held by next presentation frame. Reduced motion uses stand/sit holds and short opacity transitions; no looping sway/breath or discovery bursts.
 
-Choose a static splash character mark without a separate icon background: SVG plus 1152 x 1152 transparent PNG preview/master, essential art inside a 768 px diameter circle (288/192 dp at 4x). Configure an opaque cream window background in code. Claude converts SVG to a native vector drawable and checks launch behaviour, using the [Android splash dimensions](https://developer.android.com/develop/ui/views/launch/splash-screen#dimensions). M2 debug APK may use placeholders; final launch art is required by M4. No store/marketing art is added.
+Replace current procedural hop/squash, squash-blink, 1.12 held scale and pop overshoot where these clips apply. Applying both would breach envelopes. Interpolate authored transforms only. Render/interpolation, held positions and pending drop previews must also preserve separation: show the resolved free position, not an overlapping pointer-follow sprite until the next sim tick. `distance >= rA+rB`; valid fusion contact is `distance <= rA+rB+touchSlack`. Use the same reserved radii for both. FX may bridge the visible gap left by conservative circles. Resolve child position against remaining kids after consumption, and spawn only when space exists. Remove parent silhouettes immediately before showing the child; fading parent ghosts would need their own collision reservations and are excluded from v2. Keep kid ground disks inside world bounds, including the maximum radius at edges.
 
-Drag feedback is procedural: subtle held-kid outline/ground ring and shape change for in-bounds placement. Do not signal an undiscovered recipe match, which would reveal hidden recipes; recipe-specific hints may reference only already-discovered recipes. Do not rely on colour alone; keep the face visible and avoid persistent glow clutter. No additional feedback bitmap.
+Attachments in every body frame: `ground`, `head_top`, `face_centre`, `torso`, `hand_left`, `hand_right`. Each records absolute source `position:[x,y]`, clockwise `rotationDeg`, `scale:[sx,sy]`. Ground is always [128,224], 0 degrees, [1,1]. Illustrative round/stand: head [128,56], face [128,116], torso [128,166], left hand [52,168], right hand [202,168]. Actual values for all 32 drawings are authored in production, never inferred from alpha bounds.
+
+Back/front are logical layers that may contain multiple independently attached components. One component = one 256 PNG and one sprite. Draw all back components before body, all front after face; component-array order is authoritative. Each has an authored source pivot and fit multiplier for each body. A torso wrap follows torso scale; headwear follows head_top; a hand prop follows its hand. Water's hood needs a loose opening that fits all faces/poses; do not bake four hoods. Wave the free left nub when a prop occupies the right hand. Face alpha stays unobstructed in all allowed combinations.
+
+ASSETS.md assigns **26 front + 7 back components**, shared across every physique, face and pose. Picnic has three front parts and therefore five kid sprites including body/face. Performance fixtures must cover five sprites, not assume four draws from four logical layers. Fire flicker is authored <=2-degree rotation and 0.98-1.00 scale on existing back/head components, included in envelope; no additional fire frames.
+
+**Bigger Fire:** increase connected rear flame visible area approximately 15%, foreground crest approximately 10% from r2. Broaden middle/secondary tongues; the existing high tip is near the border, so do not simply scale the layer. Keep the asymmetric central mass, exposed side nubs and warm accents. Validate transformed padding/radius and inspect 48/64 px/grayscale beside Water and Firefighter.
+
+## Scrolling garden
+
+World x=0..2160, y=0..3840, top-left origin; camera sees 1080 world units across with height from usable portrait viewport. Retire the single 1080 x 2400 runtime plate and old fixed safe-band bounds. Kids occupy the whole world; HUD/tray are screen-space DOM, not permanently excluded world strips. Clamp camera to world edges, adapting if view is taller than world. Start centred x=1080 with Garden below the HUD. Empty-ground pan/inertia and held edge auto-scroll belong to Claude.
+
+Palette: cream `#f4efe2`, pale sage `#e2e8d4`, dusty path `#d8c5a4`, soft scenery ink `#686b55`. Three opaque seamless **256** tiles at 1 source px = 1 world unit: `ground_cream`, `ground_sage`, `ground_speckle`. All share identical cream edge pixels; sage transition lives inside the tile so arbitrary neighbours meet cleanly. Outer 160-unit fringe chooses sage/cream/speckle weights 65/25/10; interior cream/speckle 90/10. Classify fringe by cell centre. Fixed seed 20261001, no per-camera reshuffle or rotations. Clip partial final rows/columns. Keep the central lawn very quiet.
+
+Three transparent **256** path decals: straight (opposite ports), bend (adjacent), fork (three). Dusty beige, no dark outline; ChatGPT supplies edge-port masks. Rotate in 90-degree steps. Grid origin [56,0], 256 cells, columns 0..7, rows 0..14. Main route cells (col,row): [(4,3),(4,4),(4,5),(4,6),(4,7),(3,7),(3,8),(3,9),(3,10),(3,11),(4,11),(5,11),(5,12)]. Spur [(3,7),(2,7),(1,7)] joins at fork. Connectivity selects decal/rotation; endpoint ports may open into the lawn with their pale edge intentionally exposed, no extra endcap texture. Paths are walkable art, not navigation rails.
+
+| Placement | World ground point / source size | Appearance / exclusion |
+| --- | --- | --- |
+| Garden | [1080,620] / 512 x 512, source pivot [256,480] | Sprout roof over shallow wooden soil bed, blank cream sign; circle radius 300 world units; spawn outlet [1080,1120], search outward for free space |
+| Pebble patch | [460,1940] / 512 x 512, pivot [256,480] | Low pale stone oval and three clovers; left path destination; radius 280; scenery only |
+| Picnic stump | [1660,3320] / 512 x 512, pivot [256,480] | Low ringed stump, tiny leaf; right path destination; radius 280; scenery only |
+| Flower accents | [300,860], [1860,1280], [260,2700], [1910,3000] | Up to three flower/clover instances per patch, outside path/landmark clearance |
+
+Six **256** small decor sources: tuft, clover, flower, pebble, twig, mushroom. Source pivot [128,224], display scale 0.45-0.60 (normally 128 world units wide). Add 32 perimeter instances: for i=0..15, left x=96+(i mod 3)*28, right x=2064-(i mod 3)*28, y=220+i*220. Cycle the six IDs by i, deterministic jitter <=12 units per axis. Final alpha must remain inside world. Cap 44 small instances including accents; skip conflicts instead of filling gaps.
+
+Draw scenery behind kids; reserve radius 90 world units for each small instance, 280 for landmarks, 300 Garden. Require kid radius + decor radius +16 world units clearance to prevent plant/hat tangencies. Paths/ground reserve none. Keep x=480..1680 free of tall decor except Garden. Only Garden is a gameplay building: Capacity, Bias, Compendium remain tray controls. No terrain hazards or extra mechanics.
+
+ChatGPT supplies `art/data/map_garden_v2.json`: world/cell sizes, seed/weights, ports/path cells, final explicit instances with asset ID, ground position, scale, rotation, exclusion and draw order. Claude implements these authored rules/placements, not improvised scenery. Review all four camera quadrants, seams, edges, crowded Garden outlet and 16:9/20:9 drag auto-scroll. Never rasterize the whole world into a persistent intermediate texture.
+
+## DOM GUI design
+
+Cream paper notebook over a sage garden: hand-inked rounded borders, sage selected state, dusty orange discovery corner. Live text in previously selected locally bundled Patrick Hand Regular, system sans fallback. Labels 18 CSS px, counts 20-24, dense text >=16, hit targets >=44; visible focus and shape changes as well as colour.
+
+ChatGPT delivers **native SVG**, no runtime GUI PNG, in `art/src/ui/`, copied through art:export to `assets/ui/`; plus review-only 390 x 844 and 390 x 693 SVG layout mockups with safe-inset guides. Shared surfaces use a 24 x 24 viewBox and 8 px corner/inset system, applied as SVG border fragments/CSS border-image. Preserve border thickness, never stretch whole pictograms. Claude implements authored spacing/layout and live quantities.
+
+- **HUD:** two-row paper strip below top safe inset, 8 px outer margin/gaps. Row 1 kids count left, Materials/Potatokens chips right; Settings control at least 44 px. Row 2 sprout clock, next-spawn countdown, slim progress track and >=44 px instant-spawn button. Full capacity uses live text plus paused hatch, not just colour. On narrow widths currencies wrap; never squeeze touch targets.
+- **Tray:** scalloped paper top, bottom-safe padding; four equal cells >=56 px high, 28 px icon above live Garden/Capacity/Bias/Compendium labels. Dex is a separate 48 px tab above the right edge. Selected item has a leaf underline. Expanded upgrades reuse sheets; retain the visible world above.
+- **Dex:** solid cream bottom sheet up to 80% usable height, heading/close control, three card columns at 390 px, two below 360. Portrait box 80 px; tier mark and live name below. Locked entries use one closed seed packet/question mark, no hidden type silhouette. Kids/Recipes/Compendium tabs. Discovered recipe rows use live plus/arrow; unrevealed slots read Unknown recipe.
+- **Discovery toast:** 8 px side margins below HUD, <=96 px high; orange star corner, 56 px reused portrait, live New kid/name/tier. Show 2.5 s, tap opens that discovered Dex entry; queue discoveries. No toast on repeat fusion and no unrevealed parentage hints. It intercepts its own touches and stays outside the main drag corridor.
+- **Buttons:** normal cream/ink; pressed inset bottom line; disabled dashed border/muted text; selected sage/leaf underline; focus outline. Primary buttons have a small authored ink offset shadow. Spawn-full gets authored hatch. Live labels, not baked lettering.
+
+Deliver 15 icons: materials (timber offcuts), potatokens (potato coin), kids (two heads), garden (sprout bed), capacity (open fence), bias (branching sprout), compendium (seed envelope), dex (tabbed notebook), settings, audio_on, audio_off, unknown (closed seed packet), timer (sprout clock), close, discovery (four-point star). Tier marks: 1 single seed, 2 twin leaf, 3 three-petal bud, 4 four-point blossom; shape plus colour. Tier 4 is proposed with expansion, not a balance change.
+
+DOM portraits composite the same exported SVG components with their attachment transforms; fixed neutral exemplar, no cached raster per kid/appearance. No recipe-hint art for undiscovered pairs. ChatGPT supplies SVGs and `art/data/ui_v2.json` palette, type/spacing/inset tokens, state IDs and mockup dimensions. Code may apply these authored paths/masks; Claude must not draw new icons, ring/shadow/feedback shapes or placeholder art. Placement/held feedback SVGs are in ASSETS.md; positions/opacity may be driven procedurally by Claude.
+
+## Decoded texture budget
+
+RGBA bytes = width x height x 4; 1 MiB = 1,048,576 bytes. Count unique resident textures, not instances/compressed bytes. No mipmaps. Native DOM SVG adds no Pixi texture; review browser UI memory on device as well. Atlas slack/extrusion, duplicate sources and render targets count. Native Android art/review previews are not runtime game textures.
+
+| Family | Unique images | Raw MiB |
+| --- | ---: | ---: |
+| Bodies | 4 x 8 at 256 = 32 | 8.00000 |
+| Faces | 4 x 3 at 256 = 12 | 3.00000 |
+| Costumes | 26 front + 7 back at 256 = 33 | 8.25000 |
+| Spawn/fusion/discovery | 3+4+4 at 256 = 11 | 2.75000 |
+| Shadow | 1 at 128 x 64 | 0.03125 |
+| Ground | 3 at 256 | 0.75000 |
+| Path decals | 3 at 256 | 0.75000 |
+| Small decor | 6 at 256 | 1.50000 |
+| Landmarks | 2 at 512 | 2.00000 |
+| Garden | 1 at 512 | 1.00000 |
+| GUI rasters/extra portraits | 0 | 0.00000 |
+| **Raw total** | **104 images, including 77 kid-layer images** | **28.03125** |
+| Allocation reserve | Padding/extrusion/slack/necessary surfaces | **3.96875** |
+| **Hard ceiling** | Actual simultaneous allocations | **32.00000** |
+
+Load neither legacy map plate/shared aliases nor flattened portraits, launch masters or placeholders alongside replacements. Shared costumes prevent body x face x pose multiplication. Atlas rounding is not free: actual pages must fit 32 MiB; use individual textures/tightly packed non-power-of-two pages if necessary. If overhead cannot fit, reduce packing waste, then landmark/decor resolution, with art review. A new costume frame/component or GUI raster needs a budget debit before production. Reserved GPU surfaces for authored SVG placement feedback must also be reported if rasterized.
+
+## JSON sidecar and exporter contract
+
+ChatGPT authors `art/data/kid_rig_v2.json`, schemaVersion 2, with canvas, ground anchor, world canvas size, weighted appearance, bodies/frames/attachments/radii, faces/states/pivots, costumes/components/pivots/fitByBody/status, clips/fps/loop/frames/clip maxima, effects and reduced-motion alternatives. See `.codex-out/art-v2-spec-notes.md` for a concrete JSON subset and transform order. Claude generates runtime paths/mappings from validated exports; no hand-maintained runtime manifest. Source coordinates remain authoritative if an atlas trims alpha; record trim offsets without changing pivots.
+
+New checks required in `npm run art:export` (current exporter only knows legacy shared layers/map):
+
+1. Recognize body/frame, face/state, back/front component, ground/path/decor/landmark families and SVG-only UI. Validate unique names/IDs, legal roster references, source sizes/viewBoxes, required attachments, finite numbers, positive scales/fps/weights, complete frames/clips, and source existence. Missing optional layers have no empty files; missing required assets fail.
+2. Validate opaque body interiors and ground, nonempty layers, alpha/padding; transform all allowed body/face/costume/pose combinations, checking face obstruction, >=8 px composed padding, radius envelope and interpolation extrema. Clip maximum >= transformed frame maximum; body lifetime radius >= every clip. Exact ground anchor is invariant. Reject costume fit/rotation clipping, not merely source padding.
+3. Validate tile-edge RGBA equality, decal transparency, rotated path ports/connectivity, world instance bounds and exclusions, seed/placement completeness. Check all quadrant/camera preview coverage; no giant map plate enters the v2 runtime manifest.
+4. Preserve atomic writes and check-only mode. Copy DOM SVG without PNG siblings; reject scripts/external URLs/fonts/unsafe paths. Generate manifest including component order/pivots/trim offsets/timing/status. Report raw bytes and actual allocated pages/render targets; fail >32 MiB or placeholder/final coexistence/duplicate legacy loads. Generated stale-file cleanup stays scoped to prior manifest.
+5. Existing content validator checks proposed IDs/recipes for strict tier increase and spawn reachability once Claude accepts them. Assert every roster type has final or ChatGPT placeholder coverage. Make deterministic 48/64/96 px/gray contact sheets and a 40-kid nonoverlapping crowd using actual radii; the current randomly overlapping crowd does not prove D-039.
+
+Manual review still judges reference character, bigger Fire, face readability, costume tangencies and acting. Claude should test fixed-step and interpolated neighbours, pose changes, held pointer/cancel/drop previews, congested Garden, fusion children and camera edges; simulation-only spacing does not prove render-time spacing. Measure five-sprite worst case and real allocated texture bytes on S26 Ultra and existing 4x CPU-throttle/performance targets.
+
+## Delivery and gates
+
+First Claude reviews technical fit: rig/draw count, conservative spacing, camera/UI layout, exporter migration and allocated memory. Next art slice: four-body/four-face sheets, bigger Fire, R1 costume fit, a small pose strip, tiled garden sample and GUI mockups; quick roster placeholders may accompany it. Claude reviews, then presents revised samples for owner **gate 2**, still pending. Full final roster/animation production follows approval. Gate 3 remains first playable on the owner's phone; gate 4 remains MVP before polish/extra content. Preserve provenance for every source/export, references/tool/version/licence/revision. No source/runtime art or engine changes in this spec task.
 
 ## Audio production and handoff
 
@@ -52,17 +155,3 @@ ChatGPT has no dedicated music-generation tool here. Compose one original sparse
 - Audition WAV and encoded loops in the actual Android WebView/Howler runtime on headphones and phone speakers: repeated seams, fatigue, quiet playback and decoding. Sample boundaries alone do not prove encoded seamless playback. Claude selects decoded versus streaming playback deliberately.
 - Claude implements persisted music/SFX volumes and mute, first-gesture unlock with silent failure, music pause/SFX stop when hidden, and permitted resume. Priorities: discovery > fusion > upgrade > spawn > place/pick-up > UI tap. Discovery replaces fusion for one event; spawn cues are limited to one per 300 ms. Resource spend plays only when no more specific success cue applies.
 - Record provenance for all work. Imported fonts, soundfonts, samples or audio require compatible licences; prefer original synthesized tones without outside samples.
-
-## Delivery and acceptance
-
-| Slice | Deliverable | Acceptance |
-| --- | --- | --- |
-| M0 plan | Revised art/audio plan and asset list | Claude verifies nine applied points; joint plan/engineering findings consolidated |
-| M1 style | Plain, Fire, Water, Firefighter, Garden map; small/crowded previews | Claude reviews reference/import fit; owner gate 2 approves actual samples including fill/stroke |
-| M2 first playable | R1 kids, Garden, shadow/shared interaction effects, essential UI and tap/lift/place/spawn/fusion cues | Claude integrates; ChatGPT reviews behaviour/readability; owner gate 3 |
-| M3 systems | Remaining roster, tray/Dex/compendium/upgrade art, all eight cues and music | Content/import checks and reciprocal reviews |
-| M4 MVP | Font and final launcher/splash, full visual/audio/device acceptance | Owner gate 4 before polish/extra content |
-
-Initial decoded texture target: <=32 MiB including map, atlases, UI and effects. Measure actual allocation/overhead, not compressed files. Full-capacity tests use 40 kids, up to four layers each, effects, HUD/input and simulation. Owner-named Galaxy S26 Ultra and encoded-loop listening are required; CPU-throttled browser checks are additional proxies.
-
-Engineering round 2 is in .codex-out/pr1-round2-review.md for Claude to post verbatim; remaining correctness findings prevent PR #1 approval. ENGINEERING_REVIEW.md remains historical round 1. Rebase PR #2 after #1 merges, preserving these revisions and the handoff within Claude's consolidated decisions/tasks. This branch's DECISIONS.md is untouched; proposed decision updates are in .codex-out/pr2-response.md.
