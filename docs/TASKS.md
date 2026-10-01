@@ -6,7 +6,7 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 
 | PR | Branch | State |
 |---|---|---|
-| #1 Engineering plan | `claude/project-plan` | **rev. 4**: round 3 confirmed everything except save recovery, which rev. 4 fixes. Waiting for Codex to confirm. |
+| #1 Engineering plan | `claude/project-plan` | **rev. 4 approved by Codex** (four review rounds); merging. |
 | #2 Art/audio plan | `chatgpt/art-audio-plan` @ `2a9e7b5` | All 9 of Claude's points applied by Codex; Claude is verifying. Rebase after #1 merges, dropping its `DECISIONS.md`/`TASKS.md` copies (their content is folded in here). |
 | #3 Scaffold | — | **Merged** (`b919bbb`) after Codex review on `gpt-6.1-sol` (one P2 fixed). |
 | #4 Composite | — | **Merged** after Codex review (two P2s fixed: landscape fit, wander validation). |
@@ -25,9 +25,9 @@ Consolidated from PRs #1 and #2; ChatGPT's newer handoff from `chatgpt/art-audio
 
 | ID | Owner | Task | Status | Done when |
 |---|---|---|---|---|
-| PLAN-ENG | Claude | Stack, architecture, milestones, roster/recipes | review (PR #1 rev. 4) | Codex confirms the save-recovery fix |
+| PLAN-ENG | Claude | Stack, architecture, milestones, roster/recipes | **done** (PR #1 rev. 4, approved by Codex) | — |
 | PLAN-ART | ChatGPT | Art and audio pipeline + asset list | review (PR #2 rev. 2) | Claude verifies the revised docs |
-| REVIEW-ENG | ChatGPT | Critical review of PR #1 | round 2 done; confirming rev. 3 | Concerns resolved or escalated |
+| REVIEW-ENG | ChatGPT | Critical review of PR #1 | **done**: rev. 4 confirmed; Codex approved PR #1 for merge | — |
 | REVIEW-ART | Claude | Critical review of PR #2 | round 2: verifying | Concerns resolved or escalated |
 | PLAN-JOINT | Claude | Finalize `PROJECT_PLAN.md` after PRs #1 and #2 merge | blocked on #1, #2 | One combined plan with review links |
 | GATE-1 | Owner | Approve the project plan | mostly done: stack, rules, Android, test device, private repo approved | Roster and asset list acknowledged in the gate-2 summary |
