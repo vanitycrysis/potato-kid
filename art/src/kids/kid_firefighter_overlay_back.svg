@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Firefighter Kid — short hose return</title>
+  <desc>A short, thick hose curves from the front nozzle coupling back behind the body. No closed rear loop or low trailing tail competes with the helmet silhouette.</desc>
+  <path id="hose_tail" d="M 215,126 C 215,140 231,150 230,163 C 229,174 214,180 200,178 L 196,165 C 208,167 216,165 216,160 C 216,153 202,142 203,127 Z" fill="#c6ad82" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

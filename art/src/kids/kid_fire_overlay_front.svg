@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Fire Kid — small flame crest</title>
+  <desc>A single small crest overlaps the forehead, well above both eyes.</desc>
+  <path id="flame_crest" d="M 120,84 C 108,81 105,72 110,63 C 114,57 119,52 120,45 C 128,51 131,59 129,65 C 134,63 138,58 140,54 C 148,64 147,74 140,81 C 134,85 126,86 120,84 Z" fill="#f1bf79" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
