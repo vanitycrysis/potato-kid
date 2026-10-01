@@ -294,3 +294,53 @@ test('a kid in the bottom-right corner can be scrolled out from under the Dex bu
   expect(errors).toEqual([]);
 });
 
+test('on a short landscape screen, holding a kid still in the middle does not scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 915, height: 413 });
+  const errors = await boot(page, '?seed=18&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1080, 1500));
+  await page.evaluate(() => window.__PK__!.centerOn(1080, 1460));
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const top = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
+  const bottom = await page.evaluate(() =>
+    Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top),
+  );
+  await page.mouse.move(p.x, p.y - 10);
+  await page.mouse.down();
+  await page.waitForTimeout(100);
+  // Centre the held kid's silhouette in the usable band between the HUD and the tray/Dex.
+  const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
+  const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(0, 100).y - window.__PK__!.worldToScreen(0, 0).y) / 100);
+  const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const centre = at.y + ((kid.box.top + kid.box.bottom) / 2) * zoom;
+  await page.mouse.move(p.x, p.y - 10 + ((top + bottom) / 2 - centre), { steps: 2 });
+  const before = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1460));
+  await page.waitForTimeout(600);
+  const during = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1460));
+  await page.mouse.up();
+  expect(Math.abs(during.y - before.y)).toBeLessThan(2);
+  expect(errors).toEqual([]);
+});
+
+test('a held kid never disappears behind the HUD while scrolling up', async ({ page }) => {
+  const errors = await boot(page, '?seed=19&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1080, 2600));
+  await page.evaluate(() => window.__PK__!.centerOn(1080, 2400));
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const hudBottom = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
+  await page.mouse.move(p.x, p.y - 20);
+  await page.mouse.down();
+  await page.mouse.move(p.x, hudBottom + 10, { steps: 6 });
+  for (let i = 0; i < 5; i++) {
+    await page.waitForTimeout(120);
+    const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
+    const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    const top = await page.evaluate(([y, t]) => window.__PK__!.worldToScreen(0, y + t).y - window.__PK__!.worldToScreen(0, y).y, [0, kid.box.top] as const);
+    // The silhouette's top edge stays at or below the HUD.
+    expect(at.y + top).toBeGreaterThanOrEqual(hudBottom - 1);
+  }
+  await page.mouse.up();
+  expect(errors).toEqual([]);
+});
+

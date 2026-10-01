@@ -148,11 +148,17 @@ export class Game {
    * touches nothing (D-039, D-043). The scene draws the held kid there, so a lifted kid
    * never overlaps anyone either; it can still sit right against a recipe partner.
    */
-  landingSpot(kidId: number, x: number, y: number, drawn?: Map<number, { x: number; y: number }>): { x: number; y: number } | null {
+  landingSpot(
+    kidId: number,
+    x: number,
+    y: number,
+    drawn?: Map<number, { x: number; y: number }>,
+    limit?: Bounds,
+  ): { x: number; y: number } | null {
     const world = this.state.world;
     const kid = world.kids.find((k) => k.id === kidId);
     if (!kid) return null;
-    if (!drawn || drawn.size === 0) return findFreeSpot(world, kid.box, x, y, kid.id);
+    if (!drawn || drawn.size === 0) return findFreeSpot(world, kid.box, x, y, kid.id, limit);
     // Free against both where neighbours ARE (the sim, so the drop won't be re-resolved)
     // and where they're DRAWN this frame (interpolated), so the preview never overlaps
     // a neighbour on screen either (render-time separation; Codex review, PR #14).
@@ -160,7 +166,7 @@ export class Game {
       const d = drawn.get(k.id);
       return d && (d.x !== k.x || d.y !== k.y) ? [{ ...k, x: d.x, y: d.y }] : [];
     });
-    return findFreeSpot({ ...world, kids: [...world.kids, ...ghosts] }, kid.box, x, y, kid.id);
+    return findFreeSpot({ ...world, kids: [...world.kids, ...ghosts] }, kid.box, x, y, kid.id, limit);
   }
 
   /** Advances one fixed step. */

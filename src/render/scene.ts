@@ -339,8 +339,35 @@ export class MapScene {
   /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
   private resolveHeld(): void {
     if (!this.drag) return;
-    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn);
+    // Keep the held kid's whole silhouette inside the visible play area (between HUD and
+    // tray), so it can't disappear behind the GUI while the finger is near an edge.
+    // The free-spot search is limited to that area too: otherwise scenery (e.g. the Garden)
+    // can push the nearest free spot up behind the HUD (Codex review, PR #15).
+    const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    let limit: { minX: number; minY: number; maxX: number; maxY: number } | undefined;
+    if (kid) {
+      const z = this.cam.zoom;
+      const { width, height } = this.app.screen;
+      limit = {
+        minX: this.cam.x - kid.box.left,
+        maxX: this.cam.x + width / z - kid.box.right,
+        minY: this.cam.y + this.insets.top / z - kid.box.top,
+        maxY: this.cam.y + (height - this.insets.bottom) / z - kid.box.bottom,
+      };
+      if (limit.minY <= limit.maxY) this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
+    }
+    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn, limit);
     if (spot) this.drag.spot = spot;
+  }
+
+  /** The held kid's silhouette box on screen (CSS px), from where the finger wants it. */
+  private heldScreenBox(): { top: number; bottom: number } | undefined {
+    if (!this.drag) return undefined;
+    const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    if (!kid) return undefined;
+    const z = this.cam.zoom;
+    const wantY = this.camera.toLocal(this.dragScreen).y - HOLD_LIFT;
+    return { top: (wantY + kid.box.top - this.cam.y) * z, bottom: (wantY + kid.box.bottom - this.cam.y) * z };
   }
 
   private cancelActiveDrag(): void {
@@ -406,12 +433,21 @@ export class MapScene {
     const step = Math.min(dt, 0.1);
     if (this.drag) {
       const { width, height } = this.app.screen;
-      // Edge zones sit at the edges of the *visible* play area, inside the HUD and tray
-      // (Codex review, PR #15), so the held kid stays in view while it scrolls the map.
-      const edge = (pos: number, lo: number, hi: number) =>
-        pos < lo + EDGE_ZONE ? -Math.min(1, 1 - (pos - lo) / EDGE_ZONE) : pos > hi - EDGE_ZONE ? Math.min(1, 1 - (hi - pos) / EDGE_ZONE) : 0;
-      const ex = edge(this.dragScreen.x, 0, width);
-      const ey = edge(this.dragScreen.y, this.insets.top, height - this.insets.bottom);
+      // Edge zones sit at the edges of the *visible* play area, inside the HUD and tray, and
+      // shrink on short screens so a neutral middle always remains (Codex review, PR #15).
+      // Horizontally they follow the finger; vertically they follow the held kid's own
+      // silhouette (it floats above the finger), so it never hides behind the HUD.
+      const zone = (span: number) => Math.max(8, Math.min(EDGE_ZONE, span / 4));
+      const ramp = (into: number, z: number) => Math.min(1, Math.max(0, 1 - into / z));
+      const zx = zone(width);
+      const ex = -ramp(this.dragScreen.x, zx) + ramp(width - this.dragScreen.x, zx);
+      const top = this.insets.top;
+      const bottom = height - this.insets.bottom;
+      const held = this.heldScreenBox();
+      // The zones share what's left after the kid's own height, so a neutral band survives
+      // even on short landscape screens.
+      const zy = zone(bottom - top - (held ? held.bottom - held.top : 0));
+      const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
       if (ex || ey) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;

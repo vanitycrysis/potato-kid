@@ -84,8 +84,20 @@ export function innerBounds(b: Bounds, box: Box): Bounds {
  * at fixed angles. The nearest free candidate wins; ties keep the first, so the result
  * is deterministic. Null when there is no room nearby.
  */
-export function findFreeSpot(world: World, box: Box, x: number, y: number, ignore?: number): { x: number; y: number } | null {
-  const ib = innerBounds(world.bounds, box);
+export function findFreeSpot(
+  world: World,
+  box: Box,
+  x: number,
+  y: number,
+  ignore?: number,
+  /** Optional extra limit on the ground point, e.g. the visible play area for a held preview. */
+  limit?: Bounds,
+): { x: number; y: number } | null {
+  let ib = innerBounds(world.bounds, box);
+  if (limit) {
+    const cut = { minX: Math.max(ib.minX, limit.minX), minY: Math.max(ib.minY, limit.minY), maxX: Math.min(ib.maxX, limit.maxX), maxY: Math.min(ib.maxY, limit.maxY) };
+    if (cut.minX <= cut.maxX && cut.minY <= cut.maxY) ib = cut;
+  }
   const clampX = (v: number) => Math.min(ib.maxX, Math.max(ib.minX, v));
   const clampY = (v: number) => Math.min(ib.maxY, Math.max(ib.minY, v));
   const sx = clampX(x);
