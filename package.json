@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "pree2e": "npm run build",
     "e2e": "playwright test",
-    "android": "npm run build && cap sync android"
+    "android": "npm run build && cap sync android",
+    "art:export": "node scripts/export-art.mjs",
+    "art:check": "node scripts/export-art.mjs --check-only"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
