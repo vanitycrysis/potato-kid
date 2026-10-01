@@ -17,16 +17,29 @@ const FAMILIES = [
   { prefix: 'building_', dir: 'assets/sprites/buildings', size: [512, 512], padding: 8, opaque: false },
   { prefix: 'fx_shadow', dir: 'assets/sprites/fx', size: [128, 64], padding: 0, opaque: false },
   { prefix: 'fx_', dir: 'assets/sprites/fx', size: [256, 256], padding: 8, opaque: false },
-  { prefix: 'map_', dir: 'assets/maps', size: [1080, 2400], padding: 0, opaque: true },
-  { prefix: 'icon_', dir: 'assets/ui', size: [128, 128], padding: 0, opaque: false },
-  { prefix: 'badge_', dir: 'assets/ui', size: [64, 64], padding: 0, opaque: false },
-  { prefix: 'ui_', dir: 'assets/ui', size: [256, 256], padding: 0, opaque: false },
+  // Scrolling map v2 (D-040, ASSETS.md): opaque seamless ground tiles, transparent path
+  // decals that meet the tile edges, small decor and larger landmarks.
+  { prefix: 'ground_', dir: 'assets/maps/tiles', size: [256, 256], padding: 0, opaque: true },
+  { prefix: 'path_', dir: 'assets/maps/tiles', size: [256, 256], padding: 0, opaque: false },
+  { prefix: 'decor_', dir: 'assets/maps/decor', size: [256, 256], padding: 8, opaque: false },
+  { prefix: 'landmark_', dir: 'assets/maps/decor', size: [512, 512], padding: 8, opaque: false },
+  // GUI is native DOM SVG (ASSETS.md v2): validated and copied as SVG, never rasterized.
+  { prefix: 'icon_', dir: 'assets/ui', copySvg: true },
+  { prefix: 'badge_', dir: 'assets/ui', copySvg: true },
+  { prefix: 'ui_', dir: 'assets/ui', copySvg: true },
   // Adaptive icon: transparent foreground over an opaque background (ASSETS.md).
   { prefix: 'android_launcher_foreground', dir: 'art/exports/android', size: [432, 432], padding: 0, opaque: false },
   { prefix: 'android_launcher_background', dir: 'art/exports/android', size: [432, 432], padding: 0, opaque: true },
   { prefix: 'android_splash', dir: 'art/exports/android', size: [1152, 1152], padding: 0, opaque: false },
 ];
 const NAME = /^[a-z0-9]+(_[a-z0-9]+)*$/;
+/** Superseded sources kept in art/src for history but never exported (D-040: no single map plate). */
+const HISTORICAL = new Set(['map_garden']);
+/** Authored sidecars (ChatGPT): validated and copied to assets/data, never hand-maintained output. */
+const DATA_SRC = join(ROOT, 'art/data');
+const DATA_OUT = 'assets/data';
+/** Any string in a sidecar that looks like an asset ID must name a delivered source. */
+const ASSET_REF = /^(kid|fx|ground|path|decor|landmark|building|icon|ui|badge)_[a-z0-9_]+$/;
 /** Generated files from the previous run, so removed or renamed sources don't leave stale PNGs. */
 const MANIFEST = join(ROOT, 'art/.export-manifest.json');
 
@@ -75,21 +88,69 @@ const exported = [];
 // type's optional back/front overlay (ASSETS.md). A typo would otherwise export fine
 // but never be drawn (Codex review, PR #6).
 const roster = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8')).map((k) => k.id);
-const KID_LAYER = /^kid_([a-z0-9]+)_(overlay_back|overlay_front)$/;
+// v2 names (ASSETS.md): kid_body_<body>_<frame>, kid_face_<face>_<state>,
+// kid_<type>_<back|front>_<part>. Legacy r2 names stay valid during the transition.
+const KID_LEGACY_OVERLAY = /^kid_([a-z0-9]+)_(overlay_back|overlay_front)$/;
+const KID_BODY = /^kid_body_[a-z0-9]+_[a-z0-9_]+$/;
+const KID_FACE = /^kid_face_[a-z0-9]+_[a-z0-9_]+$/;
+const KID_COSTUME = /^kid_([a-z0-9]+)_(back|front)_[a-z0-9_]+$/;
 function kidNameProblem(name) {
   if (name === 'kid_plain_body' || name === 'kid_plain_face') return null;
-  const m = KID_LAYER.exec(name);
-  if (!m) return `${name}: kid layers must be kid_plain_body, kid_plain_face, or kid_<type>_overlay_back/front`;
+  if (KID_BODY.test(name) || KID_FACE.test(name)) return null;
+  const m = KID_LEGACY_OVERLAY.exec(name) ?? KID_COSTUME.exec(name);
+  if (!m) {
+    return `${name}: kid layers must be kid_body_<body>_<frame>, kid_face_<face>_<state>, kid_<type>_<back|front>_<part> (or legacy kid_plain_body/face, kid_<type>_overlay_back/front)`;
+  }
   if (!roster.includes(m[1])) return `${name}: "${m[1]}" is not a kid type in src/content/kids.json`;
   return null;
 }
 
+const sourceNames = new Set(svgs.map((f) => basename(f, '.svg')).filter((n) => !HISTORICAL.has(n)));
+
 for (const file of svgs) {
   const name = basename(file, '.svg');
+  if (HISTORICAL.has(name)) continue;
   const fam = familyOf(name);
   if (!NAME.test(name)) problems.push(`${name}: name must be lowercase snake_case`);
   if (!fam) {
     problems.push(`${name}: unknown asset family (prefix)`);
+    continue;
+  }
+  if (fam.copySvg) {
+    const text = readFileSync(file, 'utf8');
+    // Parse as XML in the browser (Codex review, PR #13): substring checks would accept
+    // a truncated file the DOM can't render.
+    const check = await page.evaluate(async (src) => {
+      const doc = new DOMParser().parseFromString(src, 'image/svg+xml');
+      if (doc.getElementsByTagName('parsererror').length) return 'is not well-formed XML';
+      const root = doc.documentElement;
+      if (root.localName !== 'svg' || root.namespaceURI !== 'http://www.w3.org/2000/svg') return 'root element must be an SVG <svg>';
+      const vb = (root.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
+      if (vb.length !== 4 || vb.some((n) => !Number.isFinite(n)) || vb[2] <= 0 || vb[3] <= 0) return 'needs a valid viewBox so the DOM can scale it';
+      if (doc.getElementsByTagName('script').length) return 'may not contain scripts';
+      for (const el of doc.getElementsByTagName('*')) {
+        for (const a of el.attributes) if (/^on/i.test(a.name)) return 'may not contain event handlers';
+      }
+      // Still deliver the original SVG, but it must actually draw something
+      // (Codex review, PR #13): an empty or fully transparent icon would pass otherwise.
+      const img = new Image();
+      img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(src)))}`;
+      try {
+        await img.decode();
+      } catch {
+        return 'cannot be decoded as an image';
+      }
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = Math.max(1, Math.round((128 * vb[3]) / vb[2]));
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const { data } = ctx.getImageData(0, 0, c.width, c.height);
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) return null;
+      return 'renders nothing visible';
+    }, text);
+    if (check) problems.push(`${name}: GUI SVG ${check}`);
+    pending.push({ out: join(ROOT, fam.dir, `${name}.svg`), text });
     continue;
   }
   if (fam.prefix === 'kid_') {
@@ -138,15 +199,75 @@ for (const file of svgs) {
   pending.push({ out: join(ROOT, fam.dir, `${name}.png`), png: result.png });
 }
 
+// Authored sidecars: parse, check every asset reference resolves to a delivered source,
+// and check the rig's clips only use body frames every body actually has.
+const dataFiles = existsSync(DATA_SRC) ? readdirSync(DATA_SRC).filter((f) => f.endsWith('.json')) : [];
+for (const f of dataFiles) {
+  const label = `art/data/${f}`;
+  let json;
+  try {
+    json = JSON.parse(readFileSync(join(DATA_SRC, f), 'utf8'));
+  } catch (e) {
+    problems.push(`${label}: invalid JSON (${e.message})`);
+    continue;
+  }
+  const missing = new Set();
+  const walk = (v) => {
+    if (typeof v === 'string') {
+      if (ASSET_REF.test(v) && !sourceNames.has(v)) missing.add(v);
+    } else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+  };
+  walk(json);
+  for (const m of missing) problems.push(`${label}: references "${m}", which has no source in art/src`);
+  if (f === 'kid_rig_v2.json') problems.push(...rigProblems(json, label));
+  pending.push({ out: join(ROOT, DATA_OUT, f), text: JSON.stringify(json, null, 2) + '\n' });
+}
+
+function rigProblems(rig, label) {
+  const out = [];
+  const bodies = rig.bodies && typeof rig.bodies === 'object' ? Object.entries(rig.bodies) : [];
+  if (bodies.length === 0) out.push(`${label}: no bodies`);
+  for (const [clipName, clip] of Object.entries(rig.clips ?? {})) {
+    for (const [i, frame] of (clip.frames ?? []).entries()) {
+      if (!frame.bodyFrame) continue;
+      for (const [bodyName, body] of bodies) {
+        if (!body.frames?.[frame.bodyFrame]) {
+          out.push(`${label}: clip "${clipName}" frame ${i} uses body frame "${frame.bodyFrame}", missing on body "${bodyName}"`);
+        }
+      }
+    }
+  }
+  // Known asset fields are checked directly, whatever their spelling (Codex review,
+  // PR #13): the generic ID scan only sees strings with a known prefix.
+  const need = (where, asset) => {
+    if (typeof asset !== 'string' || !asset) out.push(`${label}: ${where} has no asset`);
+    else if (!sourceNames.has(asset)) out.push(`${label}: ${where} uses "${asset}", which has no source in art/src`);
+  };
+  for (const [bodyName, body] of bodies) {
+    for (const [frameName, frame] of Object.entries(body.frames ?? {})) need(`body "${bodyName}" frame "${frameName}"`, frame.asset);
+  }
+  for (const [faceName, face] of Object.entries(rig.faces ?? {})) {
+    for (const [state, asset] of Object.entries(face.states ?? {})) need(`face "${faceName}" state "${state}"`, asset);
+  }
+  for (const [type, costume] of Object.entries(rig.costumes ?? {})) {
+    for (const [i, c] of (costume.components ?? []).entries()) need(`costume "${type}" component ${i}`, c.asset);
+  }
+  for (const [fxName, fx] of Object.entries(rig.effects ?? {})) {
+    for (const [i, asset] of (fx.assets ?? []).entries()) need(`effect "${fxName}" frame ${i}`, asset);
+  }
+  return out;
+}
+
 // All-or-nothing (Codex review, PR #6): a rejected delivery must not replace or delete
 // previously accepted exports. Only when every source passes are PNGs written, stale
 // outputs from the previous run removed (only files listed in our own manifest), and
 // the manifest updated.
 const writeOutputs = !checkOnly && problems.length === 0;
 if (writeOutputs) {
-  for (const { out, png } of pending) {
+  for (const { out, png, text } of pending) {
     mkdirSync(dirname(out), { recursive: true });
-    writeFileSync(out, Buffer.from(png.split(',')[1], 'base64'));
+    writeFileSync(out, text ?? Buffer.from(png.split(',')[1], 'base64'));
     exported.push(out.slice(ROOT.length + 1).replaceAll('\\', '/'));
   }
 }
@@ -165,7 +286,12 @@ if (writeOutputs) {
 
 // Review previews: every kid composited back→body→face→front, at 48/64/96 CSS px on
 // light and dark grounds, plus a crowded 40-kid portrait scene on the map if present.
-if (writeOutputs) {
+// This composer only knows the legacy r2 layers. A v2 delivery (kid_rig_v2.json) is
+// previewed by rendering the real engine instead, so this step neither deletes nor
+// regenerates previews then, to avoid stale or wrong artwork (Codex review, PR #13).
+const hasV2Rig = dataFiles.includes('kid_rig_v2.json');
+if (hasV2Rig && writeOutputs) console.log('v2 rig present: kid previews come from the engine capture, not this composer.');
+if (writeOutputs && !hasV2Rig) {
   const kidsJson = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8'));
   const kidDir = join(ROOT, 'assets/sprites/kids');
   const layerUrl = (n) => {
@@ -238,4 +364,4 @@ if (problems.length) {
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
-console.log(`\n${svgs.length} source(s) meet the asset contract.`);
+console.log(`\n${sourceNames.size} source(s) and ${dataFiles.length} sidecar(s) meet the asset contract.`);
