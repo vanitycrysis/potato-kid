@@ -17,4 +17,4 @@ The owner talks only to you. **Codex** fills the ChatGPT role, and you call it t
 3. Run `/codex:review` on every one of your PRs before merging to `main`. Post its review to the PR, labelled as Codex's.
 4. Review Codex's art and audio yourself, critically.
 5. Disagreements go in the PR. If one round doesn't settle them, bring both positions to the owner.
-
+6. **You do no art at all** (owner, D-036): no drawing, no placeholder kids, no visual design choices. Hand anything artistic to Codex. You review art for consistency and technical fit, and you own the export pipeline and the engine integration.
