@@ -3,6 +3,7 @@ import type { KidRig, MapData } from '../content/artData';
 import type { Content } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
+import { resolveDrawn } from '../sim/space';
 import { buildMap } from './mapView';
 import { KidRigView } from './rigView';
 
@@ -348,24 +349,27 @@ export class MapScene {
       this.acc -= STEP;
     }
     const alpha = this.acc / STEP;
-    if (this.drag) this.resolveHeld(); // other kids keep moving, so re-resolve every frame
-    for (const k of this.game.state.world.kids) {
+    // This frame's drawn positions first (interpolated, overlap-free), then the held kid
+    // resolves against exactly those (Codex review, PR #14), then everything is drawn.
+    const kids = this.game.state.world.kids;
+    const interpolated = new Map<number, { x: number; y: number }>();
+    for (const k of kids) {
+      const p = this.prev.get(k.id) ?? k;
+      interpolated.set(k.id, { x: p.x + (k.x - p.x) * alpha, y: p.y + (k.y - p.y) * alpha });
+    }
+    const drawn = resolveDrawn(kids, interpolated, this.placing);
+    this.drawn.clear();
+    for (const [id, pos] of drawn) this.drawn.set(id, pos);
+    if (this.drag) this.resolveHeld();
+    for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
       if (this.drag?.kidId === k.id) {
         view.update(this.drag.spot.x, this.drag.spot.y, k.activity, true, dt);
         continue;
       }
-      const placed = this.placing.get(k.id);
-      if (placed) {
-        view.update(placed.x, placed.y, k.activity, false, dt);
-        continue;
-      }
-      const p = this.prev.get(k.id) ?? k;
-      const dx = p.x + (k.x - p.x) * alpha;
-      const dy = p.y + (k.y - p.y) * alpha;
-      this.drawn.set(k.id, { x: dx, y: dy });
-      view.update(dx, dy, k.activity, k.held, dt);
+      const at = drawn.get(k.id) ?? k;
+      view.update(at.x, at.y, k.activity, k.held, dt);
     }
   }
 

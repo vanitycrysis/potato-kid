@@ -159,6 +159,9 @@ export class Game {
     const events: GameEvent[] = [];
     this.applyCommands(commands, events);
     const world = this.state.world;
+    // A drop resolves its contacts first: a partner walking away mustn't escape the touch
+    // the player saw at release (Codex review, PR #14).
+    if (commands.some((c) => c.type !== 'pickUp')) this.resolveFusions(events);
     for (const kid of world.kids) kid.grace = Math.max(0, kid.grace - dt);
     stepWander(
       world,

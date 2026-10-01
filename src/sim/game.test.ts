@@ -430,3 +430,20 @@ describe('render-time separation (Codex review, PR #14)', () => {
   });
 });
 
+
+describe('Codex review, PR #14 round 2', () => {
+  it('a drop against a partner that is walking away still fuses (contact before wander)', () => {
+    const c = structuredClone(content);
+    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, intervalSeconds: 1e9, newbornGraceSeconds: 0 };
+    c.balance.wander = { speed: 40, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
+    const game = new Game(c, { bounds, spawnAt: garden }, 1);
+    const water = place(game, 'water', 500, 500);
+    water.heading = 0; // walking east, away from where plain lands, 4 units per step
+    const plain = place(game, 'plain', 200, 800);
+    plain.heading = Math.PI; // and plain would walk west
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    const gap = 6; // inside touchSlack (8) at release; outside it after one more step apart
+    game.step([{ type: 'drop', kidId: plain.id, x: water.x - 120 - gap, y: water.y }]);
+    expect(game.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
+  });
+});

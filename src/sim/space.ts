@@ -200,3 +200,42 @@ function clampKid(b: Bounds, k: Kid): void {
   k.x = Math.min(ib.maxX, Math.max(ib.minX, k.x));
   k.y = Math.min(ib.maxY, Math.max(ib.minY, k.y));
 }
+
+/**
+ * Render-time separation (D-043): positions to draw this frame. Interpolating two kids
+ * independently can briefly overlap their boxes when collision changed the separating
+ * axis (Codex review, PR #14). Any interpolated kid that would overlap another drawn kid
+ * is drawn at its sim position instead; sim positions never overlap each other, so this
+ * always settles. `fixed` kids (pending drops) keep their given position.
+ */
+export function resolveDrawn(
+  kids: Kid[],
+  interpolated: Map<number, { x: number; y: number }>,
+  fixed: Map<number, { x: number; y: number }>,
+): Map<number, { x: number; y: number }> {
+  const out = new Map<number, { x: number; y: number }>();
+  const snapped = new Set<number>();
+  const grounded = kids.filter((k) => !k.held);
+  for (const k of grounded) out.set(k.id, fixed.get(k.id) ?? interpolated.get(k.id) ?? { x: k.x, y: k.y });
+  for (let pass = 0; pass <= grounded.length; pass++) {
+    let changed = false;
+    for (let i = 0; i < grounded.length; i++) {
+      for (let j = i + 1; j < grounded.length; j++) {
+        const a = grounded[i]!;
+        const b = grounded[j]!;
+        const pa = out.get(a.id)!;
+        const pb = out.get(b.id)!;
+        if (!intersects(rectAt(a.box, pa.x, pa.y), rectAt(b.box, pb.x, pb.y))) continue;
+        for (const k of [a, b]) {
+          if (fixed.has(k.id) || snapped.has(k.id)) continue;
+          out.set(k.id, { x: k.x, y: k.y });
+          snapped.add(k.id);
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return out;
+}
+

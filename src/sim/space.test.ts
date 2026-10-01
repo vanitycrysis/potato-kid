@@ -1,0 +1,32 @@
+import { describe, expect, it } from 'vitest';
+import { createRng } from './rng';
+import { intersects, rectAt, resolveDrawn } from './space';
+import { addKid, createWorld, defaultBox } from './world';
+
+describe('resolveDrawn (render-time separation, D-043)', () => {
+  it('draws kids whose interpolated boxes would overlap at their non-overlapping sim positions', () => {
+    const world = createWorld({ minX: 0, minY: 0, maxX: 2000, maxY: 2000 });
+    const a = addKid(world, 'plain', 500, 500, createRng(1), 0, defaultBox(60));
+    const b = addKid(world, 'fire', 620, 500, createRng(2), 0, defaultBox(60)); // touching, not overlapping
+    // Mid-step, both were interpolated toward each other by 4 units.
+    const interp = new Map([
+      [a.id, { x: 504, y: 500 }],
+      [b.id, { x: 616, y: 500 }],
+    ]);
+    const out = resolveDrawn(world.kids, interp, new Map());
+    expect(out.get(a.id)).toEqual({ x: 500, y: 500 });
+    expect(out.get(b.id)).toEqual({ x: 620, y: 500 });
+    expect(intersects(rectAt(a.box, 500, 500), rectAt(b.box, 620, 500))).toBe(false);
+  });
+
+  it('keeps interpolated positions that do not overlap, and fixed (pending-drop) positions as given', () => {
+    const world = createWorld({ minX: 0, minY: 0, maxX: 2000, maxY: 2000 });
+    const a = addKid(world, 'plain', 300, 300, createRng(1), 0, defaultBox(60));
+    const b = addKid(world, 'fire', 900, 900, createRng(2), 0, defaultBox(60));
+    const interp = new Map([[a.id, { x: 302, y: 300 }]]);
+    const fixed = new Map([[b.id, { x: 880, y: 900 }]]);
+    const out = resolveDrawn(world.kids, interp, fixed);
+    expect(out.get(a.id)).toEqual({ x: 302, y: 300 });
+    expect(out.get(b.id)).toEqual({ x: 880, y: 900 });
+  });
+});
