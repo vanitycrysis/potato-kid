@@ -23,8 +23,22 @@ export interface WanderBalance {
   idleSeconds: [number, number];
 }
 
+export interface SpawnBalance {
+  /** Seconds between Garden spawns at level 1. */
+  intervalSeconds: number;
+  /** Map capacity at level 1. */
+  capacity: number;
+  /** Kids on a brand-new map. */
+  startingKids: number;
+  /** Seconds a newborn kid cannot fuse (pacing knob, not a consumption guard). */
+  newbornGraceSeconds: number;
+}
+
 export interface Balance {
   spawnWeights: Record<KidId, number>;
+  spawn: SpawnBalance;
+  /** Two kids closer than this (ground point to ground point, world units) are in contact. */
+  contactRadius: number;
   wander: WanderBalance;
 }
 

@@ -1,5 +1,12 @@
 {
   "spawnWeights": { "plain": 40, "fire": 20, "water": 20, "snow": 20 },
+  "spawn": {
+    "intervalSeconds": 12,
+    "capacity": 12,
+    "startingKids": 4,
+    "newbornGraceSeconds": 2
+  },
+  "contactRadius": 90,
   "wander": {
     "speed": 40,
     "turnChancePerSecond": 0.6,

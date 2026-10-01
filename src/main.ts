@@ -1,10 +1,20 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
 import { MapScene } from './render/scene';
+import { Hud } from './ui/hud';
 
 declare global {
   interface Window {
-    __PK__?: { ready: boolean; kids: number; fps: () => number };
+    __PK__?: {
+      ready: boolean;
+      fps: () => number;
+      kids: () => { id: number; type: string }[];
+      discoveredRecipes: () => string[];
+      screenPointOf: (kidId: number) => { x: number; y: number } | undefined;
+      worldToScreen: (x: number, y: number) => { x: number; y: number };
+      /** Only with `?debug=1`. */
+      debugAdd?: (type: string, x: number, y: number) => number;
+    };
   }
 }
 
@@ -19,13 +29,20 @@ async function boot(): Promise<void> {
   });
   document.getElementById('app')!.appendChild(app.canvas);
 
-  // Until spawning exists (BUILD-PLAYABLE), `?kids=N` seeds the map for testing.
   const params = new URLSearchParams(location.search);
-  const kids = Number(params.get('kids') ?? 12);
-  const scene = new MapScene(app, content, Number(params.get('seed') ?? Date.now() % 2 ** 32));
-  scene.spawnRandom(Number.isFinite(kids) ? Math.max(0, Math.min(kids, 200)) : 12);
+  const seed = Number(params.get('seed') ?? Date.now() % 2 ** 32);
+  const scene = new MapScene(app, content, Number.isFinite(seed) ? seed : 1);
+  new Hud(scene, content);
 
-  window.__PK__ = { ready: true, kids: scene.world.kids.length, fps: () => app.ticker.FPS };
+  window.__PK__ = {
+    ready: true,
+    fps: () => app.ticker.FPS,
+    kids: () => scene.game.state.world.kids.map((k) => ({ id: k.id, type: k.type })),
+    discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
+    screenPointOf: (id) => scene.screenPointOf(id),
+    worldToScreen: (x, y) => scene.worldToScreen(x, y),
+    ...(params.get('debug') === '1' ? { debugAdd: (t: string, x: number, y: number) => scene.debugAdd(t, x, y) } : {}),
+  };
 }
 
 void boot();
