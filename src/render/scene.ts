@@ -79,6 +79,8 @@ export class MapScene {
    */
   private readonly placing = new Map<number, { x: number; y: number }>();
   private acc = 0;
+  /** Where each kid was drawn last frame, for render-time separation of held/placed previews. */
+  private readonly drawn = new Map<number, { x: number; y: number }>();
 
   constructor(
     private readonly app: Application,
@@ -237,6 +239,7 @@ export class MapScene {
   }
 
   private removeView(kidId: number): void {
+    this.drawn.delete(kidId);
     this.views.get(kidId)?.destroy();
     this.views.delete(kidId);
     this.prev.delete(kidId);
@@ -307,7 +310,7 @@ export class MapScene {
   /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
   private resolveHeld(): void {
     if (!this.drag) return;
-    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y);
+    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn);
     if (spot) this.drag.spot = spot;
   }
 
@@ -322,7 +325,7 @@ export class MapScene {
     this.pending.push(cmd);
     // Draw the kid exactly where the sim will put it until the command is applied
     // (Codex review, PR #5): the same free-spot answer, so it never jumps or overlaps.
-    const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y) ?? { x: cmd.x, y: cmd.y };
+    const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn) ?? { x: cmd.x, y: cmd.y };
     this.placing.set(this.drag.kidId, spot);
     this.drag = undefined;
   }
@@ -359,7 +362,10 @@ export class MapScene {
         continue;
       }
       const p = this.prev.get(k.id) ?? k;
-      view.update(p.x + (k.x - p.x) * alpha, p.y + (k.y - p.y) * alpha, k.activity, k.held, dt);
+      const dx = p.x + (k.x - p.x) * alpha;
+      const dy = p.y + (k.y - p.y) * alpha;
+      this.drawn.set(k.id, { x: dx, y: dy });
+      view.update(dx, dy, k.activity, k.held, dt);
     }
   }
 

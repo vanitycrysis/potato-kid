@@ -36,7 +36,8 @@ export interface Look {
  */
 export type Activity =
   | { kind: 'walk' }
-  | { kind: 'pause'; left: number }
+  /** Standing still. With `thenAmbient`, it's the rig's stationary wait before an ambient pose. */
+  | { kind: 'pause'; left: number; thenAmbient?: boolean }
   | { kind: 'look'; left: number }
   | { kind: 'sit'; left: number; total: number }
   | { kind: 'sleep'; left: number; total: number };
@@ -115,7 +116,8 @@ export function isWalking(kid: Kid): boolean {
 
 /**
  * Advances every kid's wander by one fixed step. Mutates `world`.
- * `rest` chooses what a kid does when it stops walking; `blocked` says whether a
+ * `rest` chooses what a kid does when it stops walking ('stop'), and again once a
+ * stationary wait ends ('stationary'); `blocked` says whether a
  * new position would hit scenery (the move is then cancelled and the kid turns).
  */
 export function stepWander(
@@ -123,7 +125,7 @@ export function stepWander(
   rng: Rng,
   w: WanderBalance,
   dt: number,
-  rest: (kid: Kid) => Activity,
+  rest: (kid: Kid, phase: 'stop' | 'stationary') => Activity,
   blocked: (kid: Kid, x: number, y: number) => boolean,
 ): void {
   const { minX, minY, maxX, maxY } = world.bounds;
@@ -132,11 +134,11 @@ export function stepWander(
     const a = kid.activity;
     if (a.kind !== 'walk') {
       a.left = Math.max(0, a.left - dt);
-      if (a.left === 0) kid.activity = { kind: 'walk' };
+      if (a.left === 0) kid.activity = a.kind === 'pause' && a.thenAmbient ? rest(kid, 'stationary') : { kind: 'walk' };
       continue;
     }
     if (rng.next() < w.idleChancePerSecond * dt) {
-      kid.activity = rest(kid);
+      kid.activity = rest(kid, 'stop');
       continue;
     }
     if (rng.next() < w.turnChancePerSecond * dt) {

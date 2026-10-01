@@ -59,6 +59,8 @@ export interface Ambient {
   weights: { look: number; sit: number; sleep: number };
   /** Chance a rest is an ambient activity rather than a plain pause. */
   chance: number;
+  /** The rig's stationary wait before an ambient pose may start (scheduler.stationaryDelaySeconds). */
+  stationaryDelay: [number, number];
   lookSeconds: number;
   /** sit-down transition + hold + stand-up transition. */
   sitSeconds: (hold: number) => number;
@@ -137,10 +139,19 @@ export class Game {
    * touches nothing (D-039, D-043). The scene draws the held kid there, so a lifted kid
    * never overlaps anyone either; it can still sit right against a recipe partner.
    */
-  landingSpot(kidId: number, x: number, y: number): { x: number; y: number } | null {
-    const kid = this.state.world.kids.find((k) => k.id === kidId);
+  landingSpot(kidId: number, x: number, y: number, drawn?: Map<number, { x: number; y: number }>): { x: number; y: number } | null {
+    const world = this.state.world;
+    const kid = world.kids.find((k) => k.id === kidId);
     if (!kid) return null;
-    return findFreeSpot(this.state.world, kid.box, x, y, kid.id);
+    if (!drawn || drawn.size === 0) return findFreeSpot(world, kid.box, x, y, kid.id);
+    // Free against both where neighbours ARE (the sim, so the drop won't be re-resolved)
+    // and where they're DRAWN this frame (interpolated), so the preview never overlaps
+    // a neighbour on screen either (render-time separation; Codex review, PR #14).
+    const ghosts = world.kids.flatMap((k) => {
+      const d = drawn.get(k.id);
+      return d && (d.x !== k.x || d.y !== k.y) ? [{ ...k, x: d.x, y: d.y }] : [];
+    });
+    return findFreeSpot({ ...world, kids: [...world.kids, ...ghosts] }, kid.box, x, y, kid.id);
   }
 
   /** Advances one fixed step. */
@@ -154,7 +165,7 @@ export class Game {
       this.rng,
       this.content.balance.wander,
       dt,
-      () => this.rest(),
+      (_kid, phase) => this.rest(phase),
       (kid, x, y) => blockedByScenery(world, kid.box, x, y),
     );
     // Touching recipe pairs fuse first, so a kid dropped against its partner fuses.
@@ -309,15 +320,23 @@ export class Game {
     return look;
   }
 
-  /** What a kid does when it stops walking: a plain pause or a rig ambient (cosmetic stream). */
-  private rest(): Activity {
+  /**
+   * What a kid does when it stops walking: a plain pause, or the rig's stationary wait
+   * (Codex review, PR #14) after which an ambient pose begins. Cosmetic stream.
+   */
+  private rest(phase: 'stop' | 'stationary'): Activity {
     const w = this.content.balance.wander;
     const a = this.ambient;
     const r = this.cosmetic;
-    if (!a || r.next() >= a.chance) {
-      const [lo, hi] = w.idleSeconds;
-      return { kind: 'pause', left: lo + r.next() * (hi - lo) };
+    if (phase === 'stop') {
+      if (!a || r.next() >= a.chance) {
+        const [lo, hi] = w.idleSeconds;
+        return { kind: 'pause', left: lo + r.next() * (hi - lo) };
+      }
+      const [lo, hi] = a.stationaryDelay;
+      return { kind: 'pause', left: lo + r.next() * (hi - lo), thenAmbient: true };
     }
+    if (!a) return { kind: 'walk' };
     const pick = weighted(r, [
       { id: 'look' as const, weight: a.weights.look },
       { id: 'sit' as const, weight: a.weights.sit },

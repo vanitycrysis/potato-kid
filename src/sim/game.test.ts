@@ -363,6 +363,7 @@ describe('appearance and rests (ART-V2)', () => {
     const ambient = {
       weights: { look: 1, sit: 1, sleep: 1 },
       chance: 1,
+      stationaryDelay: [0.5, 0.8] as [number, number],
       lookSeconds: 1,
       sitSeconds: (h: number) => h + 0.75,
       sleepSeconds: (h: number) => h + 0.75,
@@ -375,6 +376,57 @@ describe('appearance and rests (ART-V2)', () => {
       game.step([]);
       for (const k of game.state.world.kids) kinds.add(k.activity.kind);
     }
-    expect([...kinds].sort()).toEqual(['look', 'sit', 'sleep', 'walk']);
+    expect([...kinds].sort()).toEqual(['look', 'pause', 'sit', 'sleep', 'walk']);
+  });
+
+  it('waits the stationary delay before an ambient pose begins (rig scheduler)', () => {
+    const c = structuredClone(content);
+    c.balance.wander = { ...c.balance.wander, idleChancePerSecond: 5 };
+    const ambient = {
+      weights: { look: 1, sit: 1, sleep: 1 },
+      chance: 1,
+      stationaryDelay: [2, 3] as [number, number],
+      lookSeconds: 1,
+      sitSeconds: (h: number) => h + 0.75,
+      sleepSeconds: (h: number) => h + 0.75,
+      seatedHold: [1, 2] as [number, number],
+      sleepHold: [2, 3] as [number, number],
+    };
+    const game = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 }, ambient }, 4);
+    const stillFor = new Map<number, number>();
+    let ambients = 0;
+    for (let s = 0; s < 600; s++) {
+      game.step([]);
+      for (const k of game.state.world.kids) {
+        const kind = k.activity.kind;
+        if (kind === 'walk') stillFor.delete(k.id);
+        else if (kind === 'pause') stillFor.set(k.id, (stillFor.get(k.id) ?? 0) + 0.1);
+        else if (stillFor.has(k.id)) {
+          // The ambient started: it was preceded by at least the minimum stationary wait.
+          expect(stillFor.get(k.id)!).toBeGreaterThanOrEqual(2 - 1e-6);
+          stillFor.delete(k.id);
+          ambients++;
+        }
+      }
+    }
+    expect(ambients).toBeGreaterThan(0);
   });
 });
+
+describe('render-time separation (Codex review, PR #14)', () => {
+  it('a held preview is free against both the sim and the drawn (interpolated) neighbours', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    const fire = place(game, 'fire', 500, 500);
+    const held = place(game, 'snow', 200, 800);
+    game.step([{ type: 'pickUp', kidId: held.id }]);
+    // The fire kid is drawn 20 units left of where the sim has it (mid-interpolation).
+    const drawn = new Map([[fire.id, { x: 480, y: 500 }]]);
+    const spot = game.landingSpot(held.id, 380, 500, drawn)!;
+    const box = kidRect({ ...held, x: spot.x, y: spot.y });
+    for (const fx of [500, 480]) {
+      const g = gaps(box, { minX: fx - 60, minY: 440, maxX: fx + 60, maxY: 560 });
+      expect(Math.max(g.dx, g.dy)).toBeGreaterThanOrEqual(-1e-6);
+    }
+  });
+});
+

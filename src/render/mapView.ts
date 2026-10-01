@@ -1,4 +1,4 @@
-import { Container, Sprite, type Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { MapData } from '../content/artData';
 
 /**
@@ -34,9 +34,9 @@ export function buildMap(map: MapData, textures: Map<string, Texture>): Containe
     ground.addChild(s);
   }
   const [w, h] = map.worldSize;
-  const clip = new Sprite(tex(map.groundCells[0]!.asset));
-  clip.width = w;
-  clip.height = h;
+  // Rectangular geometry mask: a sprite mask would read the tile's colour channel and make
+  // the ground partly transparent (Codex review, PR #14).
+  const clip = new Graphics().rect(0, 0, w, h).fill(0xffffff);
   ground.mask = clip;
   root.addChild(ground, clip);
 

@@ -38,6 +38,7 @@ export function ambientFrom(rig: KidRig, chance: number): Ambient {
   return {
     weights: { look: w.look_around ?? 0, sit: w.sit_down ?? 0, sleep: w.sleep ?? 0 },
     chance,
+    stationaryDelay: rig.scheduler.stationaryDelaySeconds,
     lookSeconds: len('look_around'),
     sitSeconds: (hold) => down + hold + down,
     sleepSeconds: (hold) => down + hold + len('wake'),
