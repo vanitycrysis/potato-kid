@@ -52,4 +52,15 @@ describe('validateContent', () => {
     expect(errors).toContain('balance.wander.speed must be a finite number >= 0');
     expect(errors).toContain('balance.wander.idleSeconds must be [min, max] with 0 <= min <= max');
   });
+
+  it('rejects malformed spawn settings', () => {
+    const c = structuredClone(content);
+    c.balance.spawn.intervalSeconds = 0;
+    c.balance.spawn.startingKids = 99;
+    c.balance.contactRadius = Number.NaN;
+    const errors = validateContent(c);
+    expect(errors).toContain('balance.spawn.intervalSeconds must be a finite number > 0');
+    expect(errors).toContain('balance.spawn.startingKids must not exceed capacity');
+    expect(errors).toContain('balance.contactRadius must be a finite number > 0');
+  });
 });
