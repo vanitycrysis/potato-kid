@@ -69,6 +69,12 @@ export class MapScene {
   private dragScreen = { x: 0, y: 0 };
   /** Camera: world point at the screen's top-left, and world → CSS px scale. */
   private cam = { x: 0, y: 0, zoom: 1 };
+  /**
+   * Screen space covered by DOM overlays (HUD on top, tray at the bottom), in CSS px. The
+   * camera may scroll this far past the world edges so nothing stays hidden underneath
+   * (Codex review, PR #15).
+   */
+  private insets = { top: 0, bottom: 0 };
   /** Screen size the camera was last laid out for, to keep the view centre across resizes. */
   private laidOut = { width: 0, height: 0 };
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
@@ -160,6 +166,12 @@ export class MapScene {
     return { x: p.x, y: p.y };
   }
 
+  /** Tells the camera how much of the screen the GUI overlays cover. */
+  setInsets(top: number, bottom: number): void {
+    this.insets = { top: Math.max(0, top), bottom: Math.max(0, bottom) };
+    this.applyCamera();
+  }
+
   /** Moves the camera so world (x, y) is at the centre of the screen (clamped to the world). */
   centerOn(x: number, y: number): void {
     const { width, height } = this.app.screen;
@@ -195,7 +207,13 @@ export class MapScene {
     const W = this.worldWidth;
     const H = this.worldHeight;
     this.cam.x = vw >= W ? (W - vw) / 2 : Math.min(W - vw, Math.max(0, this.cam.x));
-    this.cam.y = vh >= H ? (H - vh) / 2 : Math.min(H - vh, Math.max(0, this.cam.y));
+    // Vertically, the usable view is between the overlays: let the world's top edge reach
+    // the HUD's bottom and its bottom edge reach the tray's top.
+    const top = this.insets.top / z;
+    const bottom = this.insets.bottom / z;
+    const minY = -top;
+    const maxY = H - vh + bottom;
+    this.cam.y = maxY <= minY ? (minY + maxY) / 2 : Math.min(maxY, Math.max(minY, this.cam.y));
     this.camera.scale.set(z);
     this.camera.position.set(-this.cam.x * z, -this.cam.y * z);
   }

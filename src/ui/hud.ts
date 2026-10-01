@@ -73,6 +73,10 @@ export class Hud {
 
     this.toast.setAttribute('role', 'status');
     document.body.append(top, this.toast, dex, tray);
+    // The camera must be able to bring any kid out from under the HUD and tray.
+    const measure = () => scene.setInsets(top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
+    new ResizeObserver(measure).observe(document.body);
+    measure();
     this.render();
     scene.onEvent = (e) => this.onEvent(e);
     const tick = () => {

@@ -270,3 +270,14 @@ test('backgrounding mid-pan does not lock input', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('a kid at the bottom edge of the world can be scrolled out from under the tray', async ({ page }) => {
+  const errors = await boot(page, '?seed=16&debug=1&calm=1');
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 3830));
+  await page.evaluate(() => window.__PK__!.centerOn(1080, 99999)); // scroll as far down as allowed
+  await page.waitForTimeout(150);
+  const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
+  expect(p.y).toBeLessThanOrEqual(trayTop + 1); // its feet are visible above the tray
+  expect(errors).toEqual([]);
+});
+
