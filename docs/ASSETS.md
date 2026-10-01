@@ -6,12 +6,12 @@ Owner: ChatGPT. Reviewer/integration: Claude. Status: proposed for check-in 1; n
 
 | Stable planning ID | Asset / count | Proposed spec | Needed for | Status / done means |
 | --- | --- | --- | --- | --- |
-| kid_base | Base Potato Kid / 1 type | Editable base SVG; PNG RGBA, 256 x 256, anchor (128,224); 2 idle + 2 wander frames | Art gate | Proposed; same lumpy body/dot eyes/smirk/nubs as references, approved by owner |
-| kid_fire | Fire / 1 type | Shared base, flame costume/object; same 4-frame export | Art gate | Proposed; recognizable silhouette and visible canonical face |
-| kid_water | Water / 1 type | Shared base, water costume/object; same 4-frame export | Art gate | Proposed; distinct at small size without depending on color |
-| kid_firefighter | Firefighter / 1 type | Shared base, helmet/tool; same 4-frame export | Art gate | Proposed; same face/body and clean prop bounds |
-| kid_result_a-d | Reserved starter types / 4 slots | Same shared base and 4-frame export | First playable / MVP | Names/tiers/recipe roles await Claude; these are a budget, not four invented recipes |
-| map_garden | Garden map / 1 | Opaque PNG, provisionally 1080 x 1920; quiet open play area; editable source | Art gate | Proposed; camera/safe areas agreed, crowded kids readable |
+| kid_base | Base Potato Kid / 1 type | Editable SVG; shared body and face PNG RGBA, 256 x 256, ground anchor (128,224); no overlay needed | Art gate | Proposed; same lumpy body/dot eyes/smirk/nubs as references, approved by owner |
+| kid_fire | Fire / 1 type | Flame costume/object overlay; 256 x 256 RGBA aligned with shared base/face | Art gate | Proposed; recognizable silhouette and visible canonical face |
+| kid_water | Water / 1 type | Water costume/object overlay; same aligned-layer export | Art gate | Proposed; distinct at small size without depending on color |
+| kid_firefighter | Firefighter / 1 type | Helmet/tool overlay; same aligned-layer export | Art gate | Proposed; same face/body and clean prop bounds |
+| kid_reserved_a-f | Reserved starter types / 6 slots | Shared base/face plus one aligned overlay per type | First playable / MVP | Names/tiers/spawn and recipe roles await Claude; budget slots, not invented recipes |
+| map_garden | Garden map / 1 | Opaque PNG, provisionally 1080 x 2340; quiet open play area; editable source | Art gate | Proposed; camera/safe areas agreed, crowded kids readable |
 | building_garden | Potato Garden / 1 | PNG RGBA, provisional 512 x 512; bottom-center anchor with 8 px padding | First playable | Proposed; recognizable spawn building, correct scale/import |
 | building_capacity | Capacity building / 1 | Same building spec | MVP | Visual form awaits Claude's building definition |
 | building_spawn_bias | Spawn-bias building / 1 | Same building spec | MVP | Visual form follows agreed targeted spawn pool |
@@ -21,7 +21,7 @@ Owner: ChatGPT. Reviewer/integration: Claude. Status: proposed for check-in 1; n
 | fx_fusion | Recipe fusion puff / 4 frames | Same shared-effect spec | First playable | Proposed; two parents becoming one stays legible |
 | fx_discovery | First-discovery sparkle / 4 frames | Same shared-effect spec | MVP | Proposed; distinguish first discovery from repeat fusion |
 
-Budget: eight kid types, 32 kid frames, one map, four buildings, one shadow, eleven effect frames. Dex portraits reuse each kid's approved idle art, so eight additional character drawings are not required. No additional frames for pick-up/drop or every look direction are budgeted; Claude provides restrained transforms.
+Budget: ten kid types represented by one shared body, one shared face, and nine overlays; one map, four buildings, one shadow, eleven effect frames. Six recipes follow Claude's proposed MVP budget and await a concrete table. Dex portraits reuse the same composite; flattened previews of all ten types are review artifacts, not ten additional drawings. Idle/wander/pick-up/drop use Claude's restrained procedural transforms, so no per-type animation frame sets are budgeted.
 
 ## UI art
 
@@ -49,7 +49,7 @@ Dex cards, recipe layout, offline summary, upgrades, settings, and compendium re
 | sfx_spend | Resource spend | Same; 0.10-0.25 s | MVP | Proposed; use when no more specific success cue applies |
 | music_garden | Original ambient instrumental loop / 1 | Stereo WAV PCM 48 kHz/16-bit; 60-90 s; note/MIDI source and loop boundaries | MVP | Proposed scripted composition/render; seamless and non-fatiguing after listening review |
 
-Runtime codec awaits Claude's stack choice. Keep music/SFX separately controllable and do not sonify every passive-income tick. No audio assets exist yet; tool limitations and proposed music route are recorded in `ART_AUDIO_PLAN.md`.
+Proposed runtime files: Ogg and M4A alternatives with target-browser/WebView decoding and actual loop audition, plus retained WAV masters. Keep music/SFX separately controllable and do not sonify every passive-income tick. No audio assets exist yet; tool limitations and proposed music route are recorded in `ART_AUDIO_PLAN.md`.
 
 ## Acceptance for every delivery
 
