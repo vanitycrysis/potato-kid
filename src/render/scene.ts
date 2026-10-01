@@ -24,7 +24,7 @@ export const PLAY_BOUNDS: Bounds = {
 /** The Garden sits top-centre; kids emerge just below it. */
 export const GARDEN = { x: WORLD_WIDTH / 2, y: HUD_TOP + 200 };
 
-/** How far above the finger a held kid floats, so the finger doesn't hide it (world units). */
+/** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
 const HOLD_LIFT = 70;
 
 interface Prev {
@@ -157,7 +157,7 @@ export class MapScene {
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     if (!kid) return;
     const w = this.toWorld(e);
-    this.drag = { kidId, pointerId: e.pointerId, startX: kid.x, startY: kid.y, x: w.x, y: w.y + HOLD_LIFT };
+    this.drag = { kidId, pointerId: e.pointerId, startX: kid.x, startY: kid.y, x: w.x, y: w.y - HOLD_LIFT };
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.setHeld(true);
   }
@@ -166,7 +166,7 @@ export class MapScene {
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
     const w = this.toWorld(e);
     this.drag.x = w.x;
-    this.drag.y = w.y + HOLD_LIFT;
+    this.drag.y = w.y - HOLD_LIFT;
   }
 
   private endDrag(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
@@ -176,7 +176,7 @@ export class MapScene {
       return;
     }
     const w = this.toWorld(e);
-    this.finishDrag({ type: 'drop', kidId: this.drag.kidId, x: w.x, y: w.y + HOLD_LIFT });
+    this.finishDrag({ type: 'drop', kidId: this.drag.kidId, x: w.x, y: w.y - HOLD_LIFT });
   }
 
   private cancelActiveDrag(): void {
@@ -189,8 +189,9 @@ export class MapScene {
     if (!this.drag) return;
     this.views.get(this.drag.kidId)?.setHeld(false);
     this.pending.push(cmd);
-    // A drop stays where it was released; a cancel goes straight back to its start.
-    this.placing.set(this.drag.kidId, cmd.type === 'drop' ? { x: this.drag.x, y: this.drag.y } : { x: cmd.x, y: cmd.y });
+    // Draw the kid exactly where the command puts it (the release point for a drop,
+    // the start for a cancel) until the sim applies it (Codex review, PR #5).
+    this.placing.set(this.drag.kidId, { x: cmd.x, y: cmd.y });
     this.drag = undefined;
   }
 

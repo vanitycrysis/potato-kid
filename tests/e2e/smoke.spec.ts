@@ -32,13 +32,13 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   await page.mouse.move(from.x, from.y - 20);
   await page.mouse.down();
   const to = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, water);
-  // Held kids float above the finger, so aim the finger below the target's feet.
+  // Held kids float above the finger, so put the finger below the target's feet.
   const lift = await page.evaluate(() => {
     const a = window.__PK__!.worldToScreen(0, 0);
     const b = window.__PK__!.worldToScreen(0, 70);
     return b.y - a.y;
   });
-  await page.mouse.move(to.x, to.y - lift, { steps: 12 });
+  await page.mouse.move(to.x, to.y + lift, { steps: 12 });
   await page.mouse.up();
 
   await expect
@@ -62,7 +62,13 @@ test('a released kid stays where it was dropped (no snap-back)', async ({ page }
   await page.mouse.move(from.x, from.y - 20);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 10 });
+  await page.waitForTimeout(100);
+  // While held, the kid floats above the finger (smaller y), so the face isn't covered.
+  const held = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+  const liftPx = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  expect(held.y).toBeLessThan(to.y - liftPx * 0.8);
   await page.mouse.up();
+  const landing = { x: to.x, y: to.y - liftPx };
   // Sample the rendered position over the next frames: it must never jump back toward the start.
   const samples = await page.evaluate(async (k) => {
     const out: { x: number; y: number }[] = [];
@@ -73,7 +79,7 @@ test('a released kid stays where it was dropped (no snap-back)', async ({ page }
     return out;
   }, id);
   const startDist = Math.hypot(to.x - from.x, to.y - from.y);
-  for (const p of samples) expect(Math.hypot(p.x - to.x, p.y - to.y)).toBeLessThan(startDist * 0.25);
+  for (const p of samples) expect(Math.hypot(p.x - landing.x, p.y - landing.y)).toBeLessThan(startDist * 0.1);
   expect(errors).toEqual([]);
 });
 
