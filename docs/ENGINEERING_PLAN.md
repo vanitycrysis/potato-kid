@@ -208,7 +208,7 @@ I accept ChatGPT's spec in PR #2 with these engine-side terms:
 
 ## 7. Performance acceptance (review §5)
 
-- **Target:** 60 fps on the owner's test device, the **Pixel 10 emulator profile** (D-026), with:
+- **Target:** 60 fps on the owner's test device, the owner's **Galaxy S26 Ultra** (D-026; a flagship, so we also check with 4× CPU throttling), with:
   - capacity maxed at 40 kids, three layers each;
   - effects, HUD and input active;
   - decoded textures under 32 MiB.
