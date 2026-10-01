@@ -37,5 +37,14 @@ describe('resolveDrawn (render-time separation, D-043)', () => {
     const out = resolveDrawn(world.kids, new Map(), new Map([[k.id, { x: 1200, y: 900 }]]));
     expect(out.get(k.id)).toEqual({ x: 1200, y: 900 });
   });
+
+  it('never draws an interpolated kid inside a scenery reserve', () => {
+    const obstacle = { box: { minX: 700, minY: 700, maxX: 800, maxY: 800 }, circle: { x: 750, y: 800, r: 40 } };
+    const world = createWorld({ minX: 0, minY: 0, maxX: 2000, maxY: 2000 }, [obstacle]);
+    const k = addKid(world, 'plain', 600, 640, createRng(1), 0, defaultBox(40));
+    // Its interpolated midpoint would cut into the obstacle box.
+    const out = resolveDrawn(world.kids, new Map([[k.id, { x: 670, y: 690 }]]), new Map(), [obstacle]);
+    expect(out.get(k.id)).toEqual({ x: 600, y: 640 });
+  });
 });
 

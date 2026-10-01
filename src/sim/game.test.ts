@@ -447,3 +447,26 @@ describe('Codex review, PR #14 round 2', () => {
     expect(game.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
   });
 });
+
+describe('Codex review, PR #14 round 4', () => {
+  it('a drop the player saw touching its partner fuses even if the sim gap exceeds the slack', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    const water = place(game, 'water', 500, 500);
+    const plain = place(game, 'plain', 200, 800);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    // Water drawn at 480 (sim 500): the drop flush with the drawn box leaves a 20-unit sim gap.
+    const spot = game.landingSpot(plain.id, 380, 500, new Map([[water.id, { x: 480, y: 500 }]]))!;
+    expect(spot.x).toBeCloseTo(360, 6);
+    game.step([{ type: 'drop', kidId: plain.id, x: spot.x, y: spot.y, touching: [water.id] }]);
+    expect(game.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
+  });
+
+  it('without a seen touch, the same wide gap does not fuse', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    place(game, 'water', 500, 500);
+    const plain = place(game, 'plain', 200, 800);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    game.step([{ type: 'drop', kidId: plain.id, x: 360, y: 500 }]);
+    expect(game.state.world.kids.map((k) => k.type).sort()).toEqual(['plain', 'water']);
+  });
+});

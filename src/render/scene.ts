@@ -3,7 +3,7 @@ import type { KidRig, MapData } from '../content/artData';
 import type { Content } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
-import { resolveDrawn } from '../sim/space';
+import { rectAt, resolveDrawn, touching } from '../sim/space';
 import { buildMap } from './mapView';
 import { KidRigView } from './rigView';
 
@@ -304,8 +304,18 @@ export class MapScene {
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
     this.resolveHeld();
-    // Drop exactly where the kid is shown: the resolved free spot (touching a partner fuses).
-    this.finishDrag({ type: 'drop', kidId: this.drag.kidId, x: this.drag.spot.x, y: this.drag.spot.y });
+    // Drop exactly where the kid is shown: the resolved free spot. Kids it visibly touches
+    // there (their drawn boxes) travel with the command, so a seen touch can fuse.
+    const { kidId, spot } = this.drag;
+    const kid = this.game.state.world.kids.find((k) => k.id === kidId);
+    const slack = this.game.touchSlack;
+    const seen = kid
+      ? [...this.drawn].filter(([id, at]) => {
+          const other = this.game.state.world.kids.find((k) => k.id === id);
+          return id !== kidId && !!other && touching(rectAt(kid.box, spot.x, spot.y), rectAt(other.box, at.x, at.y), slack);
+        })
+      : [];
+    this.finishDrag({ type: 'drop', kidId, x: spot.x, y: spot.y, touching: seen.map(([id]) => id) });
   }
 
   /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
@@ -357,7 +367,7 @@ export class MapScene {
       const p = this.prev.get(k.id) ?? k;
       interpolated.set(k.id, { x: p.x + (k.x - p.x) * alpha, y: p.y + (k.y - p.y) * alpha });
     }
-    const drawn = resolveDrawn(kids, interpolated, this.placing);
+    const drawn = resolveDrawn(kids, interpolated, this.placing, this.art.obstacles);
     this.drawn.clear();
     for (const [id, pos] of drawn) this.drawn.set(id, pos);
     if (this.drag) this.resolveHeld();

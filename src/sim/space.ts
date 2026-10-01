@@ -46,7 +46,7 @@ export function touching(a: Rect, b: Rect, slack: number): boolean {
   return (dx <= slack + EPS && dy <= EPS) || (dy <= slack + EPS && dx <= EPS);
 }
 
-function hitsObstacle(r: Rect, o: Obstacle): boolean {
+export function hitsObstacle(r: Rect, o: Obstacle): boolean {
   if (intersects(r, o.box)) return true;
   // Nearest point of the kid rect to the circle centre.
   const nx = Math.min(r.maxX, Math.max(r.minX, o.circle.x));
@@ -212,6 +212,7 @@ export function resolveDrawn(
   kids: Kid[],
   interpolated: Map<number, { x: number; y: number }>,
   fixed: Map<number, { x: number; y: number }>,
+  obstacles: Obstacle[] = [],
 ): Map<number, { x: number; y: number }> {
   const out = new Map<number, { x: number; y: number }>();
   const snapped = new Set<number>();
@@ -219,6 +220,17 @@ export function resolveDrawn(
   // fixed pending position and must be drawn there (Codex review, PR #14: no snap-back).
   const grounded = kids.filter((k) => !k.held || fixed.has(k.id));
   for (const k of grounded) out.set(k.id, fixed.get(k.id) ?? interpolated.get(k.id) ?? { x: k.x, y: k.y });
+  // Interpolating between two legal positions can cut through a scenery reserve
+  // (Codex review, PR #14): such a kid is drawn at its (legal) sim position.
+  for (const k of grounded) {
+    if (fixed.has(k.id)) continue;
+    const p = out.get(k.id)!;
+    const r = rectAt(k.box, p.x, p.y);
+    if (obstacles.some((o) => hitsObstacle(r, o))) {
+      out.set(k.id, { x: k.x, y: k.y });
+      snapped.add(k.id);
+    }
+  }
   for (let pass = 0; pass <= grounded.length; pass++) {
     let changed = false;
     for (let i = 0; i < grounded.length; i++) {

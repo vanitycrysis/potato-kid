@@ -22,7 +22,12 @@ import {
 /** Player input, applied at the start of the next sim step. */
 export type Command =
   | { type: 'pickUp'; kidId: number }
-  | { type: 'drop'; kidId: number; x: number; y: number }
+  /**
+   * `touching`: kids whose *drawn* boxes touched the drop when it was released. Those pairs
+   * count as in contact for this drop, so what the player saw touch can fuse even if
+   * interpolation put the partner a little away from its sim box (Codex review, PR #14).
+   */
+  | { type: 'drop'; kidId: number; x: number; y: number; touching?: number[] }
   | { type: 'cancelDrag'; kidId: number; x: number; y: number };
 
 /** What happened during a step; rendering and audio react only to these. */
@@ -134,6 +139,10 @@ export class Game {
     return this.content.balance.spawn.capacity;
   }
 
+  get touchSlack(): number {
+    return this.content.balance.body.touchSlack;
+  }
+
   /**
    * Where a held kid would land if dropped near (x, y): the nearest spot where its box
    * touches nothing (D-039, D-043). The scene draws the held kid there, so a lifted kid
@@ -157,11 +166,11 @@ export class Game {
   /** Advances one fixed step. */
   step(commands: Command[], dt: number = STEP): GameEvent[] {
     const events: GameEvent[] = [];
-    this.applyCommands(commands, events);
+    const seen = this.applyCommands(commands, events);
     const world = this.state.world;
     // A drop resolves its contacts first: a partner walking away mustn't escape the touch
     // the player saw at release (Codex review, PR #14).
-    if (commands.some((c) => c.type !== 'pickUp')) this.resolveFusions(events);
+    if (commands.some((c) => c.type !== 'pickUp')) this.resolveFusions(events, seen);
     for (const kid of world.kids) kid.grace = Math.max(0, kid.grace - dt);
     stepWander(
       world,
@@ -179,8 +188,10 @@ export class Game {
     return events;
   }
 
-  private applyCommands(commands: Command[], events: GameEvent[]): void {
+  /** Applies player commands; returns pairs the player saw touching at a drop. */
+  private applyCommands(commands: Command[], events: GameEvent[]): [number, number][] {
     const { world } = this.state;
+    const seen: [number, number][] = [];
     for (const c of commands) {
       const kid = world.kids.find((k) => k.id === c.kidId);
       if (!kid) continue; // e.g. consumed before the command arrived
@@ -196,8 +207,12 @@ export class Game {
       const p = findFreeSpot(world, kid.box, c.x, c.y, kid.id) ?? clampToBounds(world.bounds, kid.x, kid.y);
       kid.x = p.x;
       kid.y = p.y;
-      if (c.type === 'drop') events.push({ type: 'dropped', kidId: kid.id });
+      if (c.type === 'drop') {
+        events.push({ type: 'dropped', kidId: kid.id });
+        for (const other of c.touching ?? []) if (other !== kid.id) seen.push([kid.id, other]);
+      }
     }
+    return seen;
   }
 
   /**
@@ -205,7 +220,7 @@ export class Game {
    * overlapping on the other). Candidates sort by (gap, lower id, higher id); a kid
    * consumed earlier in this step is skipped, so no kid can fuse twice.
    */
-  private resolveFusions(events: GameEvent[]): void {
+  private resolveFusions(events: GameEvent[], seen: [number, number][] = []): void {
     const { world } = this.state;
     const slack = this.content.balance.body.touchSlack;
     const eligible = world.kids.filter((k) => !k.held && k.grace === 0);
@@ -237,6 +252,14 @@ export class Game {
           }
         }
       }
+    }
+    // Contacts the player saw at a drop count even if the sim gap is wider than the slack.
+    for (const [x, y] of seen) {
+      const a = eligible.find((k) => k.id === Math.min(x, y));
+      const b = eligible.find((k) => k.id === Math.max(x, y));
+      if (!a || !b || candidates.some((c) => c.a === a && c.b === b)) continue;
+      const result = this.recipes.get(pairKey(a.type, b.type));
+      if (result) candidates.push({ d: 0, a, b, result });
     }
     candidates.sort((p, q) => p.d - q.d || p.a.id - q.a.id || p.b.id - q.b.id);
 
