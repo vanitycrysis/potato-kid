@@ -37,6 +37,28 @@ describe('fusion', () => {
     expect(fused).toMatchObject({ type: 'fused', firstDiscovery: true });
   });
 
+  it('uses ground-point distance as the contact predicate, inclusive at the radius (D-030)', () => {
+    const r = content.balance.contactRadius;
+    // Exactly at the radius: contact.
+    const at = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
+    place(at, 'plain', 300, 300);
+    place(at, 'water', 300 + r, 300);
+    at.step([]);
+    expect(at.state.world.kids.map((k) => k.type)).toEqual(['firefighter']);
+    // Just beyond the radius but in an adjacent spatial-hash cell: no contact.
+    const beyond = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
+    place(beyond, 'plain', 300, 300);
+    place(beyond, 'water', 300 + r + 0.5, 300);
+    beyond.step([]);
+    expect(beyond.state.world.kids.map((k) => k.type).sort()).toEqual(['plain', 'water']);
+    // Diagonal neighbours whose cells touch but whose distance exceeds the radius: no contact.
+    const diag = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
+    place(diag, 'plain', 300, 300);
+    place(diag, 'water', 300 + r * 0.8, 300 + r * 0.8);
+    diag.step([]);
+    expect(diag.state.world.kids).toHaveLength(2);
+  });
+
   it('does nothing for a pair with no recipe', () => {
     const game = new Game(testContent({ intervalSeconds: 1e9 }), bounds, garden, 1);
     place(game, 'fire', 300, 300);
@@ -135,6 +157,19 @@ describe('spawning', () => {
     const events = game.step([]);
     expect(events.filter((e) => e.type === 'spawned')).toHaveLength(1);
     expect(game.state.spawnProgress).toBeLessThan(0.2);
+  });
+
+  it('filling the last slot does not bank a spawn (plan rev. 3 phase rule)', () => {
+    const game = new Game(testContent({ intervalSeconds: 12, capacity: 2 }), bounds, garden, 3);
+    const a = place(game, 'fire', 100, 900);
+    game.state.spawnProgress = 11;
+    // One step past the interval fills the map (2/2); progress keeps only the overshoot.
+    const events = run(game, 1.05);
+    expect(events.filter((e) => e.type === 'spawned')).toHaveLength(1);
+    expect(game.state.spawnProgress).toBeLessThan(0.2);
+    // Freeing a slot right away must not spawn immediately.
+    game.state.world.kids = game.state.world.kids.filter((k) => k.id !== a.id);
+    expect(game.step([]).filter((e) => e.type === 'spawned')).toHaveLength(0);
   });
 
   it('carries partial progress (11 s accumulated + 1 s = one spawn)', () => {

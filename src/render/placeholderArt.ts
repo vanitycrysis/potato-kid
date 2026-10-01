@@ -103,8 +103,8 @@ export function buildPlaceholderTextures(renderer: Renderer, kids: KidDef[]): Ma
     out.set(name, renderer.generateTexture({ target: g, frame, resolution: 1, antialias: true }));
     g.destroy();
   };
-  bake('kid_base_body', drawBody);
-  bake('kid_base_face', drawFace);
+  bake('kid_plain_body', drawBody);
+  bake('kid_plain_face', drawFace);
   for (const kid of kids) {
     bake(layerAssetName(kid.id, 'overlay_back'), (g) => drawOverlay(g, kid, 'overlay_back'));
     bake(layerAssetName(kid.id, 'overlay_front'), (g) => drawOverlay(g, kid, 'overlay_front'));
