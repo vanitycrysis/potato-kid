@@ -67,7 +67,22 @@ if (duplicates.length) {
 const browser = await chromium.launch();
 const page = await browser.newPage();
 const problems = [];
+/** Rendered PNGs waiting to be written: nothing touches disk until every source passes. */
+const pending = [];
 const exported = [];
+
+// Kid layer names must be ones the engine composes: the shared body/face, or a roster
+// type's optional back/front overlay (ASSETS.md). A typo would otherwise export fine
+// but never be drawn (Codex review, PR #6).
+const roster = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8')).map((k) => k.id);
+const KID_LAYER = /^kid_([a-z0-9]+)_(overlay_back|overlay_front)$/;
+function kidNameProblem(name) {
+  if (name === 'kid_plain_body' || name === 'kid_plain_face') return null;
+  const m = KID_LAYER.exec(name);
+  if (!m) return `${name}: kid layers must be kid_plain_body, kid_plain_face, or kid_<type>_overlay_back/front`;
+  if (!roster.includes(m[1])) return `${name}: "${m[1]}" is not a kid type in src/content/kids.json`;
+  return null;
+}
 
 for (const file of svgs) {
   const name = basename(file, '.svg');
@@ -76,6 +91,10 @@ for (const file of svgs) {
   if (!fam) {
     problems.push(`${name}: unknown asset family (prefix)`);
     continue;
+  }
+  if (fam.prefix === 'kid_') {
+    const p = kidNameProblem(name);
+    if (p) problems.push(p);
   }
   const [w, h] = fam.size;
   const svg = readFileSync(file, 'utf8');
@@ -116,17 +135,22 @@ for (const file of svgs) {
   if (result.paddingHit) problems.push(`${name}: art inside the ${fam.padding}px clear padding`);
   if (fam.opaque === true && !result.opaque) problems.push(`${name}: must be fully opaque`);
   if (fam.opaque === false && result.opaque) problems.push(`${name}: must have transparency`);
-  if (!checkOnly) {
-    const out = join(ROOT, fam.dir, `${name}.png`);
+  pending.push({ out: join(ROOT, fam.dir, `${name}.png`), png: result.png });
+}
+
+// All-or-nothing (Codex review, PR #6): a rejected delivery must not replace or delete
+// previously accepted exports. Only when every source passes are PNGs written, stale
+// outputs from the previous run removed (only files listed in our own manifest), and
+// the manifest updated.
+const writeOutputs = !checkOnly && problems.length === 0;
+if (writeOutputs) {
+  for (const { out, png } of pending) {
     mkdirSync(dirname(out), { recursive: true });
-    writeFileSync(out, Buffer.from(result.png.split(',')[1], 'base64'));
+    writeFileSync(out, Buffer.from(png.split(',')[1], 'base64'));
     exported.push(out.slice(ROOT.length + 1).replaceAll('\\', '/'));
   }
 }
-
-// Remove outputs from the previous run whose source no longer exists. Only files this
-// tool generated (listed in the manifest) are ever deleted.
-if (!checkOnly) {
+if (writeOutputs) {
   const previous = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : [];
   const current = new Set(exported);
   for (const rel of previous) {
@@ -141,7 +165,7 @@ if (!checkOnly) {
 
 // Review previews: every kid composited back→body→face→front, at 48/64/96 CSS px on
 // light and dark grounds, plus a crowded 40-kid portrait scene on the map if present.
-if (!checkOnly) {
+if (writeOutputs) {
   const kidsJson = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8'));
   const kidDir = join(ROOT, 'assets/sprites/kids');
   const layerUrl = (n) => {
@@ -203,6 +227,7 @@ await browser.close();
 for (const p of exported) console.log(`exported ${p}`);
 if (svgs.length === 0) console.log('No SVG sources in art/src.');
 if (problems.length) {
+  if (!checkOnly) console.error('\nNothing was written: existing exports are unchanged.');
   console.error(`\n${problems.length} contract problem(s):`);
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
