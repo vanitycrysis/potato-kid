@@ -1,0 +1,9 @@
+{
+  "spawnWeights": { "plain": 40, "fire": 20, "water": 20, "snow": 20 },
+  "wander": {
+    "speed": 40,
+    "turnChancePerSecond": 0.6,
+    "idleChancePerSecond": 0.25,
+    "idleSeconds": [0.8, 2.5]
+  }
+}
