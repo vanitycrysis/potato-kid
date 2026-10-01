@@ -1,21 +1,49 @@
 # Decisions
 
-Every decision with its reason. Newest at the bottom. Status: **proposed** (awaiting review or owner), **agreed** (both AIs), **approved** (owner).
+Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collaborators' entries are kept. **Status:**
+- **Required:** from the brief or the design doc.
+- **Approved:** by the owner.
+- **Agreed:** by both AIs.
+- **Proposed:** awaiting review.
 
-| # | Date | Decision | Reason | By | Status |
-|---|---|---|---|---|---|
-| D1 | 2026-10-01 | Stack: TypeScript + PixiJS v8 + Vite, wrapped with Capacitor for Android/iOS | Text-only and diff-friendly for two AI collaborators; testable without a human; playable in a browser at every gate | Claude | approved (owner, 2026-10-01) |
-| D2 | 2026-10-01 | Pure simulation core separated from rendering; fixed 10 Hz step | Testable game logic; offline catch-up uses the same rules | Claude | proposed |
-| D3 | 2026-10-01 | Kids composited from body + face + overlay; wander animation is procedural | One static overlay per new kid type instead of animation frames; roster scales cheaply (design doc §2) | Claude | proposed |
-| D4 | 2026-10-01 | Recipes, kids, buildings and balance live in JSON, validated in CI | Design doc §8: data-driven recipes | Claude | proposed |
-| D5 | 2026-10-01 | Offline progress uses closed-form maths, capped at 8 h; no fusions while offline | Exact and fast; discovery is kept for when the player is watching | Claude | approved (owner, 2026-10-01) |
-| D6 | 2026-10-01 | Potatokens are speed-ups only; no real-money purchases in the MVP | Resolves design doc §5.2 squeeze risk | Claude | approved (owner, 2026-10-01) |
-| D7 | 2026-10-01 | Materials faucet = passive income per kid, doubling per tier | Design doc §5.1 recommended model | Claude | approved (owner, 2026-10-01) |
-| D8 | 2026-10-01 | Android first; iOS later | Owner decision. An iOS build needs a Mac and a paid Apple developer account | Owner | approved |
-| D9 | 2026-10-01 | The "ChatGPT" collaborator role is filled by OpenAI Codex (CLI, driven through the Claude Code `codex` plugin), working in its own git worktree `../potato-kid-chatgpt` on `chatgpt/` branches | The owner asked Claude and Codex to work together autonomously; separate worktrees keep the "never the same working tree" rule | Owner | approved |
+| ID | Status | Decision | Reason / authority |
+|---|---|---|---|
+| D-001 | Required | Planning first. Engineering scaffolding began after the owner approved the stack (D-014); no production game systems or production assets before the plan is consolidated | Brief, first task. Owner, 2026-10-01: "go for it" |
+| D-002 | Required | ChatGPT owns art and audio and reviews engineering; Claude owns engineering and integration and reviews art and audio | Brief, Roles |
+| D-003 | Required | Keep consume-two/make-one, free wandering with no grid, hidden recipes, offline progress | Design doc |
+| D-004 | Observed | The 22 references are transparent black-line WebPs (base, cook, sleep, snow) on varying canvases; three base files are byte-identical | Inspected by both AIs |
+| D-005 | Agreed | Editable SVG source for body, face and costume; aligned body/face/overlay PNG layers at runtime; flattened previews for review | ChatGPT's proposal, built on Claude's layering (D-016) |
+| D-006 | Proposed; decided at the art gate | Warm flat body fill, one dark outline, costume silhouette plus a restrained accent colour per type | Transparent interiors would show the map behind them; the owner approves the actual samples |
+| D-007 | Agreed | Art-gate samples: base, Fire, Water, Firefighter, garden map | Covers the design example pairing and the first-playable recipe R1 |
+| D-008 | Agreed | Kid layers 256 × 256, ground anchor (128, 224), ≥ 8 px padding; procedural motion moves layers together; 10 types / 6 recipes | ChatGPT's spec; Claude confirms in `ENGINEERING_PLAN.md` §5 |
+| D-009 | Proposed (Claude revision) | World is 1080 units wide, fit to screen width; background 1080 × 2400 with a 1080 × 1920 safe band; decoded textures ≤ 32 MiB | ChatGPT asked for camera and safe areas; 2400 tall covers 20:9 phones |
+| D-010 | Agreed | No music-generation tool: original note/MIDI composition plus scripted synthesis for one loop and 8 cues; judged by listening | ChatGPT states the limit honestly |
+| D-011 | Proposed (Claude revision) | ChatGPT delivers WAV masters (48 kHz / 16-bit); the build encodes Ogg + M4A with ffmpeg; separate music and SFX volumes; peak and listening checks for SFX | One reproducible encoding step; ChatGPT's LUFS correction accepted |
+| D-012 | Required | All exchange and review happens through GitHub PRs; one combined plan goes to the owner | Brief |
+| D-013 | Agreed | Fix offline spawn progress and income, save recovery order, the content contract, device and audio acceptance, and the platform rationale | ChatGPT review on PR #1; answered in `ENGINEERING_PLAN.md` rev. 2 |
+| D-014 | Approved (owner) | TypeScript + PixiJS v8 + Vite + Capacitor (was Claude D1) | Text-only and diff-friendly, testable without a human, same build in a browser and on Android |
+| D-015 | Agreed | Pure simulation core separate from rendering; fixed 10 Hz step; offline is a deliberately simplified rule set (was D2) | Testable rules; ChatGPT's correction on offline accepted |
+| D-016 | Agreed | Kids composited from body + face + overlay with procedural wander animation (was D3) | One overlay per new type; roster scales cheaply |
+| D-017 | Agreed | Kids, recipes, buildings and balance in JSON, validated in CI: result tier above both parents, reachability, valid weights (was D4) | Design doc §8; ChatGPT added checks |
+| D-018 | Approved (owner) | Offline: closed-form catch-up capped at 8 h (excess discarded and shown); no offline fusions; persisted spawn progress; idempotent reconcile (was D5) | Owner, 2026-10-01; details in the plan §3 |
+| D-019 | Approved (owner) | Potatokens: instant spawn and an alternative payment for compendium respawns; earned from discoveries and milestones; no IAP and no construction timers in the MVP (was D6) | Owner, 2026-10-01 |
+| D-020 | Approved (owner) | Materials faucet: passive income per kid, `0.5 · 2^(tier-1)` per second (was D7) | Owner, 2026-10-01 |
+| D-021 | Approved (owner) | Android first; iOS later (needs a Mac with Xcode; distribution needs a paid membership) | Owner, 2026-10-01; ChatGPT's platform correction |
+| D-022 | Proposed (Claude) | HUD and panels are a DOM overlay; the world is drawn in Pixi | Live text, accessible touch targets |
+| D-023 | Proposed (Claude) | Starter roster and recipes as in `ENGINEERING_PLAN.md` §2; first-playable recipe R1 `plain + water → firefighter` | ChatGPT asked for a concrete roster; ChatGPT owns names and theming |
+| D-024 | Proposed (Claude) | Only the Garden is a map sprite; Capacity, Bias and Compendium are reached through bottom-tray UI with icons | Keeps the play area clear; smaller art budget |
+| D-025 | Proposed (Claude) | Playable builds go out as a CI artifact (web zip, then a debug APK), because GitHub Pages is unavailable for this private repo | Pages API returned 422; the owner could make the repo public instead |
 
-## Sub-agents
+## Open questions
 
-| Agent | Owner | Purpose |
+| ID | For | Question |
 |---|---|---|
-| Codex (via the `codex` Claude Code plugin) | ChatGPT role | Art/audio owner and code reviewer (see D9). Runs read-only for reviews and write-enabled in its own worktree for its own tasks. Claude commits and pushes Codex's output as a separate git author (`Codex`), and posts Codex's reviews verbatim as PR comments marked as Codex's. |
+| O-001 | Owner | Which Android phone is the test device? Needed for performance acceptance. |
+| O-002 | Owner | Make the repo public so every `main` build is playable in a browser (GitHub Pages), or keep it private and use CI downloads? |
+| O-003 | ChatGPT | Accept D-009, D-011, D-022 to D-024, or argue in PR #1? |
+
+## Sub-agents and tools
+
+| Agent | Used by | Purpose |
+|---|---|---|
+| Codex CLI (Claude Code `codex` plugin) | Claude | Installed for optional second-opinion code reviews or diagnosis. It does **not** stand in for ChatGPT, which works independently through its own PRs. |

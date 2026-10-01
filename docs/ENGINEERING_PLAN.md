@@ -1,98 +1,228 @@
-# Engineering plan (Claude's proposal, check-in 1)
+# Engineering plan
 
-Status: **proposal**. ChatGPT reviews this; after one review round it is merged with ChatGPT's art and audio plan and goes to the owner for check-in 1. Nothing gets built until the owner approves.
+Author: Claude. Revision 2 (2026-10-01): updated after ChatGPT's review on PR #1 (`docs/ENGINEERING_REVIEW.md` in PR #2). Each section says which review point it answers.
+
+**Owner decisions already given (2026-10-01):** Android first; TypeScript + PixiJS + Capacitor stack approved. Also confirmed:
+- Materials are earned passively per kid, scaled by tier.
+- Potatokens are speed-ups only; there are no real-money purchases in the MVP.
+- No fusions happen offline.
+- Offline catch-up is capped at 8 hours.
 
 ## 1. Tech stack
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | **TypeScript** (strict) | Typed simulation code is easy to test, and both AIs read and write it fluently. |
-| Rendering | **PixiJS v8** | Fast 2D WebGL batching. A screen with 100+ sprites is trivial for it on mid-range phones. Rendering only, so the game logic does not depend on it. |
-| Build | **Vite** | Fast dev server; a static build that runs anywhere. |
-| Mobile shell | **Capacitor** (Android first, then iOS) | Wraps the web build into real store apps and gives native storage, app pause and resume events, and haptics. |
-| Audio | **Howler.js** | Handles mobile audio unlock, sprite sheets and music loops. |
-| Tests | **Vitest** (simulation, economy, save) + **Playwright** (smoke test and screenshots in a headless browser) | Lets the two AIs check behaviour and visuals without a human. |
-| CI | **GitHub Actions** | Typecheck, lint and tests on every PR. Each `main` build is deployed to **GitHub Pages** so the owner can play it in a phone browser at every gate. |
+| Language | TypeScript, strict | Typed and testable; both AIs work in it fluently |
+| World rendering | PixiJS v8 | Fast 2D WebGL batching; used for rendering only |
+| UI (HUD, panels, Dex) | **DOM overlay** (plain TS + CSS) on top of the Pixi canvas | Live text, accessible touch targets (≥ 44 px), simple layout. Answers review §5 |
+| Build | Vite | Static build; the same output runs in a browser and inside Capacitor |
+| Mobile shell | Capacitor, **Android first** | Native storage, app pause and resume events, back button |
+| Audio | Howler.js | Mobile audio unlock and format fallback |
+| Tests | Vitest (simulation, economy, save, content) + Playwright (browser smoke test, drag-and-drop flows, screenshots) | Checks behaviour without a human |
+| CI | GitHub Actions | Typecheck, lint, unit tests, build and e2e on every PR; **debug APK built in CI** from M2 on |
 
-**Alternatives considered.** Godot 4 has a good 2D engine, but its scene and editor workflow is harder for two agents to work on through text diffs and PRs, and there is no browser build the owner can tap through as easily. Unity is heavy, uses opaque asset files, and its licensing is a burden for a project like this. Phaser would also work, but we would use little of it beyond what PixiJS already gives us.
+**Why not Godot or Unity (corrected, review §6).** Godot does export to the web. We prefer the web stack because the entire project is plain text that two agents can diff and review, the tests run headless in Node, and the same build runs in a browser and on Android. Unity's binary assets and editor-centric workflow suit agents working through PRs poorly.
+
+**iOS (corrected, review §6).** The Capacitor iOS route needs a Mac with Xcode. Xcode's free Personal Team allows limited testing on your own device. Distribution needs a paid membership. iOS is out of MVP scope.
+
+**Toolchain check (review §5).** This machine has the Android SDK, emulator images and Android Studio, whose bundled JDK can build APKs locally. CI builds on `ubuntu-latest` with `setup-java` and the Android SDK.
+
+**Playable builds for the owner.** GitHub Pages is **not available** for this private repo on the current plan (the API returned 422). Until the owner decides otherwise, gate builds are delivered as:
+- a zipped web build, attached to CI as an artifact;
+- from M2 on, a debug APK the owner sideloads.
+
+If the owner makes the repo public, the Pages workflow is ready.
 
 ## 2. Architecture
 
 ```
 src/
-  sim/        pure TypeScript game state and rules. No Pixi, no DOM. Fully unit-tested.
-    state.ts      GameState type (kids, currencies, buildings, dex, rngSeed, lastSavedAt)
-    tick.ts       fixed-step update: wander → contact detection → recipe resolution → spawn → income
-    recipes.ts    unordered-pair recipe lookup
-    economy.ts    all formulas (spawn interval, income, costs) in one file
-    offline.ts    closed-form catch-up for time away
-    rng.ts        seeded PRNG so every test is deterministic
-  content/    data only: kids.json, recipes.json, buildings.json, balance.json
-  save/       versioned JSON save, migrations, storage adapter (localStorage / Capacitor Preferences)
-  render/     Pixi scene that reads GameState and draws it; does not change it
-  input/      pick-up/drag/drop → commands into sim
-  ui/         HUD, Dex, building panels (Pixi or lightweight DOM overlay)
-  audio/      Howler wrapper; reacts to sim events
+  sim/       pure TS rules: state, step, recipes, economy, offline, rng. No Pixi, no DOM.
+  content/   kids.json, recipes.json, buildings.json, balance.json (data only)
+  save/      versioned save, slots, migrations, storage adapter
+  render/    Pixi world view; reads state, never mutates it
+  input/     pointer → world-coordinate commands
+  ui/        DOM HUD and panels
+  audio/     Howler wrapper driven by sim events
+  platform/  app lifecycle (visibility, Capacitor pause/resume), storage backend
 ```
 
-**Key rules**
+- **The simulation is separate from rendering.** `step(state, dt, commands) → events`. Rendering and audio react only to the events. The simulation steps at a fixed 10 Hz, and rendering interpolates positions between steps.
+- **Offline catch-up is a deliberately simplified rule set** (review §1). It does not replay wandering or fusions. It reuses the same economy functions, but the rules are different, and the docs and tests say so.
 
-- **The simulation is separate from rendering.** `sim` exposes `step(state, dt, commands) → events`. The renderer and audio only react to the returned events (`kidSpawned`, `fused`, `recipeDiscovered`, ...). This keeps the game logic testable without a renderer, and offline catch-up uses the same rules.
-- **Fixed timestep**: 10 Hz for the simulation; rendering interpolates between steps at 60 fps. Wandering is cheap steering (random heading changes, kept inside the map bounds).
-- **Contact and fusion.** Contact checks use a spatial hash, so they stay cheap with many kids. Each step, candidate pairs are sorted by distance, and a kid that has already been consumed in that step is skipped. As the design doc requires, two kids cannot both trigger a recipe in the same frame. A short **spawn grace period** (~2 s) stops a kid fusing the moment it appears. A kid being dragged by the player cannot fuse until it is dropped.
-- **Recipes are data**: `{ "a": "fire", "b": "firefighter", "result": "steam_kid" }`, looked up with the key `min(a,b)|max(a,b)`. Adding a kid or recipe means editing JSON only. CI checks the content files: no duplicate pairs, every result type exists, every kid has art.
-- **Kids are composited from layers.** Each kid is drawn as body + face + overlay in a Pixi container. Wander animation is **procedural** (hop, squash, slight tilt, blink). Overlays follow the body automatically, so new kid types need **one static overlay image, not animation frames**. Hand-drawn frames are kept for a few special moments (fusion, napping, the Garden). This is the cheapest way to get the large roster the design doc counts on.
+### Contact and fusion contract (review §4)
 
-## 3. Economy and balance model (first pass; all numbers in `balance.json`)
+1. Fusion candidates come from a spatial hash. A pair is a candidate when both kids are present, neither is being dragged, neither is inside its newborn grace period, and a recipe exists for the pair.
+2. Candidates are sorted by `(distance, min(idA,idB), max(idA,idB))`. Kid IDs are stable, monotonically increasing integers, so ties always break the same way.
+3. Candidates are resolved in that order inside one step. A kid already consumed in this step is skipped. Removing both parents and adding the result is one state update, so neither parent can fuse twice.
+4. **The consumption guard is (3), not the grace period.** The 2 s newborn grace period is only a pacing parameter in `balance.json`, to be tuned in playtests.
+5. **Dropping a kid.** A drop command carries screen coordinates. Input converts them to world coordinates using the camera transform as of the last *rendered* frame, so what the player sees is what is hit. A cancelled touch (`pointercancel`, leaving the app, a second finger) returns the kid to where the drag started. A dropped kid gets fusion-checked in the next step like any other kid.
 
-| Quantity | Formula | Starting value |
+### Content contract and validation (review §4)
+
+CI fails if any of these are false:
+- Kid IDs are unique.
+- Every recipe pair is unique and unordered.
+- Every recipe result exists, and its **tier is greater than both parents' tiers**.
+- **Every recipe is reachable.** Each input is either in the spawn pool or the result of a reachable recipe; this is checked as a graph walk.
+- Spawn and bias weights are > 0 and finite.
+- Every kid has the assets its layers need (once art exists).
+- Every kid appears in the Dex.
+
+### Starter roster and recipes (proposal, review §4)
+
+This is the shared proposal. **ChatGPT owns names and theming** and may rename anything. I own the IDs and the structure. It is built from the design doc's examples (Fire, Water, Firefighter) and the cook and snow references.
+
+| ID | Tier | Source | Theme |
+|---|---|---|---|
+| `plain` | 1 | spawns | the base Potato Kid, no overlay |
+| `fire` | 1 | spawns | flame |
+| `water` | 1 | spawns | droplet |
+| `snow` | 1 | spawns | beanie + scarf (snow refs) |
+| `chef` | 2 | recipe | chef hat + pan (cook refs) |
+| `firefighter` | 2 | recipe | helmet + hose |
+| `snowman` | 2 | recipe | snowman body (snow refs) |
+| `steam` | 2 | recipe | steam cloud |
+| `hero` | 3 | recipe | firefighter cape / medal |
+| `sundae` | 3 | recipe | ice-cream bowl |
+
+| # | Recipe | Notes |
 |---|---|---|
-| Garden spawn interval | `base · 0.85^(level-1)` | 12 s, generous on purpose (starvation is the risk) |
-| Capacity | `base + 4·(level-1)` | 12 kids |
-| Materials per kid per second | `0.5 · 2^(tier-1)` | tier 1 = 0.5/s |
+| R1 | `plain + water → firefighter` | **The first-playable recipe.** Uses only art-gate assets (base, water, firefighter). |
+| R2 | `plain + fire → chef` | |
+| R3 | `plain + snow → snowman` | |
+| R4 | `fire + water → steam` | |
+| R5 | `fire + firefighter → hero` | The design doc's own example pairing |
+| R6 | `chef + snowman → sundae` | |
+
+There are 55 possible type pairs and 6 recipes, which keeps the recipe set sparse as the design asks. Early discovery is denser on purpose: 4 of the 10 tier-1 pairs are recipes. The balance simulator will tell us whether that is too generous.
+
+- **Spawn pool:** `plain` 40, `fire` 20, `water` 20, `snow` 20.
+- **Bias building:** multiplies one chosen tier-1 type's weight by `1 + 0.5·level`.
+
+### Buildings (MVP)
+
+| ID | Effect per level | Location |
+|---|---|---|
+| `garden` | Spawn interval × 0.85 | **On the map:** kids emerge from it |
+| `capacity` | +4 capacity | UI panel |
+| `bias` | Chosen type's weight × (1 + 0.5·level) | UI panel |
+| `compendium` | Unlocks respawning a discovered kid for Materials (or Potatokens) | UI panel |
+
+Proposal for ChatGPT: only the Garden needs a large map sprite. The other three are reached from a bottom tray and need **icons, not 512 px building sprites**. This keeps the play area clear for kids and cuts the art budget. All upgrades are **instant**, so the MVP has no construction timers (review §2).
+
+**Potatokens in the MVP:**
+- Spent on instant spawns, and as an alternative way to pay for compendium respawns.
+- Earned from first discoveries and Dex milestones.
+- No time-skip feature exists in the MVP, because nothing has a timer.
+
+## 3. Economy (first pass; every value lives in `balance.json`)
+
+| Quantity | Formula | Start |
+|---|---|---|
+| Garden spawn interval | `12 s · 0.85^(level-1)` | 12 s |
+| Capacity | `12 + 4·(level-1)` | 12 |
+| Materials per kid per second | `0.5 · 2^(tier-1)` | 0.5 |
 | Upgrade cost | `c0 · 1.6^level` | per building |
-| Spawn bias | chosen type's spawn weight × `(1 + 0.5·level)` | 1 type at a time |
-| Compendium respawn | `respawnBase · 2^(tier-1)` Materials | — |
+| Compendium respawn | `respawnBase · 2^(tier-1)` | — |
 
-I will write a **balance simulator** (a headless script that plays the economy with a simple bot strategy) and use it to tune these values. It reports time-to-first-recipe, time-to-each-tier, and the share of time the map sits below 30% capacity, which measures starvation. These numbers decide the tuning, not guesses.
+A headless **balance simulator** plays the economy with a scripted player bot. It reports:
+- time to the first recipe;
+- time to each tier;
+- the share of time the map sits below 30 % capacity (starvation).
 
-**Offline progress** (non-negotiable) uses **closed-form maths**, not millions of replayed ticks:
-- spawns = `min(capacity − population, floor(away / interval))`;
-- Materials = the exact integral of income while the population climbs from the spawns and then plateaus at capacity;
-- capped at 8 h at first (an upgrade can extend it later);
-- clock safety: a negative or absurdly large time away is clamped.
+The tuning comes from those numbers.
 
-**Proposal: no fusions while the player is away.** The kids "nap" while the app is closed, which fits the sleep reference. Discovery is the main reward, so it should happen while the player is watching, and this also keeps offline maths exact. The player comes back to a full, napping map ready to experiment with.
+### Spawn timer and capacity (review §1)
 
-## 4. Save system
+- The state stores a persistent `spawnProgress` in seconds, in `[0, interval]`.
+- **Online:** `spawnProgress += dt`. When it reaches the interval and there is room, a kid spawns and progress drops by one interval.
+- **When the map is full, progress stops at the interval.** One spawn is "banked", and it happens the instant a slot frees up, for example right after a fusion. Spawn opportunities beyond that one are discarded. Online and offline use this same rule.
 
-- Versioned JSON: `{ version, savedAt, state }`, with ordered migration functions and tests for each.
-- Saves every 10 s, on `visibilitychange` / app pause, and after every fusion or purchase.
-- Two save slots that alternate (A/B), each checked against a checksum, so a crash halfway through a write cannot wipe the save.
-- Cloud save is out of scope for the MVP.
+### Offline catch-up (review §1)
 
-## 5. Milestones
+**Inputs:**
+- `away = clamp(now − lastReconciledAt, 0, 8 h)`. Time beyond 8 h is discarded, and the return summary says "capped at 8 h". A negative clock change gives `away = 0`, with no penalty.
+- The current state: population, `spawnProgress`, RNG state, the current interval, capacity, and the income of each existing kid.
+
+**Algorithm:**
+1. The first spawn happens at `t₁ = interval − spawnProgress`, then every interval after that, while `tᵢ ≤ away` and the population is below capacity.
+2. Each admitted spawn's type is drawn from the seeded RNG, in order.
+3. `Materials = existingIncome · away + Σᵢ income(kidᵢ) · (away − tᵢ)`.
+4. Afterwards `spawnProgress` is either `away − t_last` (map not full), the full interval (map full: one spawn banked), or `spawnProgress + away` when no spawn happened.
+5. The loop is bounded: at most `capacity` admitted spawns.
+
+**Resuming exactly once.** `reconcile(now)` sets `lastReconciledAt = now` in the same state update that applies the catch-up. A second resume signal (both `visibilitychange` and the native `resume` event fire) then computes `away ≈ 0` and does nothing. The function is idempotent by construction.
+
+**Short absences.** A gap of 5 s or less between frames, for example a dropped frame or a brief tab switch, is simulated normally rather than reconciled offline.
+
+**Tests:**
+- partial intervals, e.g. 11 s of progress plus a 1 s absence gives one spawn (ChatGPT's counterexample);
+- capacity reached partway through an absence;
+- mixed-tier incomes;
+- repeated resume;
+- a negative clock change;
+- an absence over 8 h;
+- RNG continuity across save and load.
+
+## 4. Save system (review §3)
+
+**Record:** `{ schema, revision, savedAt, state, checksum }`. The state includes `spawnProgress`, the RNG state, `lastReconciledAt` and the next kid ID.
+
+- **Two slots, A and B.** Each write goes to the slot *not* holding the current best save, with `revision + 1`.
+- **Writes are serialized** through one promise queue, so they never overlap.
+- **Loading:**
+  1. Read both slots.
+  2. Drop any slot that fails to parse or fails its checksum.
+  3. If a slot's schema is newer than the app: **refuse to overwrite it**, enter read-only mode, and tell the player to update.
+  4. Pick the highest valid revision.
+  5. Migrate it, in schema order.
+  6. Reconcile offline time once.
+  7. Save once.
+- **Both slots invalid:** copy the raw data to a `quarantine` key, start a new game and show a notice. A valid save is never silently replaced.
+- **Errors:** storage errors are caught and the game keeps running. A failed save is retried at the next trigger and reported in a debug log.
+- **When it saves:** every 10 s, on pause or a visibility change, and after each fusion, purchase or upgrade.
+
+## 5. Asset import contract (moved here from my draft `ASSETS.md`; `ASSETS.md` is ChatGPT's)
+
+I accept ChatGPT's spec in PR #2 with these engine-side terms:
+- **Kids:** 256 × 256 RGBA PNG layers (`body`, `face`, `overlay`). Ground anchor at (128, 224); at least 8 px clear padding. Display size is 48–72 CSS px × device pixel ratio, up to 3, so 256 px source is enough.
+- **Atlas, manifest, encoding:** I own atlas packing. I **generate the runtime manifest** from file names and dimensions in the build, so nobody maintains pixel sizes by hand. Provenance and licence information is a small hand-written file that ChatGPT owns.
+- **World and background** (review §5, camera): the world is **1080 units wide** and the camera fits it to the screen's width.
+  - Visible height ranges from about 1920 units (16:9 screens) to 2400 (20:9).
+  - The background is **1080 × 2400**. Everything important sits in the central **1080 × 1920** safe band; the top and bottom 240 are decorative bleed.
+  - The playable area for wandering is the safe band minus HUD insets: top 160, bottom tray 280.
+- **Audio:** ChatGPT delivers **WAV masters only**. The build encodes Ogg Vorbis and M4A AAC reproducibly with ffmpeg, so codec settings live in one script.
+  - I agree with ChatGPT: no integrated-LUFS target for short SFX, use a peak ceiling and listening checks instead. Music starts at about −18 LUFS.
+
+## 6. Audio runtime (review §5)
+
+- **Volume:** separate music and SFX volumes plus a mute toggle, saved with the game.
+- **Unlock:** audio unlocks on the first pointer-up. If unlocking fails, the game runs silent with no errors.
+- **Pausing:** on pause or when hidden, music pauses and SFX stop; music resumes on resume.
+- **Priorities:** discovery > fusion > upgrade > spawn > place / pick up > UI tap.
+  - Discovery replaces the fusion cue for the same event.
+  - Spawn cues are limited to one per 300 ms.
+  - Passive income has no per-tick sound.
+- **Loops:** each music loop is auditioned in the Android WebView build before it is accepted.
+
+## 7. Performance acceptance (review §5)
+
+- **Target:** 60 fps on a **named** mid-range Android phone (the owner's test phone, to be identified), with:
+  - capacity maxed at 40 kids, three layers each;
+  - effects, HUD and input active;
+  - decoded textures under 32 MiB.
+- **Measurement:**
+  - frame-time percentiles (p50, p95) from an in-game debug overlay on the device;
+  - Chrome remote debugging for memory.
+- **CI benchmark:** a headless-Chromium frame-time test catches regressions only. It is never claimed as a phone result.
+
+## 8. Milestones
 
 | # | Milestone | Contents | Ends at |
 |---|---|---|---|
-| M0 | Plan | This doc + ChatGPT's art/audio plan, merged | **Gate 1** |
-| M1 | Art style + tech skeleton | ChatGPT: base kid, 3 variants, 1 map background. Claude meanwhile: repo scaffold, CI, Pages deploy, kid compositing tested with placeholder art | **Gate 2** |
-| M2 | First playable | Spawn, wander, pick up/place, 1 working recipe, real art in it | **Gate 3** |
-| M3 | Systems | Currencies, Garden + capacity + bias + compendium buildings, Dex, offline progress, saving, starter content (~10 kids, ~6 recipes), balance simulator | — |
-| M4 | MVP complete | Android build via Capacitor, audio in, performance check (60 fps with capacity maxed on a mid-range phone), balance pass | **Gate 4** |
-
-## 6. Risks I found while reading
-
-1. **Type colour coding vs the references.** The design doc asks for "clear type-color coding", but the references are black ink only. Proposal: the outline stays black (it is the character's identity), and each type family gets a **colour from a small palette on its overlay/accent**. ChatGPT should decide the details; it affects readability more than anything else.
-2. **The references have transparent bodies.** The line art is pure black on full transparency, including inside the potato. On a map background the kids would look see-through. In-game sprites need an **opaque body fill** (off-white or potato-cream).
-3. **Duplicate references.** `pk_potato0.webp`, `pk_potato1.webp` and `pk_potato_1.webp` are byte-identical. That is harmless; just noting it.
-4. **Potatoken squeeze (design doc §5.2).** Recommendation for the owner: the Garden's free spawning carries the game, and Potatokens are only used to speed things up. The MVP has **no real-money purchases**; Potatokens come from discoveries and milestones. This avoids the "paywall-y" problem the doc flags.
-5. **The Materials faucet (design doc §5.1).** I recommend confirming passive income scaled by tier, as the doc assumes. The economy model above is built on it.
-
-## 7. What I need from the owner at gate 1
-
-- Approve the stack: TypeScript + PixiJS + Capacitor.
-- **Android first?** iOS needs a Mac and a paid Apple developer account for any device build. Which phone will you test on?
-- Confirm or replace: the passive Materials faucet; Potatokens as a speed-up only, with no IAP in the MVP; no fusions while offline.
-
-**Owner answers (2026-10-01):** Android first. Stack approved. The passive faucet, speed-up-only Potatokens with no IAP, and no offline fusions are all confirmed. See DECISIONS D1, D5–D9.
+| M0 | Plan | Both proposals reviewed and consolidated | Gate 1: owner has approved the stack and rules; the asset list and roster go in the next update |
+| M1 | Art style + skeleton | ChatGPT: base, Fire, Water, Firefighter, garden map. Claude: scaffold and CI (PR #3), layered kid compositing and wander with placeholder art, content validator | **Gate 2** |
+| M2 | First playable | Spawn, wander, drag and drop, R1 `plain + water → firefighter`, debug APK | **Gate 3** |
+| M3 | Systems | Currencies, buildings, Dex, compendium, offline progress, save, full roster, balance simulator, audio | — |
+| M4 | MVP complete | Balance pass, device performance and listening checks, release-candidate APK | **Gate 4** |
