@@ -1,17 +1,80 @@
 {
-  "spawnWeights": { "plain": 40, "fire": 20, "water": 20, "snow": 20 },
+  "spawnWeights": {
+    "plain": 40,
+    "fire": 20,
+    "water": 20,
+    "snow": 20
+  },
   "spawn": {
     "intervalSeconds": 12,
     "capacity": 12,
     "startingKids": 4,
     "newbornGraceSeconds": 2
   },
-  "body": { "radius": 60, "touchSlack": 8 },
+  "body": {
+    "radius": 60,
+    "touchSlack": 8
+  },
   "wander": {
     "speed": 40,
     "turnChancePerSecond": 0.6,
     "idleChancePerSecond": 0.25,
-    "idleSeconds": [0.8, 2.5],
+    "idleSeconds": [
+      0.8,
+      2.5
+    ],
     "ambientChance": 0.6
+  },
+  "economy": {
+    "materialsPerSecond": 0.5,
+    "startingMaterials": 0,
+    "startingPotatokens": 3,
+    "gardenIntervalFactor": 0.85,
+    "capacityPerLevel": 4,
+    "biasWeightPerLevel": 0.5,
+    "instantSpawnPotatokens": 1,
+    "respawnMaterials": 40,
+    "respawnPotatokensPerTier": 1,
+    "discoveryPotatokens": 1,
+    "dexMilestones": [
+      {
+        "kids": 5,
+        "potatokens": 2
+      },
+      {
+        "kids": 10,
+        "potatokens": 3
+      },
+      {
+        "kids": 16,
+        "potatokens": 5
+      }
+    ]
+  },
+  "buildings": {
+    "garden": {
+      "startLevel": 1,
+      "maxLevel": 10,
+      "costBase": 20,
+      "costGrowth": 1.6
+    },
+    "capacity": {
+      "startLevel": 1,
+      "maxLevel": 10,
+      "costBase": 25,
+      "costGrowth": 1.6
+    },
+    "bias": {
+      "startLevel": 0,
+      "maxLevel": 8,
+      "costBase": 40,
+      "costGrowth": 1.6
+    },
+    "compendium": {
+      "startLevel": 0,
+      "maxLevel": 1,
+      "costBase": 120,
+      "costGrowth": 1
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { pairKey } from '../content/validate';
-import type { Content, KidId } from '../content/types';
+import { BUILDING_IDS, type BuildingId, type Content, type KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
 import { blockedByScenery, findFreeSpot, gaps, kidRect, separate, touching } from './space';
 import {
@@ -28,14 +28,34 @@ export type Command =
    * interpolation put the partner a little away from its sim box (Codex review, PR #14).
    */
   | { type: 'drop'; kidId: number; x: number; y: number; touching?: number[] }
-  | { type: 'cancelDrag'; kidId: number; x: number; y: number };
+  | { type: 'cancelDrag'; kidId: number; x: number; y: number }
+  /** Buy the next level of a building with Materials (instant, plan §2). */
+  | { type: 'upgrade'; building: BuildingId }
+  /** Which spawn-pool type the bias building favours (null: none). */
+  | { type: 'setBias'; kidType: KidId | null }
+  /** Spawn a Garden kid now for Potatokens (D-019). */
+  | { type: 'instantSpawn' }
+  /** Compendium: spawn an already-discovered type, paid in Materials or Potatokens. */
+  | { type: 'respawn'; kidType: KidId; pay: 'materials' | 'potatokens' };
+
+/** Why a purchase or setting was refused; the UI explains it, and nothing changes. */
+export type RejectReason = 'cost' | 'maxLevel' | 'full' | 'noRoom' | 'locked' | 'undiscovered' | 'notSpawnable';
+
+export type SpawnSource = 'garden' | 'instant' | 'compendium';
+
+type PurchaseCommand = Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>;
 
 /** What happened during a step; rendering and audio react only to these. */
 export type GameEvent =
-  | { type: 'spawned'; kid: Kid }
+  | { type: 'spawned'; kid: Kid; source: SpawnSource }
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
   | { type: 'pickedUp'; kidId: number }
-  | { type: 'dropped'; kidId: number };
+  | { type: 'dropped'; kidId: number }
+  | { type: 'upgraded'; building: BuildingId; level: number }
+  | { type: 'biasSet'; kidType: KidId | null }
+  | { type: 'rejected'; command: Command['type']; reason: RejectReason }
+  /** Potatokens earned (spends are implied by the command that caused them). */
+  | { type: 'earned'; potatokens: number; reason: 'discovery' | 'milestone' };
 
 export interface GameState {
   world: World;
@@ -50,6 +70,15 @@ export interface GameState {
   discoveredKids: KidId[];
   /** Recipe pair keys (`pairKey`) the player has triggered. */
   discoveredRecipes: string[];
+  /** Soft currency, earned passively by every kid on the map (D-020). Fractional. */
+  materials: number;
+  /** Hard currency: whole numbers only (D-019). */
+  potatokens: number;
+  buildings: Record<BuildingId, number>;
+  /** The spawn-pool type the bias building favours. */
+  biasTarget: KidId | null;
+  /** How many Dex milestones have paid out, in balance order. */
+  milestonesPaid: number;
 }
 
 /** Weighted appearance options, derived from the rig (art data) with boxes in world units. */
@@ -91,7 +120,7 @@ export class Game {
   private readonly spawnRng: Rng;
   private readonly recipes: Map<string, KidId>;
   private readonly spawnTable: { id: KidId; weight: number }[];
-  private readonly spawnTotal: number;
+  private readonly tiers: Map<KidId, number>;
   private readonly looks: LookTable;
   private readonly spawnAt: { x: number; y: number };
   private readonly ambient: Ambient | undefined;
@@ -106,7 +135,7 @@ export class Game {
     this.spawnRng = createRng((seed ^ 0x85ebca6b) >>> 0);
     this.recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
     this.spawnTable = Object.entries(content.balance.spawnWeights).map(([id, weight]) => ({ id, weight }));
-    this.spawnTotal = this.spawnTable.reduce((sum, e) => sum + e.weight, 0);
+    this.tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
     this.spawnAt = options.spawnAt;
     this.ambient = options.ambient;
     this.looks = options.looks ?? {
@@ -122,22 +151,68 @@ export class Game {
       spawnProgress: 0,
       discoveredKids: [],
       discoveredRecipes: [],
+      materials: content.balance.economy.startingMaterials,
+      potatokens: content.balance.economy.startingPotatokens,
+      buildings: Object.fromEntries(BUILDING_IDS.map((b) => [b, content.balance.buildings[b].startLevel])) as Record<BuildingId, number>,
+      biasTarget: null,
+      milestonesPaid: 0,
     };
     for (let i = 0; i < content.balance.spawn.startingKids; i++) {
       // Starting kids appear around the spawn outlet, each on a free spot (D-039).
       const look = this.rollLook();
       const p = this.freeSpot(look.box, this.spawnAt.x + (this.rng.next() - 0.5) * 600, this.spawnAt.y + this.rng.next() * 400);
-      if (p) this.discover(this.add(this.rollSpawnType(), p, 0, look).type);
+      if (!p) continue;
+      // Starting kids seed the Dex directly: a new save hasn't earned any milestone yet.
+      const type = this.add(this.rollSpawnType(), p, 0, look).type;
+      if (!this.state.discoveredKids.includes(type)) this.state.discoveredKids.push(type);
     }
+    this.state.milestonesPaid = this.milestonesReached();
     this.syncRngState();
   }
 
+  /** Garden spawn interval, seconds: `base · factor^(level−1)` (plan §3). */
   get interval(): number {
-    return this.content.balance.spawn.intervalSeconds;
+    const e = this.content.balance.economy;
+    return this.content.balance.spawn.intervalSeconds * e.gardenIntervalFactor ** (this.state.buildings.garden - 1);
   }
 
+  /** Map capacity: `base + perLevel·(level−1)` (plan §3). */
   get capacity(): number {
-    return this.content.balance.spawn.capacity;
+    const e = this.content.balance.economy;
+    return this.content.balance.spawn.capacity + e.capacityPerLevel * (this.state.buildings.capacity - 1);
+  }
+
+  /** Materials per second from every kid on the map: the sum of `base · 2^(tier−1)` (D-020). */
+  get income(): number {
+    let sum = 0;
+    for (const k of this.state.world.kids) sum += this.incomeOf(k.type);
+    return sum;
+  }
+
+  incomeOf(type: KidId): number {
+    return this.content.balance.economy.materialsPerSecond * 2 ** ((this.tiers.get(type) ?? 1) - 1);
+  }
+
+  /** Materials to upgrade a building from its current level, or null at max level. */
+  upgradeCost(building: BuildingId): number | null {
+    const b = this.content.balance.buildings[building];
+    const level = this.state.buildings[building];
+    if (level >= b.maxLevel) return null;
+    return Math.ceil(b.costBase * b.costGrowth ** level);
+  }
+
+  /** Compendium respawn price for a type, in each currency. */
+  respawnCost(type: KidId): { materials: number; potatokens: number } {
+    const e = this.content.balance.economy;
+    const tier = this.tiers.get(type) ?? 1;
+    return { materials: Math.ceil(e.respawnMaterials * 2 ** (tier - 1)), potatokens: e.respawnPotatokensPerTier * tier };
+  }
+
+  /** Spawn-pool weights with the bias building applied. */
+  get spawnWeights(): { id: KidId; weight: number }[] {
+    const s = this.state;
+    const factor = 1 + this.content.balance.economy.biasWeightPerLevel * s.buildings.bias;
+    return this.spawnTable.map((e) => (e.id === s.biasTarget ? { id: e.id, weight: e.weight * factor } : e));
   }
 
   get touchSlack(): number {
@@ -179,6 +254,8 @@ export class Game {
     // the player saw at release (Codex review, PR #14).
     if (commands.some((c) => c.type !== 'pickUp')) this.resolveFusions(events, seen);
     for (const kid of world.kids) kid.grace = Math.max(0, kid.grace - dt);
+    // Income for the step, from the kids present after commands (plan §3).
+    this.state.materials += this.income * dt;
     stepWander(
       world,
       this.rng,
@@ -200,6 +277,10 @@ export class Game {
     const { world } = this.state;
     const seen: [number, number][] = [];
     for (const c of commands) {
+      if (c.type === 'upgrade' || c.type === 'setBias' || c.type === 'instantSpawn' || c.type === 'respawn') {
+        this.applyPurchase(c, events);
+        continue;
+      }
       const kid = world.kids.find((k) => k.id === c.kidId);
       if (!kid) continue; // e.g. consumed before the command arrived
       if (c.type === 'pickUp') {
@@ -220,6 +301,64 @@ export class Game {
       }
     }
     return seen;
+  }
+
+  private applyPurchase(c: PurchaseCommand, events: GameEvent[]): void {
+    const s = this.state;
+    const reject = (reason: RejectReason) => {
+      events.push({ type: 'rejected', command: c.type, reason });
+    };
+    switch (c.type) {
+      case 'upgrade': {
+        const cost = this.upgradeCost(c.building);
+        if (cost === null) return reject('maxLevel');
+        if (s.materials < cost) return reject('cost');
+        s.materials -= cost;
+        s.buildings[c.building]++;
+        // A faster Garden's progress past its new interval is clamped by advanceSpawn this
+        // same step: at most one banked spawn (plan §3).
+        events.push({ type: 'upgraded', building: c.building, level: s.buildings[c.building] });
+        return;
+      }
+      case 'setBias':
+        if (c.kidType !== null && !this.spawnTable.some((e) => e.id === c.kidType)) return reject('notSpawnable');
+        s.biasTarget = c.kidType;
+        events.push({ type: 'biasSet', kidType: c.kidType });
+        return;
+      case 'instantSpawn': {
+        const price = this.content.balance.economy.instantSpawnPotatokens;
+        if (s.potatokens < price) return reject('cost');
+        if (s.world.kids.length >= this.capacity) return reject('full');
+        // The Garden's timer is untouched: an instant spawn is extra, not a skip.
+        if (!this.spawnAtOutlet(() => this.rollSpawnType(), 'instant', events)) return reject('noRoom');
+        s.potatokens -= price;
+        return;
+      }
+      case 'respawn': {
+        if (s.buildings.compendium < 1) return reject('locked');
+        if (!s.discoveredKids.includes(c.kidType)) return reject('undiscovered');
+        const cost = this.respawnCost(c.kidType);
+        const price = c.pay === 'materials' ? cost.materials : cost.potatokens;
+        if ((c.pay === 'materials' ? s.materials : s.potatokens) < price) return reject('cost');
+        if (s.world.kids.length >= this.capacity) return reject('full');
+        if (!this.spawnAtOutlet(() => c.kidType, 'compendium', events)) return reject('noRoom');
+        if (c.pay === 'materials') s.materials -= price;
+        else s.potatokens -= price;
+        return;
+      }
+    }
+  }
+
+  /** A newborn at the Garden outlet, if a spot is free; the type is drawn only then. */
+  private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[]): Kid | null {
+    const look = this.peekLook();
+    const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
+    if (!p) return null;
+    this.rollLook(); // commit the peeked roll
+    const kid = this.add(type(), p, this.content.balance.spawn.newbornGraceSeconds, look);
+    events.push({ type: 'spawned', kid, source });
+    this.discover(kid.type, events);
+    return kid;
   }
 
   /**
@@ -282,9 +421,12 @@ export class Game {
       const child = this.add(c.result, at, this.content.balance.spawn.newbornGraceSeconds, look);
       const key = pairKey(c.a.type, c.b.type);
       const firstDiscovery = !this.state.discoveredRecipes.includes(key);
-      if (firstDiscovery) this.state.discoveredRecipes.push(key);
-      this.discover(child.type);
       events.push({ type: 'fused', parents: [c.a, c.b], child, firstDiscovery });
+      if (firstDiscovery) {
+        this.state.discoveredRecipes.push(key);
+        this.earn(this.content.balance.economy.discoveryPotatokens, 'discovery', events);
+      }
+      this.discover(child.type, events);
     }
   }
 
@@ -301,18 +443,12 @@ export class Game {
       s.spawnProgress = Math.min(this.interval, raw);
       return;
     }
-    const look = this.peekLook();
-    const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
-    if (!p) {
+    if (!this.spawnAtOutlet(() => this.rollSpawnType(), 'garden', events)) {
       s.spawnProgress = Math.min(this.interval, raw);
       return;
     }
-    this.rollLook(); // commit the peeked roll
     // Keep the overshoot so spawn timing doesn't drift with the step size.
     s.spawnProgress = Math.max(0, Math.min(this.interval, raw - this.interval));
-    const kid = this.add(this.rollSpawnType(), p, this.content.balance.spawn.newbornGraceSeconds, look);
-    this.discover(kid.type);
-    events.push({ type: 'spawned', kid });
   }
 
   /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */
@@ -394,16 +530,29 @@ export class Game {
   }
 
   private rollSpawnType(): KidId {
-    let roll = this.spawnRng.next() * this.spawnTotal;
-    for (const e of this.spawnTable) {
-      roll -= e.weight;
-      if (roll < 0) return e.id;
-    }
-    return this.spawnTable[this.spawnTable.length - 1]!.id;
+    return weighted(this.spawnRng, this.spawnWeights).id;
   }
 
-  private discover(type: KidId): void {
-    if (!this.state.discoveredKids.includes(type)) this.state.discoveredKids.push(type);
+  /** Records a type in the Dex; crossing a Dex milestone pays Potatokens. */
+  private discover(type: KidId, events?: GameEvent[]): void {
+    if (this.state.discoveredKids.includes(type)) return;
+    this.state.discoveredKids.push(type);
+    const milestones = this.content.balance.economy.dexMilestones;
+    while (this.state.milestonesPaid < this.milestonesReached()) {
+      const m = milestones[this.state.milestonesPaid++]!;
+      this.earn(m.potatokens, 'milestone', events);
+    }
+  }
+
+  private milestonesReached(): number {
+    const n = this.state.discoveredKids.length;
+    return this.content.balance.economy.dexMilestones.filter((m) => n >= m.kids).length;
+  }
+
+  private earn(potatokens: number, reason: 'discovery' | 'milestone', events?: GameEvent[]): void {
+    if (potatokens <= 0) return;
+    this.state.potatokens += potatokens;
+    events?.push({ type: 'earned', potatokens, reason });
   }
 
   private syncRngState(): void {
