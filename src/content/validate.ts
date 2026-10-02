@@ -1,4 +1,4 @@
-import type { Content } from './types';
+import { BUILDING_IDS, type Content } from './types';
 
 /** Unordered pair key, so `a+b` and `b+a` are the same recipe. */
 export function pairKey(a: string, b: string): string {
@@ -50,6 +50,7 @@ export function validateContent(content: Content): string[] {
 
   errors.push(...validateWander(content.balance.wander));
   errors.push(...validateSpawn(content.balance));
+  errors.push(...validateEconomy(content.balance, content.kids.length));
 
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));
@@ -127,6 +128,73 @@ function validateSpawn(balance: unknown): string[] {
   const start = o.startingKids;
   if (typeof cap === 'number' && typeof start === 'number' && start > cap) {
     errors.push('balance.spawn.startingKids must not exceed capacity');
+  }
+  return errors;
+}
+
+/** Economy and building tracks (plan §3): every value finite and in range, so no NaN reaches a save. */
+function validateEconomy(balance: unknown, kidCount: number): string[] {
+  const errors: string[] = [];
+  const b = balance as Record<string, unknown>;
+  const e = b.economy as Record<string, unknown> | undefined;
+  if (typeof e !== 'object' || e === null) return ['balance.economy is missing'];
+  const num = (key: string, ok: (v: number) => boolean, rule: string) => {
+    const v = e[key];
+    if (typeof v !== 'number' || !Number.isFinite(v) || !ok(v)) errors.push(`balance.economy.${key} must be ${rule}`);
+  };
+  const whole = (v: number) => Number.isInteger(v) && v >= 0;
+  num('materialsPerSecond', (v) => v > 0, 'a finite number > 0');
+  num('startingMaterials', (v) => v >= 0, 'a finite number >= 0');
+  num('startingPotatokens', whole, 'an integer >= 0');
+  num('gardenIntervalFactor', (v) => v > 0 && v <= 1, 'in (0, 1]');
+  num('capacityPerLevel', whole, 'an integer >= 0');
+  num('biasWeightPerLevel', (v) => v >= 0, 'a finite number >= 0');
+  num('instantSpawnPotatokens', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('respawnMaterials', (v) => v > 0, 'a finite number > 0');
+  num('respawnPotatokensPerTier', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('discoveryPotatokens', whole, 'an integer >= 0');
+  const ms = e.dexMilestones;
+  if (!Array.isArray(ms)) {
+    errors.push('balance.economy.dexMilestones must be a list');
+  } else {
+    let prev = 0;
+    for (const m of ms as { kids?: unknown; potatokens?: unknown }[]) {
+      const kids = m?.kids;
+      const pt = m?.potatokens;
+      if (typeof kids !== 'number' || !Number.isInteger(kids) || kids <= prev) {
+        errors.push('balance.economy.dexMilestones must have strictly increasing whole kid counts');
+        break;
+      }
+      if (kids > kidCount) errors.push(`balance.economy.dexMilestones: ${kids} kids is more than the roster has (${kidCount})`);
+      if (typeof pt !== 'number' || !Number.isInteger(pt) || pt < 0) errors.push('balance.economy.dexMilestones potatokens must be integers >= 0');
+      prev = kids;
+    }
+  }
+
+  const buildings = b.buildings as Record<string, unknown> | undefined;
+  if (typeof buildings !== 'object' || buildings === null) return [...errors, 'balance.buildings is missing'];
+  for (const id of BUILDING_IDS) {
+    const t = buildings[id] as Record<string, unknown> | undefined;
+    if (typeof t !== 'object' || t === null) {
+      errors.push(`balance.buildings.${id} is missing`);
+      continue;
+    }
+    const start = t.startLevel;
+    const max = t.maxLevel;
+    const base = t.costBase;
+    const growth = t.costGrowth;
+    const okInt = (v: unknown, min: number) => typeof v === 'number' && Number.isInteger(v) && v >= min;
+    if (!okInt(start, 0)) errors.push(`balance.buildings.${id}.startLevel must be an integer >= 0`);
+    if (!okInt(max, 1) || (okInt(start, 0) && (max as number) < (start as number))) {
+      errors.push(`balance.buildings.${id}.maxLevel must be an integer >= max(1, startLevel)`);
+    }
+    if (typeof base !== 'number' || !Number.isFinite(base) || base <= 0) errors.push(`balance.buildings.${id}.costBase must be a finite number > 0`);
+    if (typeof growth !== 'number' || !Number.isFinite(growth) || growth < 1) errors.push(`balance.buildings.${id}.costGrowth must be a finite number >= 1`);
+  }
+  // The Garden and capacity formulas count levels from 1.
+  for (const id of ['garden', 'capacity'] as const) {
+    const t = buildings[id] as Record<string, unknown> | undefined;
+    if (t && t.startLevel !== 1) errors.push(`balance.buildings.${id}.startLevel must be 1`);
   }
   return errors;
 }
