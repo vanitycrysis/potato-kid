@@ -169,6 +169,11 @@ export class SaveManager {
   private classify(slot: Slot, raw: string | null): SlotInfo {
     const info: SlotInfo = { slot, raw, kind: 'empty', revision: 0, schema: 0 };
     if (raw === null) return info;
+    // A newer app's record is recognised by its schema alone: a future version may change
+    // the checksum or envelope, and such a save must never be treated as corrupt (and
+    // archived, then overwritten).
+    const schema = peekSchema(raw);
+    if (schema !== null && schema > this.schema) return { ...info, kind: 'future', schema };
     const rec = decode(raw);
     if (!rec) return { ...info, kind: 'corrupt' };
     const base = { ...info, revision: rec.revision, schema: rec.schema, state: rec.state };
@@ -200,5 +205,15 @@ export class SaveManager {
     } catch {
       // Stays protected: the slot is never written this session.
     }
+  }
+}
+
+/** The record's schema number, if the text parses as an object with one. */
+function peekSchema(raw: string): number | null {
+  try {
+    const o = JSON.parse(raw) as { schema?: unknown };
+    return typeof o?.schema === 'number' && Number.isInteger(o.schema) ? o.schema : null;
+  } catch {
+    return null;
   }
 }

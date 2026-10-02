@@ -59,6 +59,8 @@ interface Drag {
 export class MapScene {
   readonly game: Game;
   private readonly listeners = new Set<(e: GameEvent) => void>();
+  private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
+  private readonly resumeListeners = new Set<(report: OfflineReport) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
   private readonly views = new Map<number, KidRigView>();
@@ -148,6 +150,33 @@ export class MapScene {
     this.listeners.add(fn);
   }
 
+  /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
+  listenSteps(fn: (events: GameEvent[]) => void): void {
+    this.stepListeners.add(fn);
+  }
+
+  /** A kid is being held: GUI feedback waits rather than covering the drag (GUI_MVP §2). */
+  get dragging(): boolean {
+    return this.drag !== undefined;
+  }
+
+  /** Calls `fn` after every offline catch-up (cold load or resume), with its report. */
+  listenResume(fn: (report: OfflineReport) => void): void {
+    this.resumeListeners.add(fn);
+  }
+
+  /** Settles any held kid now (a cancelled touch), e.g. before the GUI layout shifts. */
+  cancelDrag(): void {
+    if (!this.drag) return;
+    this.cancelActiveDrag();
+    this.stepOnce(0);
+  }
+
+  /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>): void {
+    this.pending.push(cmd);
+  }
+
   /**
    * The app is going away (lifecycle coordinator, plan §3): run whole pending sim steps,
    * discard the sub-step remainder, cancel any drag (leaving mid-drag is a cancelled
@@ -170,6 +199,7 @@ export class MapScene {
     const report = this.game.reconcile(now);
     for (const kid of report.spawned) this.addView(kid);
     this.app.ticker.start();
+    for (const fn of this.resumeListeners) fn(report);
     return report;
   }
 
@@ -483,6 +513,7 @@ export class MapScene {
     for (const [id, at] of this.placing) this.prev.set(id, at);
     this.placing.clear();
     for (const e of events) this.handle(e);
+    if (events.length) for (const fn of this.stepListeners) fn(events);
   }
 
   /** Pan inertia, and edge auto-scroll while a kid is held near a screen edge. */
