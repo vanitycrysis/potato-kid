@@ -16,6 +16,9 @@ const FAMILIES = [
   { prefix: 'kid_', dir: 'assets/sprites/kids', size: [256, 256], padding: 8, opaque: false },
   { prefix: 'building_', dir: 'assets/sprites/buildings', size: [512, 512], padding: 8, opaque: false },
   { prefix: 'fx_shadow', dir: 'assets/sprites/fx', size: [128, 64], padding: 0, opaque: false },
+  // Part B round 2: shared celebration/orbit canvases surround a 256px kid.
+  { prefix: 'fx_fusion_', dir: 'assets/sprites/fx', size: [320, 320], padding: 8, opaque: false },
+  { prefix: 'fx_discovery_', dir: 'assets/sprites/fx', size: [320, 320], padding: 8, opaque: false },
   { prefix: 'fx_', dir: 'assets/sprites/fx', size: [256, 256], padding: 8, opaque: false },
   // Scrolling map v2 (D-040, ASSETS.md): opaque seamless ground tiles, transparent path
   // decals that meet the tile edges, small decor and larger landmarks.

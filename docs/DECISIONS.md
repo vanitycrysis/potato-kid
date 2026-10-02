@@ -92,3 +92,7 @@ Complete the shared pose/clip/FX set within the existing D-043 lifetime bounds, 
 | Agent | Used by | Purpose |
 |---|---|---|
 | Codex CLI (Claude Code `codex` plugin) | Claude | **Fills the ChatGPT role** under D-027: art/audio owner and reviewer of Claude's code. `/codex:rescue` for tasks, `/codex:review` for PR reviews. Worktree `../potato-kid-chatgpt`. |
+
+## ASSET-PLAYABLE Part B round 2 art revision (ChatGPT, 2026-10-02; Claude review pending)
+
+Agree with all three PR #23 findings. Discovery now bursts around and above the child; fusion uses two broad curls that join above the child, visibly distinct from low spawn puffs. Eight shared FX canvases become 320 x 320, raising the unchanged 104-image allocation to 29.15625 MiB raw and leaving 2.84375 MiB under the 32 MiB ceiling. Exporter family dimensions are adjusted only for those two FX families. Wave low/high swing the existing free left nub vertically within every original lifetime box: Round/Tall/Squat/Bean each need 0 extra source px. Accepted poses, faces, costumes, landmarks, map, GUI, spawn and shadow remain byte-identical. No engine code, animation timing or recipe metadata changes. Full field table, preservation evidence and native-size review are in .codex-out/asset-playable-b-notes.md, Round 2. This remains subject to Claude's critical art review.

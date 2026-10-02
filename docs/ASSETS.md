@@ -13,7 +13,7 @@ Every kid texture: 256 x 256 sRGB RGBA, ground anchor (128,224), >=8 px source p
 | Bodies | `art/src/kids/kid_body_<body>_<frame>.svg` -> `assets/sprites/kids/` PNG | round/tall/squat/bean x stand/step_left/step_right/sit/wave_low/wave_high/held/settle = 32 final; all eight frames delivered for each body |
 | Faces | `kid_face_<face>_<state>.svg` -> kid PNG directory | classic/wide/crooked/dreamy x open/blink/asleep = 12 final; Dreamy corrected for D-045 |
 | Costumes | `kid_<type>_<back_or_front>_<part>.svg` -> kid PNG directory | 7 back + 26 front = 33 final; shared across all delivered appearances/poses |
-| Kid rig | `art/data/kid_rig_v2.json` -> generated runtime metadata | asset-playable-b-1; complete 15-clip delivery with reduced-motion mappings, attachments and boundsPx; existing costume fits and lifetime reserves unchanged |
+| Kid rig | `art/data/kid_rig_v2.json` -> generated runtime metadata | asset-playable-b-2; complete 15-clip delivery with reduced-motion mappings, attachments and boundsPx; existing costume fits and lifetime reserves unchanged |
 | Review composites | `art/previews/kids/` and `art/previews/animation/` | Editable contact/pose boards delivered; Claude renders all sizes at 48/64/96 px, gray/light/dark and engine captures; never runtime portrait textures |
 
 Source paths remain editable, no independently generated drifting animation identities. No duplicate plain body/face runtime aliases after migration. Lifetime silhouette boundsPx in source coordinates: round [16,12,240,236], tall [24,8,232,236], squat [8,26,248,236], bean [12,14,244,236]; frame/clip unions and size weights are in ART_AUDIO_PLAN.md and kid_rig_v2.json. Appearance scale is 0.90/1.00/1.10 only. Declare attachments/boundsPx for every frame, not just neutral body. Body/face selection is persisted independently of tier/type.
@@ -82,8 +82,8 @@ Claude's acceptance for retirement: every accepted roster ID resolves through ex
 | map_garden_v2.json | `art/data/`, world 2160 x 3840; tiled ground + explicit paths/instances/exclusions | Delivered: 135 ground cells, 15 path cells, Garden +30 small decor +2 landmarks; six conflicting perimeter reserves skipped explicitly |
 | fx_shadow | 1 transparent 128 x 64 PNG, centre pivot (64,32), `assets/sprites/fx/` | final subtle asymmetric oval; source pivot [64,32], centred at kid ground; alpha 0.16, held multiplier 0.45 |
 | fx_spawn_01..03 | 3 transparent 256 PNGs, ground anchor (128,224), >=8 px padding | final; 10 fps, 0.30 s, low sage puffs and dispersal ticks |
-| fx_fusion_01..04 | 4 same | final; 12 fps, 0.333 s; small ochre ribbon then loose puffs; parents consumed immediately, no convergence |
-| fx_discovery_01..04 | 4 same | final; 8 fps, 0.50 s; four-point sparks, authored [0,-48] offset above child; first discovery only |
+| fx_fusion_01..04 | 4 transparent 320 x 320 PNGs, pivot [160,288], offset [0,0], bounds [12,42,308,266] | final, round 2; 12 fps, 0.333 s; two broad ochre curls join above child then disperse; parents consumed immediately, no convergence |
+| fx_discovery_01..04 | 4 transparent 320 x 320 PNGs, pivot [160,288], offset [0,-24], bounds [8,8,312,288] | final, round 2; 8 fps, 0.50 s; large irregular crown-and-side star burst; first discovery only |
 
 Editable SVG counterparts go to `art/src/maps/`, `art/src/buildings/`, `art/src/fx/`. Seven legacy r2 kid SVGs are retained unchanged in `art/history/r2/`, outside export discovery; their duplicate PNGs are retired by the exporter. The old `map_garden.svg` / 1080 x 2400 plate remains historical review material until explicitly excluded from v2 export/runtime loading; no 2160 x 3840 replacement raster. Repeated tiles/decor cost instances, not new textures. Source landmark/Garden JSON includes pivot/exclusion data; world placement exclusions include the clearance rules in the plan.
 
@@ -124,7 +124,7 @@ ChatGPT delivers WAV masters and reproducible source only. Claude's ffmpeg build
 
 ## Budget and acceptance
 
-The full budget in ART_AUDIO_PLAN.md is **28.03125 MiB raw +3.96875 MiB allocation reserve =32 MiB hard ceiling**. It includes 77 kid-layer images, 11 effects, 1 shadow, 6 ground/path textures, 6 decor, 2 landmarks, 1 Garden, zero GUI rasters: 104 unique runtime images. Placeholder and final use the same slots. Native launch/review images are not loaded. Measure actual atlas/source/render-target allocations, not compressed bytes; no mipmaps or giant world cache. Five-sprite costume cases require performance testing.
+The full budget in ART_AUDIO_PLAN.md is **29.15625 MiB raw +2.84375 MiB allocation reserve =32 MiB hard ceiling**. It includes 77 kid-layer images, 11 effects, 1 shadow, 6 ground/path textures, 6 decor, 2 landmarks, 1 Garden, zero GUI rasters: 104 unique runtime images. Placeholder and final use the same slots. Native launch/review images are not loaded. Measure actual atlas/source/render-target allocations, not compressed bytes; no mipmaps or giant world cache. Five-sprite costume cases require performance testing.
 
 - Owner approved style at gate 2 (D-044); Part A merged as #21. Part B art and promoted map/UI sources await Claude review. Font fetch, expanded GUI layouts, engine event integration and device acceptance remain pending.
 - ChatGPT supplies editable SVG/JSON, timing/pivots/footprints, previews and assets/PROVENANCE.md source/tool/reference/licence/revision mapping. Generated manifests remain generated.
