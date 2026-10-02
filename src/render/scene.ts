@@ -5,6 +5,7 @@ import { Game, type Ambient, type Command, type GameEvent, type LookTable } from
 import { STEP, type Kid, type Obstacle } from '../sim/world';
 import { rectAt, resolveDrawn, touching } from '../sim/space';
 import { buildMap } from './mapView';
+import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
 
 /** Width of world shown across a portrait screen; height follows the screen's aspect (D-040). */
@@ -160,6 +161,19 @@ export class MapScene {
     const kid = this.game.debugAddKid(type, x, y, look);
     this.addView(kid);
     return kid.id;
+  }
+
+  /** Test hook: the clip a kid is showing and its running effects. */
+  presentationOf(kidId: number): { clip: string; effects: string[] } | undefined {
+    return this.views.get(kidId)?.presenting;
+  }
+
+  /**
+   * How long after a first discovery its toast appears: when the discovery effect ends
+   * (rig: discovery onComplete → toast). Immediately under reduced motion.
+   */
+  get discoveryToastDelayMs(): number {
+    return this.art.reducedMotion ? 0 : clipLength(this.art.rig, 'discovery') * 1000;
   }
 
   /** Test hook: world → screen for an arbitrary world point. */
@@ -482,15 +496,21 @@ export class MapScene {
   private handle(e: GameEvent): void {
     switch (e.type) {
       case 'spawned':
-        this.addView(e.kid);
+        this.addView(e.kid).play('spawn');
         break;
-      case 'fused':
+      case 'fused': {
+        // Parents are consumed at once, never fading or converging (rig: fusion onStart);
+        // the child is born where the sim resolved it, with the fusion effect behind it.
         for (const p of e.parents) {
           if (this.drag?.kidId === p.id) this.drag = undefined;
           this.removeView(p.id);
         }
-        this.addView(e.child);
+        const child = this.addView(e.child);
+        child.play('spawn');
+        child.startEffect('fusion');
+        if (e.firstDiscovery) child.startEffect('discovery');
         break;
+      }
       case 'pickedUp':
       case 'dropped':
         break;

@@ -1,6 +1,7 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
 import type { Attachment, Clip, ClipFrame, ComponentTransform, KidRig, Vec2 } from '../content/artData';
 import type { Activity, Kid } from '../sim/world';
+import { ClipPicker, EffectTracks, type OneShot } from './presentation';
 
 const DEG = Math.PI / 180;
 const OPEN = 'open';
@@ -10,12 +11,15 @@ const OPEN = 'open';
  * transform order exactly with nested containers:
  *
  *   root (world ground point) → scale (appearance × worldCanvasSize/256)
- *     → rig (clip offset/rotation about the ground) → canvas (−groundAnchor)
+ *     → shadow, effects behind the kid
+ *     → rig (clip offset/rotation/opacity about the ground) → canvas (−groundAnchor)
  *       → back components, body, face, front components
+ *     → effects above the kid
  *   component: attachment (position+offset, rotation, scale) → delta (clip component
  *   transform) → sprite (anchor = sourcePivot, scale = fitByBody)
  *
- * No motion is invented here (D-041): every pose and wiggle comes from authored clips.
+ * No motion is invented here (D-041): every pose and wiggle comes from authored clips,
+ * and which clip plays is decided by `ClipPicker` from the rig's scheduler priority.
  */
 export class KidRigView {
   readonly root = new Container();
@@ -26,11 +30,14 @@ export class KidRigView {
   private readonly faceAttach = new Container();
   private readonly face = new Sprite();
   private readonly parts: { attachTo: string; asset: string; attach: Container; delta: Container; sprite: Sprite }[] = [];
-  private clipName = '';
-  private clipTime = 0;
+  private readonly shadow: Sprite;
+  private readonly fxBehind = new Container();
+  private readonly fxAbove = new Container();
+  private readonly fxSprites = new Map<string, Sprite>();
+  private readonly picker: ClipPicker;
+  private readonly effects: EffectTracks;
   private blinkIn: number;
   private blinkTime = -1;
-  private lastKind: Activity['kind'] | 'held' | '' = '';
 
   constructor(
     private readonly kid: Kid,
@@ -63,27 +70,53 @@ export class KidRigView {
     this.canvas.addChild(this.body, this.faceAttach);
     for (const c of costume?.components ?? []) if (c.layer === 'front') this.canvas.addChild(makePart(c));
 
+    const sh = rig.effects.shadow;
+    this.shadow = new Sprite(this.tex(sh.asset));
+    this.shadow.anchor.set(sh.sourcePivot[0] / sh.canvas[0], sh.sourcePivot[1] / sh.canvas[1]);
+    this.shadow.position.set(sh.offsetPx[0], sh.offsetPx[1]);
+
     this.rigC.addChild(this.canvas);
-    this.scaled.addChild(this.rigC);
+    this.scaled.addChild(this.shadow, this.fxBehind, this.rigC, this.fxAbove);
     this.root.addChild(this.scaled);
+    this.picker = new ClipPicker(rig);
+    this.effects = new EffectTracks(rig);
     this.blinkIn = this.blinkDelay();
   }
+
+  /** A one-shot event clip (spawn on birth); it also starts the clip's effect, if any. */
+  play(name: OneShot): void {
+    this.picker.play(name);
+    this.startEffect(name);
+  }
+
+  /**
+   * An effect-only clip on this kid (fusion, discovery). Reduced motion shows no effects
+   * (rig reducedMotion: effect "none").
+   */
+  startEffect(clipName: string): void {
+    if (!this.reducedMotion) this.effects.start(clipName);
+  }
+
+  /** What is playing, for tests: the clip name and running effects. */
+  get presenting(): { clip: string; effects: string[] } {
+    return { clip: this.lastClip, effects: this.effects.active };
+  }
+
+  private lastClip = '';
 
   /** Position comes from the sim (already interpolated or resolved); `dt` is real seconds. */
   update(x: number, y: number, activity: Activity, held: boolean, dt: number): void {
     this.root.position.set(x, y);
     this.root.zIndex = held ? 1e6 : y;
 
-    const kind = held ? 'held' : activity.kind;
-    if (kind !== this.lastKind) {
-      this.lastKind = kind;
-      this.clipTime = 0;
-    } else {
-      this.clipTime += dt;
+    const { clip, name, time, reverse } = this.picker.advance(activity, held, dt);
+    this.lastClip = name;
+    let frame = this.reducedMotion || !clip ? this.staticFrame(name) : frameAt(clip, time, reverse);
+    if (this.reducedMotion && name === 'spawn') {
+      // Reduced motion: a newborn fades in briefly instead of playing its clip.
+      const ms = this.rig.reducedMotion.spawn?.opacityTransitionMs ?? 0;
+      frame = { ...frame, rig: { opacity: ms > 0 ? Math.min(1, (time * 1000) / ms) : 1 } };
     }
-    const { clip, name, time, reverse } = this.pickClip(activity, held);
-    if (name !== this.clipName) this.clipName = name;
-    const frame = this.reducedMotion || !clip ? this.staticFrame(name) : frameAt(clip, time, reverse);
 
     // Blink: a face-only secondary clip, only where the rig allows it to run concurrently.
     const canBlink = !held && (name === 'walk' || name === 'idle' || name === 'look_around' || name === 'seated');
@@ -102,6 +135,8 @@ export class KidRigView {
     }
 
     this.apply(frame, blinkFace);
+    this.shadow.alpha = held ? this.rig.effects.shadow.heldOpacity : 1;
+    this.drawEffects(dt);
   }
 
   destroy(): void {
@@ -109,36 +144,6 @@ export class KidRigView {
   }
 
   // --- internals ---------------------------------------------------------
-
-  private pickClip(a: Activity, held: boolean): { clip: Clip | undefined; name: string; time: number; reverse: boolean } {
-    const clips = this.rig.clips;
-    const len = (n: string) => (clips[n] ? clips[n].frames.length / clips[n].fps : 0);
-    if (held) return { clip: undefined, name: 'held', time: 0, reverse: false }; // deferred clip → reducedMotion static
-    switch (a.kind) {
-      case 'walk':
-        return { clip: clips.walk, name: 'walk', time: this.clipTime, reverse: false };
-      case 'pause':
-        return { clip: clips.idle, name: 'idle', time: this.clipTime, reverse: false };
-      case 'look':
-        return { clip: clips.look_around, name: 'look_around', time: this.clipTime, reverse: false };
-      case 'sit': {
-        const down = len('sit_down');
-        const elapsed = a.total - a.left;
-        if (elapsed < down) return { clip: clips.sit_down, name: 'sit_down', time: elapsed, reverse: false };
-        // Until a stand-up drawing exists, the authored sit-down plays backwards (spec: stand/sit fallback).
-        if (a.left < down) return { clip: clips.sit_down, name: 'sit_down', time: down - a.left, reverse: true };
-        return { clip: clips.seated, name: 'seated', time: elapsed - down, reverse: false };
-      }
-      case 'sleep': {
-        const down = len('sit_down');
-        const wake = len('wake');
-        const elapsed = a.total - a.left;
-        if (elapsed < down) return { clip: clips.sit_down, name: 'sit_down', time: elapsed, reverse: false };
-        if (a.left < wake) return { clip: clips.wake, name: 'wake', time: wake - a.left, reverse: false };
-        return { clip: clips.sleep, name: 'sleep', time: elapsed - down, reverse: false };
-      }
-    }
-  }
 
   private staticFrame(name: string): ClipFrame {
     const m = this.rig.reducedMotion[name] ?? this.rig.reducedMotion.idle ?? { bodyFrame: 'stand', faceState: OPEN };
@@ -154,7 +159,8 @@ export class KidRigView {
     const off = rig.offsetPx ?? [0, 0];
     this.rigC.position.set(off[0], off[1]);
     this.rigC.rotation = (rig.rotationDeg ?? 0) * DEG;
-    this.root.alpha = rig.opacity ?? 1;
+    // Clip opacity fades the kid's own layers only; effect opacity is independent (effects spec).
+    this.rigC.alpha = rig.opacity ?? 1;
 
     const offsets = frame.attachmentOffsets ?? {};
     // Explicit states (sleep, wake) override the blink scheduler; "inherit" lets it blink.
@@ -168,6 +174,29 @@ export class KidRigView {
     for (const p of this.parts) {
       setAttachment(p.attach, bf.attachments[p.attachTo], offsets[p.attachTo]);
       setDelta(p.delta, deltas[p.asset]);
+    }
+  }
+
+  private drawEffects(dt: number): void {
+    const live = new Set<string>();
+    for (const f of this.effects.advance(dt)) {
+      live.add(f.effect);
+      let sprite = this.fxSprites.get(f.effect);
+      if (!sprite) {
+        sprite = new Sprite();
+        const { canvas, sourcePivot, offsetPx, layer } = f.def;
+        sprite.anchor.set(sourcePivot[0] / canvas[0], sourcePivot[1] / canvas[1]);
+        sprite.position.set(offsetPx[0], offsetPx[1]);
+        (layer === 'above_kid' ? this.fxAbove : this.fxBehind).addChild(sprite);
+        this.fxSprites.set(f.effect, sprite);
+      }
+      sprite.texture = this.tex(f.asset);
+      sprite.alpha = f.opacity;
+    }
+    for (const [name, sprite] of this.fxSprites) {
+      if (live.has(name)) continue;
+      sprite.destroy();
+      this.fxSprites.delete(name);
     }
   }
 

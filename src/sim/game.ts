@@ -61,12 +61,13 @@ export interface LookTable {
 
 /** How long rest activities last; derived from the rig's scheduler and clip lengths. */
 export interface Ambient {
-  weights: { look: number; sit: number; sleep: number };
+  weights: { look: number; wave: number; sit: number; sleep: number };
   /** Chance a rest is an ambient activity rather than a plain pause. */
   chance: number;
   /** The rig's stationary wait before an ambient pose may start (scheduler.stationaryDelaySeconds). */
   stationaryDelay: [number, number];
   lookSeconds: number;
+  waveSeconds: number;
   /** sit-down transition + hold + stand-up transition. */
   sitSeconds: (hold: number) => number;
   sleepSeconds: (hold: number) => number;
@@ -380,10 +381,12 @@ export class Game {
     if (!a) return { kind: 'walk' };
     const pick = weighted(r, [
       { id: 'look' as const, weight: a.weights.look },
+      { id: 'wave' as const, weight: a.weights.wave },
       { id: 'sit' as const, weight: a.weights.sit },
       { id: 'sleep' as const, weight: a.weights.sleep },
     ]).id;
     if (pick === 'look') return { kind: 'look', left: a.lookSeconds };
+    if (pick === 'wave') return { kind: 'wave', left: a.waveSeconds };
     const range = pick === 'sit' ? a.seatedHold : a.sleepHold;
     const hold = range[0] + r.next() * (range[1] - range[0]);
     const total = pick === 'sit' ? a.sitSeconds(hold) : a.sleepSeconds(hold);

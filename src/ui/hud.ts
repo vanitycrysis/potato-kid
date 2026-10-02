@@ -3,6 +3,8 @@ import type { Content } from '../content/types';
 import type { GameEvent } from '../sim/game';
 import type { MapScene } from '../render/scene';
 import './hud.css';
+// Patrick Hand (D-031), chosen by Codex, bundled locally under the SIL OFL (assets/PROVENANCE.md).
+import fontUrl from '../../assets/fonts/patrick-hand/PatrickHand-Regular.ttf?url';
 
 // ChatGPT/Codex's native GUI SVGs (ui_v2.json, ASSETS.md v2), copied by art:export.
 const uiUrls = import.meta.glob('../../assets/ui/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
@@ -101,6 +103,15 @@ export class Hud {
     s.setProperty('--ui-button', `url("${ui('ui_button_normal')}")`);
     s.setProperty('--ui-button-pressed', `url("${ui('ui_button_pressed')}")`);
     s.setProperty('--ui-button-disabled', `url("${ui('ui_button_disabled')}")`);
+    // The font loads under the family name Codex's token gives, from the bundled file;
+    // until it is ready (or if it fails), the token's fallback stack shows.
+    const type = uiData?.typography as { family: string; fallback: string } | undefined;
+    if (type) {
+      s.setProperty('--ui-font', `"${type.family}", ${type.fallback}`);
+      const face = new FontFace(type.family, `url("${fontUrl}")`, { display: 'swap' });
+      document.fonts.add(face);
+      face.load().catch(() => {});
+    }
   }
 
   /** Not built yet (M3): visibly disabled, with the reason available to screen readers. */
@@ -132,7 +143,8 @@ export class Hud {
   private onEvent(e: GameEvent): void {
     if (e.type === 'fused' && e.firstDiscovery) {
       const name = this.content.kids.find((k) => k.id === e.child.type)?.name ?? e.child.type;
-      this.showToast(`New discovery: ${name}!`);
+      // The toast follows the discovery effect (rig: discovery onComplete).
+      window.setTimeout(() => this.showToast(`New discovery: ${name}!`), this.scene.discoveryToastDelayMs);
     }
   }
 

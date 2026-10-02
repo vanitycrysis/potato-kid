@@ -54,6 +54,8 @@ export interface ClipFrame {
   rig?: { offsetPx?: Vec2; rotationDeg?: number; opacity?: number };
   attachmentOffsets?: Record<string, Vec2>;
   componentTransforms?: Record<string, ComponentTransform>;
+  /** Zero-based frame of the clip's `effect` shown during this entry. */
+  effectFrame?: number;
 }
 
 export interface Clip {
@@ -61,6 +63,39 @@ export interface Clip {
   loop: boolean;
   frames: ClipFrame[];
   layerMask?: string[];
+  /** Name of the shared effect (in `effects`) this clip drives through `effectFrame`. */
+  effect?: string;
+  /** Discovery: only on a recipe's first discovery. */
+  firstDiscoveryOnly?: boolean;
+}
+
+/** A transient event effect (spawn, fusion, discovery): shared by every kid type. */
+export interface EventEffect {
+  canvas: Vec2;
+  sourcePivot: Vec2;
+  layer: 'behind_kid' | 'above_kid';
+  /** Source-px translation from the kid's ground point, before world/appearance scaling. */
+  offsetPx: Vec2;
+  frames: { asset: string; opacity: number }[];
+}
+
+/** The ground shadow drawn under every kid. */
+export interface ShadowEffect {
+  asset: string;
+  canvas: Vec2;
+  sourcePivot: Vec2;
+  offsetPx: Vec2;
+  /** Opacity multiplier while the kid is held. */
+  heldOpacity: number;
+}
+
+export interface ReducedMotionEntry {
+  bodyFrame?: string;
+  faceState?: string;
+  /** Keep the kid's current pose (effect-only clips such as discovery). */
+  kidPose?: 'preserve';
+  /** Fade a newborn in over this long instead of playing its clip. */
+  opacityTransitionMs?: number;
 }
 
 export interface KidRig {
@@ -77,13 +112,16 @@ export interface KidRig {
   faces: Record<string, Face>;
   costumes: Record<string, Costume>;
   clips: Record<string, Clip>;
-  reducedMotion: Record<string, { bodyFrame?: string; faceState?: string }>;
+  effects: { shadow: ShadowEffect } & Record<string, EventEffect | ShadowEffect>;
+  reducedMotion: Record<string, ReducedMotionEntry>;
   scheduler: {
     blinkDelaySeconds: Vec2;
     stationaryDelaySeconds: Vec2;
     ambientWeights: Record<string, number>;
     seatedHoldSeconds: Vec2;
     sleepHoldSeconds: Vec2;
+    /** Highest first: which presentation wins when several apply (e.g. pick-up over spawn). */
+    priority: string[];
   };
 }
 

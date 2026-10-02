@@ -13,7 +13,7 @@
   border: 8px solid transparent;
   border-image: var(--ui-panel) 8 fill / 8px stretch;
   color: var(--ui-ink);
-  font-family: 'Patrick Hand', system-ui, sans-serif;
+  font-family: var(--ui-font);
 }
 .ui-tray {
   border-image-source: var(--ui-tray);
@@ -131,7 +131,7 @@
   padding: 6px 12px;
   border: 8px solid transparent;
   border-image: var(--ui-toast) 8 fill / 8px stretch;
-  font-family: 'Patrick Hand', system-ui, sans-serif;
+  font-family: var(--ui-font);
   font-size: 20px;
   color: var(--ui-ink);
   opacity: 0;

@@ -361,10 +361,11 @@ describe('appearance and rests (ART-V2)', () => {
     const c = structuredClone(content);
     c.balance.wander = { ...c.balance.wander, idleChancePerSecond: 5 };
     const ambient = {
-      weights: { look: 1, sit: 1, sleep: 1 },
+      weights: { look: 1, wave: 1, sit: 1, sleep: 1 },
       chance: 1,
       stationaryDelay: [0.5, 0.8] as [number, number],
       lookSeconds: 1,
+      waveSeconds: 0.5,
       sitSeconds: (h: number) => h + 0.75,
       sleepSeconds: (h: number) => h + 0.75,
       seatedHold: [1, 2] as [number, number],
@@ -376,17 +377,18 @@ describe('appearance and rests (ART-V2)', () => {
       game.step([]);
       for (const k of game.state.world.kids) kinds.add(k.activity.kind);
     }
-    expect([...kinds].sort()).toEqual(['look', 'pause', 'sit', 'sleep', 'walk']);
+    expect([...kinds].sort()).toEqual(['look', 'pause', 'sit', 'sleep', 'walk', 'wave']);
   });
 
   it('waits the stationary delay before an ambient pose begins (rig scheduler)', () => {
     const c = structuredClone(content);
     c.balance.wander = { ...c.balance.wander, idleChancePerSecond: 5 };
     const ambient = {
-      weights: { look: 1, sit: 1, sleep: 1 },
+      weights: { look: 1, wave: 1, sit: 1, sleep: 1 },
       chance: 1,
       stationaryDelay: [2, 3] as [number, number],
       lookSeconds: 1,
+      waveSeconds: 0.5,
       sitSeconds: (h: number) => h + 0.75,
       sleepSeconds: (h: number) => h + 0.75,
       seatedHold: [1, 2] as [number, number],

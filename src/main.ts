@@ -23,6 +23,8 @@ declare global {
       }[];
       discoveredRecipes: () => string[];
       screenPointOf: (kidId: number) => { x: number; y: number } | undefined;
+      /** The clip a kid is showing and its running effects. */
+      presentationOf: (kidId: number) => { clip: string; effects: string[] } | undefined;
       centerOn: (x: number, y: number) => void;
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
@@ -79,6 +81,7 @@ async function boot(): Promise<void> {
       })),
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     screenPointOf: (id) => scene.screenPointOf(id),
+    presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
     centerOn: (x, y) => scene.centerOn(x, y),
     ...(params.get('debug') === '1' ? { debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => scene.debugAdd(t, x, y, look) } : {}),

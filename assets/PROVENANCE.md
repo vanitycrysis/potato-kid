@@ -8,18 +8,20 @@ New: 16 deferred body pose SVGs, 11 event-FX SVGs, one shadow SVG and two landma
 
 Seven historical r2 kid sources moved unchanged from art/src/kids/ to **art/history/r2/**. Their hashes are recorded in the export check; the corresponding legacy PNGs are retired by normal exporter stale-file cleanup, preventing duplicate runtime loads. Historical provenance below refers to these preserved originals. Historical scratch author/check scripts may retain their original source paths; use the Part B checkers for the current delivery.
 
-### Patrick Hand Regular: blocked fetch; Claude handoff (D-031)
+### Patrick Hand Regular: bundled by Claude (D-031)
 
-No font binary, substitute, partial licence, copyright, revision or invented hash is bundled. Shell fetch of the official upstream failed with **fetch failed** under restricted network access. The official directory was verified through the browser: [Google Fonts Patrick Hand upstream](https://github.com/google/fonts/tree/main/ofl/patrickhand).
+Codex chose the font (D-031) but could not fetch it in its sandbox. Claude fetched the official upstream files, unmodified, on 2026-10-02:
 
-Claude must fetch the exact upstream **PatrickHand-Regular.ttf** and **full OFL.txt**, without modification or conversion, from these official paths:
+| File | Bundled at | Bytes | SHA-256 |
+|---|---|---:|---|
+| PatrickHand-Regular.ttf | `assets/fonts/patrick-hand/PatrickHand-Regular.ttf` | 214,772 | `0f173b3e6cb6d1af25babf7f0057c5ac4ee11f9992b0469bb817e967ef4ad0fc` |
+| OFL.txt (full SIL OFL 1.1) | `assets/fonts/patrick-hand/OFL.txt` | 4,376 | `377f4f9c19e935228552478eb68cc2ed82910988a60ba60e2ac73b09f32d02d1` |
 
-- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/PatrickHand-Regular.ttf
-- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/OFL.txt
-- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/upstream_info.md
-- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/METADATA.pb
-
-Pin the fetched repository commit and record the font's internal version/revision, full copyright string, file byte lengths and SHA-256 for TTF/OFL here. Store the TTF and complete SIL OFL 1.1 text together in assets/fonts/patrick-hand/, and enable the local font only after verification. No runtime remote font fetch. Device glyph/numeral/reflow/fallback checks remain pending. This entry explicitly leaves the font deliverable to Claude under the authorized blocked-fetch exception.
+- **Source:** `google/fonts`, `ofl/patrickhand/`, pinned at commit `aeb9574d3cb4ab2ac5de70a8c730b11662281803`, the latest commit touching that directory when fetched. METADATA.pb names upstream `googlefonts/googlefontdirectory-hg` at `52f780bc9d197280a9f430574e179a5f233c56b6`.
+- **Font version:** `Version 1.003` (name ID 5; unique ID `1.003;UKWN;PatrickHand-Regular`), 728 glyphs. It covers the HUD's digits, `/` and `:`.
+- **Copyright:** "Copyright (c) 2010-2012 Patrick Wagesreiter (mail@patrickwagesreiter.at)" (OFL.txt and METADATA.pb). The font's own name ID 0 says "Copyright (c) 2012 Patrick Wagesreiter".
+- **Licence:** SIL Open Font License 1.1. Bundled with the game and loaded locally; no runtime download.
+- **Still open:** on-device glyph, numeral, reflow and fallback checks (gate 3).
 
 ## Accepted Part A art: ASSET-PLAYABLE Part A (2026-10-02)
 
