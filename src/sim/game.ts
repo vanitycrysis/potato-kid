@@ -148,11 +148,17 @@ export class Game {
    * touches nothing (D-039, D-043). The scene draws the held kid there, so a lifted kid
    * never overlaps anyone either; it can still sit right against a recipe partner.
    */
-  landingSpot(kidId: number, x: number, y: number, drawn?: Map<number, { x: number; y: number }>): { x: number; y: number } | null {
+  landingSpot(
+    kidId: number,
+    x: number,
+    y: number,
+    drawn?: Map<number, { x: number; y: number }>,
+    limit?: Bounds,
+  ): { x: number; y: number } | null {
     const world = this.state.world;
     const kid = world.kids.find((k) => k.id === kidId);
     if (!kid) return null;
-    if (!drawn || drawn.size === 0) return findFreeSpot(world, kid.box, x, y, kid.id);
+    if (!drawn || drawn.size === 0) return findFreeSpot(world, kid.box, x, y, kid.id, limit);
     // Free against both where neighbours ARE (the sim, so the drop won't be re-resolved)
     // and where they're DRAWN this frame (interpolated), so the preview never overlaps
     // a neighbour on screen either (render-time separation; Codex review, PR #14).
@@ -160,7 +166,7 @@ export class Game {
       const d = drawn.get(k.id);
       return d && (d.x !== k.x || d.y !== k.y) ? [{ ...k, x: d.x, y: d.y }] : [];
     });
-    return findFreeSpot({ ...world, kids: [...world.kids, ...ghosts] }, kid.box, x, y, kid.id);
+    return findFreeSpot({ ...world, kids: [...world.kids, ...ghosts] }, kid.box, x, y, kid.id, limit);
   }
 
   /** Advances one fixed step. */
@@ -308,9 +314,9 @@ export class Game {
     events.push({ type: 'spawned', kid });
   }
 
-  /** Debug/test only: place a kid directly, bypassing the Garden and capacity. */
-  debugAddKid(type: KidId, x: number, y: number): Kid {
-    const look = this.rollLook();
+  /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */
+  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
+    const look = this.forceLook(this.rollLook(), force);
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
     this.discover(type);
@@ -336,6 +342,15 @@ export class Game {
     const s = size.scale;
     const b = body.box;
     return { body: body.id, face: face.id, scale: s, box: { left: b.left * s, top: b.top * s, right: b.right * s, bottom: b.bottom * s } };
+  }
+
+  private forceLook(look: Look & { box: Box }, force?: Partial<Look>): Look & { box: Box } {
+    if (!force) return look;
+    const body = this.looks.bodies.find((b) => b.id === (force.body ?? look.body)) ?? this.looks.bodies[0]!;
+    const face = force.face ?? look.face;
+    const s = force.scale ?? look.scale;
+    const b = body.box;
+    return { body: body.id, face, scale: s, box: { left: b.left * s, top: b.top * s, right: b.right * s, bottom: b.bottom * s } };
   }
 
   /** The next look, without consuming it (spawn checks room first). */

@@ -47,6 +47,8 @@ interface Drag {
   y: number;
   /** Where the kid is drawn: the nearest free spot to (x, y), so it never overlaps (D-039). */
   spot: { x: number; y: number };
+  /** No free spot is visible right now: edge scrolling pauses so the last spot stays on screen. */
+  noRoom?: boolean;
 }
 
 /**
@@ -69,6 +71,12 @@ export class MapScene {
   private dragScreen = { x: 0, y: 0 };
   /** Camera: world point at the screen's top-left, and world → CSS px scale. */
   private cam = { x: 0, y: 0, zoom: 1 };
+  /**
+   * Screen space covered by DOM overlays (HUD on top, tray at the bottom), in CSS px. The
+   * camera may scroll this far past the world edges so nothing stays hidden underneath
+   * (Codex review, PR #15).
+   */
+  private insets = { top: 0, bottom: 0 };
   /** Screen size the camera was last laid out for, to keep the view centre across resizes. */
   private laidOut = { width: 0, height: 0 };
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
@@ -148,8 +156,8 @@ export class MapScene {
   }
 
   /** Debug/test hook (only exposed with `?debug=1`): place a kid at a world point. */
-  debugAdd(type: string, x: number, y: number): number {
-    const kid = this.game.debugAddKid(type, x, y);
+  debugAdd(type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }): number {
+    const kid = this.game.debugAddKid(type, x, y, look);
     this.addView(kid);
     return kid.id;
   }
@@ -158,6 +166,12 @@ export class MapScene {
   worldToScreen(x: number, y: number): { x: number; y: number } {
     const p = this.camera.toGlobal({ x, y });
     return { x: p.x, y: p.y };
+  }
+
+  /** Tells the camera how much of the screen the GUI overlays cover. */
+  setInsets(top: number, bottom: number): void {
+    this.insets = { top: Math.max(0, top), bottom: Math.max(0, bottom) };
+    this.applyCamera();
   }
 
   /** Moves the camera so world (x, y) is at the centre of the screen (clamped to the world). */
@@ -195,7 +209,13 @@ export class MapScene {
     const W = this.worldWidth;
     const H = this.worldHeight;
     this.cam.x = vw >= W ? (W - vw) / 2 : Math.min(W - vw, Math.max(0, this.cam.x));
-    this.cam.y = vh >= H ? (H - vh) / 2 : Math.min(H - vh, Math.max(0, this.cam.y));
+    // Vertically, the usable view is between the overlays: let the world's top edge reach
+    // the HUD's bottom and its bottom edge reach the tray's top.
+    const top = this.insets.top / z;
+    const bottom = this.insets.bottom / z;
+    const minY = -top;
+    const maxY = H - vh + bottom;
+    this.cam.y = maxY <= minY ? (minY + maxY) / 2 : Math.min(maxY, Math.max(minY, this.cam.y));
     this.camera.scale.set(z);
     this.camera.position.set(-this.cam.x * z, -this.cam.y * z);
   }
@@ -321,8 +341,42 @@ export class MapScene {
   /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
   private resolveHeld(): void {
     if (!this.drag) return;
-    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn);
+    // Keep the held kid's whole silhouette inside the visible play area (between HUD and
+    // tray), so it can't disappear behind the GUI while the finger is near an edge.
+    // The free-spot search is limited to that area too: otherwise scenery (e.g. the Garden)
+    // can push the nearest free spot up behind the HUD (Codex review, PR #15).
+    const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    let limit: { minX: number; minY: number; maxX: number; maxY: number } | undefined;
+    if (kid) {
+      const z = this.cam.zoom;
+      const { width, height } = this.app.screen;
+      limit = {
+        minX: this.cam.x - kid.box.left,
+        maxX: this.cam.x + width / z - kid.box.right,
+        minY: this.cam.y + this.insets.top / z - kid.box.top,
+        maxY: this.cam.y + (height - this.insets.bottom) / z - kid.box.bottom,
+      };
+      // If the band is shorter than the kid, keep its top just below the HUD rather than
+      // letting an impossible limit be ignored (Codex review, PR #15).
+      if (limit.minY > limit.maxY) limit.maxY = limit.minY;
+      this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
+    }
+    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn, limit);
+    // A full visible area keeps the last valid spot, and updateCamera stops edge scrolling
+    // until there is room again, so the held kid can't be scrolled out of view or dropped
+    // somewhere stale (Codex review, PR #15).
+    this.drag.noRoom = !spot;
     if (spot) this.drag.spot = spot;
+  }
+
+  /** The held kid's silhouette box on screen (CSS px), from where the finger wants it. */
+  private heldScreenBox(): { top: number; bottom: number } | undefined {
+    if (!this.drag) return undefined;
+    const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    if (!kid) return undefined;
+    const z = this.cam.zoom;
+    const wantY = this.camera.toLocal(this.dragScreen).y - HOLD_LIFT;
+    return { top: (wantY + kid.box.top - this.cam.y) * z, bottom: (wantY + kid.box.bottom - this.cam.y) * z };
   }
 
   private cancelActiveDrag(): void {
@@ -388,11 +442,22 @@ export class MapScene {
     const step = Math.min(dt, 0.1);
     if (this.drag) {
       const { width, height } = this.app.screen;
-      const edge = (pos: number, size: number) =>
-        pos < EDGE_ZONE ? -(1 - pos / EDGE_ZONE) : pos > size - EDGE_ZONE ? 1 - (size - pos) / EDGE_ZONE : 0;
-      const ex = edge(this.dragScreen.x, width);
-      const ey = edge(this.dragScreen.y, height);
-      if (ex || ey) {
+      // Edge zones sit at the edges of the *visible* play area, inside the HUD and tray, and
+      // shrink on short screens so a neutral middle always remains (Codex review, PR #15).
+      // Horizontally they follow the finger; vertically they follow the held kid's own
+      // silhouette (it floats above the finger), so it never hides behind the HUD.
+      const zone = (span: number) => Math.max(8, Math.min(EDGE_ZONE, span / 4));
+      const ramp = (into: number, z: number) => Math.min(1, Math.max(0, 1 - into / z));
+      const zx = zone(width);
+      const ex = -ramp(this.dragScreen.x, zx) + ramp(width - this.dragScreen.x, zx);
+      const top = this.insets.top;
+      const bottom = height - this.insets.bottom;
+      const held = this.heldScreenBox();
+      // The zones share what's left after the kid's own height, so a neutral band survives
+      // even on short landscape screens.
+      const zy = zone(bottom - top - (held ? held.bottom - held.top : 0));
+      const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
+      if ((ex || ey) && !this.drag.noRoom) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();

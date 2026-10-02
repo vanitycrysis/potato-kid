@@ -44,3 +44,24 @@ test('all four map quadrants', async ({ browser }) => {
     await page.screenshot({ path: `${OUT}/map-${q}.png` });
   }
 });
+
+for (const type of ['plain', 'water']) {
+  test(`faces: every face on every body (${type}) at game size`, async ({ browser }) => {
+    const page = await open(browser, 412, 915, '?seed=34&debug=1&calm=1');
+    const rig = JSON.parse(readFileSync('assets/data/kid_rig_v2.json', 'utf8')) as {
+      appearance: { bodyWeights: Record<string, number>; faceWeights: Record<string, number> };
+    };
+    const bodies = Object.keys(rig.appearance.bodyWeights);
+    const faces = Object.keys(rig.appearance.faceWeights);
+    // One type per capture: neighbouring different types could be a recipe and fuse.
+    await page.evaluate(
+      ([t, b, f]) => {
+        window.__PK__!.centerOn(1080, 1600);
+        f.forEach((face, row) => b.forEach((body, col) => window.__PK__!.debugAdd!(t, 760 + col * 210, 1150 + row * 260, { body, face, scale: 1 })));
+      },
+      [type, bodies, faces] as const,
+    );
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `${OUT}/faces-${type}.png` });
+  });
+}

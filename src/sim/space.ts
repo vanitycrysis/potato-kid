@@ -84,8 +84,20 @@ export function innerBounds(b: Bounds, box: Box): Bounds {
  * at fixed angles. The nearest free candidate wins; ties keep the first, so the result
  * is deterministic. Null when there is no room nearby.
  */
-export function findFreeSpot(world: World, box: Box, x: number, y: number, ignore?: number): { x: number; y: number } | null {
-  const ib = innerBounds(world.bounds, box);
+export function findFreeSpot(
+  world: World,
+  box: Box,
+  x: number,
+  y: number,
+  ignore?: number,
+  /** Optional extra limit on the ground point, e.g. the visible play area for a held preview. */
+  limit?: Bounds,
+): { x: number; y: number } | null {
+  let ib = innerBounds(world.bounds, box);
+  if (limit) {
+    const cut = { minX: Math.max(ib.minX, limit.minX), minY: Math.max(ib.minY, limit.minY), maxX: Math.min(ib.maxX, limit.maxX), maxY: Math.min(ib.maxY, limit.maxY) };
+    if (cut.minX <= cut.maxX && cut.minY <= cut.maxY) ib = cut;
+  }
   const clampX = (v: number) => Math.min(ib.maxX, Math.max(ib.minX, v));
   const clampY = (v: number) => Math.min(ib.maxY, Math.max(ib.minY, v));
   const sx = clampX(x);
@@ -127,9 +139,13 @@ export function findFreeSpot(world: World, box: Box, x: number, y: number, ignor
   }
   // Rings (pass 2), for crowds where every flush spot is blocked by a third kid.
   const step = Math.max(8, Math.min(box.right - box.left, box.bottom - box.top) / 4);
+  // Never search beyond the allowed area itself: rings past its diagonal can only clamp
+  // back onto points already tried. Without this, a full small area (e.g. a held preview
+  // limited to the visible band) scanned ~45k spots every frame and froze slow devices.
+  const reach2 = Math.hypot(ib.maxX - ib.minX, ib.maxY - ib.minY) + step;
   for (let ring = 1; ring <= 120; ring++) {
     const dist = ring * step;
-    if (dist > best.d + step) break;
+    if (dist > best.d + step || dist > reach2) break;
     const n = Math.max(8, Math.ceil((2 * Math.PI * dist) / step));
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;

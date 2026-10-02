@@ -7,20 +7,6 @@
     <style>
       html, body { margin: 0; height: 100%; background: #f4efe2; overflow: hidden; touch-action: none; }
       #app { position: fixed; inset: 0; }
-      .hud {
-        position: fixed; top: max(12px, env(safe-area-inset-top)); left: 16px; right: 16px;
-        display: flex; align-items: center; gap: 12px; pointer-events: none;
-        font: 600 16px/1.2 system-ui, sans-serif; color: #1a1a1a;
-      }
-      .hud-count { background: #fffaf0; border: 2px solid #1a1a1a; border-radius: 12px; padding: 6px 10px; white-space: nowrap; }
-      .hud-track { flex: 1; height: 12px; border: 2px solid #1a1a1a; border-radius: 8px; background: #fffaf0; overflow: hidden; }
-      .hud-bar { height: 100%; width: 0; background: #8fbf6a; }
-      .toast {
-        position: fixed; left: 50%; bottom: max(32px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
-        background: #fffaf0; border: 2px solid #1a1a1a; border-radius: 14px; padding: 10px 16px;
-        font: 700 18px/1.2 system-ui, sans-serif; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
-      }
-      .toast.show { opacity: 1; transform: translate(-50%, 0); }
       .boot-error { position: fixed; inset: 16px; margin: 0; white-space: pre-wrap; font: 14px/1.4 monospace; color: #8a1c1c; }
     </style>
   </head>
