@@ -5,11 +5,6 @@ export interface KidDef {
   tier: number;
   /** Display name; placeholder until ChatGPT names the roster. */
   name: string;
-  /**
-   * Accent colour used only by the legacy code-drawn placeholders, which are retired
-   * once Codex's art covers every type (D-036). New types don't have one.
-   */
-  accent?: string;
 }
 
 export interface RecipeDef {
