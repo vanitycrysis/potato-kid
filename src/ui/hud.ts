@@ -139,6 +139,9 @@ export class Hud {
     new ResizeObserver(measure).observe(this.top);
     measure();
     scene.listenSteps((events) => this.onStep(events));
+    // A newborn's card waits until the kid is actually drawn (its costume may still be
+    // loading), then for its discovery effect (Codex review, PR #35).
+    scene.listenShown((kidId) => this.kidShown(kidId, performance.now()));
     // Offline catch-up can discover types; the summary reports them, so no card later
     // should call them new (Codex review, PR #33).
     scene.listenResume(() => {
@@ -284,8 +287,7 @@ export class Hud {
     const now = performance.now();
     for (const item of items) {
       if (item.kind === 'refusal' && item.command === 'instantSpawn') this.inflight = false;
-      // Discoveries wait for the discovery effect to finish (rig: discovery onComplete).
-      const notBefore = item.kind === 'discovery' ? now + this.scene.discoveryToastDelayMs : now;
+      const notBefore = this.readyAt(item, now);
       // The command implies the currency, except a respawn (whose sheet keeps its own context).
       const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
       const text = item.kind === 'refusal' ? refusalText(item.reason, item.command, currency) : undefined;
@@ -294,6 +296,23 @@ export class Hud {
       const firstReward = this.queue.findIndex((c) => c.item.kind !== 'refusal');
       if (item.kind === 'refusal' && firstReward >= 0) this.queue.splice(firstReward, 0, card);
       else this.queue.push(card);
+    }
+  }
+
+  /**
+   * When a card may show: a newborn's card once the kid is drawn (and, for a discovery,
+   * after its effect); Infinity while its costume is still loading.
+   */
+  private readyAt(item: FeedbackItem, now: number): number {
+    if (item.kind !== 'discovery' && item.kind !== 'newKid') return now;
+    const after = item.kind === 'discovery' ? this.scene.discoveryToastDelayMs : 0;
+    const state = item.kidId === undefined ? 'shown' : this.scene.viewState(item.kidId);
+    return state === 'pending' ? Infinity : now + after;
+  }
+
+  private kidShown(kidId: number, now: number): void {
+    for (const c of this.queue) {
+      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
     }
   }
 
@@ -320,9 +339,15 @@ export class Hud {
       this.showing.node.remove();
       this.showing = null;
     }
-    const next = this.queue[0];
-    if (!next || next.notBefore > now || !this.fits(next.node)) return;
-    this.queue.shift();
+    // A card still waiting for its kid never holds up the ones behind it; one whose kid
+    // was consumed before it appeared is shown anyway (the discovery did happen).
+    for (const c of this.queue) {
+      if (c.notBefore === Infinity && 'kidId' in c.item && c.item.kidId !== undefined && this.scene.viewState(c.item.kidId) === 'gone') c.notBefore = now;
+    }
+    const at = this.queue.findIndex((c) => c.notBefore <= now);
+    const next = this.queue[at];
+    if (!next || !this.fits(next.node)) return;
+    this.queue.splice(at, 1);
     this.showing = next;
     this.feedback.append(next.node);
   }

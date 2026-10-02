@@ -385,13 +385,15 @@
 }
 .portrait-canvas,
 .portrait-layer,
-.portrait-layer img {
+.portrait-source,
+.portrait-source img {
   position: absolute;
   left: 0;
   top: 0;
   transform-origin: 0 0;
 }
-.portrait-layer img {
+/* Full size unless cropped (then portrait.ts places it at its trim offset). */
+.portrait-source img {
   width: 256px;
   height: 256px;
 }

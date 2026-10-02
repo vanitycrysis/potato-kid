@@ -1,9 +1,10 @@
-import { Application, Container, FederatedPointerEvent, type Texture } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent } from 'pixi.js';
 import type { KidRig, MapData } from '../content/artData';
-import type { Content } from '../content/types';
+import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
 import { rectAt, resolveDrawn, touching } from '../sim/space';
+import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -17,7 +18,8 @@ const VIEW_MIN_HEIGHT = 1920;
 export interface SceneArt {
   rig: KidRig;
   map: MapData;
-  textures: Map<string, Texture>;
+  /** Shared art resident; costumes per type, on demand (ROSTER-SCALE). */
+  textures: TextureStore;
   looks: LookTable;
   ambient: Ambient;
   obstacles: Obstacle[];
@@ -26,6 +28,8 @@ export interface SceneArt {
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
 const HOLD_LIFT = 70;
+/** A costume no kid has needed for this long is released (ROSTER-SCALE). */
+const RELEASE_AFTER_MS = 15_000;
 /** Dragging a kid within this many CSS px of a screen edge scrolls the map that way. */
 const EDGE_ZONE = 56;
 /** Edge auto-scroll speed at the very edge, world units per second. */
@@ -61,9 +65,16 @@ export class MapScene {
   private readonly listeners = new Set<(e: GameEvent) => void>();
   private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
   private readonly resumeListeners = new Set<(report: OfflineReport) => void>();
+  private readonly shownListeners = new Set<(kidId: number) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
   private readonly views = new Map<number, KidRigView>();
+  /** Kids whose costume is still loading: their view, and what it should play, come after. */
+  private readonly pendingViews = new Map<number, ((v: KidRigView) => void)[]>();
+  /** Loaded costume types with no kid on the map, and since when (wall ms). */
+  private readonly absentSince = new Map<KidId, number>();
+  /** Types kept loaded however long they are absent: the Garden spawns them all the time. */
+  private readonly resident: Set<KidId>;
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -119,7 +130,8 @@ export class MapScene {
       seed,
       saved,
     );
-    this.camera.addChild(buildMap(art.map, art.textures), this.kidLayer);
+    this.resident = new Set(Object.keys(content.balance.spawnWeights));
+    this.camera.addChild(buildMap(art.map, art.textures.map), this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -165,6 +177,20 @@ export class MapScene {
     this.resumeListeners.add(fn);
   }
 
+  /**
+   * Calls `fn` when a kid's view appears: at once, or after its costume loads (ROSTER-SCALE).
+   * Feedback about a newborn waits for this, not for the sim event (Codex review, PR #35).
+   */
+  listenShown(fn: (kidId: number) => void): void {
+    this.shownListeners.add(fn);
+  }
+
+  /** Whether a kid is drawn now, or still exists waiting for its costume. */
+  viewState(kidId: number): 'shown' | 'pending' | 'gone' {
+    if (this.views.has(kidId)) return 'shown';
+    return this.pendingViews.has(kidId) && this.game.state.world.kids.some((k) => k.id === kidId) ? 'pending' : 'gone';
+  }
+
   /** Settles any held kid now (a cancelled touch), e.g. before the GUI layout shifts. */
   cancelDrag(): void {
     if (!this.drag) return;
@@ -201,6 +227,32 @@ export class MapScene {
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
     return report;
+  }
+
+  /**
+   * Releases costumes no kid has needed for a while (ROSTER-SCALE), except the Garden's
+   * spawn pool, which comes back constantly. Absence is timed so a fusion that consumes the
+   * last kid of a type and a respawn moments later don't thrash the loader.
+   */
+  private releaseUnused(now: number): void {
+    const present = new Set(this.game.state.world.kids.map((k) => k.type));
+    for (const type of this.art.textures.loadedTypes) {
+      if (present.has(type) || this.resident.has(type)) {
+        this.absentSince.delete(type);
+        continue;
+      }
+      const since = this.absentSince.get(type);
+      if (since === undefined) this.absentSince.set(type, now);
+      else if (now - since >= RELEASE_AFTER_MS) {
+        this.absentSince.delete(type);
+        this.art.textures.release(type);
+      }
+    }
+  }
+
+  /** Test hook: costume types currently loaded. */
+  get loadedCostumes(): KidId[] {
+    return this.art.textures.loadedTypes;
   }
 
   /** Test hook: world → screen (CSS px) for a kid's ground point. */
@@ -314,8 +366,41 @@ export class MapScene {
     this.applyCamera();
   }
 
-  private addView(kid: Kid): KidRigView {
-    const view = new KidRigView(kid, this.art.rig, this.art.textures, this.art.reducedMotion);
+  /**
+   * A kid's view, now if its costume is loaded, else as soon as it is (ROSTER-SCALE). The
+   * handle records what the view should play meanwhile (a spawn, an effect) and replays it.
+   */
+  private addView(kid: Kid): Pick<KidRigView, 'play' | 'startEffect'> {
+    if (this.art.textures.ready(kid.type)) return this.createView(kid);
+    const actions: ((v: KidRigView) => void)[] = [];
+    this.pendingViews.set(kid.id, actions);
+    // A failed load is retried with backoff while the kid still needs a view, so a
+    // transient fetch failure never leaves it invisible for good (Codex review, PR #35).
+    const attempt = (delay: number) => {
+      this.art.textures.ensure(kid.type).then(
+        () => {
+          if (this.pendingViews.get(kid.id) !== actions) return; // consumed while loading
+          this.pendingViews.delete(kid.id);
+          const live = this.game.state.world.kids.find((k) => k.id === kid.id);
+          if (!live) return;
+          const view = this.createView(live);
+          for (const a of actions) a(view);
+        },
+        () => {
+          if (this.pendingViews.get(kid.id) !== actions) return;
+          window.setTimeout(() => attempt(Math.min(delay * 2, 30_000)), delay);
+        },
+      );
+    };
+    attempt(1000);
+    return {
+      play: (name) => void actions.push((v) => v.play(name)),
+      startEffect: (name) => void actions.push((v) => v.startEffect(name)),
+    };
+  }
+
+  private createView(kid: Kid): KidRigView {
+    const view = new KidRigView(kid, this.art.rig, this.art.textures.map, this.art.reducedMotion);
     view.root.eventMode = 'static';
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
@@ -325,10 +410,12 @@ export class MapScene {
     this.views.set(kid.id, view);
     this.prev.set(kid.id, { x: kid.x, y: kid.y });
     this.kidLayer.addChild(view.root);
+    for (const fn of this.shownListeners) fn(kid.id);
     return view;
   }
 
   private removeView(kidId: number): void {
+    this.pendingViews.delete(kidId);
     this.drawn.delete(kidId);
     this.views.get(kidId)?.destroy();
     this.views.delete(kidId);
@@ -470,6 +557,7 @@ export class MapScene {
 
   private frame(dt: number): void {
     this.updateCamera(dt);
+    this.releaseUnused(performance.now());
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are
     // offline catch-up's job (M3), not the frame loop's.
     this.acc += Math.min(dt, 0.25);
