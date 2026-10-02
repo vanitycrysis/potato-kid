@@ -62,6 +62,11 @@ interface Drag {
  */
 export class MapScene {
   readonly game: Game;
+  /**
+   * While a GUI sheet is open, world input (pick-up, pan, edge scroll) is paused; the
+   * simulation and income keep running (GUI_MVP §2).
+   */
+  inputPaused = false;
   private readonly listeners = new Set<(e: GameEvent) => void>();
   private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
   private readonly resumeListeners = new Set<(report: OfflineReport) => void>();
@@ -344,7 +349,7 @@ export class MapScene {
   // --- Panning -------------------------------------------------------------
 
   private startPan(e: FederatedPointerEvent): void {
-    if (this.drag || this.pan) return;
+    if (this.drag || this.pan || this.inputPaused) return;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
   }
@@ -431,7 +436,7 @@ export class MapScene {
   }
 
   private startDrag(kidId: number, e: FederatedPointerEvent): void {
-    if (this.drag || this.pan) return; // one gesture at a time; a second finger is ignored
+    if (this.drag || this.pan || this.inputPaused) return; // one gesture at a time; none under a sheet
     this.panVelocity = { x: 0, y: 0 };
     this.dragScreen = { x: e.global.x, y: e.global.y };
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);

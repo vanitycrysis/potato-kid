@@ -4,38 +4,13 @@ import type { MapScene } from '../render/scene';
 import type { GameEvent } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { formatClock, formatCount, formatExact } from './format';
+import { BuildingSheets } from './buildings';
+import { el, icon, ui } from './dom';
 import { portrait } from './portrait';
+import { Sheets } from './sheet';
 import './hud.css';
 // Patrick Hand (D-031), chosen by Codex, bundled locally under the SIL OFL (assets/PROVENANCE.md).
 import fontUrl from '../../assets/fonts/patrick-hand/PatrickHand-Regular.ttf?url';
-
-// ChatGPT/Codex's native GUI SVGs (ui_v2.json), copied by art:export.
-const uiUrls = import.meta.glob('../../assets/ui/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
-export function ui(name: string): string {
-  const hit = Object.entries(uiUrls).find(([p]) => p.endsWith(`/${name}.svg`));
-  if (!hit) throw new Error(`Missing GUI art "${name}" (D-036: run npm run art:export)`);
-  return hit[1];
-}
-
-export function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  e.className = className;
-  e.append(...children);
-  return e;
-}
-
-export function icon(name: string, label = '', className = 'ui-icon'): HTMLImageElement {
-  const img = el('img', className);
-  img.src = ui(name);
-  img.alt = label;
-  if (!label) img.setAttribute('aria-hidden', 'true');
-  return img;
-}
-
-/** Display name without the trailing " Kid" (cards); Potato Kid stays "Potato" (GUI_MVP §7). */
-export function shortName(name: string): string {
-  return name.replace(/ Kid$/, '');
-}
 
 /** How long a feedback card stays up (GUI_MVP §9). */
 const FEEDBACK_MS = 2500;
@@ -93,6 +68,9 @@ export class Hud {
   private save: SaveStatus = { unsaved: false, recovery: false, readOnly: false };
   private recoveryDismissed = false;
   private last = performance.now();
+  private readonly sheets: Sheets;
+  private readonly buildings: BuildingSheets;
+  private readonly trayCells = new Map<string, HTMLButtonElement>();
 
   constructor(
     private readonly scene: MapScene,
@@ -127,14 +105,21 @@ export class Hud {
     const tray = el(
       'nav',
       'tray ui-surface ui-tray',
-      this.trayCell('icon_garden', 'Garden'),
-      this.trayCell('icon_capacity', 'Capacity'),
-      this.trayCell('icon_bias', 'Bias'),
-      this.trayCell('icon_compendium', 'Compendium'),
+      this.trayCell('garden', 'Garden'),
+      this.trayCell('capacity', 'Capacity'),
+      this.trayCell('bias', 'Bias'),
+      this.trayCell('compendium', 'Compendium'),
     );
     tray.setAttribute('aria-label', 'Buildings');
     const dex = this.comingSoon('icon_dex', 'Potato-Dex', 'dex-button');
     document.body.append(this.shield, this.top, dex, tray);
+    this.sheets = new Sheets(
+      scene,
+      () => [this.top, tray, dex, document.getElementById('app')!].filter(Boolean),
+      () => (this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0),
+      matchMedia('(prefers-reduced-motion: reduce)').matches,
+    );
+    this.buildings = new BuildingSheets(scene, content, this.sheets);
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the tray and Dex button at the bottom (GUI_MVP §2; Codex review, PR #15).
@@ -196,6 +181,7 @@ export class Hud {
       ['button-pressed', 'ui_button_pressed'],
       ['button-disabled', 'ui_button_disabled'],
       ['button-primary', 'ui_button_primary'],
+      ['button-selected', 'ui_button_selected'],
       ['banner-problem', 'ui_banner_problem'],
       ['banner-recovery', 'ui_banner_recovery'],
       ['spawn-full', 'ui_spawn_full'],
@@ -221,12 +207,28 @@ export class Hud {
     return b;
   }
 
-  private trayCell(iconName: string, label: string): HTMLButtonElement {
-    const b = el('button', 'tray-cell', icon(iconName), el('span', 'tray-label', label));
+  /** A tray button: Garden, Capacity and Bias open their sheets; Compendium arrives later. */
+  private trayCell(key: 'garden' | 'capacity' | 'bias' | 'compendium', label: string): HTMLButtonElement {
+    const b = el('button', 'tray-cell', icon(`icon_${key}`), el('span', 'tray-label', label));
     b.type = 'button';
-    b.disabled = true;
-    b.setAttribute('aria-label', `${label} (coming soon)`);
+    this.trayCells.set(key, b);
+    if (key === 'compendium') {
+      // The Compendium sheet comes with the Dex in the next GUI slice.
+      b.disabled = true;
+      b.setAttribute('aria-label', `${label} (coming soon)`);
+      return b;
+    }
+    b.setAttribute('aria-label', label);
+    b.addEventListener('click', () => {
+      if (this.save.readOnly) return;
+      this.buildings.open(key, b);
+    });
     return b;
+  }
+
+  /** Android Back: closes an open sheet (returns whether it did). */
+  back(): boolean {
+    return this.sheets.back();
   }
 
   /**
@@ -332,12 +334,20 @@ export class Hud {
     this.spawn.setAttribute('aria-label', st.reason ? `Spawn now: ${st.reason}` : `Spawn a random Garden kid for ${formatExact(cost)} Potatokens`);
 
     this.tickFeedback(now, dt);
+    this.sheets.tick();
+    for (const [key, cell] of this.trayCells) cell.classList.toggle('is-selected', this.sheets.openKey === key);
   }
 
   // --- feedback ---------------------------------------------------------------------
 
   private onStep(events: GameEvent[]): void {
-    const items = feedbackFor(events, this.known, this.scene.game.state.discoveredKids.length);
+    // A sheet shows its own command's refusal inline; the world never repeats it (GUI_MVP §9).
+    const inSheet = new Set(this.buildings.onStep(events));
+    const items = feedbackFor(
+      events.filter((e) => !inSheet.has(e)),
+      this.known,
+      this.scene.game.state.discoveredKids.length,
+    );
     for (const e of events) if (e.type === 'spawned' && e.source === 'instant') this.inflight = false;
     const now = performance.now();
     for (const item of items) {
@@ -382,6 +392,8 @@ export class Hud {
     // once, which only ever frees space under a held kid (Codex review, PR #33).
     if (this.showing && this.bandBelow(this.top.getBoundingClientRect().bottom) < 44) this.unshow();
     if (this.scene.dragging || this.save.readOnly) return;
+    // Cards that arrive while a sheet is open wait until it closes (GUI_MVP §9).
+    if (this.sheets.isOpen && !this.showing) return;
     const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
     if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
       const r = this.queue.splice(refusal, 1)[0]!;

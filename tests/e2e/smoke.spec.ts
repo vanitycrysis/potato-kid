@@ -572,8 +572,11 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.setViewportSize({ width: 568, height: 320 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
-    await page.waitForTimeout(600);
-    await expect(page.locator('.feedback')).toBeEmpty();
+    // Sampled, not retried: a card shown too early would vanish after 2.5 s and pass a retry.
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(150);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
     await page.setViewportSize({ width: 568, height: 800 });
     await expect(page.locator('.feedback')).toContainText('Not enough');
   });
@@ -762,6 +765,95 @@ test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => 
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'window' });
     await page.waitForTimeout(200);
     expect(await page.locator('.hud').evaluate((e) => e.scrollTop)).toBe(before);
+  });
+});
+
+test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
+  const garden = (page: Page) => page.locator('.tray-cell').nth(0);
+  const bias = (page: Page) => page.locator('.tray-cell').nth(2);
+
+  test('the Garden upgrades in place, and an unaffordable upgrade sends nothing', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    await garden(page).click();
+    const action = page.locator('.sheet-action');
+    await expect(action).toHaveAttribute('aria-disabled', 'true');
+    await action.click({ force: true }); // a deliberate tap on the disabled control
+    await page.waitForTimeout(300);
+    expect((await page.evaluate(() => window.__PK__!.buildings())).levels.garden).toBe(1);
+    // Nothing was sent: the engine would have answered with a refusal.
+    await expect(page.locator('.sheet-status')).toBeHidden();
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await expect(action).toHaveAttribute('aria-disabled', 'false');
+    const before = await page.evaluate(() => window.__PK__!.wallet().materials);
+    await action.click();
+    await expect(page.locator('.sheet-status')).toContainText('Garden is now level 2.');
+    expect((await page.evaluate(() => window.__PK__!.buildings())).levels.garden).toBe(2);
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThan(before);
+    await expect(page.locator('.sheet-subtitle')).toHaveText('Level 2 / 10');
+    await expect(page.locator('.sheet')).toBeVisible(); // stays open
+    expect(errors).toEqual([]);
+  });
+
+  test('an engine refusal shows inside the sheet, never as a world card', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 32 }));
+    await garden(page).click();
+    // Send the upgrade, then lose the Materials before the sim applies it.
+    await page.evaluate(() => {
+      (document.querySelector('.sheet-action') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ materials: -32 });
+    });
+    await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
+    // World cards wait while a sheet is open, so check after it closes too. Sampled, not a
+    // retrying assertion: a leaked 2.5 s card would eventually vanish and pass a retry.
+    await page.keyboard.press('Escape');
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(200);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+  });
+
+  test('Spawn bias: seeds are disabled until built, then a pick sets the target', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1');
+    await bias(page).click();
+    await expect(page.locator('.seed-card').first()).toHaveAttribute('aria-disabled', 'true');
+    await page.locator('.seed-card').first().click({ force: true });
+    await page.waitForTimeout(300);
+    expect((await page.evaluate(() => window.__PK__!.buildings())).biasTarget).toBeNull();
+    // The UI sent nothing (the engine would have refused it with "Build Spawn bias first.").
+    await expect(page.locator('.sheet-status')).toBeHidden();
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await page.locator('.sheet-action').click();
+    await expect(page.locator('.sheet-subtitle')).toHaveText(/Level 1 \//);
+    await page.locator('.seed-card').first().click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).toBe('plain');
+    await expect(page.locator('.seed-card').first()).toHaveAttribute('aria-checked', 'true');
+    await page.locator('.seed-none').click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).toBeNull();
+  });
+
+  test('Escape, the scrim and the X close; focus returns; the world ignores input meanwhile', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1300));
+    await page.waitForTimeout(200);
+    await garden(page).click();
+    await expect(page.locator('.sheet')).toBeVisible();
+    // A press on the scrim over a kid closes the sheet and does not pick the kid up.
+    const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    await page.mouse.click(p.x, p.y - 400);
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await expect(garden(page)).toBeFocused();
+    await garden(page).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await garden(page).click();
+    await page.locator('.sheet-close').click();
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    // With a sheet open, the world doesn't react to a drag at all.
+    await garden(page).click();
+    expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(true);
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(false);
   });
 });
 
