@@ -1,14 +1,11 @@
 {
   "schemaVersion": 2,
-  "revision": "v2-slice-1",
-  "status": "style_sample",
+  "revision": "asset-playable-b-1",
+  "status": "final",
   "delivery": {
-    "scope": "sample_slice",
-    "deferredAssets": [
-      "landmark_pebble_patch",
-      "landmark_picnic_stump"
-    ],
-    "note": "Full deterministic tiled world and route; landmarks absent and unreserved. All six small decor sources delivered."
+    "scope": "first_playable_art",
+    "deferredAssets": [],
+    "note": "Approved ground/path/decor/Garden promoted after seam and placement checks; two landmarks delivered. Explicit instances/skips authoritative."
   },
   "worldSize": [
     2160,
@@ -950,7 +947,7 @@
     {
       "id": "garden",
       "asset": "building_garden",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         1080,
         620
@@ -973,7 +970,7 @@
     {
       "id": "perimeter_left_00",
       "asset": "decor_tuft",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         96,
         220
@@ -996,7 +993,7 @@
     {
       "id": "perimeter_right_00",
       "asset": "decor_tuft",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2064,
         220
@@ -1019,7 +1016,7 @@
     {
       "id": "perimeter_left_01",
       "asset": "decor_clover",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         124,
         440
@@ -1042,7 +1039,7 @@
     {
       "id": "perimeter_right_01",
       "asset": "decor_clover",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2036,
         440
@@ -1065,7 +1062,7 @@
     {
       "id": "perimeter_left_02",
       "asset": "decor_flower",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         152,
         660
@@ -1088,7 +1085,7 @@
     {
       "id": "perimeter_right_02",
       "asset": "decor_flower",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2008,
         660
@@ -1111,7 +1108,7 @@
     {
       "id": "perimeter_left_03",
       "asset": "decor_pebble",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         96,
         880
@@ -1134,7 +1131,7 @@
     {
       "id": "perimeter_right_03",
       "asset": "decor_pebble",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2064,
         880
@@ -1157,7 +1154,7 @@
     {
       "id": "perimeter_left_04",
       "asset": "decor_twig",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         124,
         1100
@@ -1180,7 +1177,7 @@
     {
       "id": "perimeter_right_04",
       "asset": "decor_twig",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2036,
         1100
@@ -1203,7 +1200,7 @@
     {
       "id": "perimeter_left_05",
       "asset": "decor_mushroom",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         152,
         1320
@@ -1226,7 +1223,7 @@
     {
       "id": "perimeter_left_06",
       "asset": "decor_tuft",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         96,
         1540
@@ -1249,7 +1246,7 @@
     {
       "id": "perimeter_right_06",
       "asset": "decor_tuft",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2064,
         1540
@@ -1270,32 +1267,9 @@
       ]
     },
     {
-      "id": "perimeter_left_07",
-      "asset": "decor_clover",
-      "status": "style_sample",
-      "worldGround": [
-        124,
-        1760
-      ],
-      "sourcePivot": [
-        128,
-        224
-      ],
-      "scale": 0.5,
-      "rotationDeg": 0,
-      "exclusionRadiusWorld": 90,
-      "drawOrder": 10,
-      "boundsPx": [
-        56,
-        128,
-        192,
-        228
-      ]
-    },
-    {
       "id": "perimeter_right_07",
       "asset": "decor_clover",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2036,
         1760
@@ -1316,32 +1290,9 @@
       ]
     },
     {
-      "id": "perimeter_left_08",
-      "asset": "decor_flower",
-      "status": "style_sample",
-      "worldGround": [
-        152,
-        1980
-      ],
-      "sourcePivot": [
-        128,
-        224
-      ],
-      "scale": 0.5,
-      "rotationDeg": 0,
-      "exclusionRadiusWorld": 90,
-      "drawOrder": 10,
-      "boundsPx": [
-        56,
-        128,
-        192,
-        228
-      ]
-    },
-    {
       "id": "perimeter_right_08",
       "asset": "decor_flower",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2008,
         1980
@@ -1364,7 +1315,7 @@
     {
       "id": "perimeter_left_09",
       "asset": "decor_pebble",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         96,
         2200
@@ -1387,7 +1338,7 @@
     {
       "id": "perimeter_right_09",
       "asset": "decor_pebble",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2064,
         2200
@@ -1410,7 +1361,7 @@
     {
       "id": "perimeter_left_10",
       "asset": "decor_twig",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         124,
         2420
@@ -1433,7 +1384,7 @@
     {
       "id": "perimeter_right_10",
       "asset": "decor_twig",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2036,
         2420
@@ -1456,7 +1407,7 @@
     {
       "id": "perimeter_right_11",
       "asset": "decor_mushroom",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2008,
         2640
@@ -1479,7 +1430,7 @@
     {
       "id": "perimeter_left_12",
       "asset": "decor_tuft",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         96,
         2860
@@ -1502,7 +1453,7 @@
     {
       "id": "perimeter_right_12",
       "asset": "decor_tuft",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2064,
         2860
@@ -1525,7 +1476,7 @@
     {
       "id": "perimeter_left_13",
       "asset": "decor_clover",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         124,
         3080
@@ -1548,7 +1499,7 @@
     {
       "id": "perimeter_left_14",
       "asset": "decor_flower",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         152,
         3300
@@ -1569,32 +1520,9 @@
       ]
     },
     {
-      "id": "perimeter_right_14",
-      "asset": "decor_flower",
-      "status": "style_sample",
-      "worldGround": [
-        2008,
-        3300
-      ],
-      "sourcePivot": [
-        128,
-        224
-      ],
-      "scale": 0.5,
-      "rotationDeg": 0,
-      "exclusionRadiusWorld": 90,
-      "drawOrder": 10,
-      "boundsPx": [
-        56,
-        128,
-        192,
-        228
-      ]
-    },
-    {
       "id": "perimeter_left_15",
       "asset": "decor_pebble",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         96,
         3520
@@ -1617,7 +1545,7 @@
     {
       "id": "perimeter_right_15",
       "asset": "decor_pebble",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         2064,
         3520
@@ -1640,7 +1568,7 @@
     {
       "id": "accent_0",
       "asset": "decor_flower",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         300,
         860
@@ -1663,7 +1591,7 @@
     {
       "id": "accent_1",
       "asset": "decor_clover",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         1860,
         1280
@@ -1686,7 +1614,7 @@
     {
       "id": "accent_2",
       "asset": "decor_flower",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         260,
         2700
@@ -1709,7 +1637,7 @@
     {
       "id": "accent_3",
       "asset": "decor_clover",
-      "status": "style_sample",
+      "status": "final",
       "worldGround": [
         1910,
         3000
@@ -1728,6 +1656,52 @@
         192,
         228
       ]
+    },
+    {
+      "id": "pebble_patch",
+      "asset": "landmark_pebble_patch",
+      "worldGround": [
+        460,
+        1940
+      ],
+      "boundsPx": [
+        64,
+        352,
+        448,
+        480
+      ],
+      "status": "final",
+      "sourcePivot": [
+        256,
+        480
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 280,
+      "drawOrder": 15
+    },
+    {
+      "id": "picnic_stump",
+      "asset": "landmark_picnic_stump",
+      "worldGround": [
+        1660,
+        3320
+      ],
+      "boundsPx": [
+        96,
+        300,
+        416,
+        480
+      ],
+      "status": "final",
+      "sourcePivot": [
+        256,
+        480
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "exclusionRadiusWorld": 280,
+      "drawOrder": 15
     }
   ],
   "exclusions": {
@@ -1736,7 +1710,8 @@
     "kidSceneryGapWorld": 16,
     "sceneryShape": "union_of_authored_silhouette_box_and_ground_reserve_circle",
     "kidShape": "boundsPx",
-    "rule": "Require separation from BOTH scenery world boundsPx (16 gap) and circle: nearest kid-box point distance >= exclusionRadiusWorld + 16. A ground circle alone does not enclose tall Garden roof. Ground/path reserve none."
+    "rule": "Require separation from BOTH scenery world boundsPx (16 gap) and circle: nearest kid-box point distance >= exclusionRadiusWorld + 16. A ground circle alone does not enclose tall Garden roof. Ground/path reserve none.",
+    "landmarkRadiusWorld": 280
   },
   "camera": {
     "initialCentre": [
@@ -1769,6 +1744,18 @@
     {
       "id": "perimeter_right_13",
       "reason": "ground reserve conflicts with accent_3"
+    },
+    {
+      "id": "perimeter_left_07",
+      "reason": "ground reserve conflicts with authored Part B landmark; skip rather than move or fill"
+    },
+    {
+      "id": "perimeter_left_08",
+      "reason": "ground reserve conflicts with authored Part B landmark; skip rather than move or fill"
+    },
+    {
+      "id": "perimeter_right_14",
+      "reason": "ground reserve conflicts with authored Part B landmark; skip rather than move or fill"
     }
   ]
 }

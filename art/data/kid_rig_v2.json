@@ -1,32 +1,29 @@
 {
   "schemaVersion": 2,
-  "revision": "asset-playable-a-2",
-  "status": "style_sample",
+  "revision": "asset-playable-b-2",
+  "status": "final",
   "delivery": {
-    "scope": "sample_slice",
+    "scope": "first_playable_art",
     "availableBodyFrames": [
       "stand",
       "step_left",
       "step_right",
-      "sit"
-    ],
-    "deferredBodyFrames": [
+      "sit",
       "wave_low",
       "wave_high",
       "held",
       "settle"
     ],
+    "deferredBodyFrames": [],
     "availableClips": [
       "idle",
-      "blink",
       "walk",
+      "blink",
       "look_around",
       "sit_down",
       "seated",
       "sleep",
-      "wake"
-    ],
-    "deferredClips": [
+      "wake",
       "wave",
       "pick_up",
       "held",
@@ -35,13 +32,15 @@
       "fusion",
       "discovery"
     ],
-    "deferredEffects": [
-      "shadow",
+    "deferredClips": [],
+    "availableEffects": [
       "spawn",
       "fusion",
-      "discovery"
+      "discovery",
+      "shadow"
     ],
-    "fallbackPolicy": "Use reducedMotion mapping for explicitly deferred kid clips; no generated visual art. Deferred FX disabled."
+    "deferredEffects": [],
+    "fallbackPolicy": "Use complete reducedMotion mappings when requested. Required assets must resolve; no generated visual art."
   },
   "canvas": [
     256,
@@ -425,6 +424,318 @@
               ]
             }
           }
+        },
+        "wave_low": {
+          "asset": "kid_body_round_wave_low",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                55
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                116
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                166
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                24,
+                189
+              ],
+              "rotationDeg": 60,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                199,
+                172
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "wave_high": {
+          "asset": "kid_body_round_wave_high",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                55
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                116
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                166
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                29,
+                66
+              ],
+              "rotationDeg": -75,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                199,
+                172
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "held": {
+          "asset": "kid_body_round_held",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                55
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                116
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                166
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                48,
+                171
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                199,
+                172
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "settle": {
+          "asset": "kid_body_round_settle",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                68
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                129.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.85
+              ]
+            },
+            "hand_left": {
+              "position": [
+                48.5,
+                179
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                200,
+                180
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
         }
       }
     },
@@ -740,6 +1051,318 @@
               "position": [
                 188,
                 187
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "wave_low": {
+          "asset": "kid_body_tall_wave_low",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                44
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                110
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                161
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                36,
+                187
+              ],
+              "rotationDeg": 60,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                187,
+                169
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "wave_high": {
+          "asset": "kid_body_tall_wave_high",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                44
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                110
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                161
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                39,
+                54
+              ],
+              "rotationDeg": -75,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                187,
+                169
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "held": {
+          "asset": "kid_body_tall_held",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                44
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                110
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                161
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                64,
+                165
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                187,
+                169
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "settle": {
+          "asset": "kid_body_tall_settle",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                58
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                123.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                171
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.85
+              ]
+            },
+            "hand_left": {
+              "position": [
+                65.5,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                187.5,
+                178
               ],
               "rotationDeg": 0,
               "scale": [
@@ -1071,6 +1694,318 @@
               ]
             }
           }
+        },
+        "wave_low": {
+          "asset": "kid_body_squat_wave_low",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                73
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                137
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                180
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                20,
+                195
+              ],
+              "rotationDeg": 60,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                211,
+                182
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "wave_high": {
+          "asset": "kid_body_squat_wave_high",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                73
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                137
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                180
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                26,
+                84
+              ],
+              "rotationDeg": -75,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                211,
+                182
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "held": {
+          "asset": "kid_body_squat_held",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                73
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                137
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                180
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                32,
+                178
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                211,
+                182
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "settle": {
+          "asset": "kid_body_squat_settle",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                80.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                144.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                183.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.85
+              ]
+            },
+            "hand_left": {
+              "position": [
+                33.5,
+                184
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                211.5,
+                186.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
         }
       }
     },
@@ -1386,6 +2321,318 @@
               "position": [
                 196,
                 188
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "wave_low": {
+          "asset": "kid_body_bean_wave_low",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                143,
+                58
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                121
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                124,
+                170
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                23,
+                194
+              ],
+              "rotationDeg": 60,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "wave_high": {
+          "asset": "kid_body_bean_wave_high",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                143,
+                58
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                121
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                124,
+                170
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                32,
+                66
+              ],
+              "rotationDeg": -75,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "held": {
+          "asset": "kid_body_bean_held",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                143,
+                58
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                121
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                124,
+                170
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                44,
+                178
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "settle": {
+          "asset": "kid_body_bean_settle",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                142,
+                70
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                126,
+                133.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                123.5,
+                177.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.85
+              ]
+            },
+            "hand_left": {
+              "position": [
+                44,
+                184.5
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                181.5
               ],
               "rotationDeg": 0,
               "scale": [
@@ -2823,7 +4070,7 @@
           }
         },
         {
-          "bodyFrame": "sit",
+          "bodyFrame": "settle",
           "faceState": "inherit",
           "rig": {
             "offsetPx": [
@@ -2846,6 +4093,12 @@
             "opacity": 1
           }
         }
+      ],
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
       ]
     },
     "seated": {
@@ -3051,7 +4304,7 @@
           }
         },
         {
-          "bodyFrame": "sit",
+          "bodyFrame": "settle",
           "faceState": "blink",
           "rig": {
             "offsetPx": [
@@ -3074,10 +4327,680 @@
             "opacity": 1
           }
         }
+      ],
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
       ]
+    },
+    "wave": {
+      "fps": 8,
+      "loop": false,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "wave_low",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "wave_high",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        }
+      ],
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
+      ],
+      "faceRule": "preserve_current_state_and_smirk",
+      "note": "Free left nub waves; right hand and all other attachments stay fixed."
+    },
+    "pick_up": {
+      "fps": 12,
+      "loop": false,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        }
+      ],
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
+      ]
+    },
+    "held": {
+      "fps": 4,
+      "loop": true,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              -1
+            ],
+            "rotationDeg": 0.25,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": -0.25,
+            "opacity": 1
+          }
+        }
+      ],
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
+      ],
+      "note": "Quarter-degree lean and one-pixel lift protect the tight headwear reserve; no root scaling."
+    },
+    "drop": {
+      "fps": 12,
+      "loop": false,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "settle",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        }
+      ],
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
+      ]
+    },
+    "spawn": {
+      "fps": 10,
+      "loop": false,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "settle",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 0.4
+          },
+          "effectFrame": 0
+        },
+        {
+          "bodyFrame": "held",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 0.8
+          },
+          "effectFrame": 1
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "open",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          },
+          "effectFrame": 2
+        }
+      ],
+      "effect": "spawn",
+      "layerMask": [
+        "back",
+        "body",
+        "face",
+        "front"
+      ]
+    },
+    "fusion": {
+      "fps": 12,
+      "loop": false,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "effectFrame": 0
+        },
+        {
+          "effectFrame": 1
+        },
+        {
+          "effectFrame": 2
+        },
+        {
+          "effectFrame": 3
+        }
+      ],
+      "layerMask": [
+        "effects"
+      ],
+      "effect": "fusion",
+      "onStart": "consume_parents_immediately",
+      "childClip": "spawn",
+      "childGround": "resolved_free_ground",
+      "parentConvergence": false
+    },
+    "discovery": {
+      "fps": 8,
+      "loop": false,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "effectFrame": 0
+        },
+        {
+          "effectFrame": 1
+        },
+        {
+          "effectFrame": 2
+        },
+        {
+          "effectFrame": 3
+        }
+      ],
+      "layerMask": [
+        "effects"
+      ],
+      "effect": "discovery",
+      "firstDiscoveryOnly": true,
+      "kidPose": "preserve",
+      "onComplete": "discovered_entry_toast"
     }
   },
-  "effects": {},
+  "effects": {
+    "spawn": {
+      "status": "final",
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "boundsPx": [
+        24,
+        180,
+        232,
+        232
+      ],
+      "assets": [
+        "fx_spawn_01",
+        "fx_spawn_02",
+        "fx_spawn_03"
+      ],
+      "fps": 10,
+      "loop": false,
+      "layer": "behind_kid",
+      "anchor": "event_ground",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "frames": [
+        {
+          "asset": "fx_spawn_01",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_spawn_02",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_spawn_03",
+          "opacity": 1
+        }
+      ],
+      "allowOverlap": true
+    },
+    "fusion": {
+      "status": "final",
+      "canvas": [
+        320,
+        320
+      ],
+      "sourcePivot": [
+        160,
+        288
+      ],
+      "boundsPx": [
+        12,
+        42,
+        308,
+        266
+      ],
+      "assets": [
+        "fx_fusion_01",
+        "fx_fusion_02",
+        "fx_fusion_03",
+        "fx_fusion_04"
+      ],
+      "fps": 12,
+      "loop": false,
+      "layer": "behind_kid",
+      "anchor": "event_ground",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "frames": [
+        {
+          "asset": "fx_fusion_01",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_fusion_02",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_fusion_03",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_fusion_04",
+          "opacity": 1
+        }
+      ],
+      "allowOverlap": true
+    },
+    "discovery": {
+      "status": "final",
+      "canvas": [
+        320,
+        320
+      ],
+      "sourcePivot": [
+        160,
+        288
+      ],
+      "boundsPx": [
+        8,
+        8,
+        312,
+        288
+      ],
+      "assets": [
+        "fx_discovery_01",
+        "fx_discovery_02",
+        "fx_discovery_03",
+        "fx_discovery_04"
+      ],
+      "fps": 8,
+      "loop": false,
+      "layer": "above_kid",
+      "anchor": "event_ground",
+      "offsetPx": [
+        0,
+        -24
+      ],
+      "frames": [
+        {
+          "asset": "fx_discovery_01",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_discovery_02",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_discovery_03",
+          "opacity": 1
+        },
+        {
+          "asset": "fx_discovery_04",
+          "opacity": 1
+        }
+      ],
+      "allowOverlap": true
+    },
+    "shadow": {
+      "status": "final",
+      "asset": "fx_shadow",
+      "canvas": [
+        128,
+        64
+      ],
+      "sourcePivot": [
+        64,
+        32
+      ],
+      "boundsPx": [
+        8,
+        16,
+        120,
+        48
+      ],
+      "anchor": "character_ground",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "layer": "below_kid",
+      "allowOverlap": true,
+      "heldOpacity": 0.45
+    }
+  },
   "reducedMotion": {
     "idle": {
       "bodyFrame": "stand",
@@ -3085,8 +5008,8 @@
       "effect": "none"
     },
     "blink": {
-      "bodyFrame": "stand",
-      "faceState": "open",
+      "kidPose": "preserve",
+      "faceState": "inherit",
       "effect": "none"
     },
     "walk": {
@@ -3142,16 +5065,18 @@
     "spawn": {
       "bodyFrame": "stand",
       "faceState": "open",
-      "effect": "none"
+      "effect": "none",
+      "opacityTransitionMs": 150
     },
     "fusion": {
       "bodyFrame": "stand",
       "faceState": "open",
-      "effect": "none"
+      "effect": "none",
+      "opacityTransitionMs": 150
     },
     "discovery": {
-      "bodyFrame": "stand",
-      "faceState": "open",
+      "kidPose": "preserve",
+      "faceState": "inherit",
       "effect": "none",
       "toast": true
     }
@@ -3167,9 +5092,10 @@
       10
     ],
     "ambientWeights": {
-      "look_around": 60,
-      "sit_down": 25,
-      "sleep": 15
+      "look_around": 50,
+      "wave": 20,
+      "sit_down": 20,
+      "sleep": 10
     },
     "seatedHoldSeconds": [
       3,
@@ -3182,11 +5108,13 @@
     "priority": [
       "consumed",
       "held",
+      "pick_up",
+      "drop",
       "spawn",
       "walk",
       "wake",
       "ambient"
     ],
-    "note": "Slice-only ambient weights omit the deferred wave; production returns to spec weights. Held uses stand fallback at resolved free point with no growth."
+    "note": "Pick-up interrupts any pose by the next presentation frame; all held/drop presentation uses a resolved free position. No procedural hop, squash, held enlargement or pop overshoot."
   }
 }

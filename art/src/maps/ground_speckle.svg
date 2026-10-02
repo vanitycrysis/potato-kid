@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>ground speckle</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-slice-1.</desc>
+  <desc>Original Potato Kid v2 authored vector sample. Status: final. Revision: v2-slice-1.</desc>
   <path d="M0 0 H256 V256 H0 Z" fill="#f4efe2"/><path d="M55 61 l5 1" fill="none" stroke="#d8d3c1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M172 52 l5 1" fill="none" stroke="#d8d3c1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M99 157 l5 1" fill="none" stroke="#d8d3c1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M207 194 l5 1" fill="none" stroke="#d8d3c1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -75,6 +75,10 @@ In response to PR #21's four art-review items, Snowman gains a coal-black top ha
 
 Agree with Claude's two remaining PR #21 findings: the shallow Raincloud read as a halo, and Picnic's tan paper peak read as a conical straw hat. Raincloud now uses the side of the existing head reserve for a deeper puffy cloud, with a flat underside and two falling drops; Picnic replaces the peak with a red checked kerchief and side knot. Required extra top reserve is **0 source px for each of Round, Tall, Squat and Bean**; D-043, engine code, every sidecar and the allocation remain unchanged. Snowman/Glassblower and all other accepted art are byte-identical to Round 2. Details and native colour/grayscale engine review are in `.codex-out/asset-playable-a-notes.md`, Round 3. These drawing choices remain subject to Claude's review and do not start Part B or create a new engineering/owner decision.
 
+## ASSET-PLAYABLE Part B art delivery (ChatGPT, 2026-10-02; Claude review pending)
+
+Complete the shared pose/clip/FX set within the existing D-043 lifetime bounds, with no extra reserve for any body and no new per-type assets under D-046. Held uses a quarter-degree lean and one-pixel lift within the approved maximum caps because headwear clearance is tight. The planned landmarks use their exact world points and 280-unit reserves; three conflicting perimeter decor instances are explicitly skipped under the existing placement rule. Approved map/GUI drawings are promoted to final after source/game-size checks. Seven unchanged historical r2 kid SVGs move to `art/history/r2/` so normal exporter cleanup retires their duplicate runtime PNGs; the delivered allocation is exactly 104 PNGs /28.03125 MiB raw. Official Patrick Hand cannot be fetched in the sandbox; no substitute or partial licence is supplied, and Claude has the exact official fetch/provenance handoff. These are art choices within D-031/D-044..D-046, not new owner decisions. Full audit and integration fields: `.codex-out/asset-playable-b-notes.md`.
+
 ## Open questions
 
 | ID | For | Question |
@@ -88,3 +92,7 @@ Agree with Claude's two remaining PR #21 findings: the shallow Raincloud read as
 | Agent | Used by | Purpose |
 |---|---|---|
 | Codex CLI (Claude Code `codex` plugin) | Claude | **Fills the ChatGPT role** under D-027: art/audio owner and reviewer of Claude's code. `/codex:rescue` for tasks, `/codex:review` for PR reviews. Worktree `../potato-kid-chatgpt`. |
+
+## ASSET-PLAYABLE Part B round 2 art revision (ChatGPT, 2026-10-02; Claude review pending)
+
+Agree with all three PR #23 findings. Discovery now bursts around and above the child; fusion uses two broad curls that join above the child, visibly distinct from low spawn puffs. Eight shared FX canvases become 320 x 320, raising the unchanged 104-image allocation to 29.15625 MiB raw and leaving 2.84375 MiB under the 32 MiB ceiling. Exporter family dimensions are adjusted only for those two FX families. Wave low/high swing the existing free left nub vertically within every original lifetime box: Round/Tall/Squat/Bean each need 0 extra source px. Accepted poses, faces, costumes, landmarks, map, GUI, spawn and shadow remain byte-identical. No engine code, animation timing or recipe metadata changes. Full field table, preservation evidence and native-size review are in .codex-out/asset-playable-b-notes.md, Round 2. This remains subject to Claude's critical art review.
