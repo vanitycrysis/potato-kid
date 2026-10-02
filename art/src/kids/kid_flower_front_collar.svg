@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>flower costume: collar</title>
-  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-1. D-044/D-045. No baked text or anatomy.</desc>
-  <path d="M128 170 Q112 153 94 164 Q105 183 128 176 Q146 180 159 160 Q138 155 128 170 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-1 round 2. D-044/D-045. No baked text or anatomy.</desc>
+  <path d="M126 205 Q106 211 97 192 Q118 187 126 205 Q135 185 155 190 Q151 209 126 205 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M126 205 L127 212" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
