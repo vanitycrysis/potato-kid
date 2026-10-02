@@ -323,11 +323,15 @@ export class Hud {
     this.feedback.append(next.node);
   }
 
-  /** Takes the visible card off screen, back to the front of the queue, time kept. */
+  /**
+   * Takes the visible card off screen and back into the queue, time kept: first in line,
+   * but a reward stays behind any waiting refusal (GUI_MVP §9; Codex review, PR #33).
+   */
   private unshow(): void {
     if (!this.showing) return;
     this.showing.node.remove();
-    this.queue.unshift(this.showing);
+    const at = this.showing.item.kind === 'refusal' ? 0 : this.queue.findIndex((c) => c.item.kind !== 'refusal');
+    this.queue.splice(at < 0 ? this.queue.length : at, 0, this.showing);
     this.showing = null;
   }
 

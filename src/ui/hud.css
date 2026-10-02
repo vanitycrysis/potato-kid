@@ -443,6 +443,12 @@
 .readonly-shield {
   display: none;
 }
+/* Read-only: the world is frozen, so the HUD and feedback carry nothing; only the banner
+   and the notice remain, and the notice is never covered (Codex review, PR #33). */
+:root[data-readonly='true'] .hud,
+:root[data-readonly='true'] .feedback {
+  display: none;
+}
 :root[data-readonly='true'] .readonly-shield {
   position: fixed;
   inset: 0;

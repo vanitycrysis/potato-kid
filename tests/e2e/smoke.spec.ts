@@ -488,10 +488,12 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a feedback card never takes the last 44 px of play band (568x320)', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 320 });
     await boot(page, '?seed=3&debug=1&calm=1');
-    // Both on screen in this short view (the camera is centred on (540, 1100)).
-    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 300, 1150), b: window.__PK__!.debugAdd!('water', 800, 1150) }));
-    await page.waitForTimeout(200);
-    await dropOnto(page, a, b);
+    // The pair is placed touching, so it fuses on the next step: this test is about the
+    // play band, not dragging (a drag in so short a band would edge-scroll).
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 500, 1150);
+      window.__PK__!.debugAdd!('water', 560, 1150);
+    });
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
     for (let i = 0; i < 8; i++) {
       const band = await page.evaluate(() => document.querySelector('.tray')!.getBoundingClientRect().top - document.querySelector('.top-stack')!.getBoundingClientRect().bottom);
@@ -588,6 +590,51 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
       await page.waitForTimeout(150);
       expect(await band(page)).toBeGreaterThanOrEqual(44);
     }
+  });
+
+  test('a requeued reward never blocks a waiting refusal (640x360)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b, c } = await page.evaluate(() => ({
+      a: window.__PK__!.debugAdd!('plain', 300, 1150),
+      b: window.__PK__!.debugAdd!('water', 800, 1150),
+      // Low on screen, well clear of the feedback card, so pressing it really holds it.
+      c: window.__PK__!.debugAdd!('fire', 1300, 1700),
+    }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    // Hold a kid (feedback freezes), queue a refusal, then a banner that settles the drag
+    // and leaves room for the short refusal but not the reward card.
+    const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 20, p.y - 30, { steps: 3 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' }));
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await page.mouse.up();
+    await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+
+  test('the read-only notice is never covered (568x320)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.addInitScript(() => {
+      localStorage.setItem('CapacitorStorage.potato-kid/slotA', JSON.stringify({ schema: 99, revision: 5, savedAt: 1, state: {}, checksum: 'x' }));
+    });
+    await page.goto('/?seed=3&calm=1');
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    // Overlap by geometry: the HUD has pointer-events: none, so hit-testing can't see it.
+    const covered = await page.evaluate(() => {
+      const n = document.querySelector('.readonly-notice')!.getBoundingClientRect();
+      return [...document.querySelectorAll('.top-stack > *, .tray, .dex-button')].some((e) => {
+        const r = e.getBoundingClientRect();
+        const shown = getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0;
+        return shown && r.left < n.right && r.right > n.left && r.top < n.bottom && r.bottom > n.top;
+      });
+    });
+    expect(covered).toBe(false);
   });
 });
 
