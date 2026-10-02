@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
+import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { MapData } from '../content/artData';
 
 /**
@@ -16,12 +16,29 @@ export function buildMap(map: MapData, textures: Map<string, Texture>): Containe
   };
   const size = map.tileSize;
 
-  // Ground: explicit cells. The world isn't a whole number of tiles, so the final column
-  // and row are clipped by a mask at the world edge.
+  // Ground: explicit cells. The world isn't a whole number of tiles, so cells on the
+  // final column/row use a cropped texture frame: exact clipping with no per-frame mask
+  // (a stencil mask cost a lot on software renderers).
+  const [w, h] = map.worldSize;
   const ground = new Container();
+  const cropped = new Map<string, Texture>();
+  const tileFor = (asset: string, cw: number, ch: number): Texture => {
+    const full = tex(asset);
+    if (cw >= size && ch >= size) return full;
+    const key = `${asset}:${cw}x${ch}`;
+    let t = cropped.get(key);
+    if (!t) {
+      t = new Texture({ source: full.source, frame: new Rectangle(full.frame.x, full.frame.y, cw, ch) });
+      cropped.set(key, t);
+    }
+    return t;
+  };
   for (const c of map.groundCells) {
-    const s = new Sprite(tex(c.asset));
-    s.position.set(c.col * size, c.row * size);
+    const x = c.col * size;
+    const y = c.row * size;
+    if (x >= w || y >= h) continue;
+    const s = new Sprite(tileFor(c.asset, Math.min(size, w - x), Math.min(size, h - y)));
+    s.position.set(x, y);
     ground.addChild(s);
   }
   // Paths: rotated about the tile centre, never the kid ground anchor.
@@ -33,12 +50,7 @@ export function buildMap(map: MapData, textures: Map<string, Texture>): Containe
     s.rotation = (p.rotationDeg * Math.PI) / 180;
     ground.addChild(s);
   }
-  const [w, h] = map.worldSize;
-  // Rectangular geometry mask: a sprite mask would read the tile's colour channel and make
-  // the ground partly transparent (Codex review, PR #14).
-  const clip = new Graphics().rect(0, 0, w, h).fill(0xffffff);
-  ground.mask = clip;
-  root.addChild(ground, clip);
+  root.addChild(ground);
 
   // Scenery instances in authored draw order (then by ground y), anchored at their pivots.
   const scenery = [...map.instances].sort((a, b) => a.drawOrder - b.drawOrder || a.worldGround[1] - b.worldGround[1]);
