@@ -1,8 +1,8 @@
 # Art and audio plan
 
-Author: ChatGPT. Art direction v2 specification, 2026-10-01. Tasks ART-V2-SPEC / ART-V2-SLICE. **Claude accepted the spec; ChatGPT accepts his silhouette-box counterproposal. The v2 sample slice is authored and awaiting exporter/rendered review.** PR #8 retains the historical r2 sources. Gate 2 remains pending (D-042).
+Author: ChatGPT. Art direction v2 specification, 2026-10-01; ASSET-PLAYABLE Part A, 2026-10-02. **Gate 2 is approved under the owner's D-044 handoff. The 16 delivered body poses, 12 face states and all 33 costume components are final art, pending Claude's Part A review.** The rig still declares the partial pose/clip delivery; Part B remains deferred. PR #8 retains the historical r2 sources. Claude records D-044..D-046 in DECISIONS.md.
 
-Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md` and D-036..D-042 in `.codex-out/decisions-gate2.md`. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. Cream fill is approved; revised samples still need gate 2. ChatGPT authors all visual work, including placeholders and motion data. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
+Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; this delivery finishes only the existing 16. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 
 ## Direction and persistent individuality
 
@@ -24,11 +24,11 @@ Map a source endpoint to world with `worldGround + (endpoint - [128,224]) * (180
 | Face ID / weight | Eyes relative to face-centre | Treatment |
 | --- | --- | --- |
 | classic / 40 | (-40,0), (40,0), dots radius 3.75 | Familiar nearly flat smirk |
-| wide / 25 | (-46,0), (46,1), radius 3.75 | Slightly vacant, wider spacing |
-| crooked / 25 | (-37,-3), (42,3), radius 3.75 | One eye higher, smirk tips up 2 px |
-| dreamy / 10 | (-42,1), (37,-2), radius 3.25 | Small dots, mouth shifted 3 px right |
+| wide / 25 | (-54,6), (54,6), radius 3.75 | Approved v2-faces-2: visibly wide spacing, smirk lower |
+| crooked / 25 | (-34,-8), (38,10), radius 3.75 | Approved v2-faces-2: visibly lopsided eyes and tilted small smirk |
+| dreamy / 10 | (-22,5), (22,5), radius 3.25 | Part A: close-set low dots, smirk at (119,130)..(137,127); no lid/brow strokes |
 
-Each has open, blink (two short ticks) and asleep (two shallow arcs) states: 12 face textures. Preserve the mouth unchanged through blinking, rather than squashing the entire face. Source face pivot (128,116); body-frame attachments position it. Wide must fit Tall too. Size choices 0.90 / 1.00 / 1.10, weights 25 / 50 / 25; transform every layer uniformly about ground and scale both collision-box axes by the same factor.
+Each has open, blink (two short ticks) and asleep (two shallow arcs) states: 12 final face textures. Dreamy's ticks/arcs retain its close spacing and low position; its mouth is identical across all three states. Preserve the mouth unchanged through blinking, rather than squashing the entire face. Source face pivot (128,116); body-frame attachments position it. Wide must fit Tall too. Size choices 0.90 / 1.00 / 1.10, weights 25 / 50 / 25; transform every layer uniformly about ground and scale both collision-box axes by the same factor.
 
 ## Pose and animation format
 
@@ -132,7 +132,7 @@ Load neither legacy map plate/shared aliases nor flattened portraits, launch mas
 
 ChatGPT authors `art/data/kid_rig_v2.json`, schemaVersion 2, with canvas, ground anchor, world canvas size, weighted appearance, bodies/frames/attachments/boundsPx, faces/states/pivots, costumes/components/pivots/fitByBody/status, clips/fps/loop/frames/clip maxima, effects and reduced-motion alternatives. See `.codex-out/art-v2-spec-notes.md` for a concrete JSON subset and transform order. Claude generates runtime paths/mappings from validated exports; no hand-maintained runtime manifest. Source coordinates remain authoritative if an atlas trims alpha; record trim offsets without changing pivots.
 
-New checks required in `npm run art:export` (current exporter only knows legacy shared layers/map):
+Exporter acceptance targets below: the current exporter recognizes v2 families and validates source padding/coverage/native SVG copying. Part A supplies independent transformed alpha and vector checks in `.codex-out/`; full integration of these targets remains Claude's pipeline work.
 
 1. Recognize body/frame, face/state, back/front component, ground/path/decor/landmark families and SVG-only UI. Validate unique names/IDs, legal roster references, source sizes/viewBoxes, required attachments, finite numbers, positive scales/fps/weights, complete frames/clips, and source existence. Missing optional layers have no empty files; missing required assets fail.
 2. Validate opaque body interiors and ground, nonempty layers, alpha/padding; transform all allowed body/face/costume/pose combinations, checking face obstruction, >=8 px composed padding, boundsPx envelopes and interpolation extrema. Each clip box contains its transformed frames; the body lifetime box contains every clip box. Exact ground anchor is invariant. Reject costume fit/rotation clipping, not merely source padding.
@@ -144,7 +144,9 @@ Manual review still judges reference character, bigger Fire, face readability, c
 
 ## Delivery and gates
 
-Claude accepted technical fit, including his silhouette-box revision. The authored sample slice now provides four-body/four-face sheets, bigger Fire, R1 costume fit, a pose strip, tiled garden sample, GUI mockups and all 12 missing types' placeholder components. Claude reviews, then presents revised samples for owner **gate 2**, still pending. Full final roster/animation production follows approval. Gate 3 remains first playable on the owner's phone; gate 4 remains MVP before polish/extra content. Preserve provenance for every source/export, references/tool/version/licence/revision. Source SVG/JSON sample art is now delivered; runtime export/engine integration remain Claude's work.
+Claude accepted technical fit, including his silhouette-box revision; the owner approved gate 2 on 2026-10-02 (D-044 handoff). ASSET-PLAYABLE Part A replaces the 27 placeholder components in place, removes Dreamy's extra strokes and promotes delivered Plain/Fire/Water/Firefighter/body/face sources to final. Round 2 addresses Claude's four art review points: Snowman gains a coal-black top hat, Raincloud a separated white cloud with rain above the face, Picnic one paper peak, and Glassblower raised diagonal goggles and a larger hand prop. Snowman's existing rear component now carries the hat and follows head_top at [128,55] with the established headwear fits, so it survives sitting without torso compression/occlusion. This is the only attachment/pivot/fit exception; allocation, layer order, filenames, all bounds and clips stay unchanged. Snowman's front buttons slot still draws the lower snow suit; Sundae's front rim slot draws the lip/cup/foot. Firefighter's nozzle artwork retains its 6 source px shift to clear seated Wide on Bean. See `.codex-out/asset-playable-a-notes.md` for checks, game-size/grayscale judgments and scale concerns. Part B's poses, event clips, FX, landmarks and bundled font remain untouched. The rig's root `style_sample` / `sample_slice` delivery markers remain historical scope markers; completed body/frame/face/costume/component statuses are `final`. Claude reviews Part A before merge. Gate 3 remains first playable on the owner's phone; gate 4 remains MVP before extra content. Preserve provenance for every source/export, references/tool/version/licence/revision.
+
+Round 3 supersedes only Round 2's Raincloud/Picnic drawings: Raincloud uses a deeper muted sage cloud with unequal puffs and a flat underside, offset above the right crown within the current reserve; Picnic wears a red checked fabric kerchief with a side knot and short floppy ends. The existing cloud/drop/headwear slots and every rig value remain unchanged. Extra top reserve required, in absolute source pixels: Round 0, Tall 0, Squat 0, Bean 0. Snowman and Glassblower are accepted and retain their exact Round 2 sources/exports. Native engine colour/grayscale review and preservation checks are recorded in the notes, Round 3. This is still Part A only.
 
 ## Audio production and handoff
 

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid lantern front cap</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M99 71 L99 42 L147 41 L151 72 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M93 40 L124 28 L153 39 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M95 72 L156 72" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M113 29 C105 13 140 13 137 29" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M99 72 L100 40 L149 40 L153 72 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M93 39 L123 27 L154 39 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M112 43 L112 68 M140 43 L141 69" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M125 65 C115 60 121 55 125 49 C127 56 135 61 125 65 Z" fill="#fff1d5" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/><path d="M95 73 L157 73" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid picnic front bib</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M108 151 L149 151 L155 192 L105 192 Z" fill="#d5b9a5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M109 171 L152 171 M129 154 L129 190" fill="none" stroke="#bd655b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M108 150 Q128 153 149 150 L155 193 Q128 198 104 191 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M110 170 L151 170 M128 155 L128 191" fill="none" stroke="#bd655b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M109 170 L151 170 M128 155 L128 191" fill="none" stroke="#d5b9a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

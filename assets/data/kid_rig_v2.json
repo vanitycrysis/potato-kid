@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "v2-faces-2",
+  "revision": "asset-playable-a-2",
   "status": "style_sample",
   "delivery": {
     "scope": "sample_slice",
@@ -106,7 +106,7 @@
   },
   "bodies": {
     "round": {
-      "status": "style_sample",
+      "status": "final",
       "boundsPx": [
         16,
         12,
@@ -116,7 +116,7 @@
       "frames": {
         "stand": {
           "asset": "kid_body_round_stand",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             16,
             12,
@@ -194,7 +194,7 @@
         },
         "step_left": {
           "asset": "kid_body_round_step_left",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             16,
             12,
@@ -272,7 +272,7 @@
         },
         "step_right": {
           "asset": "kid_body_round_step_right",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             16,
             12,
@@ -350,7 +350,7 @@
         },
         "sit": {
           "asset": "kid_body_round_sit",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             16,
             12,
@@ -429,7 +429,7 @@
       }
     },
     "tall": {
-      "status": "style_sample",
+      "status": "final",
       "boundsPx": [
         24,
         8,
@@ -439,7 +439,7 @@
       "frames": {
         "stand": {
           "asset": "kid_body_tall_stand",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             24,
             8,
@@ -517,7 +517,7 @@
         },
         "step_left": {
           "asset": "kid_body_tall_step_left",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             24,
             8,
@@ -595,7 +595,7 @@
         },
         "step_right": {
           "asset": "kid_body_tall_step_right",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             24,
             8,
@@ -673,7 +673,7 @@
         },
         "sit": {
           "asset": "kid_body_tall_sit",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             24,
             8,
@@ -752,7 +752,7 @@
       }
     },
     "squat": {
-      "status": "style_sample",
+      "status": "final",
       "boundsPx": [
         8,
         26,
@@ -762,7 +762,7 @@
       "frames": {
         "stand": {
           "asset": "kid_body_squat_stand",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             8,
             26,
@@ -840,7 +840,7 @@
         },
         "step_left": {
           "asset": "kid_body_squat_step_left",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             8,
             26,
@@ -918,7 +918,7 @@
         },
         "step_right": {
           "asset": "kid_body_squat_step_right",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             8,
             26,
@@ -996,7 +996,7 @@
         },
         "sit": {
           "asset": "kid_body_squat_sit",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             8,
             26,
@@ -1075,7 +1075,7 @@
       }
     },
     "bean": {
-      "status": "style_sample",
+      "status": "final",
       "boundsPx": [
         12,
         14,
@@ -1085,7 +1085,7 @@
       "frames": {
         "stand": {
           "asset": "kid_body_bean_stand",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             12,
             14,
@@ -1163,7 +1163,7 @@
         },
         "step_left": {
           "asset": "kid_body_bean_step_left",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             12,
             14,
@@ -1241,7 +1241,7 @@
         },
         "step_right": {
           "asset": "kid_body_bean_step_right",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             12,
             14,
@@ -1319,7 +1319,7 @@
         },
         "sit": {
           "asset": "kid_body_bean_sit",
-          "status": "style_sample",
+          "status": "final",
           "boundsPx": [
             12,
             14,
@@ -1400,7 +1400,7 @@
   },
   "faces": {
     "classic": {
-      "status": "style_sample",
+      "status": "final",
       "sourcePivot": [
         128,
         116
@@ -1412,7 +1412,7 @@
       }
     },
     "wide": {
-      "status": "style_sample",
+      "status": "final",
       "sourcePivot": [
         128,
         116
@@ -1424,7 +1424,7 @@
       }
     },
     "crooked": {
-      "status": "style_sample",
+      "status": "final",
       "sourcePivot": [
         128,
         116
@@ -1436,7 +1436,7 @@
       }
     },
     "dreamy": {
-      "status": "style_sample",
+      "status": "final",
       "sourcePivot": [
         128,
         116
@@ -1450,15 +1450,15 @@
   },
   "costumes": {
     "plain": {
-      "status": "style_sample",
+      "status": "final",
       "components": []
     },
     "fire": {
-      "status": "style_sample",
+      "status": "final",
       "components": [
         {
           "asset": "kid_fire_back_flame",
-          "status": "style_sample",
+          "status": "final",
           "layer": "back",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1486,7 +1486,7 @@
         },
         {
           "asset": "kid_fire_front_crest",
-          "status": "style_sample",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1515,11 +1515,11 @@
       ]
     },
     "water": {
-      "status": "style_sample",
+      "status": "final",
       "components": [
         {
           "asset": "kid_water_front_hood",
-          "status": "style_sample",
+          "status": "final",
           "layer": "front",
           "attachTo": "face_centre",
           "sourcePivot": [
@@ -1548,11 +1548,11 @@
       ]
     },
     "firefighter": {
-      "status": "style_sample",
+      "status": "final",
       "components": [
         {
           "asset": "kid_firefighter_back_hose",
-          "status": "style_sample",
+          "status": "final",
           "layer": "back",
           "attachTo": "torso",
           "sourcePivot": [
@@ -1580,7 +1580,7 @@
         },
         {
           "asset": "kid_firefighter_front_helmet",
-          "status": "style_sample",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1608,7 +1608,7 @@
         },
         {
           "asset": "kid_firefighter_front_nozzle",
-          "status": "style_sample",
+          "status": "final",
           "layer": "front",
           "attachTo": "hand_right",
           "sourcePivot": [
@@ -1637,11 +1637,11 @@
       ]
     },
     "snow": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_snow_front_beanie",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1669,7 +1669,7 @@
         },
         {
           "asset": "kid_snow_front_scarf",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -1698,11 +1698,11 @@
       ]
     },
     "chef": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_chef_front_hat",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1730,7 +1730,7 @@
         },
         {
           "asset": "kid_chef_front_pan",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "hand_right",
           "sourcePivot": [
@@ -1759,16 +1759,16 @@
       ]
     },
     "snowman": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_snowman_back_snowball",
-          "status": "placeholder",
+          "status": "final",
           "layer": "back",
-          "attachTo": "torso",
+          "attachTo": "head_top",
           "sourcePivot": [
             128,
-            166
+            55
           ],
           "fitByBody": {
             "round": [
@@ -1776,12 +1776,12 @@
               1
             ],
             "tall": [
-              0.86,
-              0.93
+              0.92,
+              0.84
             ],
             "squat": [
               1.08,
-              0.84
+              0.94
             ],
             "bean": [
               1,
@@ -1791,7 +1791,7 @@
         },
         {
           "asset": "kid_snowman_front_buttons",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -1820,11 +1820,11 @@
       ]
     },
     "steam": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_steam_front_vapour",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1853,11 +1853,11 @@
       ]
     },
     "hero": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_hero_back_cape",
-          "status": "placeholder",
+          "status": "final",
           "layer": "back",
           "attachTo": "torso",
           "sourcePivot": [
@@ -1885,7 +1885,7 @@
         },
         {
           "asset": "kid_hero_front_medal",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -1914,11 +1914,11 @@
       ]
     },
     "sundae": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_sundae_back_bowl",
-          "status": "placeholder",
+          "status": "final",
           "layer": "back",
           "attachTo": "torso",
           "sourcePivot": [
@@ -1946,7 +1946,7 @@
         },
         {
           "asset": "kid_sundae_front_cherry",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -1974,7 +1974,7 @@
         },
         {
           "asset": "kid_sundae_front_rim",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -2003,11 +2003,11 @@
       ]
     },
     "sprout": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_sprout_front_leaves",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2035,7 +2035,7 @@
         },
         {
           "asset": "kid_sprout_front_bib",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -2064,11 +2064,11 @@
       ]
     },
     "gardener": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_gardener_front_hat",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2096,7 +2096,7 @@
         },
         {
           "asset": "kid_gardener_front_apron",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -2124,7 +2124,7 @@
         },
         {
           "asset": "kid_gardener_front_trowel",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "hand_right",
           "sourcePivot": [
@@ -2153,11 +2153,11 @@
       ]
     },
     "raincloud": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_raincloud_back_cloud",
-          "status": "placeholder",
+          "status": "final",
           "layer": "back",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2185,7 +2185,7 @@
         },
         {
           "asset": "kid_raincloud_front_drop",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2214,11 +2214,11 @@
       ]
     },
     "glassblower": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_glassblower_front_goggles",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2246,7 +2246,7 @@
         },
         {
           "asset": "kid_glassblower_front_pipe",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "hand_right",
           "sourcePivot": [
@@ -2275,11 +2275,11 @@
       ]
     },
     "lantern": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_lantern_back_glow",
-          "status": "placeholder",
+          "status": "final",
           "layer": "back",
           "attachTo": "torso",
           "sourcePivot": [
@@ -2307,7 +2307,7 @@
         },
         {
           "asset": "kid_lantern_front_cap",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2335,7 +2335,7 @@
         },
         {
           "asset": "kid_lantern_front_star",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -2364,11 +2364,11 @@
       ]
     },
     "picnic": {
-      "status": "placeholder",
+      "status": "final",
       "components": [
         {
           "asset": "kid_picnic_front_hat",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "head_top",
           "sourcePivot": [
@@ -2396,7 +2396,7 @@
         },
         {
           "asset": "kid_picnic_front_bib",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "torso",
           "sourcePivot": [
@@ -2424,7 +2424,7 @@
         },
         {
           "asset": "kid_picnic_front_basket",
-          "status": "placeholder",
+          "status": "final",
           "layer": "front",
           "attachTo": "hand_right",
           "sourcePivot": [

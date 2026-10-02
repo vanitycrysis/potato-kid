@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid glassblower front pipe</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M187 176 L221 156" fill="none" stroke="#a8b8ae" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="225" cy="153" rx="9" ry="12" fill="#d8b576" stroke="#1a1a1a" stroke-width="5"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-2. D-044/D-045/D-046. </desc>
+  <path d="M179 181 L219 154" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M180 180 L218 154" fill="none" stroke="#a8b8ae" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M219 136 C225 129 233 136 234 147 C236 158 231 169 223 166 C214 163 211 145 219 136 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M222 140 Q218 146 220 151" fill="none" stroke="#fff1d5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid picnic front hat</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M87 69 L105 39 L127 48 L157 36 L168 68 Z" fill="#d6bd87" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M78 70 Q127 63 179 69" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-3. D-044/D-045/D-046. Current reserve, unchanged rig.</desc>
+  <path d="M80 67 C85 49 109 45 129 49 C145 50 159 60 176 63 L175 78 Q127 68 80 79 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M87 62 Q127 56 172 69" fill="none" stroke="#fff1d5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M108 50 L110 71 M139 54 L140 72" fill="none" stroke="#fff1d5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M179 64 Q190 52 203 51 Q203 64 186 73 L205 85 Q186 90 176 76 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M176 63 Q184 60 188 68 Q189 76 180 78 Q173 73 176 63 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
