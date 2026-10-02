@@ -636,5 +636,27 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     });
     expect(covered).toBe(false);
   });
+
+  test('a resize during a drag still takes a card that no longer fits off screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b, c } = await page.evaluate(() => ({
+      a: window.__PK__!.debugAdd!('plain', 250, 1500),
+      b: window.__PK__!.debugAdd!('water', 830, 700),
+      c: window.__PK__!.debugAdd!('fire', 300, 1650),
+    }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 20, p.y - 30, { steps: 3 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.waitForTimeout(300);
+    expect(await band(page)).toBeGreaterThanOrEqual(44);
+    await page.mouse.up();
+  });
 });
 

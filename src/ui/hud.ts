@@ -304,8 +304,10 @@ export class Hud {
    * queue with its remaining time. A refusal pre-empts a reward, which then resumes.
    */
   private tickFeedback(now: number, dt: number): void {
-    if (this.scene.dragging || this.save.readOnly) return;
+    // Geometry first, even mid-drag: a card that stops fitting (resize, banner) leaves at
+    // once, which only ever frees space under a held kid (Codex review, PR #33).
     if (this.showing && this.bandBelow(this.top.getBoundingClientRect().bottom) < 44) this.unshow();
+    if (this.scene.dragging || this.save.readOnly) return;
     const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
     if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
       const r = this.queue.splice(refusal, 1)[0]!;
