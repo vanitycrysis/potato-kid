@@ -101,6 +101,11 @@ const exported = [];
 // type's optional back/front overlay (ASSETS.md). A typo would otherwise export fine
 // but never be drawn (Codex review, PR #6).
 const roster = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8')).map((k) => k.id);
+// Art can precede content import (ASSET-MVP). A pre-content component must be
+// explicitly declared for that type in the authored rig; arbitrary names still fail.
+const authoredRigPath = join(DATA_SRC, 'kid_rig_v2.json');
+const authoredCostumes = existsSync(authoredRigPath)
+  ? JSON.parse(readFileSync(authoredRigPath, 'utf8')).costumes ?? {} : {};
 // v2 names (ASSETS.md): kid_body_<body>_<frame>, kid_face_<face>_<state>,
 // kid_<type>_<back|front>_<part>. Legacy r2 names stay valid during the transition.
 const KID_LEGACY_OVERLAY = /^kid_([a-z0-9_]+?)_(overlay_back|overlay_front)$/;
@@ -116,7 +121,9 @@ function kidNameProblem(name) {
   if (!m) {
     return `${name}: kid layers must be kid_body_<body>_<frame>, kid_face_<face>_<state>, kid_<type>_<back|front>_<part> (or legacy kid_plain_body/face, kid_<type>_overlay_back/front)`;
   }
-  if (!roster.includes(m[1])) return `${name}: "${m[1]}" is not a kid type in src/content/kids.json`;
+  if (!roster.includes(m[1]) && !(authoredCostumes[m[1]]?.components ?? []).some((c) => c.asset === name)) {
+    return `${name}: "${m[1]}" is not in content and this component is not declared in its art costume`;
+  }
   return null;
 }
 

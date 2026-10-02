@@ -1,5 +1,53 @@
 # Asset provenance
 
+## ASSET-MVP batch 1 (2026-10-02; Claude review pending)
+
+Author/art owner: ChatGPT/Codex. Revision `asset-mvp-1`; **20 final costumes /37 original SVG drawings**. Licence: original work for Potato Kid. Tools: hand-authored SVG paths/circles and JSON with Node.js, Playwright Chromium PNG export, original exported-PNG compositor and independent raster/vector checks. No image generation, tracing, imported artwork, samples, external fonts, baked runtime text or per-body/pose costume copies. References: all 22 supplied images inspected via `.codex-out/reference-contact-sheet.png`, approved `art/previews/ingame/types-20x9.png` and `types-20x9-gray.png`, and the accepted body/face/costume sources. References remain untouched and unembedded.
+
+| New asset ID | Original editable source | Status / revision |
+| --- | --- | --- |
+| kid_wind_front_windsock | `art/src/kids/kid_wind_front_windsock.svg` | final /asset-mvp-1 |
+| kid_stone_front_pebble | `art/src/kids/kid_stone_front_pebble.svg` | final /asset-mvp-1 |
+| kid_sail_back_sail | `art/src/kids/kid_sail_back_sail.svg` | final /asset-mvp-1 |
+| kid_sail_front_rope | `art/src/kids/kid_sail_front_rope.svg` | final /asset-mvp-1 |
+| kid_blizzard_front_snowflake | `art/src/kids/kid_blizzard_front_snowflake.svg` | final /asset-mvp-1 |
+| kid_blizzard_front_muffler | `art/src/kids/kid_blizzard_front_muffler.svg` | final /asset-mvp-1 |
+| kid_builder_front_brick | `art/src/kids/kid_builder_front_brick.svg` | final /asset-mvp-1 |
+| kid_builder_front_belt | `art/src/kids/kid_builder_front_belt.svg` | final /asset-mvp-1 |
+| kid_forge_front_anvil | `art/src/kids/kid_forge_front_anvil.svg` | final /asset-mvp-1 |
+| kid_forge_front_apron | `art/src/kids/kid_forge_front_apron.svg` | final /asset-mvp-1 |
+| kid_kite_back_kite | `art/src/kids/kid_kite_back_kite.svg` | final /asset-mvp-1 |
+| kid_kite_front_spool | `art/src/kids/kid_kite_front_spool.svg` | final /asset-mvp-1 |
+| kid_baker_front_paddle | `art/src/kids/kid_baker_front_paddle.svg` | final /asset-mvp-1 |
+| kid_baker_front_apron | `art/src/kids/kid_baker_front_apron.svg` | final /asset-mvp-1 |
+| kid_tea_front_cup | `art/src/kids/kid_tea_front_cup.svg` | final /asset-mvp-1 |
+| kid_tea_front_tag | `art/src/kids/kid_tea_front_tag.svg` | final /asset-mvp-1 |
+| kid_cocoa_front_mug | `art/src/kids/kid_cocoa_front_mug.svg` | final /asset-mvp-1 |
+| kid_cocoa_front_marshmallow | `art/src/kids/kid_cocoa_front_marshmallow.svg` | final /asset-mvp-1 |
+| kid_flower_front_blossom | `art/src/kids/kid_flower_front_blossom.svg` | final /asset-mvp-1 |
+| kid_flower_front_collar | `art/src/kids/kid_flower_front_collar.svg` | final /asset-mvp-1 |
+| kid_cactus_front_pads | `art/src/kids/kid_cactus_front_pads.svg` | final /asset-mvp-1 |
+| kid_cactus_front_pot | `art/src/kids/kid_cactus_front_pot.svg` | final /asset-mvp-1 |
+| kid_mushroom_front_cap | `art/src/kids/kid_mushroom_front_cap.svg` | final /asset-mvp-1 |
+| kid_mushroom_front_bib | `art/src/kids/kid_mushroom_front_bib.svg` | final /asset-mvp-1 |
+| kid_potter_front_jug | `art/src/kids/kid_potter_front_jug.svg` | final /asset-mvp-1 |
+| kid_potter_front_apron | `art/src/kids/kid_potter_front_apron.svg` | final /asset-mvp-1 |
+| kid_crystal_front_cluster | `art/src/kids/kid_crystal_front_cluster.svg` | final /asset-mvp-1 |
+| kid_blacksmith_front_hammer | `art/src/kids/kid_blacksmith_front_hammer.svg` | final /asset-mvp-1 |
+| kid_blacksmith_front_apron | `art/src/kids/kid_blacksmith_front_apron.svg` | final /asset-mvp-1 |
+| kid_lighthouse_front_beacon | `art/src/kids/kid_lighthouse_front_beacon.svg` | final /asset-mvp-1 |
+| kid_lighthouse_front_bib | `art/src/kids/kid_lighthouse_front_bib.svg` | final /asset-mvp-1 |
+| kid_captain_front_wheel | `art/src/kids/kid_captain_front_wheel.svg` | final /asset-mvp-1 |
+| kid_captain_front_cap | `art/src/kids/kid_captain_front_cap.svg` | final /asset-mvp-1 |
+| kid_whistle_front_pipes | `art/src/kids/kid_whistle_front_pipes.svg` | final /asset-mvp-1 |
+| kid_whistle_front_valve | `art/src/kids/kid_whistle_front_valve.svg` | final /asset-mvp-1 |
+| kid_pinwheel_front_pinwheel | `art/src/kids/kid_pinwheel_front_pinwheel.svg` | final /asset-mvp-1 |
+| kid_pinwheel_front_sash | `art/src/kids/kid_pinwheel_front_sash.svg` | final /asset-mvp-1 |
+
+Each source exports to `assets/sprites/kids/<asset ID>.png`, 256 x 256 RGBA. Exact source and PNG SHA-256, dimensions and compressed bytes are in `.codex-out/asset-mvp-1-inventory.json`; the generated files inherit source authorship/revision. Sources are reproducible with `author-asset-mvp-1.mjs`; rig metadata adds only these 20 costumes plus its revision. Its unchanged shared poses/faces/clips/accepted costumes are verified against `asset-mvp-1-baseline.json`. Review PNGs under `art/previews/roster/` reuse exports and exact authored transforms; labels are review-only system-font text. Compositor/check scripts and notes: `.codex-out/asset-mvp-1-*.mjs`, `render-asset-mvp-1.mjs`, `check-asset-mvp-1*.mjs`, `asset-mvp-1-notes.md`.
+
+Budget: 37 new PNGs /9.25 MiB raw; combined 141 PNGs /38.40625 MiB exported. ROSTER-SCALE residency/device acceptance is pending. The exporter permits a pre-content type only when its exact component is declared in that type's authored art sidecar; content remains unchanged. No git operations, commits, pushes, PR creation, merges, third-party messages or sub-agents. Claude commits/pushes unchanged as ChatGPT and reviews before merge.
+
 ## GUI-MVP (2026-10-02; Claude review pending)
 
 Original vector GUI additions and layout/copy by ChatGPT/Codex, revision `gui-mvp-1`, for Potato Kid. Tools: hand-authored SVG paths and JSON/Markdown, Node.js review composition, locally installed Playwright Chromium 153.0.8010.12 for 1× raster review and existing `npm run art:export` for native-SVG validation/copy. No image generation, third-party illustration, tracing, runtime PNG GUI or per-type portrait art. Visual reference: supplied 22-image reference contact sheet, approved GUI v2 sources/mockups and live `art/previews/ingame/types-20x9.png`; no references are embedded/traced. Review portraits reuse existing round/stand, classic/open and costume components with authored rig transforms, appearance1.00. All prior kid/map/FX/building sources and rig/map data are unchanged.
