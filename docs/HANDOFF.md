@@ -4,10 +4,10 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
 
 ## Where we are
 
-- **Waiting on the owner for check-in 3 (first playable).**
-  - It was presented at the end of this session.
-  - A debug APK built from `main` (`feebffd`) is in `C:\Users\Adria\potato-kid-gate3\apk\`, with captures alongside it.
-  - **Start the session by asking for the owner's gate-3 verdict on the S26 Ultra.**
+- **Gate 3 approved** (D-047, 2026-10-02): the first playable passes on the S26 Ultra.
+  - The animations are "good enough for how early we are"; polish comes after gate 4 (ANIM-POLISH).
+  - The owner likes the font.
+  - **Now: M3 / BUILD-MVP** (Claude) and **ROSTER-PLAN** (Codex). See "Next" below.
 - **Gate 2 was approved this session** (D-044), with two owner directions:
   - **D-045:** faces are only two dot eyes and the smirk. No brows, noses, chins or other anatomy; anything else comes from the costume.
   - **D-046:** about 500 kid types long term. The MVP ships 50–80, and the pipeline must scale (ROSTER-PLAN and ROSTER-SCALE tasks; `ENGINEERING_PLAN.md` "Roster scale").
@@ -70,7 +70,7 @@ TypeScript + PixiJS 8 + Vite + Capacitor (Android).
 - **Font:** Patrick Hand v1.003, from google/fonts `aeb9574`. A Vite plugin ships `OFL.txt` with every build.
 - **Plan:** `docs/ENGINEERING_PLAN.md` (rev. 4 + roster-scale note) has the offline, save and lifecycle contracts. Those aren't built yet.
 
-## Next, after gate 3 approval
+## Next (gate 3 is approved)
 
 1. **M3 / BUILD-MVP (Claude):**
    - currencies and passive Materials;
