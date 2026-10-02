@@ -63,6 +63,10 @@ Owner gate-2 direction D-036..D-042 is preserved in `.codex-out/decisions-gate2.
 
 In response to PR #21's four art-review items, Snowman gains a coal-black top hat; Raincloud becomes a separate near-white cloud with rain above the face; Picnic uses one paper peak; Glassblower wears raised diagonal goggles with a larger pipe/bulb. These are original costume revisions within D-044/D-045/D-046, with no Part B delivery or new anatomy. Snowman's existing rear `kid_snowman_back_snowball` component alone changes from torso to head_top, using the existing headwear pivot/fits: a torso follower would compress and hide the hat while sitting. Reusing the component keeps the same 33-component allocation and every lifetime box. All other pivots/fits/layers/motion fields remain unchanged. Full rationale and colour/grayscale game-size review: `.codex-out/asset-playable-a-notes.md`, Round 2. This records ChatGPT's art choice for review, not a new owner approval or engineering format decision.
 
+## ASSET-PLAYABLE Part A round 3 art revision (ChatGPT, 2026-10-02; Claude review pending)
+
+Agree with Claude's two remaining PR #21 findings: the shallow Raincloud read as a halo, and Picnic's tan paper peak read as a conical straw hat. Raincloud now uses the side of the existing head reserve for a deeper puffy cloud, with a flat underside and two falling drops; Picnic replaces the peak with a red checked kerchief and side knot. Required extra top reserve is **0 source px for each of Round, Tall, Squat and Bean**; D-043, engine code, every sidecar and the allocation remain unchanged. Snowman/Glassblower and all other accepted art are byte-identical to Round 2. Details and native colour/grayscale engine review are in `.codex-out/asset-playable-a-notes.md`, Round 3. These drawing choices remain subject to Claude's review and do not start Part B or create a new engineering/owner decision.
+
 ## Open questions
 
 | ID | For | Question |
