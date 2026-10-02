@@ -743,10 +743,25 @@ test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => 
     await expect(page.locator('#app')).toBeHidden();
     await expect(page.locator('.page-hint')).toBeVisible();
     await page.locator('.tray').scrollIntoViewIfNeeded();
-    await expect(page.locator('.tray-label').first()).toBeVisible();
+    // Really shown, not clipped to 1 px by the compact rule (Codex review, PR #37).
+    expect(await page.locator('.tray-label').first().evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(20);
     await page.setViewportSize({ width: 568, height: 700 });
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual' });
     await expect(page.locator('#app')).toBeVisible();
+  });
+
+  test('the HUD scroll window keeps its offset across re-measurement', async ({ page }) => {
+    await page.setViewportSize({ width: 340, height: 330 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window' });
+    await page.locator('.hud').evaluate((e) => (e.scrollTop = 40));
+    const before = await page.locator('.hud').evaluate((e) => e.scrollTop);
+    expect(before).toBeGreaterThan(0);
+    await page.setViewportSize({ width: 340, height: 332 });
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window' });
+    await page.waitForTimeout(200);
+    expect(await page.locator('.hud').evaluate((e) => e.scrollTop)).toBe(before);
   });
 });
 

@@ -236,6 +236,9 @@ export class Hud {
    */
   private layout(): void {
     const root = document.documentElement;
+    // Staying in the HUD scroll window keeps its offset; entering it starts at 0 (§3.1).
+    const wasWindow = root.dataset.hudFit === 'window';
+    const scroll = wasWindow ? this.hud.scrollTop : 0;
     const w = window.visualViewport?.width ?? window.innerWidth;
     const h = window.visualViewport?.height ?? window.innerHeight;
     root.dataset.compact = h <= 520 ? 'true' : 'false';
@@ -265,6 +268,7 @@ export class Hud {
       root.dataset.hudFit = 'window';
       this.hud.dataset.mode = this.hud.clientWidth + 16 - 32 - 6 >= 340 ? 'tworow' : 'narrow';
       this.hud.style.height = `${Math.floor(room)}px`;
+      this.hud.scrollTop = wasWindow ? scroll : 0;
       return;
     }
     // No room even for one target and the band: the world is hidden and everything flows

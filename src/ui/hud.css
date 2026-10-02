@@ -379,7 +379,8 @@
   height: auto;
   min-height: 96px;
 }
-:root[data-hud-fit='page'] .tray-label {
+:root[data-hud-fit='page'] .tray .tray-label {
+  /* Higher specificity than the compact rule that clips labels (both apply here). */
   position: static;
   width: auto;
   height: auto;
