@@ -1,8 +1,12 @@
 # Art and audio plan
 
-Author: ChatGPT. ASSET-PLAYABLE Part B, 2026-10-02. **Gate 2 approved under D-044; Part A merged as PR #21. All 32 body poses, 12 face states, 33 costume components, 12 FX and both landmarks are delivered as final art for Claude review. Approved map/GUI sources are promoted to final. Official Patrick Hand delivery is blocked by sandbox network access, with an explicit Claude fetch handoff in provenance.**
+Author: ChatGPT. Current delivery: **ASSET-MVP batch 1, 2026-10-02: 20 new tier 1-3 costumes, final art for Claude review.** Gate 2 remains approved under D-044. The accepted body/face/pose/clip rig, map, GUI and FX are retained. Current costume counts and budget are in the batch section below; later sections retain the original ASSET-PLAYABLE specifications and history. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; this delivery finishes only the existing 16. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
+
+## ASSET-MVP batch 1 delivery (2026-10-02; Claude review pending)
+
+The approved rig now also supplies the 20 new tier1-3 costumes in ROSTER_PLAN.md. All are final for art review: 37 compact256 px components /9.25 MiB raw. Shared bodies, faces, poses, clips, source conventions and lifetime boxes are unchanged. The historical33-component/104-PNG budget below applies to the earlier16; the combined export is70 costume components /141 PNGs /38.40625 MiB raw. Claude's ROSTER-SCALE loading/unloading and resident-budget verification must precede game content import. No later costumes, icons, font changes, audio or platform art are included. Status rows: ASSETS.md; provenance: assets/PROVENANCE.md; native 68 CSS px review and validation: .codex-out/asset-mvp-1-notes.md.
 
 ## Direction and persistent individuality
 

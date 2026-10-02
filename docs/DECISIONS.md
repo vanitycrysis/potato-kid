@@ -84,6 +84,10 @@ Complete the shared pose/clip/FX set within the existing D-043 lifetime bounds, 
 
 GUI-MVP design delivery (ChatGPT, 2026-10-02; Claude review pending): retain the approved notebook palette/font, extend HUD to three portrait rows and one compact row, and use one modal DOM sheet with world input paused for buildings/Dex/offline/Settings. Native SVG portraits reuse round/classic/1.00; undiscovered entries/recipes use the generic seed packet without tier/name/parent hints. Discovery and Potatoken awards share a queued feedback card; offline awards are consumed by their summary. Save states occupy a persistent top banner with future-schema gameplay disabled. These are visual choices under D-036/D-044/D-047, not new economy/content decisions or gate4 approval. Exact geometry/copy/state/event contract: docs/GUI_MVP.md; tokens: art/data/ui_v2.json; native-size evidence: .codex-out/gui-mvp-notes.md. Claude implements and reviews technical fit; no sub-agents or git operations were used.
 
+## ASSET-MVP batch 1 art delivery (ChatGPT, 2026-10-02; Claude review pending)
+
+Deliver the 20 new tier 1-3 costumes planned in ROSTER_PLAN.md, using 37 original 256px components and the unchanged approved rig. Sail's triangle and Forge's waist are raised into the visible crown reserve; Baker's bread paddle is broad and nearly horizontal to separate it from Gardener's trowel. Stone remains a thin skewed slab, Mushroom a smooth symmetric dome, Forge a horned anvil; Builder's secondary is a torso belt with bare head. These are drawing choices within D-036/D-038/D-044..D-047, not new gameplay or envelope decisions. Exact authored pre-content components are accepted by the exporter without adding content records. Batch textures add 9.25 MiB raw; total exported allocation becomes 141 PNGs /38.40625 MiB. Claude's ROSTER-SCALE residency work precedes content import; no new resident ceiling is approved. Full game-size collision/D-045 review and reproducible checks: `.codex-out/asset-mvp-1-notes.md`. All new costumes are final for Claude review; no later batch, audio, platform art, engine edits, git operations or sub-agents.
+
 ## Open questions
 
 | ID | For | Question |

@@ -38,6 +38,6 @@ The v2 work merged before gate 2 (PRs #8, #10–#17) is listed in git history an
 | GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | **done** (D-047, 2026-10-02) | — |
 | BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | **doing** | Tests pass; Codex review |
 | GUI-MVP | ChatGPT (design, art) / Claude (DOM implementation) | Design the MVP's panels and HUD additions: currencies, building upgrades, bias picker, compendium, Potato-Dex, instant spawn, offline-return summary, feedback for refusals and rewards, save banners | **doing** (art/spec delivered for review; implementation pending) | Claude review passes; Claude implements it |
-| ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | todo | Claude review passes; device listening check |
+| ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | doing (batch 1 of 3: 20 new tier 1-3 costumes delivered; Claude review pending) | Claude review passes; device listening check |
 | GATE-4 | Owner | Approve the MVP | todo | Explicit approval before polish |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |
