@@ -137,6 +137,11 @@ export class Hud {
     new ResizeObserver(measure).observe(this.top);
     measure();
     scene.listenSteps((events) => this.onStep(events));
+    // Offline catch-up can discover types; the summary reports them, so no card later
+    // should call them new (Codex review, PR #33).
+    scene.listenResume(() => {
+      for (const t of scene.game.state.discoveredKids) this.known.add(t);
+    });
     const tick = (now: number) => {
       this.render(now);
       requestAnimationFrame(tick);
@@ -144,11 +149,20 @@ export class Hud {
     requestAnimationFrame(tick);
   }
 
+  /** Kid types the feedback treats as already discovered (tests). */
+  get knownKids(): string[] {
+    return [...this.known];
+  }
+
   /** Save banners and read-only state (GUI_MVP §10), from the save coordinator. */
   setSaveStatus(status: SaveStatus): void {
     const changed = status.unsaved !== this.save.unsaved || status.recovery !== this.save.recovery || status.readOnly !== this.save.readOnly;
     this.save = status;
-    if (changed) this.renderBanners();
+    if (!changed) return;
+    // A banner shifts the HUD and the camera's limits: settle a held kid first, so it
+    // isn't displaced mid-gesture (GUI_MVP §2; Codex review, PR #33).
+    this.scene.cancelDrag();
+    this.renderBanners();
   }
 
   // --- tokens and controls --------------------------------------------------
@@ -277,19 +291,25 @@ export class Hud {
 
   /** A refusal outside a sheet takes priority: the current reward pauses, then resumes. */
   private showRefusal(item: Extract<FeedbackItem, { kind: 'refusal' }>): void {
+    const currency = item.command === 'instantSpawn' ? 'potatokens' : undefined;
+    const node = this.card(item, refusalText(item.reason, currency));
+    if (!this.fits(node)) return; // no room for it without covering the play band
     if (this.showing && this.showing.item.kind !== 'refusal') {
       this.paused = this.showing;
       this.showing.node.remove();
     } else if (this.showing) {
       this.showing.node.remove();
     }
-    const currency = item.command === 'instantSpawn' ? 'potatokens' : undefined;
-    this.showing = this.mount(item, refusalText(item.reason, currency));
+    this.showing = { item, node, remaining: FEEDBACK_MS };
+    this.feedback.append(node);
   }
 
   private tickFeedback(now: number, dt: number): void {
+    // While a kid is held, a visible card keeps its remaining time and nothing new appears
+    // (GUI_MVP §9; Codex review, PR #33).
+    if (this.scene.dragging) return;
     if (this.showing) {
-      // Timers pause on hover and focus; and while a kid is held, nothing new appears.
+      // Timers pause on hover and focus.
       if (!this.hover && !this.feedback.contains(document.activeElement)) this.showing.remaining -= dt;
       if (this.showing.remaining > 0) return;
       this.showing.node.remove();
@@ -301,17 +321,31 @@ export class Hud {
         return;
       }
     }
-    if (this.scene.dragging || this.save.readOnly) return;
+    if (this.save.readOnly) return;
     const next = this.queue[0];
     if (!next || next.notBefore > now) return;
+    const node = this.card(next.item);
+    // Only if it leaves the 44 px play band (GUI_MVP §2); otherwise it waits.
+    if (!this.fits(node)) return;
     this.queue.shift();
-    this.showing = this.mount(next.item);
+    this.showing = { item: next.item, node, remaining: FEEDBACK_MS };
+    this.feedback.append(node);
   }
 
-  private mount(item: FeedbackItem, text?: string): Showing {
-    const node = this.card(item, text);
-    this.feedback.append(node);
-    return { item, node, remaining: FEEDBACK_MS };
+  /**
+   * Whether `node` can be shown and still leave a 44 px unobscured band between the top
+   * stack and the tray (GUI_MVP §2; Codex review, PR #33). Measured off-screen first.
+   */
+  private fits(node: HTMLElement): boolean {
+    const probe = el('div', 'feedback feedback-probe');
+    probe.style.width = `${this.feedback.clientWidth || this.top.clientWidth}px`;
+    probe.append(node);
+    document.body.append(probe);
+    const height = node.getBoundingClientRect().height;
+    probe.remove();
+    const hudBottom = this.hud.getBoundingClientRect().bottom;
+    const tray = document.querySelector('.tray')?.getBoundingClientRect().top ?? window.innerHeight;
+    return tray - (hudBottom + 8 + height) >= 44;
   }
 
   private name(type: KidId): string {

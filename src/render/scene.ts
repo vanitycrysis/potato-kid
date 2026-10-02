@@ -60,6 +60,7 @@ export class MapScene {
   readonly game: Game;
   private readonly listeners = new Set<(e: GameEvent) => void>();
   private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
+  private readonly resumeListeners = new Set<(report: OfflineReport) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
   private readonly views = new Map<number, KidRigView>();
@@ -159,6 +160,18 @@ export class MapScene {
     return this.drag !== undefined;
   }
 
+  /** Calls `fn` after every offline catch-up (cold load or resume), with its report. */
+  listenResume(fn: (report: OfflineReport) => void): void {
+    this.resumeListeners.add(fn);
+  }
+
+  /** Settles any held kid now (a cancelled touch), e.g. before the GUI layout shifts. */
+  cancelDrag(): void {
+    if (!this.drag) return;
+    this.cancelActiveDrag();
+    this.stepOnce(0);
+  }
+
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
   command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>): void {
     this.pending.push(cmd);
@@ -186,6 +199,7 @@ export class MapScene {
     const report = this.game.reconcile(now);
     for (const kid of report.spawned) this.addView(kid);
     this.app.ticker.start();
+    for (const fn of this.resumeListeners) fn(report);
     return report;
   }
 

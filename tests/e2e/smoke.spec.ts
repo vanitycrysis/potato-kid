@@ -472,3 +472,76 @@ test('a save from a newer app freezes the game and asks for an update (GUI_MVP Â
   expect(await page.evaluate(() => window.__PK__!.wallet())).toEqual(before);
   expect(await page.evaluate(() => localStorage.getItem('CapacitorStorage.potato-kid/slotB'))).toBeNull();
 });
+
+/** Drags kid `a` onto kid `b` (finger below b's feet, as held kids float above the finger). */
+async function dropOnto(page: Page, a: number, b: number, release = true): Promise<void> {
+  const from = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, a);
+  await page.mouse.move(from.x, from.y - 20);
+  await page.mouse.down();
+  const to = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, b);
+  const lift = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  await page.mouse.move(to.x, to.y + lift, { steps: 10 });
+  if (release) await page.mouse.up();
+}
+
+test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
+  test('a feedback card never takes the last 44 px of play band (568x320)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // Both on screen in this short view (the camera is centred on (540, 1100)).
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 300, 1150), b: window.__PK__!.debugAdd!('water', 800, 1150) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
+    for (let i = 0; i < 8; i++) {
+      const band = await page.evaluate(() => document.querySelector('.tray')!.getBoundingClientRect().top - document.querySelector('.top-stack')!.getBoundingClientRect().bottom);
+      expect(band).toBeGreaterThanOrEqual(44);
+      await page.waitForTimeout(200);
+    }
+  });
+
+  test('a visible card keeps its time while a kid is held', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b, c } = await page.evaluate(() => ({
+      a: window.__PK__!.debugAdd!('plain', 250, 1500),
+      b: window.__PK__!.debugAdd!('water', 830, 700),
+      // Well below the feedback card, so pressing it starts a real drag.
+      c: window.__PK__!.debugAdd!('fire', 300, 1650),
+    }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    // Hold another kid for longer than a card's 2.5 s.
+    const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 30, p.y - 30, { steps: 4 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
+    await page.waitForTimeout(3200);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await page.mouse.up();
+  });
+
+  test('a save banner settles a held kid before the HUD shifts', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 300, 1500));
+    await page.waitForTimeout(150);
+    const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 40, p.y - 40, { steps: 4 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((k) => window.__PK__!.presentationOf(k)?.clip, id));
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate((k) => window.__PK__!.presentationOf(k)?.clip, id)).not.toMatch(/^(pick_up|held)$/);
+    await page.mouse.up();
+  });
+
+  test('types discovered offline are not announced as new later', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    const discovered = await page.evaluate(() => (window.__PK__!.lastOffline()?.spawned ?? []).map((k) => k.type));
+    expect(discovered.length).toBeGreaterThan(0);
+    const known = await page.evaluate(() => window.__PK__!.debugKnown!());
+    for (const t of discovered) expect(known).toContain(t);
+  });
+});

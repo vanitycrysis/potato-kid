@@ -42,6 +42,8 @@ declare global {
       debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
+      /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
+      debugKnown?: () => string[];
       /** Only with `?debug=1`: shows a save banner state (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
@@ -158,6 +160,7 @@ async function boot(): Promise<void> {
             await save();
           },
           debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
+          debugKnown: () => hud.knownKids,
         }
       : {}),
     };

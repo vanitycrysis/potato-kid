@@ -98,6 +98,13 @@
 .feedback:empty {
   display: none;
 }
+/* Off-screen measurement of a card before it may be shown (play-band check). */
+.feedback-probe {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  visibility: hidden;
+}
 
 .hud {
   position: relative;
