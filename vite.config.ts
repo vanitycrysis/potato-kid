@@ -23,7 +23,9 @@ function fontLicence(): Plugin {
 export default defineConfig({
   // Relative base so the same build works on GitHub Pages (sub-path) and inside Capacitor.
   base: './',
-  build: { target: 'es2022' },
+  // The app ships inside the APK and loads from local files, so one ~0.5 MB chunk (mostly
+  // PixiJS) costs no network time; the default 500 kB advisory doesn't apply here.
+  build: { target: 'es2022', chunkSizeWarningLimit: 1024 },
   plugins: [fontLicence()],
   test: {
     include: ['src/**/*.test.ts'],

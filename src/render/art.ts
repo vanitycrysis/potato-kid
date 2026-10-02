@@ -11,6 +11,12 @@ export function assetName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1, -'.png'.length);
 }
 
+/** The URL of an exported PNG by asset name (DOM portraits reuse the same files). */
+export function assetUrl(name: string): string | undefined {
+  const hit = Object.entries(urls).find(([path]) => assetName(path) === name);
+  return hit?.[1];
+}
+
 /** Names of all exported runtime PNGs (for the D-036 coverage check). */
 export const exportedNames = new Set(Object.keys(urls).map(assetName));
 

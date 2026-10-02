@@ -101,8 +101,11 @@ describe('building upgrades (plan §2, §3)', () => {
 });
 
 describe('bias building', () => {
-  it('only targets spawn-pool types', () => {
+  it('is locked until built (GUI_MVP §5), then only targets spawn-pool types', () => {
     const g = game();
+    expect(g.step([{ type: 'setBias', kidType: 'fire' }])).toContainEqual({ type: 'rejected', command: 'setBias', reason: 'locked' });
+    expect(g.state.biasTarget).toBeNull();
+    g.state.buildings.bias = 1;
     expect(g.step([{ type: 'setBias', kidType: 'hero' }])).toContainEqual({ type: 'rejected', command: 'setBias', reason: 'notSpawnable' });
     expect(g.state.biasTarget).toBeNull();
     expect(g.step([{ type: 'setBias', kidType: 'fire' }])).toContainEqual({ type: 'biasSet', kidType: 'fire' });
@@ -111,9 +114,9 @@ describe('bias building', () => {
 
   it('multiplies the target weight by 1 + perLevel · level', () => {
     const g = game();
-    g.step([{ type: 'setBias', kidType: 'fire' }]);
+    g.state.biasTarget = 'fire';
     const base = content.balance.spawnWeights.fire!;
-    expect(g.spawnWeights.find((w) => w.id === 'fire')!.weight).toBe(base); // not built yet
+    expect(g.spawnWeights.find((w) => w.id === 'fire')!.weight).toBe(base); // level 0: no effect
     g.state.buildings.bias = 2;
     expect(g.spawnWeights.find((w) => w.id === 'fire')!.weight).toBeCloseTo(base * (1 + 2 * e.biasWeightPerLevel));
     expect(g.spawnWeights.find((w) => w.id === 'plain')!.weight).toBe(content.balance.spawnWeights.plain);
@@ -270,5 +273,25 @@ describe('balance validation', () => {
     expect(problems).toContain('balance.economy.dexMilestones must have strictly increasing whole kid counts');
     expect(problems).toContain('balance.buildings.garden.startLevel must be 1');
     expect(problems).toContain('balance.buildings.bias.costGrowth must be a finite number >= 1');
+  });
+});
+
+describe('waiting for room (GUI_MVP §3)', () => {
+  it('is set only when a due spawn finds no free spot, and clears when one lands', () => {
+    // A world with room for exactly four default boxes (120 × 120), but capacity 40.
+    const c = testContent((x) => {
+      x.balance.spawn.intervalSeconds = 1;
+      x.balance.spawn.capacity = 40;
+    });
+    const tiny = { minX: 0, minY: 0, maxX: 250, maxY: 250 };
+    const g = new Game(c, { bounds: tiny, spawnAt: { x: 125, y: 125 } }, 7);
+    for (const [x, y] of [[60, 60], [190, 60], [60, 190], [190, 190]]) place(g, 'plain', x!, y!);
+    g.state.spawnProgress = 1;
+    expect(g.step([]).some((e) => e.type === 'spawned')).toBe(false);
+    expect(g.state.world.kids).toHaveLength(4);
+    expect(g.waitingForRoom).toBe(true);
+    g.state.world.kids.pop(); // room again
+    expect(g.step([]).some((e) => e.type === 'spawned')).toBe(true);
+    expect(g.waitingForRoom).toBe(false);
   });
 });

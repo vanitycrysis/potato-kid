@@ -59,6 +59,7 @@ interface Drag {
 export class MapScene {
   readonly game: Game;
   private readonly listeners = new Set<(e: GameEvent) => void>();
+  private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
   private readonly views = new Map<number, KidRigView>();
@@ -146,6 +147,21 @@ export class MapScene {
   /** Calls `fn` with every sim event, after the scene has handled it. */
   listen(fn: (e: GameEvent) => void): void {
     this.listeners.add(fn);
+  }
+
+  /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
+  listenSteps(fn: (events: GameEvent[]) => void): void {
+    this.stepListeners.add(fn);
+  }
+
+  /** A kid is being held: GUI feedback waits rather than covering the drag (GUI_MVP §2). */
+  get dragging(): boolean {
+    return this.drag !== undefined;
+  }
+
+  /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>): void {
+    this.pending.push(cmd);
   }
 
   /**
@@ -483,6 +499,7 @@ export class MapScene {
     for (const [id, at] of this.placing) this.prev.set(id, at);
     this.placing.clear();
     for (const e of events) this.handle(e);
+    if (events.length) for (const fn of this.stepListeners) fn(events);
   }
 
   /** Pan inertia, and edge auto-scroll while a kid is held near a screen edge. */

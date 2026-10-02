@@ -433,3 +433,42 @@ test('time away is credited once: Garden spawns and income (plan §3)', async ({
   expect(undrawn).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('Spawn now spends a Potatoken and brings a kid; when broke it sends nothing (GUI_MVP §3)', async ({ page }) => {
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  const spawn = page.locator('.hud-spawn');
+  const start = await page.evaluate(() => ({ kids: window.__PK__!.kids().length, tokens: window.__PK__!.wallet().potatokens }));
+  expect(start.tokens).toBeGreaterThan(0);
+  await spawn.click();
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(start.kids + 1);
+  expect(await page.evaluate(() => window.__PK__!.wallet().potatokens)).toBe(start.tokens - 1);
+  await expect(page.locator('.feedback')).toContainText('Kid arrived at the Garden.');
+  // Spend the rest; then the control is disabled and a tap changes nothing.
+  for (let i = 1; i < start.tokens; i++) {
+    await spawn.click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.wallet().potatokens)).toBe(start.tokens - 1 - i);
+  }
+  await expect(spawn).toHaveAttribute('aria-disabled', 'true');
+  const kids = await page.evaluate(() => window.__PK__!.kids().length);
+  await spawn.click();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(kids);
+  await expect(page.locator('.feedback')).not.toContainText('Not enough');
+  expect(errors).toEqual([]);
+});
+
+test('a save from a newer app freezes the game and asks for an update (GUI_MVP §10)', async ({ page }) => {
+  await page.addInitScript(() => {
+    // A slot written by a future schema: the save manager must go read-only, never write.
+    localStorage.setItem('CapacitorStorage.potato-kid/slotA', JSON.stringify({ schema: 99, revision: 5, savedAt: 1, state: {}, checksum: 'x' }));
+  });
+  await page.goto('/?seed=3&calm=1');
+  await page.waitForFunction(() => window.__PK__?.ready === true);
+  await expect(page.locator('.banner')).toContainText('Please update the game.');
+  await expect(page.locator('.readonly-notice')).toContainText('Your save is kept safe.');
+  await expect(page.locator('.hud-spawn')).toHaveAttribute('aria-disabled', 'true');
+  const before = await page.evaluate(() => window.__PK__!.wallet());
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => window.__PK__!.wallet())).toEqual(before);
+  expect(await page.evaluate(() => localStorage.getItem('CapacitorStorage.potato-kid/slotB'))).toBeNull();
+});
