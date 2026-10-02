@@ -236,7 +236,7 @@
       "name": "Weather Vane Kid"
     },
     {
-      "id": "hot_air_balloon",
+      "id": "balloon",
       "tier": 4,
       "name": "Balloon Kid"
     },
@@ -276,7 +276,7 @@
       "name": "Botanical Garden Kid"
     },
     {
-      "id": "midnight_garden",
+      "id": "moon_garden",
       "tier": 5,
       "name": "Moon Garden Kid"
     },
@@ -530,7 +530,7 @@
     {
       "a": "captain",
       "b": "fire",
-      "result": "hot_air_balloon"
+      "result": "balloon"
     },
     {
       "a": "captain",
@@ -570,7 +570,7 @@
     {
       "a": "lantern",
       "b": "terrarium",
-      "result": "midnight_garden"
+      "result": "moon_garden"
     },
     {
       "a": "cookie",
@@ -588,7 +588,7 @@
       "result": "harbor"
     },
     {
-      "a": "hot_air_balloon",
+      "a": "balloon",
       "b": "pinwheel",
       "result": "sky_fair"
     },

@@ -74,7 +74,25 @@ All additions use the approved shared body/face/pose rig and **1–3 components*
 
 The references' cook, snow and sleep drawings and the current types-20x9.png and types-20x9-gray.png were inspected. Existing silhouette anchors remain: flame, droplet, pom beanie, toque, rescue helmet, top hat, twin vapour curls, cape/medal, dessert bowl/cherry, leaves, straw brim, cloud, blowpipe, lantern and kerchief. Costume concepts below reserve different primary shapes; accent colour alone never distinguishes a type.
 
-Planning collision review: Tea's wide single-handled cup vs Cocoa's tall squared mug; Sundae's shallow bowl vs Soup's deep handled pot/ladle; Stone's flat pebble vs Crystal's three sharp peaks; Steam's thin curls vs Raincloud's separate lobes vs Blizzard's six-point flake; Sprout's two leaves vs Flower's five petals vs Cactus's three blunt pads vs Bonsai's two flat shelves; Greenhouse's pitched roof vs Terrarium's tall bell jar vs Snowglobe's round pedestal globe; Kite's diamond vs Sail's triangle vs Balloon's pear vs Sky Fair's gondola wheel; Pinwheel's three triangles vs Windmill's four rectangles vs Captain's small open spokes. Keep Observatory's tube as its main cue, rather than relying on another dome. Wind's sock must not resemble Snow's beanie. Kiln's dark arch must not resemble Greenhouse's light roof frame. Rescue Station's folded stretcher must read as equipment rather than Hero's cape.
+Planning collision review: Tea's wide single-handled cup vs Cocoa's tall squared mug; Sundae's shallow bowl vs Soup's deep handled pot/ladle; Stone's flat pebble vs Crystal's three sharp peaks; Steam's thin curls vs Raincloud's separate lobes vs Blizzard's six-point flake; Sprout's two leaves vs Flower's five petals vs Cactus's three blunt pads vs Bonsai's two flat shelves; Greenhouse's pitched roof vs Terrarium's tall bell jar vs Snowglobe's round pedestal globe; Kite's diamond vs Sail's triangle vs Balloon's pear vs Sky Fair's gondola wheel; Pinwheel's three triangles vs Windmill's four rectangles vs Captain's small open spokes. Keep Observatory's tube as its main cue, rather than relying on another dome. Wind's sock must not resemble Snow's beanie. Builder keeps the upright brick as its primary cue and uses a torso tool belt as its secondary; its head stays bare so Firefighter retains the raised-shield helmet silhouette. Kiln's square shoulders and bottom-open arch must differ from Greenhouse's pitched roof frame. Rescue Station's folded stretcher must read as equipment rather than Hero's cape.
+
+### Low head cap cluster
+
+Nine of the 48 new costumes place compact caps on head_top. ASSET-MVP must compare these together in grayscale with secondary props hidden, using the following outline targets. Height differences are relative within the current art envelope; no larger lifetime bounds are requested. A notch or opening must reach the contour or remain visibly open against the shared body at game size, rather than becoming a painted dark detail.
+
+| Kid / ID | Outline target and separation |
+| --- | --- |
+| Stone / `stone` | Thinnest cap: a skewed slab with blunt uneven ends, almost no rise, no projecting brim and no regular cutout. Lower and less symmetric than Mushroom. |
+| Mushroom / `mushroom` | A symmetric shallow dome, visibly higher than Stone, with wide rounded overhangs on both sides and a lifted underside. One continuous convex top, unlike Pretzel's two humps. |
+| Cookie / `cookie` | A tilted near-circle, higher relative to its width than Mushroom, with one large bite cut from the upper-right outer edge. The missing arc must survive reduction; no reliance on chocolate dots. |
+| Pretzel / `pretzel` | Two rounded upper humps separated by a deep top saddle, plus two broad open loop holes. The saddle distinguishes its outer contour from Cookie even if the holes lose contrast. |
+| Kiln / `kiln` | Square shoulders and a flat top ledge over a broad semicircular cutout open at the bottom. Thick arch legs flank the opening; no mushroom-like continuous dome or merely painted firing door. |
+| Forge / `forge` | A nearly horizontal top with a long tapered right horn, short squared left heel and a pinched waist below. Strong one-sided overhang and underside steps, unlike Kiln's centered arch. |
+| Mosaic / `mosaic` | An angular L: one taller left block drops through a single broad rectangular top step into a lower right arm. Square ends, no curves, tapered horn or narrow anvil waist. |
+| Moon Garden / `moon_garden` | A tilted crescent with two unequal pointed tips and a deep side-open concavity. A single curved spine, unlike Pretzel's paired loops or Cookie's small bite. |
+| Winter Market / `winter_market` | A very shallow straight-topped awning with square overhangs at both ends and three broad scallops along the lower edge. Repeated lower lobes distinguish it from Mushroom's smooth underside and Kiln's single opening. |
+
+Also compare this cluster with existing Firefighter, Gardener, Snowman and Picnic headwear and the other proposed caps, especially Greenhouse, Captain and Observatory. These are targets for drawing and review, not evidence that the finished silhouettes pass.
 
 **New designs have no pixels yet: their grayscale readability is a production acceptance check, not a claimed pass.** In ASSET-MVP, inspect each at ~55 CSS px in colour and grayscale alongside all prior types, then on every body/face/pose. Redraw a colliding primary cue before exporting; do not solve it by colour, extra face details, a new physique or many miniature symbols. A paper object may reuse construction methods but each Dex costume must have a distinct visible silhouette. Keep cues compact inside existing bounds, especially all rear wheel/trellis/sail designs.
 
@@ -89,7 +107,7 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `water` | 1 | Water Kid | Core & Elements | Open pointed droplet hood; muted blue; existing face_centre hood (1, retained attachment). | Spawn 16% |
 | `snow` | 1 | Snow Kid | Core & Elements | Tall pom beanie; ice blue; head_top beanie + torso scarf (2, existing). | Spawn 16% |
 | `wind` | 1 | Wind Kid | Core & Elements | Single broad windsock cap with short bent tail; pale mint; head_top windsock (1). | Spawn 12% |
-| `stone` | 1 | Stone Kid | Core & Elements | One low irregular flat pebble cap; slate; head_top pebble (1). | Spawn 10% |
+| `stone` | 1 | Stone Kid | Core & Elements | Very thin skewed pebble slab with blunt uneven ends and no brim; slate; head_top pebble (1). | Spawn 10% |
 | `chef` | 2 | Chef Kid | Kitchen & Table | Puffed toque; warm cream; head_top hat + hand_right pan (2, existing). | R02: `plain + fire` |
 | `firefighter` | 2 | Firefighter Kid | Rescue & Care | Raised-shield helmet; brick red; head_top helmet + hand_right nozzle + back hose (3, existing). | R01: `plain + water` |
 | `snowman` | 2 | Snowman Kid | Cozy & Seasons | Flat black top hat; ice blue; back hat at head_top + torso lower snow suit/buttons (2, existing). | R03: `plain + snow` |
@@ -97,8 +115,8 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `sprout` | 2 | Sprout Kid | Garden & Growing | Two unequal leaves; leaf green; head_top leaves + torso seed bib (2, existing). | R07: `water + snow` |
 | `sail` | 2 | Sail Kid | Waterside & Voyages | Compact triangular sail on a short mast; sail blue; back sail + torso rope sash (2). | R13: `wind + water` |
 | `blizzard` | 2 | Blizzard Kid | Weather & Sky | One broad six-point snowflake cap; ice blue; head_top snowflake + torso short muffler (2). | R14: `wind + snow` |
-| `builder` | 2 | Builder Kid | Craft & Workshop | One chunky rectangular brick held upright; clay orange; hand_right brick + head_top shallow hardhat (2). | R15: `plain + stone` |
-| `forge` | 2 | Forge Kid | Craft & Workshop | Squat anvil cap with one projecting horn; iron gray; head_top anvil + torso ember apron (2). | R16: `fire + stone` |
+| `builder` | 2 | Builder Kid | Craft & Workshop | One chunky rectangular brick held upright; clay orange; hand_right brick + torso tool belt (2). | R15: `plain + stone` |
+| `forge` | 2 | Forge Kid | Craft & Workshop | Squat flat-topped anvil cap with a long tapered right horn, short left heel and narrow waist; iron gray; head_top anvil + torso ember apron (2). | R16: `fire + stone` |
 | `kite` | 2 | Kite Kid | Play & Festival | Tilted diamond kite with one short bow tail; coral; back kite + hand_right spool (2). | R17: `plain + wind` |
 | `hero` | 3 | Hero Kid | Rescue & Care | Flared short cape and broad diamond medal; rescue red; back cape + torso medal (2, existing). | R05: `fire + firefighter` |
 | `sundae` | 3 | Sundae Kid | Kitchen & Table | Shallow dessert bowl and cherry; cherry red; back bowl + head_top cherry + torso rim/cup (3, existing). | R06: `chef + snowman` |
@@ -110,7 +128,7 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `cocoa` | 3 | Cocoa Kid | Kitchen & Table | Tall mug with squared handle and marshmallow block; cocoa brown; torso mug + head_top marshmallow (2). | R20: `chef + snow` |
 | `flower` | 3 | Flower Kid | Garden & Growing | Single five-petal offset blossom; dusty rose; head_top blossom + torso leaf collar (2). | R21: `sprout + water` |
 | `cactus` | 3 | Cactus Kid | Garden & Growing | Three blunt upright cactus pads; sage; head_top connected cactus cap + torso clay-pot belt (2). | R22: `sprout + fire` |
-| `mushroom` | 3 | Mushroom Kid | Garden & Growing | Wide low domed mushroom cap; ochre; head_top cap + torso short gardening bib (2). | R23: `sprout + snow` |
+| `mushroom` | 3 | Mushroom Kid | Garden & Growing | Wide symmetric shallow dome with two rounded overhangs and a lifted underside; ochre; head_top cap + torso short gardening bib (2). | R23: `sprout + snow` |
 | `potter` | 3 | Potter Kid | Craft & Workshop | Wide-mouth clay jug with one open handle; terracotta; hand_right jug + torso clay apron (2). | R24: `builder + water` |
 | `crystal` | 3 | Crystal Kid | Curiosity & Science | Three unequal sharp crystal peaks; lilac; head_top crystal cluster (1). | R25: `forge + snow` |
 | `blacksmith` | 3 | Blacksmith Kid | Craft & Workshop | Broad block hammer; iron gray; hand_right hammer + torso leather apron (2). | R26: `forge + plain` |
@@ -125,29 +143,29 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `bonsai` | 4 | Bonsai Kid | Garden & Growing | Two flat offset foliage shelves on a bent trunk; leaf green; head_top tree + torso shallow tray (2). | R33: `gardener + sprout` |
 | `terrarium` | 4 | Terrarium Kid | Garden & Growing | Tall bell-jar cap with small top knob; moss green; head_top open jar frame + torso mushroom bib (2). | R34: `mushroom + glassblower` |
 | `teapot` | 4 | Teapot Kid | Kitchen & Table | Low lid cap and single projecting teapot spout; tea green; head_top lid + torso spout wrap + back loop handle (3). | R35: `tea + potter` |
-| `cookie` | 4 | Cookie Kid | Kitchen & Table | Offset round cookie cap with one large bite notch; cocoa brown; head_top cookie + torso crumb-pocket bib (2). | R36: `baker + cocoa` |
-| `pretzel` | 4 | Pretzel Kid | Kitchen & Table | One broad crossed-loop pretzel cap; wheat gold; head_top pretzel + torso baker ribbon (2). | R37: `baker + blacksmith` |
+| `cookie` | 4 | Cookie Kid | Kitchen & Table | Tilted near-round cookie cap with one large upper-right bite notch; cocoa brown; head_top cookie + torso crumb-pocket bib (2). | R36: `baker + cocoa` |
+| `pretzel` | 4 | Pretzel Kid | Kitchen & Table | Broad crossed-loop pretzel cap with two rounded humps, a deep top saddle and two open loops; wheat gold; head_top pretzel + torso baker ribbon (2). | R37: `baker + blacksmith` |
 | `soup` | 4 | Soup Kid | Kitchen & Table | Deep handled soup pot and upright ladle; ochre; torso pot wrap + hand_right ladle (2). | R38: `mushroom + chef` |
 | `snowglobe` | 4 | Snowglobe Kid | Cozy & Seasons | Round open globe frame on a stepped pedestal; ice blue; back globe + torso pedestal/snow scene (2). | R39: `blizzard + glassblower` |
 | `ice_sculptor` | 4 | Ice Sculptor Kid | Craft & Workshop | Large triangular ice wedge on a short carving board; ice blue; hand_right ice/board + torso chisel apron (2). | R40: `snowman + potter` |
 | `weather_vane` | 4 | Weather Vane Kid | Weather & Sky | Single horizontal arrow above a short post; brass; head_top arrow/post + torso compass badge (2). | R41: `pinwheel + blacksmith` |
-| `hot_air_balloon` | 4 | Balloon Kid | Play & Festival | Small pear-shaped balloon on two short tethers; coral; back balloon + torso basket wrap (2). | R42: `captain + fire` |
+| `balloon` | 4 | Balloon Kid | Play & Festival | Small pear-shaped balloon on two short tethers; coral; back balloon + torso basket wrap (2). | R42: `captain + fire` |
 | `steamboat` | 4 | Steamboat Kid | Waterside & Voyages | Short paddle-wheel hull belt with one flat funnel; navy; torso hull/wheel + head_top funnel (2). | R43: `captain + whistle` |
 | `lifeguard` | 4 | Lifeguard Kid | Rescue & Care | Large open lifebuoy belt; rescue red; torso buoy + hand_right rescue float (2). | R44: `hero + captain` |
-| `kiln` | 4 | Kiln Kid | Craft & Workshop | Low brick arch cap with a dark firing opening; clay orange; head_top kiln arch + hand_right tile (2). | R45: `potter + forge` |
+| `kiln` | 4 | Kiln Kid | Craft & Workshop | Low brick arch cap with square shoulders, a flat top ledge and a broad bottom-open arch cutout; clay orange; head_top kiln arch + hand_right tile (2). | R45: `potter + forge` |
 | `aurora` | 4 | Aurora Kid | Weather & Sky | Short zigzag-edged light curtain rising to one side; lilac; back curtain + torso small ice pendant (2). | R46: `blizzard + crystal` |
 | `festival` | 5 | Festival Kid | Play & Festival | Short crown of three triangular pennants; coral; head_top bunting + hand_right little drum (2). | R47: `picnic + lantern` |
 | `observatory` | 5 | Observatory Kid | Curiosity & Science | Large tilted short telescope tube on a compact stand; navy; hand_right telescope + head_top low slit-dome cap (2). | R48: `greenhouse + crystal` |
 | `botanical_garden` | 5 | Botanical Garden Kid | Garden & Growing | Squared trellis arch with two large leaf tabs; leaf green; back trellis + hand_right seed tray (2). | R49: `bonsai + greenhouse` |
-| `midnight_garden` | 5 | Moon Garden Kid | Garden & Growing | One broad crescent-moon cap; lilac; head_top crescent + hand_right mushroom lamp (2). | R50: `lantern + terrarium` |
+| `moon_garden` | 5 | Moon Garden Kid | Garden & Growing | One tilted crescent-moon cap with unequal pointed tips and a deep side-open concavity; lilac; head_top crescent + hand_right mushroom lamp (2). | R50: `lantern + terrarium` |
 | `patisserie` | 5 | Patisserie Kid | Kitchen & Table | Three diminishing cake tiers with one short candle; dusty rose; head_top cake + hand_right piping bag (2). | R51: `cookie + teapot` |
-| `winter_market` | 5 | Winter Market Kid | Cozy & Seasons | Short scalloped stall awning cap; ice blue; head_top awning + torso cocoa sachet apron (2). | R52: `cocoa + snowglobe` |
+| `winter_market` | 5 | Winter Market Kid | Cozy & Seasons | Very shallow straight-topped stall awning cap with square end overhangs and three broad lower scallops; ice blue; head_top awning + torso cocoa sachet apron (2). | R52: `cocoa + snowglobe` |
 | `harbor` | 5 | Harbor Kid | Waterside & Voyages | Broad curved anchor with two flukes; sea blue; hand_right anchor + back paired mooring posts (2). | R53: `lighthouse + steamboat` |
-| `sky_fair` | 5 | Sky Fair Kid | Play & Festival | Small circular fair wheel with four box gondolas; coral; back wheel + torso ticket sash (2). | R54: `hot_air_balloon + pinwheel` |
+| `sky_fair` | 5 | Sky Fair Kid | Play & Festival | Small circular fair wheel with four box gondolas; coral; back wheel + torso ticket sash (2). | R54: `balloon + pinwheel` |
 | `rescue_station` | 5 | Rescue Station Kid | Rescue & Care | Folded A-frame rescue stretcher below shoulder level; rescue red; back stretcher + hand_right rescue torch (2). | R55: `lifeguard + lantern` |
 | `sculpture_park` | 5 | Sculpture Park Kid | Craft & Workshop | One solid carved spiral sculpture on a stepped base; ice blue; head_top spiral + torso plinth belt (2). | R56: `ice_sculptor + aurora` |
 | `windmill` | 5 | Windmill Kid | Craft & Workshop | Four broad rectangular mill sails above the crown; wheat gold; back sails/hub + hand_right grain bag (2). | R57: `weather_vane + baker` |
-| `mosaic` | 5 | Mosaic Kid | Craft & Workshop | Large stepped L-shaped tile cap; terracotta; head_top tessera cap + torso tiled apron (2). | R58: `kiln + crystal` |
+| `mosaic` | 5 | Mosaic Kid | Craft & Workshop | Stepped L-shaped tile cap with one tall left block, a broad rectangular top step and square ends; terracotta; head_top tessera cap + torso tiled apron (2). | R58: `kiln + crystal` |
 
 ## MVP recipes
 
@@ -198,7 +216,7 @@ R01–R12 are retained unchanged from the current content. Most rationales use f
 | R39 | `blizzard + glassblower -> snowglobe` | 4 | The glassworker bottles a snowstorm. |
 | R40 | `snowman + potter -> ice_sculptor` | 4 | A sculptor's shaping craft meets snow. |
 | R41 | `pinwheel + blacksmith -> weather_vane` | 4 | A metalworker makes the wind toy into a direction arrow. |
-| R42 | `captain + fire -> hot_air_balloon` | 4 | The captain pilots a craft lifted by heated air. |
+| R42 | `captain + fire -> balloon` | 4 | The captain pilots a craft lifted by heated air. |
 | R43 | `captain + whistle -> steamboat` | 4 | The captain gets a steam-powered boat and its whistle. |
 | R44 | `hero + captain -> lifeguard` | 4 | Rescue work moves to the waterfront. |
 | R45 | `potter + forge -> kiln` | 4 | The clay worker needs a firing oven. |
@@ -206,11 +224,11 @@ R01–R12 are retained unchanged from the current content. Most rationales use f
 | R47 | `picnic + lantern -> festival` | 5 | Add evening lights to a shared outdoor meal. |
 | R48 | `greenhouse + crystal -> observatory` | 5 | A glass shelter and an optical crystal suggest a telescope under a dome. |
 | R49 | `bonsai + greenhouse -> botanical_garden` | 5 | A tended collection of plants gets a glass garden. |
-| R50 | `lantern + terrarium -> midnight_garden` | 5 | A little enclosed garden gets an evening light. |
+| R50 | `lantern + terrarium -> moon_garden` | 5 | A little enclosed garden gets an evening light. |
 | R51 | `cookie + teapot -> patisserie` | 5 | Baked treats and tea become a pastry counter. |
 | R52 | `cocoa + snowglobe -> winter_market` | 5 | Hot cocoa and a snowy scene suggest a winter stall. |
 | R53 | `lighthouse + steamboat -> harbor` | 5 | A boat and its guiding beacon need a home dock. |
-| R54 | `hot_air_balloon + pinwheel -> sky_fair` | 5 | A balloon ride and spinning toy suggest a fairground wheel. |
+| R54 | `balloon + pinwheel -> sky_fair` | 5 | A balloon ride and spinning toy suggest a fairground wheel. |
 | R55 | `lifeguard + lantern -> rescue_station` | 5 | The waterfront rescuer gets a lighted base of operations. |
 | R56 | `ice_sculptor + aurora -> sculpture_park` | 5 | Cold sculptures displayed under sky lights become an outdoor exhibit. |
 | R57 | `weather_vane + baker -> windmill` | 5 | Wind direction plus the baker's grain suggests a flour mill. |
@@ -266,6 +284,6 @@ The Node check constructs a **500-node structural witness** matching every famil
 
 **Owner questions: none required for this proposal.** D-038 authorizes new kids/recipes and D-046 authorizes this MVP range. No deeper tiers, spawn-unlock mechanism, new game system or gate approval is assumed. If later playtests show six seeds cannot support discovery pacing, Claude and ChatGPT should first tune existing weights/spawn/bias/compendium tools; a proposed unlock mechanism would require a separately marked owner question.
 
-**For Claude's review:** accept/revise the 48 proposed new IDs; run the simulator on the six weights and mixed-tier graph; review retention of all current recipes; confirm ASSET-MVP and ROSTER-SCALE order; validate the data with the actual content validator on import. T5 requires a new shared tier badge in ASSET-MVP (current art has badges 1–4); high-tier badges 6–8 belong to later waves. Existing sound cues can cover these entries; no per-type audio is required. Names such as Balloon Kid and Moon Garden Kid intentionally differ from their IDs; names can change without save-ID migrations.
+**For Claude's review:** round 2 aligns Balloon Kid and Moon Garden Kid with the proposed IDs balloon and moon_garden before shipping. IDs become permanent once shipped; future display-name changes must retain shipped IDs. The round-1 structure, six seeds and recipe rules are accepted; the spawn weights remain provisional pending Claude's simulator. Review these three revisions before accepting the final IDs. T5 requires a new shared tier badge in ASSET-MVP (current art has badges 1–4); high-tier badges 6–8 belong to later waves. Existing sound cues can cover these entries; no per-type audio is required. Dex milestones beyond 16 are Claude's later import work.
 
 Import docs/roster-mvp.json by splitting kids/recipes and applying spawnWeights through Claude's balance review. Do not copy family/costume/witness metadata into src. Source balance fields other than spawnWeights are left intact for actual-validator checking. No source, art, balance file, task status or decision-log edits are included. Claude commits the sandbox edits unchanged as ChatGPT, reviews and pushes; this worktree does not run git.
