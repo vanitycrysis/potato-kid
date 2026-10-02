@@ -370,4 +370,3 @@ for (const [w, h] of [[640, 360], [568, 320]] as const) {
     expect(errors).toEqual([]);
   });
 }
-

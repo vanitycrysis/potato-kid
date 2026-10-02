@@ -47,6 +47,8 @@ interface Drag {
   y: number;
   /** Where the kid is drawn: the nearest free spot to (x, y), so it never overlaps (D-039). */
   spot: { x: number; y: number };
+  /** No free spot is visible right now: edge scrolling pauses so the last spot stays on screen. */
+  noRoom?: boolean;
 }
 
 /**
@@ -360,6 +362,10 @@ export class MapScene {
       this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
     }
     const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn, limit);
+    // A full visible area keeps the last valid spot, and updateCamera stops edge scrolling
+    // until there is room again, so the held kid can't be scrolled out of view or dropped
+    // somewhere stale (Codex review, PR #15).
+    this.drag.noRoom = !spot;
     if (spot) this.drag.spot = spot;
   }
 
@@ -451,7 +457,7 @@ export class MapScene {
       // even on short landscape screens.
       const zy = zone(bottom - top - (held ? held.bottom - held.top : 0));
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
-      if (ex || ey) {
+      if ((ex || ey) && !this.drag.noRoom) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();
