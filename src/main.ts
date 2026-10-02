@@ -1,7 +1,7 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { kidRig, mapData } from './content/artData';
-import { ambientFrom, lookTable, obstaclesFrom, rigCoverage } from './content/artRules';
+import { kidRig, mapData, uiData } from './content/artData';
+import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { exportedNames, loadTextures } from './render/art';
 import { MapScene } from './render/scene';
@@ -35,13 +35,13 @@ async function boot(): Promise<void> {
   // D-036: the engine never draws art of its own. If ChatGPT/Codex's art doesn't cover
   // the roster, stop with a clear message instead of inventing placeholders.
   if (!kidRig || !mapData) throw new Error('Art data missing: run `npm run art:export` (kid_rig_v2.json, map_garden_v2.json).');
-  const coverage = rigCoverage(kidRig, content.kids, exportedNames);
+  const coverage = [...rigCoverage(kidRig, content.kids, exportedNames), ...uiPaletteCoverage(uiData)];
   if (coverage.length) throw new Error(`Art coverage incomplete:\n${coverage.join('\n')}`);
 
   const app = new Application();
   await app.init({
     resizeTo: window,
-    background: '#f4efe2',
+    background: uiData!.palette!.world!,
     antialias: false,
     resolution: Math.min(window.devicePixelRatio, 2),
     autoDensity: true,
