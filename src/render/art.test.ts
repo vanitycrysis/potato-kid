@@ -107,6 +107,46 @@ describe('TextureStore releases (Codex review, PR #35 round 2)', () => {
     expect(store.loadedTypes).toContain('hero');
     store.release('hero');
     expect(store.map.has(parts[0]!)).toBe(false);
+    await flush(); // unloads run through the asset's work queue
     expect(g.unloaded).toContain(parts[0]);
+  });
+});
+
+describe('TextureStore with Pixi-style deduplication (Codex review, PR #35 round 3)', () => {
+  it('a reload never shares a source with a released, still-loading generation', async () => {
+    // Like Pixi Assets: one load per URL is shared until unloaded; unload destroys it.
+    const cache = new Map<string, Promise<Texture>>();
+    const gates: (() => void)[] = [];
+    const loader: TextureLoader = {
+      load: (url) => {
+        let p = cache.get(url);
+        if (!p) {
+          p = new Promise<Texture>((resolve) => gates.push(() => resolve(tex())));
+          cache.set(url, p);
+        }
+        return p;
+      },
+      unload: async (url) => {
+        const p = cache.get(url);
+        cache.delete(url);
+        if (p) (await p).destroy(true);
+      },
+    };
+    const flush = () => new Promise((r) => setTimeout(r, 0));
+    const store = new TextureStore(rig, loader, (n) => n);
+    const first = store.ensure('hero');
+    await flush();
+    store.release('hero'); // last kid consumed while the costume still loads
+    const second = store.ensure('hero'); // a respawn asks again before the first load lands
+    await flush();
+    while (gates.length) {
+      gates.shift()!();
+      await flush();
+    }
+    await first.catch(() => {});
+    await second;
+    await flush();
+    expect(store.ready('hero')).toBe(true);
+    for (const c of rig.costumes.hero!.components) expect(store.map.get(c.asset)!.source.destroyed).toBe(false);
   });
 });

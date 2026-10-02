@@ -67,8 +67,12 @@ export class TextureStore {
   private readonly owned = new Map<KidId, Set<string>>();
   /** Bumped by every release: a load that started before it is stale when it lands. */
   private readonly generation = new Map<KidId, number>();
-  /** Unloads in flight: a reload waits for them, or Pixi would hand back a texture being destroyed. */
-  private readonly unloading = new Map<string, Promise<void>>();
+  /**
+   * Per-asset work queue: every load, stale-load cleanup and unload of an asset runs after
+   * the previous one has settled. Pixi deduplicates loads of one URL to one source, so a
+   * reload must never overlap an older generation's cleanup (Codex review, PR #35).
+   */
+  private readonly chain = new Map<string, Promise<void>>();
   private readonly costumeAssets: Map<KidId, string[]>;
 
   constructor(
@@ -121,7 +125,7 @@ export class TextureStore {
       const t = this.map.get(a);
       this.map.delete(a);
       t?.destroy(false);
-      this.unload(a);
+      void this.enqueue(a, () => this.unload(a));
     }
     this.owned.delete(type);
   }
@@ -131,27 +135,40 @@ export class TextureStore {
     return [...new Set([...this.typeLoads.keys(), ...[...this.owned].filter(([, set]) => set.size > 0).map(([t]) => t)])];
   }
 
-  private async loadCostume(type: KidId, name: string, gen: number): Promise<void> {
-    if (this.map.has(name)) return;
-    const tex = await this.fetch(name);
-    if ((this.generation.get(type) ?? 0) !== gen) {
-      // Released while this was loading: never repopulate the map (Codex review, PR #35).
-      tex.destroy(false);
-      this.unload(name);
-      return;
-    }
-    this.map.set(name, tex);
-    let set = this.owned.get(type);
-    if (!set) this.owned.set(type, (set = new Set()));
-    set.add(name);
+  private loadCostume(type: KidId, name: string, gen: number): Promise<void> {
+    return this.enqueue(name, async () => {
+      if (this.map.has(name)) return;
+      const tex = await this.fetch(name);
+      if ((this.generation.get(type) ?? 0) !== gen) {
+        // Released while this was loading: never repopulate the map, and finish freeing
+        // it before any newer load of the asset may start (Codex review, PR #35).
+        tex.destroy(false);
+        await this.unload(name);
+        return;
+      }
+      this.map.set(name, tex);
+      let set = this.owned.get(type);
+      if (!set) this.owned.set(type, (set = new Set()));
+      set.add(name);
+    });
+  }
+
+  /** Runs `job` after all earlier work on the asset has settled (success or failure). */
+  private enqueue(name: string, job: () => Promise<void>): Promise<void> {
+    const prior = this.chain.get(name) ?? Promise.resolve();
+    const run = prior.then(job, job);
+    const settled = run.catch(() => {});
+    this.chain.set(name, settled);
+    void settled.then(() => {
+      if (this.chain.get(name) === settled) this.chain.delete(name);
+    });
+    return run;
   }
 
   /** Fetches one asset (after any unload of it still in flight), with its trim applied. */
   private async fetch(name: string): Promise<Texture> {
     const url = this.urlOf(name);
     if (!url) throw new Error(`Missing art "${name}" (rig coverage should have caught this at boot)`);
-    // A release of this asset may still be unloading: finish it first (Codex review, PR #35).
-    await this.unloading.get(name);
     const base = await this.loader.load(url);
     const t = trimOf(name);
     return t
@@ -159,13 +176,8 @@ export class TextureStore {
       : base;
   }
 
-  private unload(name: string): void {
+  private async unload(name: string): Promise<void> {
     const url = this.urlOf(name);
-    if (!url) return;
-    const done = this.loader.unload(url).catch(() => {});
-    this.unloading.set(name, done);
-    void done.then(() => {
-      if (this.unloading.get(name) === done) this.unloading.delete(name);
-    });
+    if (url) await this.loader.unload(url).catch(() => {});
   }
 }
