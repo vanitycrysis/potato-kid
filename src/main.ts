@@ -59,6 +59,9 @@ declare global {
   }
 }
 
+// Before any asynchronous boot work: Back must work while loading and on a boot error.
+const back = handleBack();
+
 async function boot(): Promise<void> {
   // D-036: the engine never draws art of its own. If ChatGPT/Codex's art doesn't cover
   // the roster, stop with a clear message instead of inventing placeholders.
@@ -106,7 +109,7 @@ async function boot(): Promise<void> {
     loaded.state ?? undefined,
   );
   const hud = new Hud(scene, content);
-  handleBack(() => hud.back());
+  back.closeSheet = () => hud.back();
   const saveStatus = () =>
     hud.setSaveStatus({ unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' });
   saveStatus();
