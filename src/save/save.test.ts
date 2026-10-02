@@ -217,6 +217,71 @@ describe('failure paths (plan §4)', () => {
   });
 });
 
+describe('Codex review, PR #30', () => {
+  it('protects an unusable slot even when the other slot loads fine', async () => {
+    const storage = new TestStorage();
+    const g = newGame();
+    const bad = g.persisted();
+    bad.world.nextKidId = 1;
+    const rawB = encode(1, 9, 1, bad);
+    storage.data.set('slotA', encode(1, 10, 1, g.persisted()));
+    storage.data.set('slotB', rawB);
+    const m = new SaveManager(storage, content);
+    const r = await m.load();
+    expect(r.state).toEqual(g.persisted());
+    expect(r.olderSaveLoaded).toBe(false); // the unusable one was the older save
+    // B's bytes are archived (and verified) before anything may write to B.
+    const archive = storage.writes.findIndex((k) => k.startsWith('archive/B-r9-'));
+    expect(archive).toBe(0);
+    await m.save(g.persisted());
+    expect(storage.writes.indexOf('slotB')).toBeGreaterThan(archive);
+    expect([...storage.data.values()]).toContain(rawB);
+  });
+
+  it('…and if that archive fails, B is never written', async () => {
+    const storage = new TestStorage();
+    const g = newGame();
+    const bad = g.persisted();
+    bad.world.nextKidId = 1;
+    const rawB = encode(1, 9, 1, bad);
+    storage.data.set('slotA', encode(1, 10, 1, g.persisted()));
+    storage.data.set('slotB', rawB);
+    storage.failWrites = (key) => key.startsWith('archive/');
+    const m = new SaveManager(storage, content);
+    expect((await m.load()).mode).toBe('unsaved');
+    await m.save(g.persisted());
+    expect(storage.data.get('slotB')).toBe(rawB);
+  });
+
+  it('every resting activity needs its timers', () => {
+    const g = newGame();
+    const state = g.persisted();
+    const kid = state.world.kids[0]!;
+    const check = (activity: unknown) => {
+      (kid as { activity: unknown }).activity = activity;
+      return validateState(state, content).filter((p) => p.includes('activity'));
+    };
+    expect(check({ kind: 'walk' })).toEqual([]);
+    expect(check({ kind: 'pause', left: 1 })).toEqual([]);
+    expect(check({ kind: 'pause' })).not.toEqual([]);
+    expect(check({ kind: 'wave', left: Number.NaN })).not.toEqual([]);
+    expect(check({ kind: 'sit', left: 3 })).not.toEqual([]);
+    expect(check({ kind: 'sleep', left: 3, total: 9 })).toEqual([]);
+  });
+
+  it('a body or face the current art lacks maps to a valid one on restore; scale must be positive', () => {
+    const g = newGame();
+    const state = g.persisted();
+    state.world.kids[0]!.look = { body: 'retired_body', face: 'retired_face', scale: 1 };
+    expect(validateState(state, content)).toEqual([]);
+    const restored = new Game(structuredClone(content), options, 1, state);
+    const look = restored.state.world.kids[0]!.look;
+    expect([look.body, look.face]).toEqual(['default', 'default']);
+    state.world.kids[0]!.look = { body: 'default', face: 'default', scale: 0 };
+    expect(validateState(state, content)).not.toEqual([]);
+  });
+});
+
 describe("Codex's round-3 trace (plan §4)", () => {
   // Schema 2 build. A holds revision 20 whose 1→2 migration fails; B holds revision 19, which migrates.
   const migrations = {

@@ -95,18 +95,22 @@ export class SaveManager {
     const future = infos.some((i) => i.kind === 'future');
     for (const i of infos) if (i.kind === 'corrupt') this.protectedSlots.add(i.slot);
 
-    let loaded: { slot: Slot; state: PersistedState } | null = null;
-    let skippedNewer = infos.some((i) => i.kind === 'corrupt');
+    // Migrate and validate *every* valid slot, not just until one works: an unusable one
+    // must be protected even when the other slot is loaded (Codex review, PR #30).
+    let loaded: { slot: Slot; revision: number; state: PersistedState } | null = null;
+    const failed: SlotInfo[] = [];
     const valid = infos.filter((i) => i.kind === 'valid').sort((a, b) => b.revision - a.revision);
     for (const i of valid) {
       const state = this.migrate(i);
-      if (state) {
-        loaded = { slot: i.slot, state };
-        break;
+      if (!state) {
+        this.protectedSlots.add(i.slot); // a save we can't use: keep it safe
+        failed.push(i);
+      } else if (!loaded) {
+        loaded = { slot: i.slot, revision: i.revision, state };
       }
-      this.protectedSlots.add(i.slot); // a valid save we can't migrate: keep it safe
-      skippedNewer = true;
     }
+    // A torn write is most likely the newest, so a corrupt slot counts as newer.
+    const skippedNewer = !!loaded && (infos.some((i) => i.kind === 'corrupt') || failed.some((i) => i.revision > loaded.revision));
 
     if (future) {
       // A newer app wrote here: never write, but the player can still play this session.
@@ -124,7 +128,7 @@ export class SaveManager {
     } else {
       this.modeValue = this.target() ? 'normal' : 'unsaved';
     }
-    return { state: loaded?.state ?? null, mode: this.modeValue, olderSaveLoaded: !!loaded && skippedNewer };
+    return { state: loaded?.state ?? null, mode: this.modeValue, olderSaveLoaded: skippedNewer };
   }
 
   /**

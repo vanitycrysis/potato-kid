@@ -215,11 +215,13 @@ export class Game {
     for (const kid of this.state.world.kids) {
       // Nobody is mid-drag in a loaded game, and the box always follows the current art.
       kid.held = false;
-      const body = this.looks.bodies.find((b) => b.id === kid.look.body);
-      if (body) {
-        const k = kid.look.scale;
-        kid.box = { left: body.box.left * k, top: body.box.top * k, right: body.box.right * k, bottom: body.box.bottom * k };
-      }
+      // Appearance is cosmetic: a body or face the current art doesn't have (e.g. retired
+      // in a later version) maps to the first one rather than failing to draw (Codex review, PR #30).
+      const body = this.looks.bodies.find((b) => b.id === kid.look.body) ?? this.looks.bodies[0]!;
+      if (!this.looks.faces.some((f) => f.id === kid.look.face)) kid.look.face = this.looks.faces[0]!.id;
+      kid.look.body = body.id;
+      const k = kid.look.scale;
+      kid.box = { left: body.box.left * k, top: body.box.top * k, right: body.box.right * k, bottom: body.box.bottom * k };
     }
     this.rng.setState(copy.rngState);
     this.cosmetic.setState(copy.cosmeticRngState);

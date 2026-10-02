@@ -104,9 +104,14 @@ export function validateState(state: unknown, content: Content): string[] {
     for (const f of ['x', 'y', 'heading', 'grace'] as const) if (!finite(k[f])) p.push(`kid ${String(id)} ${f} is not finite`);
     const a = k.activity as Record<string, unknown> | undefined;
     if (typeof a !== 'object' || a === null || typeof a.kind !== 'string' || !kinds.has(a.kind)) p.push(`kid ${String(id)} activity is invalid`);
-    else for (const f of ['left', 'total'] as const) if (f in a && !finite(a[f])) p.push(`kid ${String(id)} activity ${f} is not finite`);
+    else {
+      // Every rest needs its countdown, and sit/sleep their total, or the kid freezes or the
+      // animation time is NaN (Codex review, PR #30).
+      const needs = a.kind === 'walk' ? [] : a.kind === 'sit' || a.kind === 'sleep' ? ['left', 'total'] : ['left'];
+      for (const f of needs) if (!finite(a[f]) || (a[f] as number) < 0) p.push(`kid ${String(id)} activity ${f} is missing or invalid`);
+    }
     const look = k.look as Record<string, unknown> | undefined;
-    if (typeof look !== 'object' || look === null || typeof look.body !== 'string' || typeof look.face !== 'string' || !finite(look.scale)) {
+    if (typeof look !== 'object' || look === null || typeof look.body !== 'string' || typeof look.face !== 'string' || !finite(look.scale) || (look.scale as number) <= 0) {
       p.push(`kid ${String(id)} look is invalid`);
     }
     const box = k.box as Record<string, unknown> | undefined;
