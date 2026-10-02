@@ -666,7 +666,8 @@ test('costumes load when a type appears and are released after it leaves (ROSTER
   // Hero and Glassblower aren't in the spawn pool, so their costumes start unloaded.
   expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).not.toContain('hero');
   const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
-  await expect.poll(() => page.evaluate((id) => !!window.__PK__!.screenPointOf(id), hero)).toBe(true);
+  // Both parents are drawn (their costumes loaded) before any drag (Codex review, PR #35).
+  for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
   expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).toEqual(expect.arrayContaining(['hero', 'glassblower']));
   // Fuse them (hero + glassblower -> lantern): both types leave the map.
   await dropOnto(page, hero, glass);
@@ -693,7 +694,7 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
   });
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
-  await expect.poll(() => page.evaluate((id) => !!window.__PK__!.screenPointOf(id), glass)).toBe(true);
+  for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
   await dropOnto(page, hero, glass);
   await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
   const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
