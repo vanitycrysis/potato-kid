@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "gui-mvp-1",
+  "revision": "gui-mvp-1-short-1",
   "status": "final",
   "runtimeMode": "native_dom_svg",
   "palette": {
@@ -1614,6 +1614,58 @@
       },
       "reviewOnly": true,
       "screen": "offline_save_warning"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_short_unsaved_568x320.svg",
+      "size": [
+        568,
+        320
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "short_unsaved"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_short_recovery_568x320.svg",
+      "size": [
+        568,
+        320
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "short_recovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_short_unsaved_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "short_unsaved"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_short_recovery_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "short_recovery"
     }
   ],
   "delivery": {
@@ -1687,7 +1739,112 @@
         60,
         112,
         164
-      ]
+      ],
+      "persistentBannerLayout": {
+        "spec": "docs/GUI_MVP.md#31-short-viewports-with-a-persistent-banner",
+        "activeStates": [
+          "unsaved",
+          "recovery"
+        ],
+        "minimumPlayBandPx": 44,
+        "bannerToHudGapPx": 8,
+        "hudToWorldGapPx": 8,
+        "worldToNavigationGapPx": 8,
+        "maximumHudHeightFormula": "min(trayTop,DexTop)-8-(ST+measuredBannerHeight+8)-8-44",
+        "selectionOrder": [
+          "usual-if-fits",
+          "two-row-if-fits",
+          "vertical-hud-scroll",
+          "vertical-page-without-world"
+        ],
+        "twoRow": {
+          "heightPx": 104,
+          "minimumContentWidthPx": 340,
+          "contentInsetXPx": 16,
+          "rowYs": [
+            8,
+            52
+          ],
+          "rowHeightPx": 44,
+          "rowGapPx": 0,
+          "columnGapPx": 8,
+          "firstRowColumnsPx": [
+            104,
+            88,
+            "minmax(80,1fr)",
+            44
+          ],
+          "firstRowOrder": [
+            "materials",
+            "potatokens",
+            "population",
+            "settings"
+          ],
+          "iconPx": 24,
+          "firstRowIconYPx": 18,
+          "countPx": 20,
+          "countLinePx": 24,
+          "secondRowTimerWidth": "C-120",
+          "timerIconXY": [
+            16,
+            52
+          ],
+          "timerLabelXY": [
+            46,
+            52
+          ],
+          "timerLabelPx": 18,
+          "timerLinePx": 24,
+          "timerCopy": "full portrait timer copy and observation rules",
+          "trackXY": [
+            16,
+            84
+          ],
+          "trackHeightPx": 6,
+          "trackWidth": "C-120",
+          "spawnTargetPx": [
+            112,
+            44
+          ],
+          "fitPolicy": "actual text and exact price fit columns without wrapping; otherwise scroll stacked content"
+        },
+        "scrollWindow": {
+          "minimumHeightPx": 60,
+          "requiredHeightFormula": "R=16+max(44,tallest measured HUD target height)",
+          "height": "maximumHudHeightFormula",
+          "borderPx": 8,
+          "aperture": "local y8 to height-8",
+          "contentInsetXPx": 16,
+          "scrollbarGutterPx": 6,
+          "scrollbarThumb": "sceneryInk",
+          "scrollbarTrack": "sage",
+          "initialScrollTopPx": 0,
+          "content": "two-row if horizontally fitting after gutter, otherwise four-row 212px content; grow for wrapping",
+          "focusedTargetPolicy": "scroll complete target into aperture before activation"
+        },
+        "pageFallback": {
+          "when": "maximumHudHeightFormula < R",
+          "worldViewport": "hidden; cancel held drag; simulation and income continue",
+          "flowOrder": [
+            "banner",
+            "hint",
+            "stacked-hud",
+            "tray-with-labels",
+            "dex"
+          ],
+          "gapPx": 8,
+          "hint": "Make this window taller to move kids.",
+          "hintPx": 16,
+          "hintLinePx": 22,
+          "sheet": "replace hint/hud/navigation below banner; auto height; page scroll; no pinned header/footer",
+          "banner": "mounted with unchanged copy/lifecycle; normal page flow",
+          "restore": "measured maximum HUD height >= R"
+        },
+        "remeasure": "banner/font/zoom/wrap/resize/safe-inset changes; always start from usual HUD",
+        "feedback": "queue until measured remaining play band >=44",
+        "runtimeAssetsAdded": 0,
+        "pixiTexturesAdded": 0
+      }
     },
     "sheets": {
       "maxWidthPx": 600,
