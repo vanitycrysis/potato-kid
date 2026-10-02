@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "revision": "v2-slice-1",
-  "status": "style_sample",
+  "revision": "asset-playable-b-1",
+  "status": "final",
   "runtimeMode": "native_dom_svg",
   "palette": {
     "paper": "#fff1d5",
@@ -18,7 +18,7 @@
   "typography": {
     "family": "Patrick Hand",
     "fallback": "system-ui, sans-serif",
-    "fontDelivery": "not included in slice; use locally bundled licensed font when available",
+    "fontDelivery": "blocked: official upstream fetch unavailable in sandbox; Claude must bundle PatrickHand-Regular.ttf and full OFL.txt from google/fonts/ofl/patrickhand, record revision and SHA-256 before enabling",
     "labelPx": 18,
     "countPx": 22,
     "minimumTextPx": 16
@@ -156,6 +156,6 @@
       "upgrade_sheet",
       "toast_layout"
     ],
-    "note": "All 15 icons, 9 surfaces/states, 3 feedback marks and 4 tier marks supplied as style samples. Two HUD/tray layout mockups. All mockup lettering is review-only; engine uses live DOM text."
+    "note": "Approved icons, surfaces/states, feedback and tier marks are final native SVG. Two HUD/tray mockups retained. Expanded layout/device reflow work remains explicitly deferred."
   }
 }

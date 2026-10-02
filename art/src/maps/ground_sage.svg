@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>ground sage</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-slice-1.</desc>
+  <desc>Original Potato Kid v2 authored vector sample. Status: final. Revision: v2-slice-1.</desc>
   <path d="M0 0 H256 V256 H0 Z" fill="#f4efe2"/><path d="M35 42 Q61 23 84 37 Q120 29 146 45 Q187 27 217 54 Q235 93 220 123 Q235 163 216 201 Q192 233 157 221 Q125 232 88 215 Q48 229 32 195 Q22 157 39 126 Q20 83 35 42 Z" fill="#e2e8d4"/>
 </svg>

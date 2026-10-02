@@ -1,6 +1,27 @@
 # Asset provenance
 
-## Current kid art: ASSET-PLAYABLE Part A (2026-10-02)
+## Current delivery: ASSET-PLAYABLE Part B (2026-10-02)
+
+Revision **asset-playable-b-1**, author ChatGPT/Codex in the ChatGPT project role. Original hand-authored SVG paths and JSON, written with Node.js using .codex-out/author-asset-playable-b.mjs; Chromium/Playwright raster export and review. References: all 22 supplied reference images inspected via the reference contact sheet, D-044..D-046, approved Part A art and garden/GUI sources. No image generation, tracing, external artwork, baked runtime text or external audio. Licence: original work for Potato Kid.
+
+New: 16 deferred body pose SVGs, 11 event-FX SVGs, one shadow SVG and two landmark SVGs. Existing faces, 16 costume definitions/33 costume SVG drawings, original poses and all four lifetime boxes remain unchanged. Existing map/building/native GUI drawings are promoted to final by metadata only. Three sidecars now carry this revision. Each source's own desc retains its drawing revision; status-only promotions do not falsely claim a redraw. Exact current source dimensions, SHA-256, revision and status are in .codex-out/asset-playable-b-inventory.json. Generated PNG/JSON/SVG exports inherit their source revision; output hashes and source preservation are in .codex-out/asset-playable-b-export-check.json.
+
+Seven historical r2 kid sources moved unchanged from art/src/kids/ to **art/history/r2/**. Their hashes are recorded in the export check; the corresponding legacy PNGs are retired by normal exporter stale-file cleanup, preventing duplicate runtime loads. Historical provenance below refers to these preserved originals. Historical scratch author/check scripts may retain their original source paths; use the Part B checkers for the current delivery.
+
+### Patrick Hand Regular: blocked fetch; Claude handoff (D-031)
+
+No font binary, substitute, partial licence, copyright, revision or invented hash is bundled. Shell fetch of the official upstream failed with **fetch failed** under restricted network access. The official directory was verified through the browser: [Google Fonts Patrick Hand upstream](https://github.com/google/fonts/tree/main/ofl/patrickhand).
+
+Claude must fetch the exact upstream **PatrickHand-Regular.ttf** and **full OFL.txt**, without modification or conversion, from these official paths:
+
+- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/PatrickHand-Regular.ttf
+- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/OFL.txt
+- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/upstream_info.md
+- https://raw.githubusercontent.com/google/fonts/main/ofl/patrickhand/METADATA.pb
+
+Pin the fetched repository commit and record the font's internal version/revision, full copyright string, file byte lengths and SHA-256 for TTF/OFL here. Store the TTF and complete SIL OFL 1.1 text together in assets/fonts/patrick-hand/, and enable the local font only after verification. No runtime remote font fetch. Device glyph/numeral/reflow/fallback checks remain pending. This entry explicitly leaves the font deliverable to Claude under the authorized blocked-fetch exception.
+
+## Accepted Part A art: ASSET-PLAYABLE Part A (2026-10-02)
 
 Current art revision **asset-playable-a-3**, ChatGPT/Codex, Part A round 3. Three original SVG sources supersede their round-2 drawings: `kid_raincloud_back_cloud`, `kid_raincloud_front_drop`, `kid_picnic_front_hat`. Tools: original hand-authored SVG paths through `.codex-out/author-asset-playable-a-round3.mjs`, Node.js; licence: original work for Potato Kid. References: all 22 supplied images inspected in the contact sheet, Round 2 engine crops and Claude's PR #21 review. Raincloud is a deeper muted sage cloud offset right, with falling rain; Picnic is a red checked kerchief with a side knot. No image generation, tracing, external images or baked text. All accepted art, including Snowman and Glassblower, and all three sidecars are byte-identical to Round 2; rig revision remains **asset-playable-a-2**. No extra reserve, slots, textures, anatomy or Part B content.
 
@@ -30,13 +51,13 @@ For every listed asset: **author:** ChatGPT/Codex `gpt-6.1-sol`; **tool:** hand-
 
 | Asset ID | Editable source | Revision | References consulted |
 | --- | --- | --- | --- |
-| kid_plain_body | `art/src/kids/kid_plain_body.svg` | 2 | `references/pk_potato0.webp`, `pk_potato1.webp`, `pk_potato_0.webp`, `pk_potato_1.webp`; cook/snow costumes for shared-body continuity |
-| kid_plain_face | `art/src/kids/kid_plain_face.svg` | 1 | All four plain references above; `references/pk_cook_0.webp` through `pk_cook_6.webp` for dot-eye and short-smirk continuity |
-| kid_fire_overlay_back | `art/src/kids/kid_fire_overlay_back.svg` | 2 | Plain references for proportions; cook/snow references for simple costume language; original flame design from `docs/ASSETS.md` |
-| kid_fire_overlay_front | `art/src/kids/kid_fire_overlay_front.svg` | 1 | Plain references for face clearance; `references/pk_cook_0.webp` through `pk_cook_6.webp` for small forehead accessories; original flame crest |
-| kid_water_overlay_front | `art/src/kids/kid_water_overlay_front.svg` | 1 | Plain references; `references/pk_snow_0.webp` through `pk_snow_6.webp` for open-face costume framing; original droplet hood from `docs/ASSETS.md` |
-| kid_firefighter_overlay_back | `art/src/kids/kid_firefighter_overlay_back.svg` | 2 | `references/pk_cook_0.webp` through `pk_cook_6.webp` for side-object simplicity; original short hose return replacing the round-1 loop |
-| kid_firefighter_overlay_front | `art/src/kids/kid_firefighter_overlay_front.svg` | 2 | Cook references for hat/prop scale; snow references for face clearance; original red firefighter helmet with raised shield/ridge/sloping rear brim and nozzle/coupling |
+| kid_plain_body | `art/history/r2/kid_plain_body.svg` | 2 | `references/pk_potato0.webp`, `pk_potato1.webp`, `pk_potato_0.webp`, `pk_potato_1.webp`; cook/snow costumes for shared-body continuity |
+| kid_plain_face | `art/history/r2/kid_plain_face.svg` | 1 | All four plain references above; `references/pk_cook_0.webp` through `pk_cook_6.webp` for dot-eye and short-smirk continuity |
+| kid_fire_overlay_back | `art/history/r2/kid_fire_overlay_back.svg` | 2 | Plain references for proportions; cook/snow references for simple costume language; original flame design from `docs/ASSETS.md` |
+| kid_fire_overlay_front | `art/history/r2/kid_fire_overlay_front.svg` | 1 | Plain references for face clearance; `references/pk_cook_0.webp` through `pk_cook_6.webp` for small forehead accessories; original flame crest |
+| kid_water_overlay_front | `art/history/r2/kid_water_overlay_front.svg` | 1 | Plain references; `references/pk_snow_0.webp` through `pk_snow_6.webp` for open-face costume framing; original droplet hood from `docs/ASSETS.md` |
+| kid_firefighter_overlay_back | `art/history/r2/kid_firefighter_overlay_back.svg` | 2 | `references/pk_cook_0.webp` through `pk_cook_6.webp` for side-object simplicity; original short hose return replacing the round-1 loop |
+| kid_firefighter_overlay_front | `art/history/r2/kid_firefighter_overlay_front.svg` | 2 | Cook references for hat/prop scale; snow references for face clearance; original red firefighter helmet with raised shield/ridge/sloping rear brim and nozzle/coupling |
 | map_garden | `art/src/maps/map_garden.svg` | 1 | All 22 images in `references/`, especially `pk_sleep_0.webp` through `pk_sleep_3.webp` and snow scenes for sparse environmental doodles; cream/sage direction from `docs/ART_AUDIO_PLAN.md` |
 
 All 22 references were inspected in `.codex-out/reference-contact-sheet.png`; plain, cook and snow originals were also opened individually. The supplied references remain unchanged. Warm opaque fill, thicker production outlines and all new costumes/garden motifs are original adaptations awaiting owner check-in 2.

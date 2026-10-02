@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <title>icon potatokens</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-slice-1.</desc>
+  <desc>Original Potato Kid v2 authored vector sample. Status: final. Revision: v2-slice-1.</desc>
   <ellipse cx="64" cy="64" rx="37" ry="39" fill="#d8b576" stroke="#1a1a1a" stroke-width="5"/><path d="M53 43 Q80 39 85 62 Q87 84 63 88 Q42 88 43 65 Q42 51 53 43 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="62" r="2.5" fill="#1a1a1a"/><circle cx="73" cy="61" r="2.5" fill="#1a1a1a"/><path d="M60 72 l9 -1" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
