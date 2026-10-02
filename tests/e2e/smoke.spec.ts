@@ -544,4 +544,50 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     const known = await page.evaluate(() => window.__PK__!.debugKnown!());
     for (const t of discovered) expect(known).toContain(t);
   });
+
+  /** Free band between the top stack and the higher of the tray and the Dex button. */
+  const band = (page: Page) =>
+    page.evaluate(
+      () =>
+        Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top) -
+        document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
+    );
+
+  test('the play band counts the Dex button too (320x568)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 400, 1300), b: window.__PK__!.debugAdd!('water', 700, 1300) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
+    for (let i = 0; i < 8; i++) {
+      expect(await band(page)).toBeGreaterThanOrEqual(44);
+      await page.waitForTimeout(200);
+    }
+  });
+
+  test('a refusal that cannot fit waits, and appears once there is room', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
+    await page.waitForTimeout(600);
+    await expect(page.locator('.feedback')).toBeEmpty();
+    await page.setViewportSize({ width: 568, height: 800 });
+    await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+
+  test('a visible card that stops fitting goes back to the queue (640x360 + banner)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 300, 1150), b: window.__PK__!.debugAdd!('water', 800, 1150) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(150);
+      expect(await band(page)).toBeGreaterThanOrEqual(44);
+    }
+  });
 });
+

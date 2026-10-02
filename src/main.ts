@@ -42,6 +42,8 @@ declare global {
       debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
+      /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
       /** Only with `?debug=1`: shows a save banner state (screenshots and tests). */
@@ -161,6 +163,7 @@ async function boot(): Promise<void> {
           },
           debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
           debugKnown: () => hud.knownKids,
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => scene.command(cmd),
         }
       : {}),
     };

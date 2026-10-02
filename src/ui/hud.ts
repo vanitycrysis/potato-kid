@@ -51,10 +51,12 @@ export interface SaveStatus {
 
 type HudMode = 'portrait' | 'narrow' | 'compact';
 
-interface Showing {
+/** A feedback card, queued or on screen; it keeps its remaining time across both. */
+interface Card {
   item: FeedbackItem;
   node: HTMLElement;
   remaining: number;
+  notBefore: number;
 }
 
 /**
@@ -77,9 +79,9 @@ export class Hud {
   private readonly feedback = el('div', 'feedback');
   private readonly shield = el('div', 'readonly-shield');
   private readonly known: Set<KidId>;
-  private readonly queue: { item: FeedbackItem; notBefore: number }[] = [];
-  private showing: Showing | null = null;
-  private paused: Showing | null = null;
+  /** Waiting cards, refusals first (GUI_MVP §9). */
+  private readonly queue: Card[] = [];
+  private showing: Card | null = null;
   private hover = false;
   private inflight = false;
   private save: SaveStatus = { unsaved: false, recovery: false, readOnly: false };
@@ -284,68 +286,67 @@ export class Hud {
       if (item.kind === 'refusal' && item.command === 'instantSpawn') this.inflight = false;
       // Discoveries wait for the discovery effect to finish (rig: discovery onComplete).
       const notBefore = item.kind === 'discovery' ? now + this.scene.discoveryToastDelayMs : now;
-      if (item.kind === 'refusal') this.showRefusal(item);
-      else this.queue.push({ item, notBefore });
+      const text = item.kind === 'refusal' ? refusalText(item.reason, item.command === 'instantSpawn' ? 'potatokens' : undefined) : undefined;
+      const card: Card = { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
+      // Refusals are never dropped: they wait like any card, but ahead of rewards.
+      const firstReward = this.queue.findIndex((c) => c.item.kind !== 'refusal');
+      if (item.kind === 'refusal' && firstReward >= 0) this.queue.splice(firstReward, 0, card);
+      else this.queue.push(card);
     }
   }
 
-  /** A refusal outside a sheet takes priority: the current reward pauses, then resumes. */
-  private showRefusal(item: Extract<FeedbackItem, { kind: 'refusal' }>): void {
-    const currency = item.command === 'instantSpawn' ? 'potatokens' : undefined;
-    const node = this.card(item, refusalText(item.reason, currency));
-    if (!this.fits(node)) return; // no room for it without covering the play band
-    if (this.showing && this.showing.item.kind !== 'refusal') {
-      this.paused = this.showing;
-      this.showing.node.remove();
-    } else if (this.showing) {
-      this.showing.node.remove();
-    }
-    this.showing = { item, node, remaining: FEEDBACK_MS };
-    this.feedback.append(node);
-  }
-
+  /**
+   * Feedback scheduling (GUI_MVP §§2, 9): one card at a time; nothing moves while a kid is
+   * held; a card is shown only while a 44 px play band remains above the tray and Dex
+   * button, and a visible card that stops fitting (a banner, a resize) goes back to the
+   * queue with its remaining time. A refusal pre-empts a reward, which then resumes.
+   */
   private tickFeedback(now: number, dt: number): void {
-    // While a kid is held, a visible card keeps its remaining time and nothing new appears
-    // (GUI_MVP §9; Codex review, PR #33).
-    if (this.scene.dragging) return;
+    if (this.scene.dragging || this.save.readOnly) return;
+    if (this.showing && this.bandBelow(this.top.getBoundingClientRect().bottom) < 44) this.unshow();
+    const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
+    if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
+      const r = this.queue.splice(refusal, 1)[0]!;
+      this.unshow(); // the reward resumes after the refusal
+      this.queue.unshift(r);
+    }
     if (this.showing) {
-      // Timers pause on hover and focus.
       if (!this.hover && !this.feedback.contains(document.activeElement)) this.showing.remaining -= dt;
       if (this.showing.remaining > 0) return;
       this.showing.node.remove();
       this.showing = null;
-      if (this.paused) {
-        this.showing = this.paused;
-        this.paused = null;
-        this.feedback.append(this.showing.node);
-        return;
-      }
     }
-    if (this.save.readOnly) return;
     const next = this.queue[0];
-    if (!next || next.notBefore > now) return;
-    const node = this.card(next.item);
-    // Only if it leaves the 44 px play band (GUI_MVP §2); otherwise it waits.
-    if (!this.fits(node)) return;
+    if (!next || next.notBefore > now || !this.fits(next.node)) return;
     this.queue.shift();
-    this.showing = { item: next.item, node, remaining: FEEDBACK_MS };
-    this.feedback.append(node);
+    this.showing = next;
+    this.feedback.append(next.node);
   }
 
-  /**
-   * Whether `node` can be shown and still leave a 44 px unobscured band between the top
-   * stack and the tray (GUI_MVP §2; Codex review, PR #33). Measured off-screen first.
-   */
+  /** Takes the visible card off screen, back to the front of the queue, time kept. */
+  private unshow(): void {
+    if (!this.showing) return;
+    this.showing.node.remove();
+    this.queue.unshift(this.showing);
+    this.showing = null;
+  }
+
+  /** Free height between `top` and the highest bottom control (tray or Dex button). */
+  private bandBelow(top: number): number {
+    const bounds = ['.tray', '.dex-button'].map((q) => document.querySelector(q)?.getBoundingClientRect().top ?? window.innerHeight);
+    return Math.min(...bounds) - top;
+  }
+
+  /** Whether `node` can be shown and still leave the 44 px play band; measured off-screen. */
   private fits(node: HTMLElement): boolean {
     const probe = el('div', 'feedback feedback-probe');
     probe.style.width = `${this.feedback.clientWidth || this.top.clientWidth}px`;
     probe.append(node);
     document.body.append(probe);
     const height = node.getBoundingClientRect().height;
+    node.remove();
     probe.remove();
-    const hudBottom = this.hud.getBoundingClientRect().bottom;
-    const tray = document.querySelector('.tray')?.getBoundingClientRect().top ?? window.innerHeight;
-    return tray - (hudBottom + 8 + height) >= 44;
+    return this.bandBelow(this.hud.getBoundingClientRect().bottom + 8 + height) >= 44;
   }
 
   private name(type: KidId): string {
