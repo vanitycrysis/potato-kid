@@ -85,7 +85,7 @@ export class Hud {
     new ResizeObserver(measure).observe(document.body);
     measure();
     this.render();
-    scene.onEvent = (e) => this.onEvent(e);
+    scene.listen((e) => this.onEvent(e));
     const tick = () => {
       this.render();
       requestAnimationFrame(tick);

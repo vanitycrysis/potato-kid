@@ -1,3 +1,5 @@
+import { Preferences } from '@capacitor/preferences';
+
 /**
  * Where save bytes live. Reads and writes may fail: the save manager treats a failed
  * read as "unknown", never as "empty" (plan §4).
@@ -23,18 +25,20 @@ export class MemoryStorage implements SaveStorage {
   }
 }
 
-/** Browser storage (the web build). The Android build may swap in a native backend. */
-export class LocalStorage implements SaveStorage {
+/**
+ * The game's storage: Capacitor Preferences. On Android that is the app's own
+ * SharedPreferences, which survive WebView cache clears; on the web it falls back to
+ * localStorage.
+ */
+export class PreferencesStorage implements SaveStorage {
   constructor(private readonly prefix = 'potato-kid/') {}
 
-  read(key: string): Promise<string | null> {
-    return new Promise((resolve) => resolve(localStorage.getItem(this.prefix + key)));
+  async read(key: string): Promise<string | null> {
+    const { value } = await Preferences.get({ key: this.prefix + key });
+    return value;
   }
 
-  write(key: string, value: string): Promise<void> {
-    return new Promise((resolve) => {
-      localStorage.setItem(this.prefix + key, value);
-      resolve();
-    });
+  async write(key: string, value: string): Promise<void> {
+    await Preferences.set({ key: this.prefix + key, value });
   }
 }

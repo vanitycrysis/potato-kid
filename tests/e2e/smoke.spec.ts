@@ -392,3 +392,44 @@ test('the build ships the bundled font with its full licence (SIL OFL condition 
   expect(text).toContain('Copyright (c) 2010-2012 Patrick Wagesreiter');
   expect(text).toContain('SIL OPEN FONT LICENSE Version 1.1');
 });
+
+test('a reloaded game continues from its save (plan §4)', async ({ page }) => {
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  await page.evaluate(() => {
+    window.__PK__!.debugAdd!('plain', 250, 1500);
+    window.__PK__!.debugAdd!('fire', 830, 1500);
+  });
+  // Saves land on load, then every 10 s and on events; wait for one that includes the kids.
+  await page.evaluate(() => window.__PK__!.debugAway!(0));
+  const before = await page.evaluate(() => ({ kids: window.__PK__!.kids().map((k) => [k.id, k.type]), wallet: window.__PK__!.wallet() }));
+  expect(await page.evaluate(() => window.__PK__!.save().mode)).toBe('normal');
+
+  await page.reload();
+  await page.waitForFunction(() => window.__PK__?.ready === true);
+  const after = await page.evaluate(() => ({ kids: window.__PK__!.kids().map((k) => [k.id, k.type]), wallet: window.__PK__!.wallet() }));
+  expect(after.kids).toEqual(before.kids);
+  expect(after.wallet.materials).toBeGreaterThanOrEqual(before.wallet.materials);
+  expect(errors).toEqual([]);
+});
+
+test('time away is credited once: Garden spawns and income (plan §3)', async ({ page }) => {
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
+  const before = await page.evaluate(() => window.__PK__!.wallet().materials);
+  await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+  const report = await page.evaluate(() => window.__PK__!.lastOffline());
+  expect(report!.seconds).toBeCloseTo(60, 0);
+  // calm: 12 s Garden, capacity 12, one kid placed -> five spawns in 60 s.
+  expect(report!.spawned).toHaveLength(5);
+  const after = await page.evaluate(() => window.__PK__!.wallet().materials);
+  expect(after - before).toBeGreaterThanOrEqual(report!.materials - 1);
+  // Every offline kid still on the map is drawn. (Once play resumes, two that arrived
+  // touching may fuse, exactly as Garden spawns can online.)
+  // Checked in one evaluate, so a fusion can't land between reading and checking.
+  const undrawn = await page.evaluate((ids) => {
+    const alive = new Set(window.__PK__!.kids().map((k) => k.id));
+    return ids.filter((id) => alive.has(id) && !window.__PK__!.screenPointOf(id));
+  }, report!.spawned.map((k) => k.id));
+  expect(undrawn).toEqual([]);
+  expect(errors).toEqual([]);
+});

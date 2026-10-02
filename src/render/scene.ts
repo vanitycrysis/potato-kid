@@ -1,7 +1,7 @@
 import { Application, Container, FederatedPointerEvent, type Texture } from 'pixi.js';
 import type { KidRig, MapData } from '../content/artData';
 import type { Content } from '../content/types';
-import { Game, type Ambient, type Command, type GameEvent, type LookTable } from '../sim/game';
+import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
 import { rectAt, resolveDrawn, touching } from '../sim/space';
 import { buildMap } from './mapView';
@@ -58,8 +58,7 @@ interface Drag {
  */
 export class MapScene {
   readonly game: Game;
-  /** Called with every sim event, after the scene has handled it. */
-  onEvent: (e: GameEvent) => void = () => {};
+  private readonly listeners = new Set<(e: GameEvent) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
   private readonly views = new Map<number, KidRigView>();
@@ -97,6 +96,8 @@ export class MapScene {
     content: Content,
     seed: number,
     private readonly art: SceneArt,
+    /** A loaded save (plan §4) to continue instead of starting a new map. */
+    saved?: PersistedState,
   ) {
     const [w, h] = art.map.worldSize;
     this.worldWidth = w;
@@ -114,6 +115,7 @@ export class MapScene {
         now: Date.now(),
       },
       seed,
+      saved,
     );
     this.camera.addChild(buildMap(art.map, art.textures), this.kidLayer);
     app.stage.addChild(this.camera);
@@ -134,20 +136,41 @@ export class MapScene {
       if (this.drag && e.pointerId === this.drag.pointerId) this.cancelActiveDrag();
       if (this.pan && e.pointerId === this.pan.pointerId) this.pan = undefined;
     });
-    // Leaving the app mid-drag counts as a cancelled touch (plan §2).
-    // Panning is dropped too: the gesture's pointerup may never arrive, which would
-    // otherwise lock all input after resume (Codex review, PR #11).
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) return;
-      if (this.drag) this.cancelActiveDrag();
-      this.pan = undefined;
-      this.panVelocity = { x: 0, y: 0 };
-    });
 
     this.layout();
     this.centerOn(art.map.camera.initialCentre[0], art.map.camera.initialCentre[1]);
     app.renderer.on('resize', () => this.layout());
     app.ticker.add((t) => this.frame(t.deltaMS / 1000));
+  }
+
+  /** Calls `fn` with every sim event, after the scene has handled it. */
+  listen(fn: (e: GameEvent) => void): void {
+    this.listeners.add(fn);
+  }
+
+  /**
+   * The app is going away (lifecycle coordinator, plan §3): run whole pending sim steps,
+   * discard the sub-step remainder, cancel any drag (leaving mid-drag is a cancelled
+   * touch, plan §2) and stop ticking. Suspended time is credited only by `resume`.
+   */
+  suspend(): void {
+    while (this.acc >= STEP) this.stepOnce();
+    this.acc = 0;
+    if (this.drag) this.cancelActiveDrag();
+    // Apply the cancel now, with no time passing, so the save never holds a kid mid-air.
+    if (this.pending.length) this.stepOnce(0);
+    // Panning is dropped too: its pointerup may never arrive (Codex review, PR #11).
+    this.pan = undefined;
+    this.panVelocity = { x: 0, y: 0 };
+    this.app.ticker.stop();
+  }
+
+  /** Back from a suspension at wall-clock `now`: offline catch-up once, then tick again. */
+  resume(now: number): OfflineReport {
+    const report = this.game.reconcile(now);
+    for (const kid of report.spawned) this.addView(kid);
+    this.app.ticker.start();
+    return report;
   }
 
   /** Test hook: world → screen (CSS px) for a kid's ground point. */
@@ -421,13 +444,7 @@ export class MapScene {
     // offline catch-up's job (M3), not the frame loop's.
     this.acc += Math.min(dt, 0.25);
     while (this.acc >= STEP) {
-      for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
-      const events = this.game.step(this.pending.splice(0));
-      // Placed kids interpolate from where they were put down, so a kid that had to
-      // slide off an occupied spot (D-039) visibly slides instead of teleporting.
-      for (const [id, at] of this.placing) this.prev.set(id, at);
-      this.placing.clear();
-      for (const e of events) this.handle(e);
+      this.stepOnce();
       this.acc -= STEP;
     }
     const alpha = this.acc / STEP;
@@ -455,6 +472,17 @@ export class MapScene {
       const at = drawn.get(k.id) ?? k;
       view.update(at.x, at.y, k.activity, false, dt);
     }
+  }
+
+  /** One fixed sim step with the queued commands (dt 0 applies commands without time passing). */
+  private stepOnce(dt: number = STEP): void {
+    for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
+    const events = this.game.step(this.pending.splice(0), dt);
+    // Placed kids interpolate from where they were put down, so a kid that had to
+    // slide off an occupied spot (D-039) visibly slides instead of teleporting.
+    for (const [id, at] of this.placing) this.prev.set(id, at);
+    this.placing.clear();
+    for (const e of events) this.handle(e);
   }
 
   /** Pan inertia, and edge auto-scroll while a kid is held near a screen edge. */
@@ -517,10 +545,9 @@ export class MapScene {
         if (e.firstDiscovery) child.startEffect('discovery');
         break;
       }
-      case 'pickedUp':
-      case 'dropped':
+      default:
         break;
     }
-    this.onEvent(e);
+    for (const fn of this.listeners) fn(e);
   }
 }
