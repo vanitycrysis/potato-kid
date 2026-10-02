@@ -4,7 +4,7 @@ import { kidRig, mapData, uiData } from './content/artData';
 import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { Lifecycle } from './platform/lifecycle';
-import { exportedNames, loadTextures } from './render/art';
+import { exportedNames, TextureStore } from './render/art';
 import { MapScene } from './render/scene';
 import { SaveManager, type SaveMode } from './save/manager';
 import { PreferencesStorage } from './save/storage';
@@ -44,6 +44,8 @@ declare global {
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
+      /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
+      debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
       /** Only with `?debug=1`: shows a save banner state (screenshots and tests). */
@@ -78,6 +80,11 @@ async function boot(): Promise<void> {
   // Load before building the world (plan §4): nothing is written until this resolves.
   const saves = new SaveManager(new PreferencesStorage(), content);
   const loaded = await saves.load();
+  // Shared art, plus the costumes the map will show first: the Garden's spawn pool and
+  // every type in the save (ROSTER-SCALE). Others load when a kid of that type appears.
+  const textures = new TextureStore(kidRig);
+  const firstTypes = new Set([...Object.keys(gameContent.balance.spawnWeights), ...(loaded.state?.world.kids.map((k) => k.type) ?? [])]);
+  await Promise.all([textures.loadShared(), ...[...firstTypes].map((t) => textures.ensure(t))]);
   const scene = new MapScene(
     app,
     gameContent,
@@ -85,7 +92,7 @@ async function boot(): Promise<void> {
     {
       rig: kidRig,
       map: mapData,
-      textures: await loadTextures(),
+      textures,
       looks: lookTable(kidRig),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
       obstacles: obstaclesFrom(mapData),
@@ -163,6 +170,7 @@ async function boot(): Promise<void> {
           },
           debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
           debugKnown: () => hud.knownKids,
+          debugLoadedCostumes: () => scene.loadedCostumes,
           debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => scene.command(cmd),
         }
       : {}),

@@ -660,3 +660,26 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   });
 });
 
+test('costumes load when a type appears and are released after it leaves (ROSTER-SCALE)', async ({ page }) => {
+  test.setTimeout(60_000);
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  // Hero and Glassblower aren't in the spawn pool, so their costumes start unloaded.
+  expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).not.toContain('hero');
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  await expect.poll(() => page.evaluate((id) => !!window.__PK__!.screenPointOf(id), hero)).toBe(true);
+  expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).toEqual(expect.arrayContaining(['hero', 'glassblower']));
+  // Fuse them (hero + glassblower -> lantern): both types leave the map.
+  await dropOnto(page, hero, glass);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
+  const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
+  await expect.poll(() => page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
+  // 15 s after the last of them left, their costumes are released; the lantern's stays.
+  await expect
+    .poll(() => page.evaluate(() => window.__PK__!.debugLoadedCostumes!()), { timeout: 25_000, intervals: [1000] })
+    .not.toEqual(expect.arrayContaining(['hero']));
+  const loaded = await page.evaluate(() => window.__PK__!.debugLoadedCostumes!());
+  expect(loaded).not.toContain('glassblower');
+  expect(loaded).toContain('lantern');
+  expect(errors).toEqual([]);
+});
+

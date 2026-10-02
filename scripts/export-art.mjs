@@ -45,6 +45,16 @@ const DATA_OUT = 'assets/data';
 const ASSET_REF = /^(kid|fx|ground|path|decor|landmark|building|icon|ui|badge)_[a-z0-9_]+$/;
 /** Generated files from the previous run, so removed or renamed sources don't leave stale PNGs. */
 const MANIFEST = join(ROOT, 'art/.export-manifest.json');
+/**
+ * ROSTER-SCALE: transparent families are exported cropped to their visible pixels (plus a
+ * 1 px clear margin, so edges filter cleanly) and the crop is recorded in a generated
+ * `assets/data/trim.json` as [x, y, w, h, canvasW, canvasH]. The engine rebuilds each
+ * texture with Pixi's orig/trim rects, so every pivot and anchor still refers to the
+ * authored canvas; only the decoded memory shrinks. Tiles and paths stay full size.
+ */
+const TRIM_PREFIXES = ['kid_', 'fx_', 'decor_', 'landmark_', 'building_'];
+const TRIM_OUT = join(ROOT, 'assets/data/trim.json');
+const trims = {};
 
 /**
  * Kid layer order and names. Must match src/render/layers.ts (LAYER_ORDER and
@@ -93,10 +103,12 @@ const exported = [];
 const roster = JSON.parse(readFileSync(join(ROOT, 'src/content/kids.json'), 'utf8')).map((k) => k.id);
 // v2 names (ASSETS.md): kid_body_<body>_<frame>, kid_face_<face>_<state>,
 // kid_<type>_<back|front>_<part>. Legacy r2 names stay valid during the transition.
-const KID_LEGACY_OVERLAY = /^kid_([a-z0-9]+)_(overlay_back|overlay_front)$/;
+const KID_LEGACY_OVERLAY = /^kid_([a-z0-9_]+?)_(overlay_back|overlay_front)$/;
 const KID_BODY = /^kid_body_[a-z0-9]+_[a-z0-9_]+$/;
 const KID_FACE = /^kid_face_[a-z0-9]+_[a-z0-9_]+$/;
-const KID_COSTUME = /^kid_([a-z0-9]+)_(back|front)_[a-z0-9_]+$/;
+// Lazy type match: a type may contain underscores (ice_sculptor), so the first
+// `_back_`/`_front_` separates it from the part.
+const KID_COSTUME = /^kid_([a-z0-9_]+?)_(back|front)_[a-z0-9_]+$/;
 function kidNameProblem(name) {
   if (name === 'kid_plain_body' || name === 'kid_plain_face') return null;
   if (KID_BODY.test(name) || KID_FACE.test(name)) return null;
@@ -165,7 +177,7 @@ for (const file of svgs) {
   const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
   // Render at exactly the contract size on a transparent page, then inspect pixels.
   const result = await page.evaluate(
-    async ({ dataUrl, w, h, padding }) => {
+    async ({ dataUrl, w, h, padding, doTrim }) => {
       const img = new Image();
       img.src = dataUrl;
       await img.decode();
@@ -188,9 +200,40 @@ for (const file of svgs) {
           }
         }
       }
-      return { png: c.toDataURL('image/png'), opaque, empty, paddingHit, naturalW: img.naturalWidth, naturalH: img.naturalHeight };
+      let trim = null;
+      let png = c.toDataURL('image/png');
+      if (doTrim && !empty) {
+        let x0 = w;
+        let y0 = h;
+        let x1 = -1;
+        let y1 = -1;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (data[(y * w + x) * 4 + 3] > 0) {
+              if (x < x0) x0 = x;
+              if (x > x1) x1 = x;
+              if (y < y0) y0 = y;
+              if (y > y1) y1 = y;
+            }
+          }
+        }
+        // One clear pixel around the art, so bilinear filtering never samples a cut edge.
+        x0 = Math.max(0, x0 - 1);
+        y0 = Math.max(0, y0 - 1);
+        x1 = Math.min(w - 1, x1 + 1);
+        y1 = Math.min(h - 1, y1 + 1);
+        const tw = x1 - x0 + 1;
+        const th = y1 - y0 + 1;
+        const t = document.createElement('canvas');
+        t.width = tw;
+        t.height = th;
+        t.getContext('2d').drawImage(c, x0, y0, tw, th, 0, 0, tw, th);
+        png = t.toDataURL('image/png');
+        trim = [x0, y0, tw, th, w, h];
+      }
+      return { png, trim, opaque, empty, paddingHit, naturalW: img.naturalWidth, naturalH: img.naturalHeight };
     },
-    { dataUrl, w, h, padding: fam.padding },
+    { dataUrl, w, h, padding: fam.padding, doTrim: TRIM_PREFIXES.some((t) => name.startsWith(t)) },
   );
   if (result.naturalW !== w || result.naturalH !== h) {
     problems.push(`${name}: SVG size is ${result.naturalW}x${result.naturalH}, contract is ${w}x${h}`);
@@ -200,7 +243,13 @@ for (const file of svgs) {
   if (fam.opaque === true && !result.opaque) problems.push(`${name}: must be fully opaque`);
   if (fam.opaque === false && result.opaque) problems.push(`${name}: must have transparency`);
   pending.push({ out: join(ROOT, fam.dir, `${name}.png`), png: result.png });
+  if (result.trim) trims[name] = result.trim;
 }
+// Sorted, so the generated file is stable across runs.
+pending.push({
+  out: TRIM_OUT,
+  text: JSON.stringify(Object.fromEntries(Object.keys(trims).sort().map((k) => [k, trims[k]])), null, 0).replaceAll('],"', '],\n"') + '\n',
+});
 
 // Authored sidecars: parse, check every asset reference resolves to a delivered source,
 // and check the rig's clips only use body frames every body actually has.
