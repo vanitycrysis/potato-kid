@@ -12,7 +12,7 @@
 .ui-surface {
   border: 8px solid transparent;
   border-image: var(--ui-panel) 8 fill / 8px stretch;
-  color: var(--ui-ink, #1a1a1a);
+  color: var(--ui-ink);
   font-family: 'Patrick Hand', system-ui, sans-serif;
 }
 .ui-tray {
@@ -53,13 +53,13 @@
 .hud-track {
   height: 6px;
   border-radius: 3px;
-  background: var(--ui-sage, #e2e8d4);
+  background: var(--ui-sage);
   overflow: hidden;
 }
 .hud-bar {
   height: 100%;
   width: 0;
-  background: var(--ui-sceneryInk, #686b55);
+  background: var(--ui-sceneryInk);
   opacity: 0.55;
 }
 
@@ -111,7 +111,7 @@
   color: inherit;
 }
 .tray-cell:disabled {
-  color: var(--ui-disabled, #686b55);
+  color: var(--ui-disabled);
 }
 .tray-cell:disabled .ui-icon {
   opacity: 0.6;
@@ -133,7 +133,7 @@
   border-image: var(--ui-toast) 8 fill / 8px stretch;
   font-family: 'Patrick Hand', system-ui, sans-serif;
   font-size: 20px;
-  color: var(--ui-ink, #1a1a1a);
+  color: var(--ui-ink);
   opacity: 0;
   transition:
     opacity 0.2s,

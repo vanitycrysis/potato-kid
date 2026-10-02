@@ -1,6 +1,6 @@
 import type { Ambient, LookTable } from '../sim/game';
 import type { Obstacle } from '../sim/world';
-import type { BoundsPx, KidRig, MapData, MapInstance } from './artData';
+import type { BoundsPx, KidRig, MapData, MapInstance, UiData } from './artData';
 import type { KidDef } from './types';
 
 // Pure derivations from ChatGPT/Codex's art data into what the simulation needs.
@@ -122,4 +122,16 @@ export function rigCoverage(rig: KidRig, kids: KidDef[], delivered: Set<string>)
     for (const [s, asset] of Object.entries(face.states)) need(`face "${id}" state "${s}"`, asset);
   }
   return problems;
+}
+
+/** Palette tokens the engine and `hud.css` read from ui_v2.json. */
+export const UI_PALETTE_KEYS = ['world', 'ink', 'sage', 'sceneryInk', 'disabled'] as const;
+
+/**
+ * GUI colour coverage (D-036): every colour on screen comes from Codex's ui_v2.json.
+ * A missing token is an error; the engine has no colours of its own to fall back on.
+ */
+export function uiPaletteCoverage(ui: UiData | undefined): string[] {
+  if (!ui) return ['ui_v2.json is missing'];
+  return UI_PALETTE_KEYS.filter((k) => typeof ui.palette?.[k] !== 'string').map((k) => `ui_v2.json palette has no "${k}"`);
 }

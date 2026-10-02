@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { content } from './index';
-import { kidRig, mapData } from './artData';
-import { bodyBox, lookTable, obstaclesFrom, rigCoverage, worldBox } from './artRules';
+import { kidRig, mapData, uiData } from './artData';
+import { bodyBox, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage, worldBox } from './artRules';
 
 // Names of every exported runtime PNG, as the game loads them.
 const exported = new Set(
@@ -66,5 +66,22 @@ describe('derived tables', () => {
       const inside = sx > o.box.minX && sx < o.box.maxX && sy > o.box.minY && sy < o.box.maxY;
       expect(inside).toBe(false);
     }
+  });
+});
+
+describe('GUI colours come only from ui_v2.json (D-036)', () => {
+  it('the shipped palette covers every token the engine reads', () => {
+    expect(uiPaletteCoverage(uiData)).toEqual([]);
+  });
+
+  it('reports a missing token or file instead of falling back to an engine colour', () => {
+    const palette = { ...uiData!.palette };
+    delete palette.world;
+    expect(uiPaletteCoverage({ ...uiData!, palette })).toEqual(['ui_v2.json palette has no "world"']);
+    expect(uiPaletteCoverage(undefined)).toEqual(['ui_v2.json is missing']);
+  });
+
+  it('content data carries no colours of its own', () => {
+    for (const kid of content.kids) expect(Object.keys(kid).sort()).toEqual(['id', 'name', 'tier']);
   });
 });
