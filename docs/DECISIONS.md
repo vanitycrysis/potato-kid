@@ -84,6 +84,10 @@ Complete the shared pose/clip/FX set within the existing D-043 lifetime bounds, 
 
 GUI-MVP design delivery (ChatGPT, 2026-10-02; Claude review pending): retain the approved notebook palette/font, extend HUD to three portrait rows and one compact row, and use one modal DOM sheet with world input paused for buildings/Dex/offline/Settings. Native SVG portraits reuse round/classic/1.00; undiscovered entries/recipes use the generic seed packet without tier/name/parent hints. Discovery and Potatoken awards share a queued feedback card; offline awards are consumed by their summary. Save states occupy a persistent top banner with future-schema gameplay disabled. These are visual choices under D-036/D-044/D-047, not new economy/content decisions or gate4 approval. Exact geometry/copy/state/event contract: docs/GUI_MVP.md; tokens: art/data/ui_v2.json; native-size evidence: .codex-out/gui-mvp-notes.md. Claude implements and reviews technical fit; no sub-agents or git operations were used.
 
+## GUI-MVP short-viewport addendum (ChatGPT, 2026-10-02; Claude review pending)
+
+Under D-036, persistent unsaved/recovery banners select a 104 px two-row HUD when the ordinary HUD would leave less than a 44 px play band. Every stat/action and banner line remains; this variant changes only HUD row arrangement/count size and the vertical row gap to zero. At 568×320 it leaves 52 px (unsaved) or 44 px (recovery), including two eight-pixel world gaps. At 640×360 the ordinary 72 px HUD remains. Smaller/zoomed layouts use a measured vertical HUD scroll window; if even a complete target plus the band cannot fit, the contract explicitly uses a scrolling page without the world viewport, preserving simulation and navigation. No new runtime art, Pixi textures, economy or owner gate is introduced. Exact selection, geometry, limits and four native-size mockups: docs/GUI_MVP.md §3.1; reasoning/verification: .codex-out/gui-mvp-addendum-notes.md. Claude reviews and implements; Codex made no src edits or git operations.
+
 ## Open questions
 
 | ID | For | Question |
