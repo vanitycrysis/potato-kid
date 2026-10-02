@@ -1,9 +1,11 @@
 {
   "spawnWeights": {
-    "plain": 40,
-    "fire": 20,
-    "water": 20,
-    "snow": 20
+    "plain": 30,
+    "fire": 16,
+    "water": 16,
+    "snow": 16,
+    "wind": 12,
+    "stone": 10
   },
   "spawn": {
     "intervalSeconds": 12,
@@ -48,6 +50,14 @@
       {
         "kids": 16,
         "potatokens": 5
+      },
+      {
+        "kids": 25,
+        "potatokens": 6
+      },
+      {
+        "kids": 36,
+        "potatokens": 8
       }
     ],
     "offlineCapHours": 8
