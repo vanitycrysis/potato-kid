@@ -42,7 +42,7 @@ async function boot(): Promise<void> {
   await app.init({
     resizeTo: window,
     background: '#f4efe2',
-    antialias: true,
+    antialias: false,
     resolution: Math.min(window.devicePixelRatio, 2),
     autoDensity: true,
   });
