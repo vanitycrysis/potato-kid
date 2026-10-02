@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "asset-playable-b-1",
+  "revision": "asset-playable-b-2",
   "status": "final",
   "delivery": {
     "scope": "first_playable_art",
@@ -481,10 +481,10 @@
             },
             "hand_left": {
               "position": [
-                23,
-                145
+                24,
+                189
               ],
-              "rotationDeg": -20,
+              "rotationDeg": 60,
               "scale": [
                 1,
                 1
@@ -559,10 +559,10 @@
             },
             "hand_left": {
               "position": [
-                27,
-                121
+                29,
+                66
               ],
-              "rotationDeg": -65,
+              "rotationDeg": -75,
               "scale": [
                 1,
                 1
@@ -1116,10 +1116,10 @@
             },
             "hand_left": {
               "position": [
-                45,
-                143
+                36,
+                187
               ],
-              "rotationDeg": -20,
+              "rotationDeg": 60,
               "scale": [
                 1,
                 1
@@ -1194,10 +1194,10 @@
             },
             "hand_left": {
               "position": [
-                46,
-                119
+                39,
+                54
               ],
-              "rotationDeg": -65,
+              "rotationDeg": -75,
               "scale": [
                 1,
                 1
@@ -1751,10 +1751,10 @@
             },
             "hand_left": {
               "position": [
-                13,
-                156
+                20,
+                195
               ],
-              "rotationDeg": -20,
+              "rotationDeg": 60,
               "scale": [
                 1,
                 1
@@ -1829,10 +1829,10 @@
             },
             "hand_left": {
               "position": [
-                17,
-                130
+                26,
+                84
               ],
-              "rotationDeg": -65,
+              "rotationDeg": -75,
               "scale": [
                 1,
                 1
@@ -2386,10 +2386,10 @@
             },
             "hand_left": {
               "position": [
-                25,
-                154
+                23,
+                194
               ],
-              "rotationDeg": -20,
+              "rotationDeg": 60,
               "scale": [
                 1,
                 1
@@ -2464,10 +2464,10 @@
             },
             "hand_left": {
               "position": [
-                28,
-                124
+                32,
+                66
               ],
-              "rotationDeg": -65,
+              "rotationDeg": -75,
               "scale": [
                 1,
                 1
@@ -4877,18 +4877,18 @@
     "fusion": {
       "status": "final",
       "canvas": [
-        256,
-        256
+        320,
+        320
       ],
       "sourcePivot": [
-        128,
-        224
+        160,
+        288
       ],
       "boundsPx": [
-        24,
-        148,
-        236,
-        228
+        12,
+        42,
+        308,
+        266
       ],
       "assets": [
         "fx_fusion_01",
@@ -4927,18 +4927,18 @@
     "discovery": {
       "status": "final",
       "canvas": [
-        256,
-        256
+        320,
+        320
       ],
       "sourcePivot": [
-        128,
-        224
+        160,
+        288
       ],
       "boundsPx": [
-        52,
-        16,
-        204,
-        100
+        8,
+        8,
+        312,
+        288
       ],
       "assets": [
         "fx_discovery_01",
@@ -4952,7 +4952,7 @@
       "anchor": "event_ground",
       "offsetPx": [
         0,
-        -48
+        -24
       ],
       "frames": [
         {

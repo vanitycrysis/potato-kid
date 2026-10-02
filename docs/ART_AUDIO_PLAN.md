@@ -114,7 +114,7 @@ RGBA bytes = width x height x 4; 1 MiB = 1,048,576 bytes. Count unique resident 
 | Bodies | 4 x 8 at 256 = 32 | 8.00000 |
 | Faces | 4 x 3 at 256 = 12 | 3.00000 |
 | Costumes | 26 front + 7 back at 256 = 33 | 8.25000 |
-| Spawn/fusion/discovery | 3+4+4 at 256 = 11 | 2.75000 |
+| Spawn/fusion/discovery | 3 at 256 +8 at 320 = 11 | 3.87500 |
 | Shadow | 1 at 128 x 64 | 0.03125 |
 | Ground | 3 at 256 | 0.75000 |
 | Path decals | 3 at 256 | 0.75000 |
@@ -122,8 +122,8 @@ RGBA bytes = width x height x 4; 1 MiB = 1,048,576 bytes. Count unique resident 
 | Landmarks | 2 at 512 | 2.00000 |
 | Garden | 1 at 512 | 1.00000 |
 | GUI rasters/extra portraits | 0 | 0.00000 |
-| **Raw total** | **104 images, including 77 kid-layer images** | **28.03125** |
-| Allocation reserve | Padding/extrusion/slack/necessary surfaces | **3.96875** |
+| **Raw total** | **104 images, including 77 kid-layer images** | **29.15625** |
+| Allocation reserve | Padding/extrusion/slack/necessary surfaces | **2.84375** |
 | **Hard ceiling** | Actual simultaneous allocations | **32.00000** |
 
 Load neither legacy map plate/shared aliases nor flattened portraits, launch masters or placeholders alongside replacements. Shared costumes prevent body x face x pose multiplication. Atlas rounding is not free: actual pages must fit 32 MiB; use individual textures/tightly packed non-power-of-two pages if necessary. If overhead cannot fit, reduce packing waste, then landmark/decor resolution, with art review. A new costume frame/component or GUI raster needs a budget debit before production. Reserved GPU surfaces for authored SVG placement feedback must also be reported if rasterized.
@@ -150,11 +150,11 @@ Round 3 supersedes only Round 2's Raincloud/Picnic drawings: Raincloud uses a de
 
 ## Part B delivery (2026-10-02; Claude review pending)
 
-All deferred body poses and seven event clips are supplied, with real settle transitions and complete reduced-motion mappings. No lifetime box, existing costume pivot/fit, face or original pose changed. Wave uses the left nub; right-hand props remain fixed. Held/drop never enlarge the root. Shared FX use the existing ink/palette and reveal no recipe or type. Discovery is an effect-only clip above the unchanged kid; fusion removes parents on consumption and dispatches the child's separate spawn at a resolved free ground point.
+All deferred body poses and seven event clips are supplied, with real settle transitions and complete reduced-motion mappings. No lifetime box, existing costume pivot/fit, face or original pose changed. Wave uses the left nub; right-hand props remain fixed. Held/drop never enlarge the root. Shared FX use the existing ink/palette and reveal no recipe or type. Round 2 revises only wave_low/wave_high and fusion/discovery: fusion uses paired joining curls, discovery an irregular crown-and-side burst. Both FX use 320 x 320 sources, sourcePivot [160,288]; offsets fusion [0,0], discovery [0,-24]. Scale source pixels by the kid's 180/256 factor (never shrink the whole FX to a 180-world-unit width); see the Round 2 integration table in .codex-out/asset-playable-b-notes.md. All body reserves remain unchanged. Discovery is an effect-only clip above the unchanged kid; fusion removes parents on consumption and dispatches the child's separate spawn at a resolved free ground point.
 
 Map and GUI source drawings pass the native-size/source check and are final under D-044. Two 512 landmarks use the planned pivots, positions and 280-unit reserves. The three additional landmark conflicts skip perimeter_left_07, perimeter_left_08 and perimeter_right_14; there are 30 small decor instances, Garden and two landmarks. Every instance has real art and exclusion metadata. Expanded sheet/toast/upgrade layout mockups and phone reflow checks remain deferred as before. Font fetch failed in the sandbox; no font or licence substitute is included.
 
-Budget is exactly **104 runtime PNGs / 28.03125 MiB raw**, including 77 kid layers, leaving **3.96875 MiB** for allocation overhead within the 32 MiB ceiling. The 16 new body drawings, 11 event FX, shadow and two landmarks add **8.78125 MiB** to the prior v2 delivery. Seven legacy kid sources are preserved byte-for-byte in art/history/r2/; their 1.75 MiB duplicate PNGs are removed through normal exporter cleanup so the eager texture loader sees only the 104 planned images. No native DOM GUI rasters or portrait caches are added. Physical GPU/atlas/surface allocations remain Claude's device check.
+Budget is exactly **104 runtime PNGs / 29.15625 MiB raw**, including 77 kid layers, leaving **2.84375 MiB** for allocation overhead within the 32 MiB ceiling. The 16 new body drawings, 11 event FX, shadow and two landmarks add **9.90625 MiB** to the prior v2 delivery. Seven legacy kid sources are preserved byte-for-byte in art/history/r2/; their 1.75 MiB duplicate PNGs are removed through normal exporter cleanup so the eager texture loader sees only the 104 planned images. No native DOM GUI rasters or portrait caches are added. Physical GPU/atlas/surface allocations remain Claude's device check.
 
 Independent validation covers all bodies, costumes, faces/states, birth sizes, clip entries and sampled held interpolation. Native-size colour/gray/dark sheets and nine clip strips are in .codex-out/. Art notes, schema field semantics, original source hashes and font handoff: .codex-out/asset-playable-b-notes.md and assets/PROVENANCE.md. No engine edits or audio delivery.
 
