@@ -29,4 +29,24 @@ describe('lifecycle coordinator (plan §3)', () => {
     listeners.get('visibilitychange')!();
     expect(calls).toEqual(['suspend', 'resume@9000']);
   });
+
+  it('ignores a native state reply that arrives after a newer signal (Codex review, PR #31)', async () => {
+    const calls: string[] = [];
+    const l = new Lifecycle({ suspend: () => calls.push('suspend'), resume: () => calls.push('resume') }, () => 0);
+    const native = new Map<string, () => void>();
+    let reply!: (s: { isActive: boolean }) => void;
+    const app = {
+      addListener: (event: string, fn: () => void) => Promise.resolve(native.set(event, fn)),
+      getState: () => new Promise<{ isActive: boolean }>((r) => (reply = r)),
+    };
+    const doc = { hidden: false, addEventListener: () => {} };
+    l.attach(doc as unknown as Document, { addEventListener: () => {} } as unknown as Window, app);
+    native.get('pause')!();
+    native.get('resume')!();
+    reply({ isActive: false }); // a snapshot taken before the pause/resume
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(l.state).toBe('active');
+    expect(calls).toEqual(['suspend', 'resume']);
+  });
 });

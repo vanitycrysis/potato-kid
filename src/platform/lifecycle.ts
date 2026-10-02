@@ -43,17 +43,43 @@ export class Lifecycle {
    * hidden while boot was still loading, before any listener existed. Without this, that
    * absence would never be credited (Codex review, PR #31).
    */
-  attach(doc: Pick<Document, 'hidden' | 'addEventListener'> = document, win: Pick<Window, 'addEventListener'> = window): void {
-    doc.addEventListener('visibilitychange', () => (doc.hidden ? this.suspend() : this.resume()));
-    win.addEventListener('pagehide', () => this.suspend());
-    win.addEventListener('pageshow', () => {
-      if (!doc.hidden) this.resume();
-    });
+  attach(
+    doc: Pick<Document, 'hidden' | 'addEventListener'> = document,
+    win: Pick<Window, 'addEventListener'> = window,
+    native: NativeApp | null = Capacitor.isNativePlatform() ? App : null,
+  ): void {
+    // Counts signals, so a slow initial state reply can't undo a newer one.
+    let signals = 0;
+    const on = (fn: () => void) => () => {
+      signals++;
+      fn();
+    };
+    doc.addEventListener('visibilitychange', on(() => (doc.hidden ? this.suspend() : this.resume())));
+    win.addEventListener('pagehide', on(() => this.suspend()));
+    win.addEventListener(
+      'pageshow',
+      on(() => {
+        if (!doc.hidden) this.resume();
+      }),
+    );
     if (doc.hidden) this.suspend();
-    if (Capacitor.isNativePlatform()) {
-      void App.addListener('pause', () => this.suspend());
-      void App.addListener('resume', () => this.resume());
-      void App.getState().then(({ isActive }) => (isActive ? this.resume() : this.suspend()));
+    if (native) {
+      void native.addListener('pause', on(() => this.suspend()));
+      void native.addListener('resume', on(() => this.resume()));
+      const asked = signals;
+      // A reply that arrives after any newer signal is stale: ignore it (Codex review, PR #31).
+      void native.getState().then(({ isActive }) => {
+        if (signals === asked) {
+          if (isActive) this.resume();
+          else this.suspend();
+        }
+      });
     }
   }
+}
+
+/** The part of Capacitor's App plugin the coordinator uses (injectable for tests). */
+export interface NativeApp {
+  addListener(event: 'pause' | 'resume', fn: () => void): Promise<unknown>;
+  getState(): Promise<{ isActive: boolean }>;
 }
