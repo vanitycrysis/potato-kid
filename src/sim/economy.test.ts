@@ -83,12 +83,20 @@ describe('building upgrades (plan §2, §3)', () => {
     expect(g.step([{ type: 'upgrade', building: 'compendium' }])).toContainEqual({ type: 'rejected', command: 'upgrade', reason: 'maxLevel' });
   });
 
-  it('a faster Garden keeps at most one banked spawn', () => {
-    const g = game((c) => (c.balance.spawn.intervalSeconds = 12));
-    g.state.spawnProgress = 12; // banked, map has room but we upgrade first
+  it('a faster Garden keeps at most one banked spawn, even after several upgrades (Codex review, PR #27)', () => {
+    const g = game((c) => {
+      c.balance.spawn.intervalSeconds = 12;
+      c.balance.spawn.capacity = 40;
+    });
+    g.state.spawnProgress = 12; // one banked spawn
     g.state.materials = 1e6;
-    g.step([{ type: 'upgrade', building: 'garden' }], 0);
-    expect(g.state.spawnProgress).toBeLessThanOrEqual(g.interval);
+    const up = { type: 'upgrade', building: 'garden' } as const;
+    const first = g.step([up, up, up, up, up], 0);
+    expect(first.filter((x) => x.type === 'spawned')).toHaveLength(1);
+    // No time passes: nothing else may spawn.
+    const second = g.step([], 0);
+    expect(second.filter((x) => x.type === 'spawned')).toHaveLength(0);
+    expect(g.state.spawnProgress).toBeLessThan(g.interval);
   });
 });
 

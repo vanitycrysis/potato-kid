@@ -315,8 +315,9 @@ export class Game {
         if (s.materials < cost) return reject('cost');
         s.materials -= cost;
         s.buildings[c.building]++;
-        // A faster Garden's progress past its new interval is clamped by advanceSpawn this
-        // same step: at most one banked spawn (plan §3).
+        // A faster Garden keeps at most one banked spawn (plan §3): clamp before the step's
+        // spawn consumes it, or the leftover would bank a second one (Codex review, PR #27).
+        s.spawnProgress = Math.min(s.spawnProgress, this.interval);
         events.push({ type: 'upgraded', building: c.building, level: s.buildings[c.building] });
         return;
       }
