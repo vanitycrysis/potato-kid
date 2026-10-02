@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid firefighter front nozzle</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: style_sample. Revision: v2-slice-1.</desc>
-  <path d="M199 163 L217 169 L222 158 L205 151 Z" fill="#c6ad82" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M202 158 L188 144 L195 135 L213 151 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M185 143 L195 132 L202 138 L192 149 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1.</desc>
+  <g transform="translate(6 0)"><path d="M199 163 L217 169 L222 158 L205 151 Z" fill="#c6ad82" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M202 158 L188 144 L195 135 L213 151 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M185 143 L195 132 L202 138 L192 149 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></svg>

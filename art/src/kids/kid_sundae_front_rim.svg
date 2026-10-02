@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid sundae front rim</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M50 187 Q129 204 208 188" fill="none" stroke="#d5b9a5" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M123 207 L135 207 L135 216 L150 220 Q128 224 105 220 L122 216 Z" fill="#d5b9a5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M39 174 Q127 193 215 174 C210 194 191 209 164 212 L91 212 C66 205 47 192 39 174 Z" fill="#d5b9a5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 174 Q128 192 212 174" fill="none" stroke="#fff1d5" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 168 Q128 186 212 168" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid lantern back glow</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <ellipse cx="128" cy="160" rx="86" ry="65" fill="#efd6a0" stroke="none" stroke-width="0"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M49 151 C46 123 63 104 92 101 C118 89 151 94 174 103 C201 108 211 130 214 157 C220 181 201 207 176 217 C146 230 109 228 80 216 C55 205 41 178 49 151 Z" fill="#efd6a0" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid gardener front apron</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M111 149 L144 149 L155 203 L101 201 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M118 177 L140 178 L139 190 L118 189 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M111 148 L143 148 Q146 171 155 202 Q129 208 101 201 Q109 174 111 148 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M117 174 L140 175 L139 190 Q128 194 118 189 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid snow front beanie</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M83 67 Q92 41 121 38 Q155 35 172 66 Z" fill="#bfd1d0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M79 67 Q126 62 176 66 L176 78 Q127 75 79 79 Z" fill="#bfd1d0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="122" cy="31" r="6" fill="#96bbc0"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M83 65 C85 49 94 31 113 28 C139 25 162 43 168 65 Z" fill="#bfd1d0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="115" cy="29" r="10" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5"/><path d="M79 64 Q122 60 173 65 L172 80 Q127 77 80 81 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M96 68 L96 76 M116 67 L116 75 M137 68 L137 75 M157 69 L157 77" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

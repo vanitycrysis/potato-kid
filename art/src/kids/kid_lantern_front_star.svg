@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid lantern front star</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M128 151 L135 165 L149 170 L136 179 L132 194 L122 182 L107 181 L117 168 L116 154 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M128 149 L136 167 L153 174 L136 182 L129 201 L121 183 L105 176 L121 168 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M124 175 L129 170" fill="none" stroke="#fff1d5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

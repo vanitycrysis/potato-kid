@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid steam front vapour</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: placeholder. Revision: v2-slice-1.</desc>
-  <path d="M108 76 C88 67 122 57 106 47 C90 38 115 32 110 22" fill="none" stroke="#879b91" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M147 77 C128 66 163 56 146 46 C132 36 155 28 153 20" fill="none" stroke="#879b91" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
+  <path d="M108 74 C93 68 92 60 104 52 C115 45 115 39 107 33 C102 29 101 24 105 20" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 73 C135 67 137 59 148 52 C160 44 159 37 151 32 C146 28 146 24 150 19" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M108 74 C93 68 92 60 104 52 C115 45 115 39 107 33 C102 29 101 24 105 20" fill="none" stroke="#b7c4bc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 73 C135 67 137 59 148 52 C160 44 159 37 151 32 C146 28 146 24 150 19" fill="none" stroke="#b7c4bc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
