@@ -149,6 +149,8 @@ export class Game {
   private readonly looks: LookTable;
   private readonly spawnAt: { x: number; y: number };
   private readonly ambient: Ambient | undefined;
+  /** A due Garden spawn found no free spot near the outlet (shown as "Waiting for room"). */
+  private blocked = false;
 
   constructor(
     private readonly content: Content,
@@ -264,6 +266,14 @@ export class Game {
     const e = this.content.balance.economy;
     const tier = this.tiers.get(type) ?? 1;
     return { materials: Math.ceil(e.respawnMaterials * 2 ** (tier - 1)), potatokens: e.respawnPotatokensPerTier * tier };
+  }
+
+  /**
+   * A due Garden spawn is waiting because no spot near the Garden is free, though the map
+   * isn't full (GUI_MVP §3: "Waiting for room" only after a real failed placement).
+   */
+  get waitingForRoom(): boolean {
+    return this.blocked;
   }
 
   /** Spawn-pool weights with the bias building applied. */
@@ -424,6 +434,8 @@ export class Game {
         return;
       }
       case 'setBias':
+        // The engine guards this too, not only the UI (GUI_MVP §5).
+        if (s.buildings.bias < 1) return reject('locked');
         if (c.kidType !== null && !this.spawnTable.some((e) => e.id === c.kidType)) return reject('notSpawnable');
         s.biasTarget = c.kidType;
         events.push({ type: 'biasSet', kidType: c.kidType });
@@ -544,12 +556,15 @@ export class Game {
     // Tolerance absorbs float drift from summing 0.1 s steps (120 × 0.1 ≠ 12 exactly).
     if (raw < this.interval - 1e-6 || s.world.kids.length >= this.capacity) {
       s.spawnProgress = Math.min(this.interval, raw);
+      this.blocked = false;
       return;
     }
     if (!this.spawnAtOutlet(() => this.rollSpawnType(), 'garden', events)) {
       s.spawnProgress = Math.min(this.interval, raw);
+      this.blocked = true;
       return;
     }
+    this.blocked = false;
     // Keep the overshoot so spawn timing doesn't drift with the step size.
     s.spawnProgress = Math.max(0, Math.min(this.interval, raw - this.interval));
   }

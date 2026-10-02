@@ -433,3 +433,272 @@ test('time away is credited once: Garden spawns and income (plan §3)', async ({
   expect(undrawn).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('Spawn now spends a Potatoken and brings a kid; when broke it sends nothing (GUI_MVP §3)', async ({ page }) => {
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  const spawn = page.locator('.hud-spawn');
+  const start = await page.evaluate(() => ({ kids: window.__PK__!.kids().length, tokens: window.__PK__!.wallet().potatokens }));
+  expect(start.tokens).toBeGreaterThan(0);
+  await spawn.click();
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(start.kids + 1);
+  expect(await page.evaluate(() => window.__PK__!.wallet().potatokens)).toBe(start.tokens - 1);
+  await expect(page.locator('.feedback')).toContainText('Kid arrived at the Garden.');
+  // Spend the rest; then the control is disabled and a tap changes nothing.
+  for (let i = 1; i < start.tokens; i++) {
+    await spawn.click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.wallet().potatokens)).toBe(start.tokens - 1 - i);
+  }
+  await expect(spawn).toHaveAttribute('aria-disabled', 'true');
+  const kids = await page.evaluate(() => window.__PK__!.kids().length);
+  await spawn.click();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(kids);
+  await expect(page.locator('.feedback')).not.toContainText('Not enough');
+  expect(errors).toEqual([]);
+});
+
+test('a save from a newer app freezes the game and asks for an update (GUI_MVP §10)', async ({ page }) => {
+  await page.addInitScript(() => {
+    // A slot written by a future schema: the save manager must go read-only, never write.
+    localStorage.setItem('CapacitorStorage.potato-kid/slotA', JSON.stringify({ schema: 99, revision: 5, savedAt: 1, state: {}, checksum: 'x' }));
+  });
+  await page.goto('/?seed=3&calm=1');
+  await page.waitForFunction(() => window.__PK__?.ready === true);
+  await expect(page.locator('.banner')).toContainText('Please update the game.');
+  await expect(page.locator('.readonly-notice')).toContainText('Your save is kept safe.');
+  await expect(page.locator('.hud-spawn')).toHaveAttribute('aria-disabled', 'true');
+  const before = await page.evaluate(() => window.__PK__!.wallet());
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(() => window.__PK__!.wallet())).toEqual(before);
+  expect(await page.evaluate(() => localStorage.getItem('CapacitorStorage.potato-kid/slotB'))).toBeNull();
+});
+
+/** Drags kid `a` onto kid `b` (finger below b's feet, as held kids float above the finger). */
+async function dropOnto(page: Page, a: number, b: number, release = true): Promise<void> {
+  const from = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, a);
+  await page.mouse.move(from.x, from.y - 20);
+  await page.mouse.down();
+  const to = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, b);
+  const lift = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  await page.mouse.move(to.x, to.y + lift, { steps: 10 });
+  if (release) await page.mouse.up();
+}
+
+test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
+  test('a feedback card never takes the last 44 px of play band (568x320)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // The pair is placed touching, so it fuses on the next step: this test is about the
+    // play band, not dragging (a drag in so short a band would edge-scroll).
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 500, 1150);
+      window.__PK__!.debugAdd!('water', 560, 1150);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
+    for (let i = 0; i < 8; i++) {
+      const band = await page.evaluate(() => document.querySelector('.tray')!.getBoundingClientRect().top - document.querySelector('.top-stack')!.getBoundingClientRect().bottom);
+      expect(band).toBeGreaterThanOrEqual(44);
+      await page.waitForTimeout(200);
+    }
+  });
+
+  test('a visible card keeps its time while a kid is held', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b, c } = await page.evaluate(() => ({
+      a: window.__PK__!.debugAdd!('plain', 250, 1500),
+      b: window.__PK__!.debugAdd!('water', 830, 700),
+      // Well below the feedback card, so pressing it starts a real drag.
+      c: window.__PK__!.debugAdd!('fire', 300, 1650),
+    }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    // Hold another kid for longer than a card's 2.5 s.
+    const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 30, p.y - 30, { steps: 4 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
+    await page.waitForTimeout(3200);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await page.mouse.up();
+  });
+
+  test('a save banner settles a held kid before the HUD shifts', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 300, 1500));
+    await page.waitForTimeout(150);
+    const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 40, p.y - 40, { steps: 4 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((k) => window.__PK__!.presentationOf(k)?.clip, id));
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate((k) => window.__PK__!.presentationOf(k)?.clip, id)).not.toMatch(/^(pick_up|held)$/);
+    await page.mouse.up();
+  });
+
+  test('types discovered offline are not announced as new later', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    const discovered = await page.evaluate(() => (window.__PK__!.lastOffline()?.spawned ?? []).map((k) => k.type));
+    expect(discovered.length).toBeGreaterThan(0);
+    const known = await page.evaluate(() => window.__PK__!.debugKnown!());
+    for (const t of discovered) expect(known).toContain(t);
+  });
+
+  /** Free band between the top stack and the higher of the tray and the Dex button. */
+  const band = (page: Page) =>
+    page.evaluate(
+      () =>
+        Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top) -
+        document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
+    );
+
+  test('the play band counts the Dex button too (320x568)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 400, 1300), b: window.__PK__!.debugAdd!('water', 700, 1300) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
+    for (let i = 0; i < 8; i++) {
+      expect(await band(page)).toBeGreaterThanOrEqual(44);
+      await page.waitForTimeout(200);
+    }
+  });
+
+  test('a refusal that cannot fit waits, and appears once there is room', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
+    await page.waitForTimeout(600);
+    await expect(page.locator('.feedback')).toBeEmpty();
+    await page.setViewportSize({ width: 568, height: 800 });
+    await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+
+  test('a visible card that stops fitting goes back to the queue (640x360 + banner)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 300, 1150), b: window.__PK__!.debugAdd!('water', 800, 1150) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(150);
+      expect(await band(page)).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test('a requeued reward never blocks a waiting refusal (640x360)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b, c } = await page.evaluate(() => ({
+      a: window.__PK__!.debugAdd!('plain', 300, 1150),
+      b: window.__PK__!.debugAdd!('water', 800, 1150),
+      // Low on screen, well clear of the feedback card, so pressing it really holds it.
+      c: window.__PK__!.debugAdd!('fire', 1300, 1700),
+    }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    // Hold a kid (feedback freezes), queue a refusal, then a banner that settles the drag
+    // and leaves room for the short refusal but not the reward card.
+    const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 20, p.y - 30, { steps: 3 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' }));
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await page.mouse.up();
+    await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+
+  test('the read-only notice is never covered (568x320)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.addInitScript(() => {
+      localStorage.setItem('CapacitorStorage.potato-kid/slotA', JSON.stringify({ schema: 99, revision: 5, savedAt: 1, state: {}, checksum: 'x' }));
+    });
+    await page.goto('/?seed=3&calm=1');
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    // Overlap by geometry: the HUD has pointer-events: none, so hit-testing can't see it.
+    const covered = await page.evaluate(() => {
+      const n = document.querySelector('.readonly-notice')!.getBoundingClientRect();
+      return [...document.querySelectorAll('.top-stack > *, .tray, .dex-button')].some((e) => {
+        const r = e.getBoundingClientRect();
+        const shown = getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0;
+        return shown && r.left < n.right && r.right > n.left && r.top < n.bottom && r.bottom > n.top;
+      });
+    });
+    expect(covered).toBe(false);
+  });
+
+  test('a resize during a drag still takes a card that no longer fits off screen', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b, c } = await page.evaluate(() => ({
+      a: window.__PK__!.debugAdd!('plain', 250, 1500),
+      b: window.__PK__!.debugAdd!('water', 830, 700),
+      c: window.__PK__!.debugAdd!('fire', 300, 1650),
+    }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(p.x + 20, p.y - 30, { steps: 3 });
+    expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.waitForTimeout(300);
+    expect(await band(page)).toBeGreaterThanOrEqual(44);
+    await page.mouse.up();
+  });
+});
+
+test('costumes load when a type appears and are released after it leaves (ROSTER-SCALE)', async ({ page }) => {
+  test.setTimeout(60_000);
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  // Hero and Glassblower aren't in the spawn pool, so their costumes start unloaded.
+  expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).not.toContain('hero');
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  // Both parents are drawn (their costumes loaded) before any drag (Codex review, PR #35).
+  for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
+  expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).toEqual(expect.arrayContaining(['hero', 'glassblower']));
+  // Fuse them (hero + glassblower -> lantern): both types leave the map.
+  await dropOnto(page, hero, glass);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
+  const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
+  await expect.poll(() => page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
+  // 15 s after the last of them left, their costumes are released; the lantern's stays.
+  await expect
+    .poll(() => page.evaluate(() => window.__PK__!.debugLoadedCostumes!()), { timeout: 25_000, intervals: [1000] })
+    .not.toEqual(expect.arrayContaining(['hero']));
+  const loaded = await page.evaluate(() => window.__PK__!.debugLoadedCostumes!());
+  expect(loaded).not.toContain('glassblower');
+  expect(loaded).toContain('lantern');
+  expect(errors).toEqual([]);
+});
+
+
+test('a discovery card waits until its kid is drawn, even if the costume loads slowly', async ({ page }) => {
+  test.setTimeout(60_000);
+  // Lantern's costume downloads take 3 s (a slow network).
+  await page.route('**/kid_lantern_*', async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.continue();
+  });
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
+  await dropOnto(page, hero, glass);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
+  const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
+  await expect(page.locator('.feedback')).toContainText('New discovery', { timeout: 15_000 });
+  expect(await page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
+  expect(errors).toEqual([]);
+});

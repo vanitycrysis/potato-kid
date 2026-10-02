@@ -4,7 +4,7 @@ import { kidRig, mapData, uiData } from './content/artData';
 import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { Lifecycle } from './platform/lifecycle';
-import { exportedNames, loadTextures } from './render/art';
+import { exportedNames, TextureStore } from './render/art';
 import { MapScene } from './render/scene';
 import { SaveManager, type SaveMode } from './save/manager';
 import { PreferencesStorage } from './save/storage';
@@ -42,6 +42,14 @@ declare global {
       debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
+      /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
+      /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
+      debugLoadedCostumes?: () => string[];
+      /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
+      debugKnown?: () => string[];
+      /** Only with `?debug=1`: shows a save banner state (screenshots and tests). */
+      debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
   }
 }
@@ -72,6 +80,11 @@ async function boot(): Promise<void> {
   // Load before building the world (plan §4): nothing is written until this resolves.
   const saves = new SaveManager(new PreferencesStorage(), content);
   const loaded = await saves.load();
+  // Shared art, plus the costumes the map will show first: the Garden's spawn pool and
+  // every type in the save (ROSTER-SCALE). Others load when a kid of that type appears.
+  const textures = new TextureStore(kidRig);
+  const firstTypes = new Set([...Object.keys(gameContent.balance.spawnWeights), ...(loaded.state?.world.kids.map((k) => k.type) ?? [])]);
+  await Promise.all([textures.loadShared(), ...[...firstTypes].map((t) => textures.ensure(t))]);
   const scene = new MapScene(
     app,
     gameContent,
@@ -79,7 +92,7 @@ async function boot(): Promise<void> {
     {
       rig: kidRig,
       map: mapData,
-      textures: await loadTextures(),
+      textures,
       looks: lookTable(kidRig),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
       obstacles: obstaclesFrom(mapData),
@@ -87,12 +100,23 @@ async function boot(): Promise<void> {
     },
     loaded.state ?? undefined,
   );
-  new Hud(scene, content);
+  const hud = new Hud(scene, content);
+  const saveStatus = () =>
+    hud.setSaveStatus({ unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' });
+  saveStatus();
 
   // Reconcile the time since the save once, then save once (plan §4 steps 6-7). The
-  // return summary and save banners are drawn by the GUI-MVP panels (pending Codex's design).
-  let lastOffline: OfflineReport | null = loaded.state ? scene.resume(Date.now()) : null;
-  const save = () => saves.save(scene.game.persisted());
+  // return summary is drawn by the GUI-MVP sheets (next GUI slice).
+  let lastOffline: OfflineReport | null = null;
+  const save = () => saves.save(scene.game.persisted()).then(saveStatus);
+  if (saves.mode === 'readOnly') {
+    // A newer app's save (GUI_MVP §10): freeze play and accounting; nothing is written or
+    // credited until a version that can read it loads it.
+    scene.suspend();
+    window.__PK__ = { ...hooks(), lastOffline: () => null };
+    return;
+  }
+  if (loaded.state) lastOffline = scene.resume(Date.now());
   void save();
   const lifecycle = new Lifecycle({
     suspend: () => {
@@ -115,7 +139,8 @@ async function boot(): Promise<void> {
     if (saveAfter(e)) void save();
   });
 
-  window.__PK__ = {
+  function hooks(): Omit<NonNullable<Window['__PK__']>, 'lastOffline'> {
+    return {
     ready: true,
     fps: () => app.ticker.FPS,
     kids: () =>
@@ -131,7 +156,6 @@ async function boot(): Promise<void> {
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     wallet: () => ({ materials: scene.game.state.materials, potatokens: scene.game.state.potatokens }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
-    lastOffline: () => lastOffline,
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
@@ -144,9 +168,15 @@ async function boot(): Promise<void> {
             lastOffline = scene.resume(scene.game.state.accountedUntil + awayMs);
             await save();
           },
+          debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
+          debugKnown: () => hud.knownKids,
+          debugLoadedCostumes: () => scene.loadedCostumes,
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => scene.command(cmd),
         }
       : {}),
-  };
+    };
+  }
+  window.__PK__ = { ...hooks(), lastOffline: () => lastOffline };
 }
 
 function calmed(c: Content): Content {

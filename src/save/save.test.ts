@@ -179,6 +179,15 @@ describe('failure paths (plan §4)', () => {
     expect(storage.writes).toEqual([]);
   });
 
+  it('a newer app’s save is read-only even if its envelope or checksum differs', async () => {
+    const storage = new TestStorage();
+    storage.data.set('slotA', JSON.stringify({ schema: 99, revision: 5, savedAt: 1, state: {}, checksum: 'a-new-scheme' }));
+    const m = new SaveManager(storage, content);
+    expect((await m.load()).mode).toBe('readOnly');
+    await m.save(newGame().persisted());
+    expect(storage.writes).toEqual([]);
+  });
+
   it('a state that parses but cannot be played is protected, not loaded', async () => {
     const storage = new TestStorage();
     const g = newGame();
