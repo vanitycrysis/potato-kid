@@ -69,6 +69,12 @@ export type GameEvent =
   /** Potatokens earned (spends are implied by the command that caused them). */
   | { type: 'earned'; potatokens: number; reason: 'discovery' | 'milestone' };
 
+/**
+ * Everything a save needs (plan §4). The world's bounds and scenery come from the map
+ * data, not the save, so a save survives map changes.
+ */
+export type PersistedState = Omit<GameState, 'world'> & { world: Pick<World, 'kids' | 'nextKidId'> };
+
 export interface GameState {
   world: World;
   rngState: number;
@@ -148,6 +154,8 @@ export class Game {
     private readonly content: Content,
     options: GameOptions,
     seed: number,
+    /** A loaded save (already validated): restores it instead of starting a new map. */
+    saved?: PersistedState,
   ) {
     this.rng = createRng(seed);
     this.cosmetic = createRng((seed ^ 0x9e3779b9) >>> 0);
@@ -177,6 +185,10 @@ export class Game {
       milestonesPaid: 0,
       accountedUntil: options.now ?? 0,
     };
+    if (saved) {
+      this.restore(saved);
+      return;
+    }
     for (let i = 0; i < content.balance.spawn.startingKids; i++) {
       // Starting kids appear around the spawn outlet, each on a free spot (D-039).
       const look = this.rollLook();
@@ -188,6 +200,32 @@ export class Game {
     }
     this.state.milestonesPaid = this.milestonesReached();
     this.syncRngState();
+  }
+
+  /** A deep copy of the state to save: no live references into the running game. */
+  persisted(): PersistedState {
+    this.syncRngState();
+    const { world, ...rest } = this.state;
+    return structuredClone({ ...rest, world: { kids: world.kids, nextKidId: world.nextKidId } });
+  }
+
+  private restore(saved: PersistedState): void {
+    const copy = structuredClone(saved);
+    Object.assign(this.state, copy, { world: { ...this.state.world, kids: copy.world.kids, nextKidId: copy.world.nextKidId } });
+    for (const kid of this.state.world.kids) {
+      // Nobody is mid-drag in a loaded game, and the box always follows the current art.
+      kid.held = false;
+      // Appearance is cosmetic: a body or face the current art doesn't have (e.g. retired
+      // in a later version) maps to the first one rather than failing to draw (Codex review, PR #30).
+      const body = this.looks.bodies.find((b) => b.id === kid.look.body) ?? this.looks.bodies[0]!;
+      if (!this.looks.faces.some((f) => f.id === kid.look.face)) kid.look.face = this.looks.faces[0]!.id;
+      kid.look.body = body.id;
+      const k = kid.look.scale;
+      kid.box = { left: body.box.left * k, top: body.box.top * k, right: body.box.right * k, bottom: body.box.bottom * k };
+    }
+    this.rng.setState(copy.rngState);
+    this.cosmetic.setState(copy.cosmeticRngState);
+    this.spawnRng.setState(copy.spawnRngState);
   }
 
   /** Garden spawn interval, seconds: `base · factor^(level−1)` (plan §3). */
