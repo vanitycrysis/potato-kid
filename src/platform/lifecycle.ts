@@ -38,16 +38,22 @@ export class Lifecycle {
     this.hooks.resume(this.now());
   }
 
-  /** Listens to every platform signal. */
-  attach(): void {
-    document.addEventListener('visibilitychange', () => (document.hidden ? this.suspend() : this.resume()));
-    window.addEventListener('pagehide', () => this.suspend());
-    window.addEventListener('pageshow', () => {
-      if (!document.hidden) this.resume();
+  /**
+   * Listens to every platform signal, and adopts the current state: the app may have been
+   * hidden while boot was still loading, before any listener existed. Without this, that
+   * absence would never be credited (Codex review, PR #31).
+   */
+  attach(doc: Pick<Document, 'hidden' | 'addEventListener'> = document, win: Pick<Window, 'addEventListener'> = window): void {
+    doc.addEventListener('visibilitychange', () => (doc.hidden ? this.suspend() : this.resume()));
+    win.addEventListener('pagehide', () => this.suspend());
+    win.addEventListener('pageshow', () => {
+      if (!doc.hidden) this.resume();
     });
+    if (doc.hidden) this.suspend();
     if (Capacitor.isNativePlatform()) {
       void App.addListener('pause', () => this.suspend());
       void App.addListener('resume', () => this.resume());
+      void App.getState().then(({ isActive }) => (isActive ? this.resume() : this.suspend()));
     }
   }
 }
