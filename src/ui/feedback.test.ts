@@ -66,8 +66,13 @@ describe('feedback cards (GUI_MVP §9)', () => {
       { kind: 'arrival', count: 2 },
       { kind: 'refusal', command: 'instantSpawn', reason: 'full' },
     ]);
-    expect(refusalText('cost', 'potatokens')).toBe('Not enough Potatokens.');
-    expect(refusalText('cost')).toBe('Not enough currency.');
+    expect(refusalText('cost', 'instantSpawn', 'potatokens')).toBe('Not enough Potatokens.');
+    expect(refusalText('cost', 'upgrade')).toBe('Not enough currency.');
+  });
+
+  it('a locked refusal names the right building (Codex review, PR #33)', () => {
+    expect(refusalText('locked', 'setBias')).toBe('Build Spawn bias first.');
+    expect(refusalText('locked', 'respawn')).toBe('Build the Compendium first.');
   });
 
   it('matches what the real sim emits for a first fusion that reaches a milestone', () => {

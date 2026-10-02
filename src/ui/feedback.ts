@@ -76,8 +76,11 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
   return out;
 }
 
-/** Player-facing refusal copy (GUI_MVP §9). `currency` disambiguates `cost`. */
-export function refusalText(reason: RejectReason, currency?: 'materials' | 'potatokens'): string {
+/**
+ * Player-facing refusal copy (GUI_MVP §9). Rejected events carry no context, so the caller
+ * passes what it sent: `command` picks the locked building, `currency` disambiguates cost.
+ */
+export function refusalText(reason: RejectReason, command?: string, currency?: 'materials' | 'potatokens'): string {
   switch (reason) {
     case 'cost':
       return currency === 'materials' ? 'Not enough Materials.' : currency === 'potatokens' ? 'Not enough Potatokens.' : 'Not enough currency.';
@@ -88,7 +91,8 @@ export function refusalText(reason: RejectReason, currency?: 'materials' | 'pota
     case 'noRoom':
       return 'No clear spot by the Garden. Move a kid aside.';
     case 'locked':
-      return 'Build the Compendium first.';
+      // Bias is locked until built (engine guard); the Compendium locks respawns.
+      return command === 'setBias' ? 'Build Spawn bias first.' : 'Build the Compendium first.';
     case 'undiscovered':
       return 'Discover this kid first.';
     case 'notSpawnable':

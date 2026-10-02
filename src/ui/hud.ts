@@ -231,8 +231,8 @@ export class Hud {
     const g = this.scene.game;
     const cost = this.content.balance.economy.instantSpawnPotatokens;
     if (this.save.readOnly) return { ok: false, reason: 'Update the game to continue.' };
-    if (g.state.world.kids.length >= g.capacity) return { ok: false, reason: refusalText('full') };
-    if (g.state.potatokens < cost) return { ok: false, reason: refusalText('cost', 'potatokens') };
+    if (g.state.world.kids.length >= g.capacity) return { ok: false, reason: refusalText('full', 'instantSpawn') };
+    if (g.state.potatokens < cost) return { ok: false, reason: refusalText('cost', 'instantSpawn', 'potatokens') };
     return { ok: !this.inflight, reason: '' };
   }
 
@@ -286,7 +286,9 @@ export class Hud {
       if (item.kind === 'refusal' && item.command === 'instantSpawn') this.inflight = false;
       // Discoveries wait for the discovery effect to finish (rig: discovery onComplete).
       const notBefore = item.kind === 'discovery' ? now + this.scene.discoveryToastDelayMs : now;
-      const text = item.kind === 'refusal' ? refusalText(item.reason, item.command === 'instantSpawn' ? 'potatokens' : undefined) : undefined;
+      // The command implies the currency, except a respawn (whose sheet keeps its own context).
+      const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
+      const text = item.kind === 'refusal' ? refusalText(item.reason, item.command, currency) : undefined;
       const card: Card = { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
       // Refusals are never dropped: they wait like any card, but ahead of rewards.
       const firstReward = this.queue.findIndex((c) => c.item.kind !== 'refusal');
@@ -397,7 +399,7 @@ export class Hud {
       case 'arrival':
         return el('div', 'toast toast-short', icon('icon_spawn', '', 'ui-icon-28'), el('span', 'card-heading', item.count === 1 ? 'Kid arrived at the Garden.' : `${item.count} kids arrived at the Garden.`));
       case 'refusal':
-        return el('div', 'toast toast-short', icon('icon_warning', '', 'ui-icon-28'), el('span', 'card-heading', text ?? refusalText(item.reason)));
+        return el('div', 'toast toast-short', icon('icon_warning', '', 'ui-icon-28'), el('span', 'card-heading', text ?? refusalText(item.reason, item.command)));
     }
   }
 
