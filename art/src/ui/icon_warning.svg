@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Attention</title>
+  <desc>Original Potato Kid GUI-MVP vector. Revision gui-mvp-1. Final art for Claude review.</desc>
+  <path d="M63 21 Q67 17 71 25 L111 100 Q114 106 104 107 L23 107 Q14 107 19 97 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 49 V76" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="91" r="3.5" fill="#1a1a1a"/>
+</svg>

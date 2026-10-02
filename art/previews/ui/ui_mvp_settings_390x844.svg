@@ -1,0 +1,498 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844"><title>Potato Kid GUI-MVP: settings, 390 × 844</title><desc>Review only. Static illustrative data; safe insets 24/24 CSS px. Original GUI composition, existing neutral round/classic/1.00 kid layers. Body clipping indicates vertical scrolling; no runtime baked text. Revision gui-mvp-1.</desc><defs><symbol id="badge_tier_1" viewBox="0 0 64 64">
+  
+  
+  <ellipse cx="32" cy="32" rx="9" ry="14" fill="#bca480" stroke="#1a1a1a" stroke-width="3"/>
+</symbol>
+<symbol id="badge_tier_2" viewBox="0 0 64 64">
+  
+  
+  <path d="M32 44 Q11 39 15 18 Q32 16 32 44 Q32 14 50 20 Q55 40 32 44 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="badge_tier_3" viewBox="0 0 64 64">
+  
+  
+  <ellipse cx="22" cy="32" rx="8" ry="11" fill="#d9b7a6" stroke="#1a1a1a" stroke-width="3"/><ellipse cx="41" cy="32" rx="8" ry="11" fill="#d9b7a6" stroke="#1a1a1a" stroke-width="3"/><ellipse cx="32" cy="19" rx="8" ry="11" fill="#d9b7a6" stroke="#1a1a1a" stroke-width="3"/>
+</symbol>
+<symbol id="badge_tier_4" viewBox="0 0 64 64">
+  
+  
+  <path d="M32 8 Q35 27 55 32 Q36 35 32 56 Q29 36 8 32 Q28 29 32 8 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="badge_tier_5" viewBox="0 0 64 64">
+  
+  
+  <path d="M32 27 C18 18 22 7 31 7 C43 6 44 19 36 27 C45 13 58 20 56 29 C55 40 42 40 37 34 C53 37 52 52 43 54 C33 57 28 45 31 38 C27 54 14 57 10 47 C6 36 20 31 27 33 C11 34 4 22 12 16 C21 9 30 21 32 27 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="2.5"/>
+</symbol>
+<symbol id="icon_audio_off" viewBox="0 0 128 128">
+  
+  
+  <path d="M25 53 H42 L64 34 V96 L42 76 H25 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M82 48 L107 82 M106 48 L82 82" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_audio_on" viewBox="0 0 128 128">
+  
+  
+  <path d="M25 53 H42 L64 34 V96 L42 76 H25 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M79 47 Q96 64 79 82 M92 31 Q120 64 92 98" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_bias" viewBox="0 0 128 128">
+  
+  
+  <path d="M63 104 V64 M63 65 Q37 58 29 33 M63 65 Q85 55 96 32" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 40 Q10 26 28 19 Q44 24 28 40 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M95 41 Q77 25 96 19 Q112 25 95 41 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_capacity" viewBox="0 0 128 128">
+  
+  
+  <path d="M23 39 V101 M64 52 V104 M105 38 V101 M24 64 L104 64 M24 84 L104 84" fill="none" stroke="#bca480" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 39 V101 M64 52 V104 M105 38 V101" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_check" viewBox="0 0 128 128">
+  
+  
+  <path d="M27 68 L52 92 L101 35" fill="none" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_close" viewBox="0 0 128 128">
+  
+  
+  <path d="M37 36 L93 94 M92 36 L37 94" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_compendium" viewBox="0 0 128 128">
+  
+  
+  <path d="M32 20 L90 20 L100 107 L24 107 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 41 L61 63 L91 40" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 92 V69" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 77 Q43 76 45 65 Q58 62 60 77 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_dex" viewBox="0 0 128 128">
+  
+  
+  <path d="M29 22 L94 22 L98 107 L29 107 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 23 V107 M94 38 L105 38 V56 H96" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 59 Q75 51 81 65 Q86 83 69 86 Q54 83 60 59 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_discovery" viewBox="0 0 128 128">
+  
+  
+  <path d="M64 14 Q69 56 110 64 Q71 69 64 113 Q58 72 17 64 Q58 58 64 14 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_garden" viewBox="0 0 128 128">
+  
+  
+  <path d="M22 76 L105 76 L101 103 L26 101 Z" fill="#bca480" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M64 79 L65 32" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M65 56 Q30 55 30 32 Q55 27 65 56 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M65 46 Q69 20 94 26 Q98 45 65 46 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_kids" viewBox="0 0 128 128">
+  
+  
+  <path d="M15 70 Q13 42 40 37 Q66 34 73 62 Q79 91 48 96 Q19 99 15 70 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M57 60 Q62 31 86 35 Q112 37 113 64 Q119 93 90 96 Q63 92 57 60 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="76" cy="59" r="3" fill="#1a1a1a"/><circle cx="96" cy="59" r="3" fill="#1a1a1a"/><path d="M82 69 l8 -1" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_lock" viewBox="0 0 128 128">
+  
+  
+  <path d="M42 59 V44 Q41 23 64 23 Q88 24 87 45 V59" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+  <path d="M31 58 L96 56 L99 104 L30 105 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 76 V89" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+</symbol>
+<symbol id="icon_materials" viewBox="0 0 128 128">
+  
+  
+  <path d="M23 52 L73 36 L86 55 L35 72 Z" fill="#bca480" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 78 L90 61 L106 83 L56 100 Z" fill="#bca480" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_none" viewBox="0 0 128 128">
+  
+  
+  <path d="M61 24 C84 21 104 40 103 63 C105 88 84 104 61 103 C39 106 23 86 25 62 C23 40 41 24 61 24 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M44 64 H83" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+</symbol>
+<symbol id="icon_potatokens" viewBox="0 0 128 128">
+  
+  
+  <ellipse cx="64" cy="64" rx="37" ry="39" fill="#d8b576" stroke="#1a1a1a" stroke-width="5"/><path d="M53 43 Q80 39 85 62 Q87 84 63 88 Q42 88 43 65 Q42 51 53 43 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="62" r="2.5" fill="#1a1a1a"/><circle cx="73" cy="61" r="2.5" fill="#1a1a1a"/><path d="M60 72 l9 -1" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_settings" viewBox="0 0 128 128">
+  
+  
+  <circle cx="64" cy="64" r="31" fill="#fff1d5"/><path d="M64 22 V35 M64 94 V107 M22 64 H35 M94 64 H107 M33 33 L42 42 M86 86 L95 95 M33 95 L42 86 M86 42 L95 33" fill="none" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="64" cy="64" rx="24" ry="24" fill="#fff1d5" stroke="#1a1a1a" stroke-width="6"/><ellipse cx="64" cy="64" rx="7" ry="7" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5"/>
+</symbol>
+<symbol id="icon_spawn" viewBox="0 0 128 128">
+  
+  
+  <path d="M44 105 V57 M44 73 Q19 71 21 48 Q43 44 44 73 Z M45 62 Q47 34 72 38 Q77 59 45 62 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M90 69 V101 M74 85 H106" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+</symbol>
+<symbol id="icon_timer" viewBox="0 0 128 128">
+  
+  
+  <ellipse cx="63" cy="74" rx="32" ry="32" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5"/><path d="M63 74 V53 M63 74 L78 82 M62 41 V22" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M61 28 Q43 29 40 15 Q58 11 61 28 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="icon_unknown" viewBox="0 0 128 128">
+  
+  
+  <path d="M31 22 L91 22 L99 106 L24 106 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M35 42 L89 42 M53 61 Q56 49 70 55 Q85 65 65 76 V82" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="65" cy="92" r="3" fill="#1a1a1a"/>
+</symbol>
+<symbol id="icon_warning" viewBox="0 0 128 128">
+  
+  
+  <path d="M63 21 Q67 17 71 25 L111 100 Q114 106 104 107 L23 107 Q14 107 19 97 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 49 V76" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="91" r="3.5" fill="#1a1a1a"/>
+</symbol>
+<symbol id="ui_banner_problem" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+  <path d="M16 2 L22 8 L22 2 Z" fill="#bd655b"/>
+</symbol>
+<symbol id="ui_banner_recovery" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+  <path d="M16 2 L22 8 L22 2 Z" fill="#a5b58a"/>
+</symbol>
+<symbol id="ui_button_disabled" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#686b55" stroke-width="1.5" stroke-dasharray="2 2"/>
+</symbol>
+<symbol id="ui_button_normal" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+</symbol>
+<symbol id="ui_button_pressed" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/><path d="M7 19 H17" fill="none" stroke="#1a1a1a" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="ui_button_primary" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="3" width="21" height="20" rx="6" fill="#1a1a1a"/>
+  <rect x="1.5" y="1.5" width="21" height="20" rx="6" fill="#e2e8d4" stroke="#1a1a1a" stroke-width="1.5"/>
+</symbol>
+<symbol id="ui_button_selected" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#e2e8d4" stroke="#1a1a1a" stroke-width="1.5"/><path d="M8 19 Q12 16 16 19" fill="none" stroke="#686b55" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="ui_focus" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="none" stroke="#1a1a1a" stroke-width="1.5"/>
+</symbol>
+<symbol id="ui_hold_ring" viewBox="0 0 128 128">
+  
+  
+  <ellipse cx="64" cy="74" rx="49" ry="23" fill="none" stroke="#686b55" stroke-width="5"/>
+</symbol>
+<symbol id="ui_panel" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+</symbol>
+<symbol id="ui_place_blocked" viewBox="0 0 128 128">
+  
+  
+  <ellipse cx="64" cy="74" rx="49" ry="23" fill="none" stroke="#bd655b" stroke-width="5" stroke-dasharray="7 8"/><path d="M51 63 L77 85 M77 63 L51 85" fill="none" stroke="#bd655b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="ui_place_clear" viewBox="0 0 128 128">
+  
+  
+  <ellipse cx="64" cy="74" rx="49" ry="23" fill="none" stroke="#686b55" stroke-width="5"/><path d="M47 73 L59 84 L81 61" fill="none" stroke="#686b55" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="ui_slider_thumb" viewBox="0 0 24 24">
+  
+  
+  <path d="M11 2 C17 1 22 6 22 12 C23 18 17 22 11 22 C5 23 2 17 2 11 C1 6 5 2 11 2 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+  <path d="M10 8 L10 16 M14 8 L14 16" fill="none" stroke="#686b55" stroke-width="1.5" stroke-linecap="round"/>
+</symbol>
+<symbol id="ui_spawn_full" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+  <path d="M17 2 L22 7 M20 2 L22 4" fill="none" stroke="#686b55" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="ui_toast" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/><path d="M16 2 L22 8 L22 2 Z" fill="#e8a06b" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="ui_tray" viewBox="0 0 24 24">
+  
+  
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/><path d="M4 4 Q8 1 12 4 Q16 1 20 4" fill="none" stroke="#1a1a1a" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="portrait-plain" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-fire" viewBox="0 0 256 256"><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <g transform="translate(128 55) scale(0.91421 1) translate(-128 -55)"><path d="M68 92 C64 78 70 65 81 55 C90 47 94 40 94 34 C106 39 113 48 114 56 C119 39 126 33 135 27 C142 22 143 20 144 18 C152 29 151 43 146 50 C160 47 168 39 171 30 C187 42 189 60 180 74 C189 70 192 62 192 58 C202 77 193 97 175 111 L88 110 C78 106 71 100 68 92 Z" fill="#e8a06b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <g transform="translate(128 55) scale(0.903772 1) translate(-128 -55)"><path d="M119 86 C106 83 103 73 109 63 C114 56 119 51 120 43 C129 49 133 59 131 66 C137 64 141 58 142 52 C151 63 150 76 141 83 C134 87 126 88 119 86 Z" fill="#f1bf79" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+</g></symbol>
+<symbol id="portrait-water" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 116) rotate(0) scale(1 1) scale(1.16 1) translate(-128 -116)">
+  
+  
+  <path d="M128 24 C137 42 150 56 167 70 C188 89 205 111 212 133 C216 147 210 165 199 173 C190 179 180 172 184 161 C190 146 193 125 183 107 C172 88 151 79 129 80 C106 79 85 88 73 107 C63 125 63 146 69 161 C73 172 64 178 55 173 C44 166 38 148 43 133 C49 110 68 88 91 68 C109 51 122 38 128 24 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M146 62 l13 13" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-snow" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M83 65 C85 49 94 31 113 28 C139 25 162 43 168 65 Z" fill="#bfd1d0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="115" cy="29" r="10" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5"/><path d="M79 64 Q122 60 173 65 L172 80 Q127 77 80 81 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M96 68 L96 76 M116 67 L116 75 M137 68 L137 75 M157 69 L157 77" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M58 158 Q121 171 195 158 L196 175 Q125 188 59 174 Z" fill="#bfd1d0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M168 172 Q180 171 189 175 L185 204 L171 201 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M174 195 L185 197 M173 203 L171 208 M181 204 L180 209" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-chef" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M103 76 L103 51 C88 54 79 42 85 32 C88 26 95 26 100 28 C102 18 118 17 127 25 C137 17 153 22 155 31 C173 28 175 48 151 53 L149 76 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M103 63 Q126 66 150 62 M113 41 L113 51 M139 40 L139 51" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(199 172) rotate(0) scale(1 1) scale(1 1) translate(-202 -168)">
+  
+  
+  <path d="M185 169 L208 169" fill="none" stroke="#1a1a1a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M207 163 Q222 160 232 162 Q234 179 216 180 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M209 163 Q220 169 232 163" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-firefighter" viewBox="0 0 256 256"><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M209 156 C225 160 234 172 229 184 C225 194 215 196 201 192 L200 181 C210 185 218 183 218 178 C218 173 211 169 203 169 Z" fill="#c6ad82" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M69 78 C69 58 84 39 102 37 C122 30 142 33 158 42 C176 52 184 65 186 80 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M137 36 Q155 51 156 77" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M55 78 C91 75 111 79 135 80 C162 79 180 78 194 83 L222 95 L219 104 C204 101 192 92 177 91 C140 88 101 90 64 91 C52 92 46 84 55 78 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M106 28 Q122 20 135 27 L140 38 L136 62 L121 75 L105 61 L102 38 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(199 172) rotate(0) scale(1 1) scale(1 1) translate(-202 -168)">
+  
+  
+  <g transform="translate(6 0)"><path d="M199 163 L217 169 L222 158 L205 151 Z" fill="#c6ad82" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M202 158 L188 144 L195 135 L213 151 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M185 143 L195 132 L202 138 L192 149 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></g></symbol>
+<symbol id="portrait-snowman" viewBox="0 0 256 256"><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M103 52 L99 22 Q126 20 151 24 L154 53 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M103 41 L151 43 L152 51 L104 49 Z" fill="#bd655b" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/><path d="M82 50 Q127 46 174 52 L174 59 Q126 55 81 57 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M42 160 C64 169 83 174 127 170 C163 169 186 162 216 157 C221 181 204 208 180 218 C151 229 104 229 75 218 C52 209 37 184 42 160 Z" fill="#e3ece5" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 163 C37 184 52 209 75 218 C104 229 151 229 180 218 C204 208 221 181 216 160" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="128" cy="193" r="4.75" fill="#1a1a1a" stroke="none" stroke-width="0"/><circle cx="127" cy="211" r="4.75" fill="#1a1a1a" stroke="none" stroke-width="0"/>
+</g></symbol>
+<symbol id="portrait-steam" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M108 74 C93 68 92 60 104 52 C115 45 115 39 107 33 C102 29 101 24 105 20" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 73 C135 67 137 59 148 52 C160 44 159 37 151 32 C146 28 146 24 150 19" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M108 74 C93 68 92 60 104 52 C115 45 115 39 107 33 C102 29 101 24 105 20" fill="none" stroke="#b7c4bc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 73 C135 67 137 59 148 52 C160 44 159 37 151 32 C146 28 146 24 150 19" fill="none" stroke="#b7c4bc" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-hero" viewBox="0 0 256 256"><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M73 137 Q124 152 182 138 C192 159 198 185 216 216 L174 207 L128 223 L82 207 L40 216 C55 189 59 160 73 137 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M63 183 L54 204 M192 183 L202 204" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M108 150 L119 174 L136 174 L149 150" fill="none" stroke="#bd655b" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><path d="M127 168 L146 184 L130 204 L111 187 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M122 185 L128 179 L134 184" fill="none" stroke="#fff1d5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-sundae" viewBox="0 0 256 256"><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M35 174 Q126 162 221 174 C217 195 201 209 179 215 L76 215 C54 205 41 193 35 174 Z" fill="#d5b9a5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M39 175 Q128 188 217 175" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M130 42 Q135 28 148 26" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M133 27 Q142 19 151 24 Q145 33 133 27 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M127 43 C118 39 111 47 114 57 C117 68 132 71 141 61 C148 50 141 40 133 43 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M123 207 L135 207 L135 216 L150 220 Q128 224 105 220 L122 216 Z" fill="#d5b9a5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M39 174 Q127 193 215 174 C210 194 191 209 164 212 L91 212 C66 205 47 192 39 174 Z" fill="#d5b9a5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 174 Q128 192 212 174" fill="none" stroke="#fff1d5" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 168 Q128 186 212 168" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-sprout" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M126 75 Q130 61 128 48" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M127 52 C108 53 88 42 87 28 C108 24 124 34 127 52 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M129 48 C131 28 147 20 163 22 C162 39 148 51 129 48 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M107 37 L126 51 M146 34 L130 48" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M107 155 Q127 159 148 154 L139 189 Q126 191 114 184 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M124 166 C113 174 122 183 128 179 C135 172 131 168 124 166 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-gardener" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M86 66 L99 37 Q126 35 151 42 L168 66 Z" fill="#d6bd87" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M88 58 Q126 55 162 59 L168 67 L86 67 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M65 69 Q124 58 190 71 Q164 84 77 82 Z" fill="#d6bd87" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M94 72 L99 77 M152 71 L157 77" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M111 148 L143 148 Q146 171 155 202 Q129 208 101 201 Q109 174 111 148 Z" fill="#a5b58a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M117 174 L140 175 L139 190 Q128 194 118 189 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(199 172) rotate(0) scale(1 1) scale(1 1) translate(-202 -168)">
+  
+  
+  <path d="M195 178 L214 157" fill="none" stroke="#1a1a1a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M195 178 L214 157" fill="none" stroke="#c6ad82" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M208 161 C211 151 220 140 232 140 C233 151 225 162 216 168 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M216 160 L226 149" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-raincloud" viewBox="0 0 256 256"><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M155 50 C141 50 140 31 154 28 C153 15 174 13 182 27 C192 21 206 24 207 35 C221 31 231 50 216 50 L155 50 Z" fill="#b2c5c1" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M202 59 C200 63 196 66 198 70 C201 75 208 72 208 68 C208 65 204 61 202 59 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M215 70 C213 74 208 78 210 82 C213 87 221 84 221 80 C221 76 217 72 215 70 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-glassblower" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M73 46 Q123 52 178 78" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M81 39 L114 46 L109 68 L76 61 Z" fill="#b2c5c1" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M142 53 L176 64 L170 86 L136 75 Z" fill="#b2c5c1" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M113 57 Q124 56 138 66" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M87 49 L97 51 M147 64 L157 68" fill="none" stroke="#fff1d5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(199 172) rotate(0) scale(1 1) scale(1 1) translate(-202 -168)">
+  
+  
+  <path d="M179 181 L219 154" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M180 180 L218 154" fill="none" stroke="#a8b8ae" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M219 136 C225 129 233 136 234 147 C236 158 231 169 223 166 C214 163 211 145 219 136 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M222 140 Q218 146 220 151" fill="none" stroke="#fff1d5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-lantern" viewBox="0 0 256 256"><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M49 151 C46 123 63 104 92 101 C118 89 151 94 174 103 C201 108 211 130 214 157 C220 181 201 207 176 217 C146 230 109 228 80 216 C55 205 41 178 49 151 Z" fill="#efd6a0" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M113 29 C105 13 140 13 137 29" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M99 72 L100 40 L149 40 L153 72 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M93 39 L123 27 L154 39 Z" fill="#a8b8ae" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M112 43 L112 68 M140 43 L141 69" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M125 65 C115 60 121 55 125 49 C127 56 135 61 125 65 Z" fill="#fff1d5" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/><path d="M95 73 L157 73" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M128 149 L136 167 L153 174 L136 182 L129 201 L121 183 L105 176 L121 168 Z" fill="#d8b576" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M124 175 L129 170" fill="none" stroke="#fff1d5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="portrait-picnic" viewBox="0 0 256 256">
+  
+  
+  <path d="M59 207 Q58 215 54 220 M183 207 Q184 215 188 220" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(0 0)"><path d="M119 55 C108 52 104 59 95 60 C80 60 79 70 68 76 C54 81 48 97 42 111 C37 124 40 136 37 146 C35 160 44 174 48 183 C54 192 61 196 69 204 C81 212 94 208 106 213 C121 218 136 215 148 213 C163 213 175 206 186 201 C199 198 201 188 207 180 C214 165 209 157 212 147 C214 133 204 121 206 111 C209 102 199 96 199 86 C195 76 183 72 173 68 C154 64 137 61 128 58 C124 56 122 55 119 55 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 164 q-7 -3 -10 -9 M197 164 q7 -4 10 -9 M110 61 q-5 -7 -7 -9" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="translate(128 116) rotate(0) scale(1 1) translate(-128 -116)">
+  
+  
+  <circle cx="88" cy="116" r="3.75" fill="#1a1a1a"/><circle cx="168" cy="116" r="3.75" fill="#1a1a1a"/><path d="M117 126 C123 126 130 126 135 124" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 55) rotate(0) scale(1 1) scale(1 1) translate(-128 -55)">
+  
+  
+  <path d="M80 67 C85 49 109 45 129 49 C145 50 159 60 176 63 L175 78 Q127 68 80 79 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M87 62 Q127 56 172 69" fill="none" stroke="#fff1d5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M108 50 L110 71 M139 54 L140 72" fill="none" stroke="#fff1d5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M179 64 Q190 52 203 51 Q203 64 186 73 L205 85 Q186 90 176 76 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M176 63 Q184 60 188 68 Q189 76 180 78 Q173 73 176 63 Z" fill="#bd655b" stroke="#1a1a1a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(128 166) rotate(0) scale(1 1) scale(1 1) translate(-128 -166)">
+  
+  
+  <path d="M108 150 Q128 153 149 150 L155 193 Q128 198 104 191 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M110 170 L151 170 M128 155 L128 191" fill="none" stroke="#bd655b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M109 170 L151 170 M128 155 L128 191" fill="none" stroke="#d5b9a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</g><g transform="translate(199 172) rotate(0) scale(1 1) scale(1 1) translate(-202 -168)">
+  
+  
+  <path d="M195 173 C191 152 220 146 224 172" fill="none" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M188 174 L231 173 L226 195 Q209 199 192 194 Z" fill="#d6bd87" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M190 178 L229 177 M199 182 L200 192 M218 181 L217 193" fill="none" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></symbol>
+<symbol id="garden-world" viewBox="0 0 512 512">
+  
+  
+  <path d="M96 335 L407 335 L399 449 Q255 480 109 446 Z" fill="#bca480" stroke="#686b55" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M105 337 Q257 315 405 338 L394 371 Q255 394 113 369 Z" fill="#86765a" stroke="#686b55" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M151 326 L151 257 M359 326 L359 254" fill="none" stroke="#686b55" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M81 260 Q177 169 257 161 Q338 177 430 261 Q365 280 300 265 Q256 293 208 267 Q141 281 81 260 Z" fill="#a5b58a" stroke="#686b55" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M258 165 Q247 122 256 92" fill="none" stroke="#686b55" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M254 119 Q175 117 177 66 Q232 49 254 119 Z" fill="#a5b58a" stroke="#686b55" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M256 105 Q258 42 326 42 Q342 103 256 105 Z" fill="#a5b58a" stroke="#686b55" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M189 295 L319 292 L323 334 L186 339 Z" fill="#fff1d5" stroke="#686b55" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M155 410 Q256 426 363 410" fill="none" stroke="#686b55" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M206 351 Q204 327 197 321 M204 337 Q184 335 184 321 Q201 318 204 337 Z M207 339 Q209 321 223 322 Q228 337 207 339 Z" fill="#a5b58a" stroke="#686b55" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol><clipPath id="clip-1"><rect x="24" y="420" width="342" height="320"/></clipPath></defs><style>@font-face{font-family:'Patrick Hand';src:url('../../../assets/fonts/patrick-hand/PatrickHand-Regular.ttf')}text{font-family:'Patrick Hand',system-ui,sans-serif;font-weight:400}</style><rect width="390" height="844" fill="#f4efe2"/><path d="M202.8 240 L202.8 774" fill="none" stroke="#d8c5a4" stroke-width="24"/><use href="#garden-world" x="105.30000000000001" y="174" width="144" height="144"/><use href="#portrait-plain" x="34" y="358" width="80" height="80"/><use href="#portrait-fire" x="226" y="394" width="80" height="80"/><use href="#portrait-water" x="74" y="495" width="80" height="80"/><use href="#portrait-snow" x="259" y="570" width="80" height="80"/><svg x="8" y="24" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="24" width="358" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="24" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="8" y="32" width="8" height="144" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="32" width="358" height="144" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="32" width="8" height="144" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="8" y="176" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="176" width="358" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="176" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><use href="#icon_materials" x="24" y="42" width="24" height="24"/><text x="54" y="63" font-size="22" text-anchor="start" fill="#1a1a1a">1.2k</text><use href="#icon_potatokens" x="173" y="42" width="24" height="24"/><text x="203" y="63" font-size="22" text-anchor="start" fill="#1a1a1a">8</text><g data-hit="322,32,44,44"><svg x="322" y="32" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="330" y="32" width="28" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="32" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="40" width="8" height="28" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="330" y="40" width="28" height="28" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="40" width="8" height="28" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="68" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="330" y="68" width="28" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="68" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><use href="#icon_settings" x="332" y="42" width="24" height="24"/></g><use href="#icon_kids" x="24" y="94" width="24" height="24"/><text x="54" y="115" font-size="22" text-anchor="start" fill="#1a1a1a">8/12</text><use href="#icon_timer" x="128" y="94" width="24" height="24"/><text x="158" y="115" font-size="18" text-anchor="start" fill="#1a1a1a">Next kid 00:08</text><rect x="24" y="151" width="222" height="6" rx="3" fill="#e2e8d4"/><rect x="24" y="151" width="88.80000000000001" height="6" rx="3" fill="#686b55" opacity=".55"/><g data-hit="254,132,112,44" aria-label="Spawn now"><svg x="254" y="132" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="262" y="132" width="96" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="132" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="254" y="140" width="8" height="28" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="262" y="140" width="96" height="28" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="140" width="8" height="28" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="254" y="168" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="262" y="168" width="96" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="168" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><text x="310" y="151" font-size="18" text-anchor="middle" fill="#1a1a1a">Spawn now</text><text x="318" y="170" font-size="16" text-anchor="middle" fill="#1a1a1a">1</text><use href="#icon_potatokens" x="284" y="155" width="18" height="18"/></g><svg x="8" y="724" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="724" width="358" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="724" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="8" y="732" width="8" height="80" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="732" width="358" height="80" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="732" width="8" height="80" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="8" y="812" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="812" width="358" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="812" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_tray" x="0" y="0" width="24" height="24"/></svg><g data-hit="16,732,89.5,80"><use href="#icon_garden" x="46.75" y="738" width="28" height="28"/><text x="60.75" y="788" font-size="16" text-anchor="middle" fill="#1a1a1a">Garden</text></g><g data-hit="105.5,732,89.5,80"><use href="#icon_capacity" x="136.25" y="738" width="28" height="28"/><text x="150.25" y="788" font-size="16" text-anchor="middle" fill="#1a1a1a">Capacity</text></g><g data-hit="195,732,89.5,80"><use href="#icon_bias" x="225.75" y="738" width="28" height="28"/><text x="239.75" y="788" font-size="16" text-anchor="middle" fill="#1a1a1a">Bias</text></g><g data-hit="284.5,732,89.5,80"><use href="#icon_compendium" x="315.25" y="738" width="28" height="28"/><text x="329.25" y="788" font-size="16" text-anchor="middle" fill="#1a1a1a">Compendium</text></g><g data-hit="334,668,48,48"><svg x="334" y="668" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="342" y="668" width="32" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="668" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="334" y="676" width="8" height="32" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="342" y="676" width="32" height="32" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="676" width="8" height="32" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="334" y="708" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="342" y="708" width="32" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="708" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><use href="#icon_dex" x="346" y="680" width="24" height="24"/></g><rect width="390" height="844" fill="#1a1a1a" opacity=".24"/><svg x="8" y="340" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="340" width="358" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="340" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="8" y="348" width="8" height="464" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="348" width="358" height="464" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="348" width="8" height="464" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="8" y="812" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="16" y="812" width="358" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><svg x="374" y="812" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_panel" x="0" y="0" width="24" height="24"/></svg><use href="#icon_settings" x="24" y="364" width="28" height="28"/><text x="60" y="382" font-size="26" text-anchor="start" fill="#1a1a1a">Settings</text><g data-hit="322,356,44,44"><svg x="322" y="356" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="330" y="356" width="28" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="356" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="364" width="8" height="28" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="330" y="364" width="28" height="28" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="364" width="8" height="28" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="392" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="330" y="392" width="28" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="392" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><use href="#icon_close" x="332" y="366" width="24" height="24"/></g><text x="24" y="412" font-size="16" text-anchor="start" fill="#1a1a1a">Make the garden your own.</text><g clip-path="url(#clip-1)" data-scroll="24,420,342,320"><use href="#icon_audio_on" x="24" y="432" width="28" height="28"/><text x="60" y="454" font-size="22" text-anchor="start" fill="#1a1a1a">Audio</text><g data-hit="262,424,52,44" aria-label="On"><svg x="262" y="424" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="270" y="424" width="36" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="306" y="424" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="262" y="432" width="8" height="28" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="270" y="432" width="36" height="28" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="306" y="432" width="8" height="28" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="262" y="460" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="270" y="460" width="36" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><svg x="306" y="460" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_selected" x="0" y="0" width="24" height="24"/></svg><text x="288" y="452" font-size="16" text-anchor="middle" fill="#1a1a1a">On</text></g><g data-hit="314,424,52,44" aria-label="Off"><svg x="314" y="424" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="424" width="36" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="424" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="314" y="432" width="8" height="28" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="432" width="36" height="28" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="432" width="8" height="28" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="314" y="460" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="322" y="460" width="36" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="460" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_normal" x="0" y="0" width="24" height="24"/></svg><text x="340" y="452" font-size="16" text-anchor="middle" fill="#1a1a1a">Off</text></g><text x="24" y="500" font-size="16" text-anchor="start" fill="#1a1a1a">Audio is coming soon.</text><text x="24" y="556" font-size="18" text-anchor="start" fill="#1a1a1a">Music</text><text x="366" y="556" font-size="16" text-anchor="end" fill="#1a1a1a">70%</text><rect x="36" y="581" width="318" height="6" rx="3" fill="#e2e8d4"/><rect x="36" y="581" width="222.6" height="6" rx="3" fill="#686b55" opacity=".55"/><g data-hit="24,562,342,44"><use href="#ui_slider_thumb" x="246.6" y="572" width="24" height="24"/></g><text x="24" y="668" font-size="18" text-anchor="start" fill="#1a1a1a">Sound effects</text><text x="366" y="668" font-size="16" text-anchor="end" fill="#1a1a1a">80%</text><rect x="36" y="693" width="318" height="6" rx="3" fill="#e2e8d4"/><rect x="36" y="693" width="254.4" height="6" rx="3" fill="#686b55" opacity=".55"/><g data-hit="24,674,342,44"><use href="#ui_slider_thumb" x="278.4" y="684" width="24" height="24"/></g></g><rect x="362" y="428" width="4" height="64" rx="2" fill="#686b55" opacity=".65"/><g data-hit="24,756,342,48" aria-label="Done"><svg x="24" y="756" width="8" height="8" viewBox="0 0 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="32" y="756" width="326" height="8" viewBox="8 0 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="756" width="8" height="8" viewBox="16 0 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="24" y="764" width="8" height="32" viewBox="0 8 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="32" y="764" width="326" height="32" viewBox="8 8 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="764" width="8" height="32" viewBox="16 8 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="24" y="796" width="8" height="8" viewBox="0 16 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="32" y="796" width="326" height="8" viewBox="8 16 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><svg x="358" y="796" width="8" height="8" viewBox="16 16 8 8" preserveAspectRatio="none"><use href="#ui_button_primary" x="0" y="0" width="24" height="24"/></svg><text x="195" y="786" font-size="18" text-anchor="middle" fill="#1a1a1a">Done</text></g><path d="M0 24 H390 M0 820 H390" fill="none" stroke="#bd655b" stroke-width="1" stroke-dasharray="4 4" opacity=".5"/></svg>

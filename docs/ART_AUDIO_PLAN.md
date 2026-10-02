@@ -91,6 +91,8 @@ ChatGPT supplies `art/data/map_garden_v2.json`: world/cell sizes, seed/weights, 
 
 ## DOM GUI design
 
+**GUI-MVP revision (2026-10-02; Claude review pending):** [GUI_MVP.md](GUI_MVP.md) is now the precise layout/state/copy contract, superseding the deferred expanded-layout work and old HUD coordinates in this section. The palette, Patrick Hand, native SVG/nine-slice contract, neutral portrait rig and unknown packet remain. HUD now uses three portrait rows/one compact row; shared modal sheets cover all buildings, picker, Compendium, Dex, offline, save states and Settings. `art/data/ui_v2.json` has the additive `mvp` tokens and existing HUD paths are updated. Ten native GUI SVG additions (including tier5) add zero Pixi texture allocations. The locally bundled official font from PLAYABLE-INTEGRATION is used for true-size review, superseding this plan's historical font-fetch block. This delivery is design/art only: Claude implements DOM and behavioural/device checks before gate4.
+
 Cream paper notebook over a sage garden: hand-inked rounded borders, sage selected state, dusty orange discovery corner. Live text in previously selected locally bundled Patrick Hand Regular, system sans fallback. Labels 18 CSS px, counts 20-24, dense text >=16, hit targets >=44; visible focus and shape changes as well as colour.
 
 ChatGPT delivers **native SVG**, no runtime GUI PNG, in `art/src/ui/`, copied through art:export to `assets/ui/`; plus review-only 390 x 844 and 390 x 693 SVG layout mockups with safe-inset guides. Shared surfaces use a 24 x 24 viewBox and 8 px corner/inset system, applied as SVG border fragments/CSS border-image. Preserve border thickness, never stretch whole pictograms. Claude implements authored spacing/layout and live quantities.

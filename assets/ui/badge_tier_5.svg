@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Tier five blossom</title>
+  <desc>Original Potato Kid GUI-MVP vector. Final art for Claude review. Five rounded petals, distinct from the four-point tier-four mark; pair with live Tier 5 text. Revision gui-mvp-1.</desc>
+  <path d="M32 27 C18 18 22 7 31 7 C43 6 44 19 36 27 C45 13 58 20 56 29 C55 40 42 40 37 34 C53 37 52 52 43 54 C33 57 28 45 31 38 C27 54 14 57 10 47 C6 36 20 31 27 33 C11 34 4 22 12 16 C21 9 30 21 32 27 Z" fill="#96bbc0" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="2.5"/>
+</svg>

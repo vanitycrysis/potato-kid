@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
   <title>ui spawn full</title>
-  <desc>Original Potato Kid v2 authored vector sample. Status: final. Revision: v2-slice-1.</desc>
-  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/><path d="M7 16 L16 7 M11 18 L18 11" fill="none" stroke="#686b55" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid GUI-MVP vector revision. Status: final for Claude review. Revision: gui-mvp-1. Full-map hatch stays in the eight-pixel corner so nine-slice resizing never paints across live action labels or prices.</desc>
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff1d5" stroke="#1a1a1a" stroke-width="1.5"/>
+  <path d="M17 2 L22 7 M20 2 L22 4" fill="none" stroke="#686b55" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
