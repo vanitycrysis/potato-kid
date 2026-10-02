@@ -282,6 +282,120 @@
   border-image-source: var(--ui-spawn-full);
 }
 
+/* Two-row HUD for short viewports with a persistent banner (§3.1): 104 px, rows of 44
+   at local y 8 and 52 with no gap; row 1 Materials, Potatokens, population, Settings;
+   row 2 timer and track, then Spawn now. */
+.hud[data-mode='tworow'] {
+  height: 104px;
+  display: grid;
+  grid-template-columns: 104px 88px minmax(80px, 1fr) 44px;
+  grid-template-rows: 44px 44px;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 0;
+  padding: 0 8px;
+  font-size: 20px;
+  line-height: 24px;
+}
+.hud[data-mode='tworow'] > * {
+  position: static;
+}
+/* Every cell placed explicitly: the DOM order (Settings before population) differs. */
+.hud[data-mode='tworow'] .hud-materials {
+  grid-area: 1 / 1;
+}
+.hud[data-mode='tworow'] .hud-potatokens {
+  grid-area: 1 / 2;
+}
+.hud[data-mode='tworow'] .hud-population {
+  grid-area: 1 / 3;
+}
+.hud[data-mode='tworow'] .hud-settings {
+  grid-area: 1 / 4;
+  width: 44px;
+}
+.hud[data-mode='tworow'] .hud-timer {
+  grid-area: 2 / 1 / 3 / 4;
+  align-self: start;
+}
+.hud[data-mode='tworow'] .hud-spawn {
+  grid-area: 2 / 3 / 3 / 5;
+  justify-self: end;
+}
+.hud[data-mode='tworow'] .hud-track {
+  position: absolute;
+  top: 76px;
+  left: 8px;
+  width: calc(100% - 16px - 120px);
+}
+/* HUD scroll window (§3.1): fixed border, vertical scroll, 6 px gutter. */
+:root[data-hud-fit='window'] .hud {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-sceneryInk) var(--ui-sage);
+  pointer-events: auto;
+}
+:root[data-hud-fit='window'] .hud > * {
+  pointer-events: auto;
+}
+/* Page mode (§3.1): no world; banner, hint, HUD, tray and Dex flow as one page. */
+.page-hint {
+  display: none;
+}
+:root[data-hud-fit='page'],
+:root[data-hud-fit='page'] body {
+  /* index.html pins the page to the viewport for the world; a page must scroll. */
+  height: auto;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+:root[data-hud-fit='page'] body {
+  display: flex;
+  flex-direction: column;
+}
+:root[data-hud-fit='page'] #app {
+  display: none;
+}
+/* Banner, hint and HUD (in the top stack), then the tray, then the Dex button. */
+:root[data-hud-fit='page'] .top-stack {
+  order: 1;
+}
+:root[data-hud-fit='page'] .tray {
+  order: 2;
+}
+:root[data-hud-fit='page'] .dex-button {
+  order: 3;
+}
+:root[data-hud-fit='page'] .top-stack,
+:root[data-hud-fit='page'] .tray,
+:root[data-hud-fit='page'] .dex-button {
+  position: static;
+  margin: 8px var(--ui-mr) 8px var(--ui-ml);
+}
+/* The tray keeps its labels in page mode (§3.1), even on a short screen. */
+:root[data-hud-fit='page'] .tray {
+  height: auto;
+  min-height: 96px;
+}
+:root[data-hud-fit='page'] .tray .tray-label {
+  /* Higher specificity than the compact rule that clips labels (both apply here). */
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+}
+:root[data-hud-fit='page'] .page-hint {
+  display: block;
+  margin: 8px var(--ui-mr) 0 var(--ui-ml);
+  font-family: var(--ui-font);
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--ui-ink);
+}
+
 /* --- Tray and Dex button (§3) ---------------------------------------------------- */
 .dex-button {
   position: fixed;

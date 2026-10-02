@@ -49,7 +49,12 @@ export interface SaveStatus {
   readOnly: boolean;
 }
 
-type HudMode = 'portrait' | 'narrow' | 'compact';
+type HudMode = 'portrait' | 'narrow' | 'compact' | 'tworow';
+
+/** The play band the GUI must always leave (GUI_MVP §2). */
+const PLAY_BAND = 44;
+/** Smallest HUD scroll window: one complete 44 px target plus padding (GUI_MVP §3.1). */
+const HUD_WINDOW_MIN = 16 + 44;
 
 /** A feedback card, queued or on screen; it keeps its remaining time across both. */
 interface Card {
@@ -78,6 +83,7 @@ export class Hud {
   private readonly banners = el('div', 'banners');
   private readonly feedback = el('div', 'feedback');
   private readonly shield = el('div', 'readonly-shield');
+  private readonly pageHint = el('p', 'page-hint', 'Make this window taller to move kids.');
   private readonly known: Set<KidId>;
   /** Waiting cards, refusals first (GUI_MVP §9). */
   private readonly queue: Card[] = [];
@@ -115,7 +121,8 @@ export class Hud {
     this.feedback.setAttribute('role', 'status');
     this.feedback.addEventListener('pointerenter', () => (this.hover = true));
     this.feedback.addEventListener('pointerleave', () => (this.hover = false));
-    this.top.append(this.banners, this.hud, this.feedback);
+    // Page mode orders banner, hint, HUD (GUI_MVP §3.1); the hint is hidden otherwise.
+    this.top.append(this.banners, this.pageHint, this.hud, this.feedback);
 
     const tray = el(
       'nav',
@@ -137,6 +144,10 @@ export class Hud {
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
+    // In page mode the body sizes to its content, so a taller window doesn't resize it:
+    // the viewport itself must trigger re-selection too (GUI_MVP §3.1).
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
     measure();
     scene.listenSteps((events) => this.onStep(events));
     // A newborn's card waits until the kid is actually drawn (its costume may still be
@@ -168,6 +179,7 @@ export class Hud {
     // isn't displaced mid-gesture (GUI_MVP §2; Codex review, PR #33).
     this.scene.cancelDrag();
     this.renderBanners();
+    this.layout();
   }
 
   // --- tokens and controls --------------------------------------------------
@@ -217,15 +229,58 @@ export class Hud {
     return b;
   }
 
-  /** Portrait three rows, narrow four rows, compact one row (GUI_MVP §3). */
+  /**
+   * Portrait three rows, narrow four rows, compact one row (GUI_MVP §3); with a persistent
+   * save banner, whichever of those, a two-row HUD, a HUD scroll window or a page without
+   * the world first leaves the 44 px play band (§3.1). The usual HUD is always tried first.
+   */
   private layout(): void {
+    const root = document.documentElement;
+    // Staying in the HUD scroll window keeps its offset; entering it starts at 0 (§3.1).
+    const wasWindow = root.dataset.hudFit === 'window';
+    const scroll = wasWindow ? this.hud.scrollTop : 0;
     const w = window.visualViewport?.width ?? window.innerWidth;
     const h = window.visualViewport?.height ?? window.innerHeight;
+    root.dataset.compact = h <= 520 ? 'true' : 'false';
+    root.dataset.hudFit = 'usual';
+    this.hud.style.height = '';
     const inner = this.hud.clientWidth - 16;
     let mode: HudMode = w < 360 && h > 520 ? 'narrow' : 'portrait';
     if (h <= 520) mode = inner >= 556 ? 'compact' : 'portrait';
     this.hud.dataset.mode = mode;
-    document.documentElement.dataset.compact = h <= 520 ? 'true' : 'false';
+    if (!this.persistentBanner()) return;
+
+    const banner = this.banners.getBoundingClientRect().height;
+    const top = this.top.getBoundingClientRect().top;
+    const bottom = Math.min(...['.tray', '.dex-button'].map((q) => document.querySelector(q)?.getBoundingClientRect().top ?? h)) - 8;
+    // A: the tallest HUD that still leaves the band (Y = HUD top, E = band bottom).
+    const hudTop = top + banner + 8;
+    const room = bottom - hudTop - 8 - PLAY_BAND;
+    if (this.hud.offsetHeight <= room) return;
+    // The two-row HUD needs 340 px of content width (C = HUD width − 32).
+    if (104 <= room && this.hud.clientWidth + 16 - 32 >= 340) {
+      this.hud.dataset.mode = 'tworow';
+      return;
+    }
+    if (room >= HUD_WINDOW_MIN) {
+      // A vertical scroll window of height A over the two-row content when it fits beside
+      // the 6 px gutter, else the four-row content (§3.1).
+      root.dataset.hudFit = 'window';
+      this.hud.dataset.mode = this.hud.clientWidth + 16 - 32 - 6 >= 340 ? 'tworow' : 'narrow';
+      this.hud.style.height = `${Math.floor(room)}px`;
+      this.hud.scrollTop = wasWindow ? scroll : 0;
+      return;
+    }
+    // No room even for one target and the band: the world is hidden and everything flows
+    // as one page until the window grows (§3.1). Held input is settled first.
+    this.scene.cancelDrag();
+    root.dataset.hudFit = 'page';
+    this.hud.dataset.mode = 'narrow';
+  }
+
+  /** An unsaved or recovery banner is up (read-only hides the HUD instead). */
+  private persistentBanner(): boolean {
+    return !this.save.readOnly && this.banners.childElementCount > 0;
   }
 
   // --- instant spawn ------------------------------------------------------------
@@ -461,6 +516,7 @@ export class Hud {
       close.addEventListener('click', () => {
         this.recoveryDismissed = true;
         this.renderBanners();
+        this.layout();
       });
       b.append(close);
       this.banners.append(b);
