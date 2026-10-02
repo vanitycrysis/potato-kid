@@ -1,0 +1,624 @@
+{
+  "kids": [
+    {
+      "id": "plain",
+      "tier": 1,
+      "name": "Potato Kid"
+    },
+    {
+      "id": "fire",
+      "tier": 1,
+      "name": "Fire Kid"
+    },
+    {
+      "id": "water",
+      "tier": 1,
+      "name": "Water Kid"
+    },
+    {
+      "id": "snow",
+      "tier": 1,
+      "name": "Snow Kid"
+    },
+    {
+      "id": "wind",
+      "tier": 1,
+      "name": "Wind Kid"
+    },
+    {
+      "id": "stone",
+      "tier": 1,
+      "name": "Stone Kid"
+    },
+    {
+      "id": "chef",
+      "tier": 2,
+      "name": "Chef Kid"
+    },
+    {
+      "id": "firefighter",
+      "tier": 2,
+      "name": "Firefighter Kid"
+    },
+    {
+      "id": "snowman",
+      "tier": 2,
+      "name": "Snowman Kid"
+    },
+    {
+      "id": "steam",
+      "tier": 2,
+      "name": "Steam Kid"
+    },
+    {
+      "id": "sprout",
+      "tier": 2,
+      "name": "Sprout Kid"
+    },
+    {
+      "id": "sail",
+      "tier": 2,
+      "name": "Sail Kid"
+    },
+    {
+      "id": "blizzard",
+      "tier": 2,
+      "name": "Blizzard Kid"
+    },
+    {
+      "id": "builder",
+      "tier": 2,
+      "name": "Builder Kid"
+    },
+    {
+      "id": "forge",
+      "tier": 2,
+      "name": "Forge Kid"
+    },
+    {
+      "id": "kite",
+      "tier": 2,
+      "name": "Kite Kid"
+    },
+    {
+      "id": "hero",
+      "tier": 3,
+      "name": "Hero Kid"
+    },
+    {
+      "id": "sundae",
+      "tier": 3,
+      "name": "Sundae Kid"
+    },
+    {
+      "id": "gardener",
+      "tier": 3,
+      "name": "Gardener Kid"
+    },
+    {
+      "id": "raincloud",
+      "tier": 3,
+      "name": "Raincloud Kid"
+    },
+    {
+      "id": "glassblower",
+      "tier": 3,
+      "name": "Glassblower Kid"
+    },
+    {
+      "id": "baker",
+      "tier": 3,
+      "name": "Baker Kid"
+    },
+    {
+      "id": "tea",
+      "tier": 3,
+      "name": "Tea Kid"
+    },
+    {
+      "id": "cocoa",
+      "tier": 3,
+      "name": "Cocoa Kid"
+    },
+    {
+      "id": "flower",
+      "tier": 3,
+      "name": "Flower Kid"
+    },
+    {
+      "id": "cactus",
+      "tier": 3,
+      "name": "Cactus Kid"
+    },
+    {
+      "id": "mushroom",
+      "tier": 3,
+      "name": "Mushroom Kid"
+    },
+    {
+      "id": "potter",
+      "tier": 3,
+      "name": "Potter Kid"
+    },
+    {
+      "id": "crystal",
+      "tier": 3,
+      "name": "Crystal Kid"
+    },
+    {
+      "id": "blacksmith",
+      "tier": 3,
+      "name": "Blacksmith Kid"
+    },
+    {
+      "id": "lighthouse",
+      "tier": 3,
+      "name": "Lighthouse Kid"
+    },
+    {
+      "id": "captain",
+      "tier": 3,
+      "name": "Captain Kid"
+    },
+    {
+      "id": "whistle",
+      "tier": 3,
+      "name": "Whistle Kid"
+    },
+    {
+      "id": "pinwheel",
+      "tier": 3,
+      "name": "Pinwheel Kid"
+    },
+    {
+      "id": "lantern",
+      "tier": 4,
+      "name": "Lantern Kid"
+    },
+    {
+      "id": "picnic",
+      "tier": 4,
+      "name": "Picnic Kid"
+    },
+    {
+      "id": "greenhouse",
+      "tier": 4,
+      "name": "Greenhouse Kid"
+    },
+    {
+      "id": "bouquet",
+      "tier": 4,
+      "name": "Bouquet Kid"
+    },
+    {
+      "id": "bonsai",
+      "tier": 4,
+      "name": "Bonsai Kid"
+    },
+    {
+      "id": "terrarium",
+      "tier": 4,
+      "name": "Terrarium Kid"
+    },
+    {
+      "id": "teapot",
+      "tier": 4,
+      "name": "Teapot Kid"
+    },
+    {
+      "id": "cookie",
+      "tier": 4,
+      "name": "Cookie Kid"
+    },
+    {
+      "id": "pretzel",
+      "tier": 4,
+      "name": "Pretzel Kid"
+    },
+    {
+      "id": "soup",
+      "tier": 4,
+      "name": "Soup Kid"
+    },
+    {
+      "id": "snowglobe",
+      "tier": 4,
+      "name": "Snowglobe Kid"
+    },
+    {
+      "id": "ice_sculptor",
+      "tier": 4,
+      "name": "Ice Sculptor Kid"
+    },
+    {
+      "id": "weather_vane",
+      "tier": 4,
+      "name": "Weather Vane Kid"
+    },
+    {
+      "id": "balloon",
+      "tier": 4,
+      "name": "Balloon Kid"
+    },
+    {
+      "id": "steamboat",
+      "tier": 4,
+      "name": "Steamboat Kid"
+    },
+    {
+      "id": "lifeguard",
+      "tier": 4,
+      "name": "Lifeguard Kid"
+    },
+    {
+      "id": "kiln",
+      "tier": 4,
+      "name": "Kiln Kid"
+    },
+    {
+      "id": "aurora",
+      "tier": 4,
+      "name": "Aurora Kid"
+    },
+    {
+      "id": "festival",
+      "tier": 5,
+      "name": "Festival Kid"
+    },
+    {
+      "id": "observatory",
+      "tier": 5,
+      "name": "Observatory Kid"
+    },
+    {
+      "id": "botanical_garden",
+      "tier": 5,
+      "name": "Botanical Garden Kid"
+    },
+    {
+      "id": "moon_garden",
+      "tier": 5,
+      "name": "Moon Garden Kid"
+    },
+    {
+      "id": "patisserie",
+      "tier": 5,
+      "name": "Patisserie Kid"
+    },
+    {
+      "id": "winter_market",
+      "tier": 5,
+      "name": "Winter Market Kid"
+    },
+    {
+      "id": "harbor",
+      "tier": 5,
+      "name": "Harbor Kid"
+    },
+    {
+      "id": "sky_fair",
+      "tier": 5,
+      "name": "Sky Fair Kid"
+    },
+    {
+      "id": "rescue_station",
+      "tier": 5,
+      "name": "Rescue Station Kid"
+    },
+    {
+      "id": "sculpture_park",
+      "tier": 5,
+      "name": "Sculpture Park Kid"
+    },
+    {
+      "id": "windmill",
+      "tier": 5,
+      "name": "Windmill Kid"
+    },
+    {
+      "id": "mosaic",
+      "tier": 5,
+      "name": "Mosaic Kid"
+    }
+  ],
+  "recipes": [
+    {
+      "a": "plain",
+      "b": "water",
+      "result": "firefighter"
+    },
+    {
+      "a": "plain",
+      "b": "fire",
+      "result": "chef"
+    },
+    {
+      "a": "plain",
+      "b": "snow",
+      "result": "snowman"
+    },
+    {
+      "a": "fire",
+      "b": "water",
+      "result": "steam"
+    },
+    {
+      "a": "fire",
+      "b": "firefighter",
+      "result": "hero"
+    },
+    {
+      "a": "chef",
+      "b": "snowman",
+      "result": "sundae"
+    },
+    {
+      "a": "water",
+      "b": "snow",
+      "result": "sprout"
+    },
+    {
+      "a": "plain",
+      "b": "sprout",
+      "result": "gardener"
+    },
+    {
+      "a": "water",
+      "b": "steam",
+      "result": "raincloud"
+    },
+    {
+      "a": "fire",
+      "b": "steam",
+      "result": "glassblower"
+    },
+    {
+      "a": "hero",
+      "b": "glassblower",
+      "result": "lantern"
+    },
+    {
+      "a": "sundae",
+      "b": "gardener",
+      "result": "picnic"
+    },
+    {
+      "a": "wind",
+      "b": "water",
+      "result": "sail"
+    },
+    {
+      "a": "wind",
+      "b": "snow",
+      "result": "blizzard"
+    },
+    {
+      "a": "plain",
+      "b": "stone",
+      "result": "builder"
+    },
+    {
+      "a": "fire",
+      "b": "stone",
+      "result": "forge"
+    },
+    {
+      "a": "plain",
+      "b": "wind",
+      "result": "kite"
+    },
+    {
+      "a": "chef",
+      "b": "fire",
+      "result": "baker"
+    },
+    {
+      "a": "chef",
+      "b": "steam",
+      "result": "tea"
+    },
+    {
+      "a": "chef",
+      "b": "snow",
+      "result": "cocoa"
+    },
+    {
+      "a": "sprout",
+      "b": "water",
+      "result": "flower"
+    },
+    {
+      "a": "sprout",
+      "b": "fire",
+      "result": "cactus"
+    },
+    {
+      "a": "sprout",
+      "b": "snow",
+      "result": "mushroom"
+    },
+    {
+      "a": "builder",
+      "b": "water",
+      "result": "potter"
+    },
+    {
+      "a": "forge",
+      "b": "snow",
+      "result": "crystal"
+    },
+    {
+      "a": "forge",
+      "b": "plain",
+      "result": "blacksmith"
+    },
+    {
+      "a": "sail",
+      "b": "fire",
+      "result": "lighthouse"
+    },
+    {
+      "a": "sail",
+      "b": "plain",
+      "result": "captain"
+    },
+    {
+      "a": "steam",
+      "b": "wind",
+      "result": "whistle"
+    },
+    {
+      "a": "kite",
+      "b": "wind",
+      "result": "pinwheel"
+    },
+    {
+      "a": "gardener",
+      "b": "glassblower",
+      "result": "greenhouse"
+    },
+    {
+      "a": "flower",
+      "b": "gardener",
+      "result": "bouquet"
+    },
+    {
+      "a": "gardener",
+      "b": "sprout",
+      "result": "bonsai"
+    },
+    {
+      "a": "mushroom",
+      "b": "glassblower",
+      "result": "terrarium"
+    },
+    {
+      "a": "tea",
+      "b": "potter",
+      "result": "teapot"
+    },
+    {
+      "a": "baker",
+      "b": "cocoa",
+      "result": "cookie"
+    },
+    {
+      "a": "baker",
+      "b": "blacksmith",
+      "result": "pretzel"
+    },
+    {
+      "a": "mushroom",
+      "b": "chef",
+      "result": "soup"
+    },
+    {
+      "a": "blizzard",
+      "b": "glassblower",
+      "result": "snowglobe"
+    },
+    {
+      "a": "snowman",
+      "b": "potter",
+      "result": "ice_sculptor"
+    },
+    {
+      "a": "pinwheel",
+      "b": "blacksmith",
+      "result": "weather_vane"
+    },
+    {
+      "a": "captain",
+      "b": "fire",
+      "result": "balloon"
+    },
+    {
+      "a": "captain",
+      "b": "whistle",
+      "result": "steamboat"
+    },
+    {
+      "a": "hero",
+      "b": "captain",
+      "result": "lifeguard"
+    },
+    {
+      "a": "potter",
+      "b": "forge",
+      "result": "kiln"
+    },
+    {
+      "a": "blizzard",
+      "b": "crystal",
+      "result": "aurora"
+    },
+    {
+      "a": "picnic",
+      "b": "lantern",
+      "result": "festival"
+    },
+    {
+      "a": "greenhouse",
+      "b": "crystal",
+      "result": "observatory"
+    },
+    {
+      "a": "bonsai",
+      "b": "greenhouse",
+      "result": "botanical_garden"
+    },
+    {
+      "a": "lantern",
+      "b": "terrarium",
+      "result": "moon_garden"
+    },
+    {
+      "a": "cookie",
+      "b": "teapot",
+      "result": "patisserie"
+    },
+    {
+      "a": "cocoa",
+      "b": "snowglobe",
+      "result": "winter_market"
+    },
+    {
+      "a": "lighthouse",
+      "b": "steamboat",
+      "result": "harbor"
+    },
+    {
+      "a": "balloon",
+      "b": "pinwheel",
+      "result": "sky_fair"
+    },
+    {
+      "a": "lifeguard",
+      "b": "lantern",
+      "result": "rescue_station"
+    },
+    {
+      "a": "ice_sculptor",
+      "b": "aurora",
+      "result": "sculpture_park"
+    },
+    {
+      "a": "weather_vane",
+      "b": "baker",
+      "result": "windmill"
+    },
+    {
+      "a": "kiln",
+      "b": "crystal",
+      "result": "mosaic"
+    }
+  ],
+  "spawnWeights": {
+    "plain": 30,
+    "fire": 16,
+    "water": 16,
+    "snow": 16,
+    "wind": 12,
+    "stone": 10
+  }
+}
