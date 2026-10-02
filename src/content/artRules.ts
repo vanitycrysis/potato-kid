@@ -36,10 +36,11 @@ export function ambientFrom(rig: KidRig, chance: number): Ambient {
   const w = rig.scheduler.ambientWeights;
   const down = len('sit_down');
   return {
-    weights: { look: w.look_around ?? 0, sit: w.sit_down ?? 0, sleep: w.sleep ?? 0 },
+    weights: { look: w.look_around ?? 0, wave: w.wave ?? 0, sit: w.sit_down ?? 0, sleep: w.sleep ?? 0 },
     chance,
     stationaryDelay: rig.scheduler.stationaryDelaySeconds,
     lookSeconds: len('look_around'),
+    waveSeconds: len('wave'),
     sitSeconds: (hold) => down + hold + down,
     sleepSeconds: (hold) => down + hold + len('wake'),
     seatedHold: rig.scheduler.seatedHoldSeconds,
@@ -124,14 +125,17 @@ export function rigCoverage(rig: KidRig, kids: KidDef[], delivered: Set<string>)
   return problems;
 }
 
-/** Palette tokens the engine and `hud.css` read from ui_v2.json. */
+/** Palette tokens the engine and `hud.css` read from ui_v2.json (typography is checked too). */
 export const UI_PALETTE_KEYS = ['world', 'ink', 'sage', 'sceneryInk', 'disabled'] as const;
 
 /**
- * GUI colour coverage (D-036): every colour on screen comes from Codex's ui_v2.json.
- * A missing token is an error; the engine has no colours of its own to fall back on.
+ * GUI token coverage (D-036): every colour and the type on screen come from Codex's
+ * ui_v2.json. A missing token is an error; the engine has no colours or fonts of its own.
  */
 export function uiPaletteCoverage(ui: UiData | undefined): string[] {
   if (!ui) return ['ui_v2.json is missing'];
-  return UI_PALETTE_KEYS.filter((k) => typeof ui.palette?.[k] !== 'string').map((k) => `ui_v2.json palette has no "${k}"`);
+  const problems = UI_PALETTE_KEYS.filter((k) => typeof ui.palette?.[k] !== 'string').map((k) => `ui_v2.json palette has no "${k}"`);
+  const type = ui.typography as { family?: unknown; fallback?: unknown } | undefined;
+  if (typeof type?.family !== 'string' || typeof type.fallback !== 'string') problems.push('ui_v2.json typography needs "family" and "fallback"');
+  return problems;
 }

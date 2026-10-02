@@ -39,6 +39,7 @@ export type Activity =
   /** Standing still. With `thenAmbient`, it's the rig's stationary wait before an ambient pose. */
   | { kind: 'pause'; left: number; thenAmbient?: boolean }
   | { kind: 'look'; left: number }
+  | { kind: 'wave'; left: number }
   | { kind: 'sit'; left: number; total: number }
   | { kind: 'sleep'; left: number; total: number };
 

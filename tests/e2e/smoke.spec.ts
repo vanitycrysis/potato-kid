@@ -48,11 +48,25 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
     return b.y - a.y;
   });
   await page.mouse.move(to.x, to.y + lift, { steps: 12 });
+  // Held kids show Codex's pick-up, then held clip (ASSET-PLAYABLE part B).
+  expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, plain));
   await page.mouse.up();
 
   await expect
     .poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type)), { timeout: 3000 })
     .toContain('firefighter');
+  // The child is born with the fusion effect, and this first discovery adds its spark.
+  const child = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'firefighter')!.id);
+  const seen = new Set<string>();
+  await expect
+    .poll(
+      async () => {
+        for (const fx of (await page.evaluate((id) => window.__PK__!.presentationOf(id)?.effects ?? [], child))) seen.add(fx);
+        return [...seen].sort();
+      },
+      { timeout: 2000, intervals: [20] },
+    )
+    .toEqual(['discovery', 'fusion', 'spawn']);
   const ids = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
   expect(ids).not.toContain(plain);
   expect(ids).not.toContain(water);
@@ -370,3 +384,11 @@ for (const [w, h] of [[640, 360], [568, 320]] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+test('the build ships the bundled font with its full licence (SIL OFL condition 2)', async ({ request }) => {
+  const res = await request.get('/assets/PatrickHand-OFL.txt');
+  expect(res.ok()).toBe(true);
+  const text = await res.text();
+  expect(text).toContain('Copyright (c) 2010-2012 Patrick Wagesreiter');
+  expect(text).toContain('SIL OPEN FONT LICENSE Version 1.1');
+});

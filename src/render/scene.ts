@@ -5,6 +5,7 @@ import { Game, type Ambient, type Command, type GameEvent, type LookTable } from
 import { STEP, type Kid, type Obstacle } from '../sim/world';
 import { rectAt, resolveDrawn, touching } from '../sim/space';
 import { buildMap } from './mapView';
+import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
 
 /** Width of world shown across a portrait screen; height follows the screen's aspect (D-040). */
@@ -162,6 +163,19 @@ export class MapScene {
     return kid.id;
   }
 
+  /** Test hook: the clip a kid is showing and its running effects. */
+  presentationOf(kidId: number): { clip: string; effects: string[] } | undefined {
+    return this.views.get(kidId)?.presenting;
+  }
+
+  /**
+   * How long after a first discovery its toast appears: when the discovery effect ends
+   * (rig: discovery onComplete → toast). Immediately under reduced motion.
+   */
+  get discoveryToastDelayMs(): number {
+    return this.art.reducedMotion ? 0 : clipLength(this.art.rig, 'discovery') * 1000;
+  }
+
   /** Test hook: world → screen for an arbitrary world point. */
   worldToScreen(x: number, y: number): { x: number; y: number } {
     const p = this.camera.toGlobal({ x, y });
@@ -287,6 +301,7 @@ export class MapScene {
     this.placing.delete(kidId);
     this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT, spot: start };
     this.pending.push({ type: 'pickUp', kidId });
+    this.views.get(kidId)?.pickedUp();
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
@@ -392,6 +407,7 @@ export class MapScene {
     // (Codex review, PR #5): the same free-spot answer, so it never jumps or overlaps.
     const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn) ?? { x: cmd.x, y: cmd.y };
     this.placing.set(this.drag.kidId, spot);
+    this.views.get(this.drag.kidId)?.dropped();
     this.drag = undefined;
   }
 
@@ -432,8 +448,10 @@ export class MapScene {
         view.update(this.drag.spot.x, this.drag.spot.y, k.activity, true, dt);
         continue;
       }
+      // Only the dragged kid is drawn held: one just let go is released from that moment,
+      // even before the sim applies its drop (Codex review, PR #24).
       const at = drawn.get(k.id) ?? k;
-      view.update(at.x, at.y, k.activity, k.held, dt);
+      view.update(at.x, at.y, k.activity, false, dt);
     }
   }
 
@@ -482,15 +500,21 @@ export class MapScene {
   private handle(e: GameEvent): void {
     switch (e.type) {
       case 'spawned':
-        this.addView(e.kid);
+        this.addView(e.kid).play('spawn');
         break;
-      case 'fused':
+      case 'fused': {
+        // Parents are consumed at once, never fading or converging (rig: fusion onStart);
+        // the child is born where the sim resolved it, with the fusion effect behind it.
         for (const p of e.parents) {
           if (this.drag?.kidId === p.id) this.drag = undefined;
           this.removeView(p.id);
         }
-        this.addView(e.child);
+        const child = this.addView(e.child);
+        child.play('spawn');
+        child.startEffect('fusion');
+        if (e.firstDiscovery) child.startEffect('discovery');
         break;
+      }
       case 'pickedUp':
       case 'dropped':
         break;
