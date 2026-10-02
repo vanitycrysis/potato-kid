@@ -34,6 +34,12 @@ export class ClipPicker {
   /** `fresh`: started since the last frame, so it shows its first entry before time advances. */
   private oneShot: { name: OneShot; t: number; fresh: boolean } | undefined;
   private heldT = 0;
+  /**
+   * Let go since the last pick-up. The sim keeps the kid held until its next 10 Hz step
+   * applies the drop; presentation shows it released at once, so the drop clip's first
+   * entry is never skipped while hidden (Codex review, PR #24).
+   */
+  private released = false;
   private activityKind = '';
   private activityT = 0;
 
@@ -52,17 +58,20 @@ export class ClipPicker {
    */
   pickUp(): void {
     this.heldT = 0;
+    this.released = false;
     this.oneShot = { name: 'pick_up', t: 0, fresh: true };
   }
 
   /** The player let go (drop or cancel): ends a pick-up even mid-clip, then plays the drop. */
   drop(): void {
+    this.released = true;
     if (this.oneShot?.name === 'pick_up') this.oneShot = undefined;
     this.play('drop');
   }
 
   /** The clip to show this frame. `dt` is real seconds since the last call. */
-  advance(activity: Activity, held: boolean, dt: number): ClipPick {
+  advance(activity: Activity, simHeld: boolean, dt: number): ClipPick {
+    const held = simHeld && !this.released;
     if (held) this.heldT += dt;
     if (this.oneShot) {
       if (this.oneShot.fresh) this.oneShot.fresh = false;

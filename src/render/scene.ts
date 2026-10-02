@@ -448,8 +448,10 @@ export class MapScene {
         view.update(this.drag.spot.x, this.drag.spot.y, k.activity, true, dt);
         continue;
       }
+      // Only the dragged kid is drawn held: one just let go is released from that moment,
+      // even before the sim applies its drop (Codex review, PR #24).
       const at = drawn.get(k.id) ?? k;
-      view.update(at.x, at.y, k.activity, k.held, dt);
+      view.update(at.x, at.y, k.activity, false, dt);
     }
   }
 

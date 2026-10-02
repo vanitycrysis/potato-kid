@@ -55,6 +55,16 @@ describe('which clip a kid shows (scheduler.priority)', () => {
     expect(p.advance(walk, false, FRAME).name).toBe('drop');
   });
 
+  it('a drop shows from its first entry even while the sim still reports held (Codex review, PR #24)', () => {
+    const p = new ClipPicker(rig);
+    p.pickUp();
+    run(p, 0.5, true);
+    p.drop();
+    // Until the next 10 Hz step applies the drop, the sim still says held.
+    expect(p.advance(walk, true, FRAME)).toMatchObject({ name: 'drop', time: 0 });
+    expect(p.advance(walk, true, 0.05)).toMatchObject({ name: 'drop', time: 0.05 });
+  });
+
   it('a lower-priority one-shot cannot replace a higher one', () => {
     const p = new ClipPicker(rig);
     p.pickUp();
