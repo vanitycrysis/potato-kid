@@ -13,7 +13,9 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 - the remaining poses and clips, effects and landmarks;
 - the map and GUI art, now final.
 
-**PLAYABLE-INTEGRATION** (Claude) plays it all in the engine and bundles the official Patrick Hand font. Next: **gate 3**, the first playable on the S26 Ultra.
+**PLAYABLE-INTEGRATION is done** (#24; Codex review, 3 rounds): the engine plays it all, and the official Patrick Hand font is bundled.
+
+**Waiting on the owner: gate 3**, the first playable on the S26 Ultra. A debug APK from `main` (`feebffd`) and captures are in `C:/Users/Adria/potato-kid-gate3/`.
 
 The v2 work merged before gate 2 (PRs #8, #10–#17) is listed in git history and in `docs/HANDOFF.md`.
 
@@ -32,8 +34,8 @@ The v2 work merged before gate 2 (PRs #8, #10–#17) is listed in git history an
 | ASSET-PLAYABLE | ChatGPT | A: D-045 face fix + final art for the 12 placeholder costumes. B: deferred poses and clips, FX, landmarks, font | **done** (#21, #23) | — |
 | ROSTER-PLAN | ChatGPT (names, themes, combinations) / Claude (IDs, validation, balance) | Roster plan toward ~500 types (D-046): themes, tiers, recipe graph, and the 50–80 that ship in the MVP | todo (after ASSET-PLAYABLE) | Both agree; reachability and tier checks pass on the full graph |
 | ROSTER-SCALE | Claude | Engine and pipeline for ~500 types: per-type texture loading and unloading, Dex thumbnails, content validation at scale, art-export throughput | todo (part of BUILD-MVP) | Texture budget and frame time hold with 500 types in the data; tests pass; Codex review |
-| PLAYABLE-INTEGRATION | Claude | Play part B's clips, FX and shadow; wave ambient; reduced motion; bundle the font | review | Tests pass; Codex review; merged |
-| GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | todo | Explicit approval |
+| PLAYABLE-INTEGRATION | Claude | Play part B's clips, FX and shadow; wave ambient; reduced motion; bundle the font | **done** (#24) | — |
+| GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | **waiting on owner** | Explicit approval |
 | BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | todo | Tests pass; Codex review |
 | ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | todo | Claude review passes; device listening check |
 | GATE-4 | Owner | Approve the MVP | todo | Explicit approval before polish |
