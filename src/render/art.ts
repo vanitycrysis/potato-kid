@@ -37,6 +37,17 @@ export function textureBytes(name: string, fullSize: [number, number]): number {
   return t ? t[2] * t[3] * 4 : fullSize[0] * fullSize[1] * 4;
 }
 
+/** How textures are fetched and freed (Pixi's Assets; injectable for tests). */
+export interface TextureLoader {
+  load(url: string): Promise<Texture>;
+  unload(url: string): Promise<void>;
+}
+
+const pixiLoader: TextureLoader = {
+  load: (url) => Assets.load<Texture>(url),
+  unload: (url) => Assets.unload(url),
+};
+
 /**
  * Runtime textures (ROSTER-SCALE, D-046). Shared art (bodies, faces, effects, map) stays
  * resident; a kid type's costume components load when the first kid of that type needs
@@ -48,9 +59,15 @@ export class TextureStore {
   /** Loaded textures by asset name; views read this map directly. */
   readonly map = new Map<string, Texture>();
   private readonly typeLoads = new Map<KidId, Promise<void>>();
+  /** Unloads in flight: a reload waits for them, or Pixi would hand back a texture being destroyed. */
+  private readonly unloading = new Map<string, Promise<void>>();
   private readonly costumeAssets: Map<KidId, string[]>;
 
-  constructor(private readonly rig: KidRig) {
+  constructor(
+    private readonly rig: KidRig,
+    private readonly loader: TextureLoader = pixiLoader,
+    private readonly urlOf: (name: string) => string | undefined = (n) => byName.get(n),
+  ) {
     this.costumeAssets = new Map(Object.entries(rig.costumes).map(([type, c]) => [type, c.components.map((x) => x.asset)]));
   }
 
@@ -65,12 +82,18 @@ export class TextureStore {
     return (this.costumeAssets.get(type) ?? []).every((a) => this.map.has(a));
   }
 
-  /** Loads a type's costume (once, however often asked). */
+  /**
+   * Loads a type's costume (once, however often asked). A failed load is forgotten, so the
+   * next call tries again rather than repeating the failure (Codex review, PR #35).
+   */
   ensure(type: KidId): Promise<void> {
     const existing = this.typeLoads.get(type);
     if (existing) return existing;
     const p = Promise.all((this.costumeAssets.get(type) ?? []).map((a) => this.loadOne(a))).then(() => {});
     this.typeLoads.set(type, p);
+    p.catch(() => {
+      if (this.typeLoads.get(type) === p) this.typeLoads.delete(type);
+    });
     return p;
   }
 
@@ -82,8 +105,13 @@ export class TextureStore {
       const t = this.map.get(a);
       this.map.delete(a);
       t?.destroy(false);
-      const url = byName.get(a);
-      if (url) void Assets.unload(url);
+      const url = this.urlOf(a);
+      if (!url) continue;
+      const done = this.loader.unload(url).catch(() => {});
+      this.unloading.set(a, done);
+      void done.then(() => {
+        if (this.unloading.get(a) === done) this.unloading.delete(a);
+      });
     }
   }
 
@@ -94,9 +122,11 @@ export class TextureStore {
 
   private async loadOne(name: string): Promise<void> {
     if (this.map.has(name)) return;
-    const url = byName.get(name);
+    const url = this.urlOf(name);
     if (!url) throw new Error(`Missing art "${name}" (rig coverage should have caught this at boot)`);
-    const base = await Assets.load<Texture>(url);
+    // A release of this asset may still be unloading: finish it first (Codex review, PR #35).
+    await this.unloading.get(name);
+    const base = await this.loader.load(url);
     const t = trimOf(name);
     this.map.set(
       name,

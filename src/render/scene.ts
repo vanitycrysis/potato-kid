@@ -359,14 +359,25 @@ export class MapScene {
     if (this.art.textures.ready(kid.type)) return this.createView(kid);
     const actions: ((v: KidRigView) => void)[] = [];
     this.pendingViews.set(kid.id, actions);
-    void this.art.textures.ensure(kid.type).then(() => {
-      if (this.pendingViews.get(kid.id) !== actions) return; // consumed while loading
-      this.pendingViews.delete(kid.id);
-      const live = this.game.state.world.kids.find((k) => k.id === kid.id);
-      if (!live) return;
-      const view = this.createView(live);
-      for (const a of actions) a(view);
-    });
+    // A failed load is retried with backoff while the kid still needs a view, so a
+    // transient fetch failure never leaves it invisible for good (Codex review, PR #35).
+    const attempt = (delay: number) => {
+      this.art.textures.ensure(kid.type).then(
+        () => {
+          if (this.pendingViews.get(kid.id) !== actions) return; // consumed while loading
+          this.pendingViews.delete(kid.id);
+          const live = this.game.state.world.kids.find((k) => k.id === kid.id);
+          if (!live) return;
+          const view = this.createView(live);
+          for (const a of actions) a(view);
+        },
+        () => {
+          if (this.pendingViews.get(kid.id) !== actions) return;
+          window.setTimeout(() => attempt(Math.min(delay * 2, 30_000)), delay);
+        },
+      );
+    };
+    attempt(1000);
     return {
       play: (name) => void actions.push((v) => v.play(name)),
       startEffect: (name) => void actions.push((v) => v.startEffect(name)),
