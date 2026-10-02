@@ -76,6 +76,8 @@ export interface EconomyBalance {
   discoveryPotatokens: number;
   /** Potatokens when the Dex reaches this many discovered kid types. */
   dexMilestones: { kids: number; potatokens: number }[];
+  /** Offline catch-up credits at most this long; the rest is discarded and reported (D-018). */
+  offlineCapHours: number;
 }
 
 export interface Balance {

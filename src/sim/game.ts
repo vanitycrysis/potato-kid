@@ -41,7 +41,19 @@ export type Command =
 /** Why a purchase or setting was refused; the UI explains it, and nothing changes. */
 export type RejectReason = 'cost' | 'maxLevel' | 'full' | 'noRoom' | 'locked' | 'undiscovered' | 'notSpawnable';
 
-export type SpawnSource = 'garden' | 'instant' | 'compendium';
+export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline';
+
+/** What offline catch-up credited (plan §3); the return screen shows it. */
+export interface OfflineReport {
+  /** Seconds credited: wall time since `accountedUntil`, capped. */
+  seconds: number;
+  /** Seconds beyond the cap that were discarded. */
+  discardedSeconds: number;
+  materials: number;
+  /** Potatokens from Dex milestones that offline spawns reached. */
+  potatokens: number;
+  spawned: Kid[];
+}
 
 type PurchaseCommand = Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>;
 
@@ -79,6 +91,11 @@ export interface GameState {
   biasTarget: KidId | null;
   /** How many Dex milestones have paid out, in balance order. */
   milestonesPaid: number;
+  /**
+   * Wall-clock ms up to which spawns and income are credited: the single accounting
+   * boundary for online and offline time (plan §3). A high-water mark: it never moves back.
+   */
+  accountedUntil: number;
 }
 
 /** Weighted appearance options, derived from the rig (art data) with boxes in world units. */
@@ -111,6 +128,8 @@ export interface GameOptions {
   obstacles?: Obstacle[];
   looks?: LookTable;
   ambient?: Ambient;
+  /** Wall-clock ms at creation: a new save is accounted up to now. */
+  now?: number;
 }
 
 export class Game {
@@ -156,6 +175,7 @@ export class Game {
       buildings: Object.fromEntries(BUILDING_IDS.map((b) => [b, content.balance.buildings[b].startLevel])) as Record<BuildingId, number>,
       biasTarget: null,
       milestonesPaid: 0,
+      accountedUntil: options.now ?? 0,
     };
     for (let i = 0; i < content.balance.spawn.startingKids; i++) {
       // Starting kids appear around the spawn outlet, each on a free spot (D-039).
@@ -268,8 +288,52 @@ export class Game {
     this.resolveFusions(events);
     separate(world);
     this.advanceSpawn(dt, events);
+    // This step's time is now credited (plan §3): online time is never credited again offline.
+    this.state.accountedUntil += dt * 1000;
     this.syncRngState();
     return events;
+  }
+
+  /**
+   * Offline catch-up (plan §3, D-018), for time the app was suspended. Deliberately
+   * simpler than online play: no wandering and no fusions. Garden spawns fill free slots
+   * on the interval schedule, and every kid earns from the moment it exists. Credits
+   * only time after `accountedUntil`, capped, then advances it to `now`; a clock that
+   * reads earlier than `accountedUntil` credits nothing and moves nothing back.
+   */
+  reconcile(now: number): OfflineReport {
+    const s = this.state;
+    const capSeconds = this.content.balance.economy.offlineCapHours * 3600;
+    const elapsed = Math.max(0, (now - s.accountedUntil) / 1000);
+    const away = Math.min(elapsed, capSeconds);
+    s.accountedUntil = Math.max(s.accountedUntil, now);
+
+    const interval = this.interval;
+    const events: GameEvent[] = [];
+    const spawned: Kid[] = [];
+    let materials = this.income * away;
+    // First spawn when the current interval completes; a banked spawn (progress at the
+    // interval) is due at once. At most `capacity` admissions, so the loop is bounded.
+    let t = Math.max(0, interval - s.spawnProgress);
+    let last: number | undefined;
+    // Tolerance absorbs float drift, as in advanceSpawn.
+    while (t <= away + 1e-6 && s.world.kids.length < this.capacity) {
+      const kid = this.spawnAtOutlet(() => this.rollSpawnType(), 'offline', events);
+      if (!kid) break; // no free spot near the Garden: treat as full
+      kid.grace = 0; // it has been around for a while
+      spawned.push(kid);
+      materials += this.incomeOf(kid.type) * Math.max(0, away - t);
+      last = t;
+      t += interval;
+    }
+    // Phase rule (plan §3): after a spawn, progress restarts from the last one; otherwise
+    // it keeps accumulating, holding at the interval (one banked spawn) when full.
+    s.spawnProgress = Math.min(interval, last === undefined ? s.spawnProgress + away : Math.max(0, away - last));
+    s.materials += materials;
+    this.syncRngState();
+    let potatokens = 0;
+    for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;
+    return { seconds: away, discardedSeconds: elapsed - away, materials, potatokens, spawned };
   }
 
   /** Applies player commands; returns pairs the player saw touching at a drop. */

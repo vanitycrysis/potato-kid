@@ -110,6 +110,8 @@ export class MapScene {
         obstacles: art.obstacles,
         looks: art.looks,
         ambient: art.ambient,
+        // A new game is accounted up to now (plan §3), never from the epoch.
+        now: Date.now(),
       },
       seed,
     );
