@@ -4,28 +4,15 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 
 ## Where things stand (Claude, 2026-10-02)
 
-**Waiting on the owner: check-in 2 (art style).** It was presented once (r2 art). The owner asked for body and face variation, poses, animations, new kids, a bigger Fire flame, a scrollable map, no overlaps and GUI art (D-036 to D-042). All of that is now built and is going back to the owner for approval.
+**Gate 2 approved** (D-044). The owner liked the style ("matches the potato kid energy really well") and set two directions:
+- **D-045:** the face is only two dot eyes and the smirk; no eyebrows, noses, chins or other features unless they come from the costume. The dreamy face's lid strokes go.
+- **D-046:** about **500 kid types** long term. The MVP ships roughly 50–80; the pipeline scales to 500; the rest arrives in waves after gate 4.
 
-Merged since the gate-2 feedback:
+Next: **ASSET-PLAYABLE** (Codex), in two parts, then **gate 3** (first playable on the S26 Ultra).
+- Part A: the D-045 face fix, final art for the 12 placeholder costumes, Claude's earlier notes (Snow beanie reads as a lid; Snowman and Sundae read as plates).
+- Part B: deferred poses and clips, FX, the two landmarks, the bundled Patrick Hand font.
 
-| PR | What | Review |
-|---|---|---|
-| #10 | Owner feedback recorded (D-036 to D-042) | Codex |
-| #11 | No overlap + scrollable 2160 × 3840 world | Codex, 2 rounds |
-| #12 | Roster expansion: 16 kids, 12 recipes (incl. tier 4) | Codex |
-| #13 | Exporter v2: new families, native SVG GUI, sidecar validation | Codex, 4 rounds |
-| #8 | Art v2 spec + sample slice (bodies, faces, poses, costumes, map, GUI SVGs) | Claude, 4 rounds |
-| #14 | v2 engine: rig renderer, appearance, box collision (D-043), map v2, art coverage | Codex, 6 rounds |
-| #16 | Faces v2: visibly wider / lopsided / dreamy faces | Claude |
-| #17 | Render perf (no MSAA, no stencil mask): fixed red `main`, 15 → 60 fps on software GL | Codex |
-
-In review: **#15 GUI v2** (Codex's paper HUD, tray, Dex button, toast; compact short-screen layout). Six Codex rounds so far.
-
-Known limits, honestly stated:
-- Placeholder costumes for 12 types (by Codex, marked `placeholder`).
-- Deferred art: wave/held/settle poses, FX, landmarks.
-- Buildings, currencies, Dex and save arrive with M3.
-- The GUI shows those controls disabled.
+The v2 work merged before gate 2 (PRs #8, #10–#17) is listed in git history and in `docs/HANDOFF.md`.
 
 ## Board
 
@@ -35,11 +22,13 @@ Known limits, honestly stated:
 | GATE-1 | Owner | Approve the project plan | **done** (stack, rules, device, private repo; roster expanded with owner leave, D-038) | — |
 | SCAFFOLD, COMPOSITE | Claude | Scaffold, CI, layered kids | **done** (#3, #4) | — |
 | BUILD-PLAYABLE | Claude | Spawn, drag and drop, R1 fusion, debug APK | **done** (#5) | — |
-| ART-STYLE / ART-V2 | ChatGPT | Art style, then v2 per owner feedback | **review → owner** (#8, #16 merged) | Owner approves gate 2 |
+| ART-STYLE / ART-V2 | ChatGPT | Art style, then v2 per owner feedback | **done** (#8, #16; gate 2 approved) | — |
 | ENGINE-V2 | Claude | Rig renderer, appearance, box collision, map v2, scrolling, no overlap | **done** (#11, #14, #17) | — |
-| GUI-V2 | Claude (impl) / ChatGPT (art) | HUD, tray, Dex button, toast | review (#15) | Codex approves; merged |
-| GATE-2 | Owner | Approve the art style | **waiting on owner** | Explicit approval |
-| ASSET-PLAYABLE | ChatGPT | Final art for placeholder types, FX, deferred poses, landmarks | todo (after gate 2) | Claude review passes |
+| GUI-V2 | Claude (impl) / ChatGPT (art) | HUD, tray, Dex button, toast | **done** (#15) | — |
+| GATE-2 | Owner | Approve the art style | **done** (D-044, 2026-10-02) | — |
+| ASSET-PLAYABLE | ChatGPT | A: D-045 face fix + final art for the 12 placeholder costumes. B: deferred poses and clips, FX, landmarks, font | **doing** (part A) | Claude review passes for each part |
+| ROSTER-PLAN | ChatGPT (names, themes, combinations) / Claude (IDs, validation, balance) | Roster plan toward ~500 types (D-046): themes, tiers, recipe graph, and the 50–80 that ship in the MVP | todo (after ASSET-PLAYABLE) | Both agree; reachability and tier checks pass on the full graph |
+| ROSTER-SCALE | Claude | Engine and pipeline for ~500 types: per-type texture loading and unloading, Dex thumbnails, content validation at scale, art-export throughput | todo (part of BUILD-MVP) | Texture budget and frame time hold with 500 types in the data; tests pass; Codex review |
 | GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | todo | Explicit approval |
 | BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | todo | Tests pass; Codex review |
 | ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | todo | Claude review passes; device listening check |
