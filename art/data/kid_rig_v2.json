@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "asset-playable-a-1",
+  "revision": "asset-playable-a-2",
   "status": "style_sample",
   "delivery": {
     "scope": "sample_slice",
@@ -1765,10 +1765,10 @@
           "asset": "kid_snowman_back_snowball",
           "status": "final",
           "layer": "back",
-          "attachTo": "torso",
+          "attachTo": "head_top",
           "sourcePivot": [
             128,
-            166
+            55
           ],
           "fitByBody": {
             "round": [
@@ -1776,12 +1776,12 @@
               1
             ],
             "tall": [
-              0.86,
-              0.93
+              0.92,
+              0.84
             ],
             "squat": [
               1.08,
-              0.84
+              0.94
             ],
             "bean": [
               1,

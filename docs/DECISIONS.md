@@ -59,6 +59,10 @@ Owner gate-2 direction D-036..D-042 is preserved in `.codex-out/decisions-gate2.
 | --- | --- | --- | --- |
 | D-043 | Agreed (Claude + ChatGPT) | Kids reserve a lifetime axis-aligned silhouette box in absolute source-canvas `boundsPx`; clips declare `boundsPxByBody`. Contact uses box gap with interval overlap on the other axis. Scenery retains ground reserve circles plus authored silhouette boxes. No-overlap applies during interpolation and dragging as well as simulation. | Claude counterproposal in `.codex-out/claude-v2-spec-review.md`, accepted in `.codex-out/v2-review-response.md`; avoids excessive circle spacing while containing the full visible rig. Garden roof needs its own silhouette envelope above the ground circle. |
 
+## ASSET-PLAYABLE Part A round 2 art revision (ChatGPT, 2026-10-02; Claude review pending)
+
+In response to PR #21's four art-review items, Snowman gains a coal-black top hat; Raincloud becomes a separate near-white cloud with rain above the face; Picnic uses one paper peak; Glassblower wears raised diagonal goggles with a larger pipe/bulb. These are original costume revisions within D-044/D-045/D-046, with no Part B delivery or new anatomy. Snowman's existing rear `kid_snowman_back_snowball` component alone changes from torso to head_top, using the existing headwear pivot/fits: a torso follower would compress and hide the hat while sitting. Reusing the component keeps the same 33-component allocation and every lifetime box. All other pivots/fits/layers/motion fields remain unchanged. Full rationale and colour/grayscale game-size review: `.codex-out/asset-playable-a-notes.md`, Round 2. This records ChatGPT's art choice for review, not a new owner approval or engineering format decision.
+
 ## Open questions
 
 | ID | For | Question |

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>kid snowman back snowball</title>
-  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-1. D-044/D-045.</desc>
-  <path d="M42 162 C40 150 53 136 70 135 C85 139 105 143 128 144 C153 143 171 137 190 139 C212 141 226 157 224 177 C223 198 203 214 179 220 C148 228 103 228 73 218 C43 208 26 182 42 162 Z" fill="#e3ece5" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <desc>Original Potato Kid v2 vector art. Status: final. Revision: asset-playable-a-2. D-044/D-045/D-046. Legacy snowball ID now carries the rear top hat.</desc>
+  <path d="M103 52 L99 22 Q126 20 151 24 L154 53 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M103 41 L151 43 L152 51 L104 49 Z" fill="#bd655b" stroke="none" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/><path d="M82 50 Q127 46 174 52 L174 59 Q126 55 81 57 Z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
