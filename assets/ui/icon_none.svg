@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>No bias</title>
+  <desc>Original Potato Kid GUI-MVP vector. An empty seed ring and dash; never a hidden kid silhouette. Revision gui-mvp-1. Final art for Claude review.</desc>
+  <path d="M61 24 C84 21 104 40 103 63 C105 88 84 104 61 103 C39 106 23 86 25 62 C23 40 41 24 61 24 Z" fill="#fff1d5" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M44 64 H83" fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+</svg>

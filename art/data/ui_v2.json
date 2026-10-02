@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "asset-playable-b-1",
+  "revision": "gui-mvp-1",
   "status": "final",
   "runtimeMode": "native_dom_svg",
   "palette": {
@@ -13,15 +13,25 @@
     "disabled": "#686b55",
     "water": "#96bbc0",
     "fire": "#e8a06b",
-    "firefighter": "#bd655b"
+    "firefighter": "#bd655b",
+    "danger": "#bd655b"
   },
   "typography": {
     "family": "Patrick Hand",
     "fallback": "system-ui, sans-serif",
-    "fontDelivery": "blocked: official upstream fetch unavailable in sandbox; Claude must bundle PatrickHand-Regular.ttf and full OFL.txt from google/fonts/ofl/patrickhand, record revision and SHA-256 before enabling",
+    "fontDelivery": "bundled locally by PLAYABLE-INTEGRATION: assets/fonts/patrick-hand/PatrickHand-Regular.ttf and OFL.txt",
     "labelPx": 18,
     "countPx": 22,
-    "minimumTextPx": 16
+    "minimumTextPx": 16,
+    "titlePx": 26,
+    "titleLinePx": 32,
+    "sectionPx": 22,
+    "sectionLinePx": 28,
+    "countLinePx": 28,
+    "labelLinePx": 24,
+    "bodyPx": 16,
+    "bodyLinePx": 22,
+    "compactCountPx": 20
   },
   "spacing": {
     "outerMargin": 8,
@@ -48,12 +58,15 @@
     "disabled": "ui_button_disabled",
     "selected": "ui_button_selected",
     "focus": "ui_focus",
-    "spawnFull": "ui_spawn_full"
+    "spawnFull": "ui_spawn_full",
+    "primary": "ui_button_primary"
   },
   "surfaces": {
     "panel": "ui_panel",
     "tray": "ui_tray",
-    "toast": "ui_toast"
+    "toast": "ui_toast",
+    "saveProblem": "ui_banner_problem",
+    "saveRecovery": "ui_banner_recovery"
   },
   "icons": {
     "materials": "icon_materials",
@@ -70,13 +83,19 @@
     "unknown": "icon_unknown",
     "timer": "icon_timer",
     "close": "icon_close",
-    "discovery": "icon_discovery"
+    "discovery": "icon_discovery",
+    "spawn": "icon_spawn",
+    "lock": "icon_lock",
+    "check": "icon_check",
+    "warning": "icon_warning",
+    "none": "icon_none"
   },
   "tierMarks": {
     "1": "badge_tier_1",
     "2": "badge_tier_2",
     "3": "badge_tier_3",
-    "4": "badge_tier_4"
+    "4": "badge_tier_4",
+    "5": "badge_tier_5"
   },
   "feedbackMarks": {
     "held": "ui_hold_ring",
@@ -92,20 +111,21 @@
     "safeInsets": "device env(safe-area-inset-*)",
     "hud": {
       "topInsetPx": 24,
-      "heightPx": 128,
-      "rows": 2,
-      "populationRowY": 8,
+      "heightPx": 160,
+      "rows": 3,
+      "populationRowY": 60,
       "currencyRowY": 8,
-      "countdownRowY": 66,
+      "countdownRowY": 60,
       "settingsTarget": [
         44,
         44
       ],
       "spawnTarget": [
-        80,
+        112,
         44
       ],
-      "progressTrackHeight": 6
+      "progressTrackHeight": 6,
+      "progressRowY": 108
     },
     "tray": {
       "heightPx": 96,
@@ -117,7 +137,8 @@
       "belowHudGap": 8,
       "maxHeight": 96,
       "portraitPx": 56,
-      "durationSeconds": 2.5
+      "durationSeconds": 2.5,
+      "overflowPolicy": "Grow for long names/milestone line; measure actual occlusion. No clipping."
     },
     "dex": {
       "maxUsableHeightFraction": 0.8,
@@ -135,7 +156,8 @@
         "top": 24,
         "bottom": 24
       },
-      "reviewOnly": true
+      "reviewOnly": true,
+      "screen": "hud_compatibility"
     },
     {
       "source": "art/previews/ui/ui_hud_v2_390x693.svg",
@@ -147,15 +169,1682 @@
         "top": 24,
         "bottom": 24
       },
-      "reviewOnly": true
+      "reviewOnly": true,
+      "screen": "hud_compatibility"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "hud"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_full_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "hud_full"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_broke_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "hud_broke"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "garden"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_short_funds_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "garden_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_max_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "garden_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "capacity"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_short_funds_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "capacity_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_max_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "capacity_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_picker_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_picker"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_picker_scrolled_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_picker_scrolled"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_unbuilt_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_unbuilt"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_short_funds_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_max_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_locked_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_locked"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_short_funds_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_full_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_full"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_scrolled_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_scrolled"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_poor_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_poor"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_kids_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_kids"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_undiscovered_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_undiscovered"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_recipes_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_recipes"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_detail_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_detail"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_search_empty_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_search_empty"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "offline"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_capped_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "offline_capped"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_refusal_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "refusal"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_discovery_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "reward_discovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_milestone_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "reward_milestone"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_combined_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "reward_combined"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_unsaved_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "save_unsaved"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_recovery_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "save_recovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_update_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "save_update"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_settings_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "settings"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_settings_off_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "settings_off"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_save_warning_390x844.svg",
+      "size": [
+        390,
+        844
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "offline_save_warning"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "hud"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_full_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "hud_full"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_broke_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "hud_broke"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "garden"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_short_funds_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "garden_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_max_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "garden_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "capacity"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_short_funds_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "capacity_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_max_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "capacity_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_picker_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_picker"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_picker_scrolled_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_picker_scrolled"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_unbuilt_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_unbuilt"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_short_funds_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_max_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "bias_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_locked_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_locked"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_short_funds_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_full_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_full"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_scrolled_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_scrolled"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_poor_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "compendium_poor"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_kids_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_kids"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_undiscovered_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_undiscovered"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_recipes_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_recipes"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_detail_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_detail"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_search_empty_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "dex_search_empty"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "offline"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_capped_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "offline_capped"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_refusal_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "refusal"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_discovery_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "reward_discovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_milestone_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "reward_milestone"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_combined_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "reward_combined"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_unsaved_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "save_unsaved"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_recovery_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "save_recovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_update_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "save_update"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_settings_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "settings"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_settings_off_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "settings_off"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_save_warning_390x693.svg",
+      "size": [
+        390,
+        693
+      ],
+      "safeInsetsPx": {
+        "top": 24,
+        "bottom": 24
+      },
+      "reviewOnly": true,
+      "screen": "offline_save_warning"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "hud"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_full_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "hud_full"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_hud_broke_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "hud_broke"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "garden"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_short_funds_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "garden_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_garden_max_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "garden_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "capacity"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_short_funds_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "capacity_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_capacity_max_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "capacity_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_picker_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "bias_picker"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_picker_scrolled_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "bias_picker_scrolled"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_unbuilt_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "bias_unbuilt"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_short_funds_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "bias_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_bias_max_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "bias_max"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_locked_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "compendium_locked"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_short_funds_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "compendium_short_funds"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "compendium"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_full_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "compendium_full"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_scrolled_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "compendium_scrolled"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_compendium_poor_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "compendium_poor"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_kids_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "dex_kids"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_undiscovered_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "dex_undiscovered"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_recipes_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "dex_recipes"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_detail_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "dex_detail"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_dex_search_empty_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "dex_search_empty"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "offline"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_capped_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "offline_capped"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_refusal_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "refusal"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_discovery_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "reward_discovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_milestone_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "reward_milestone"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_reward_combined_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "reward_combined"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_unsaved_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "save_unsaved"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_recovery_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "save_recovery"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_save_update_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "save_update"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_settings_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "settings"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_settings_off_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "settings_off"
+    },
+    {
+      "source": "art/previews/ui/ui_mvp_offline_save_warning_640x360.svg",
+      "size": [
+        640,
+        360
+      ],
+      "safeInsetsPx": {
+        "top": 8,
+        "bottom": 8
+      },
+      "reviewOnly": true,
+      "screen": "offline_save_warning"
     }
   ],
   "delivery": {
-    "deferredLayouts": [
-      "dex_sheet",
-      "upgrade_sheet",
-      "toast_layout"
+    "deferredLayouts": [],
+    "note": "GUI-MVP sources/layouts are final for Claude review. DOM implementation, behavioural/device acceptance and gate 4 remain pending. Review screens include all three viewport sizes; no additional Pixi textures."
+  },
+  "mvp": {
+    "spec": "docs/GUI_MVP.md",
+    "referenceViewports": [
+      [
+        390,
+        844
+      ],
+      [
+        390,
+        693
+      ],
+      [
+        640,
+        360
+      ]
     ],
-    "note": "Approved icons, surfaces/states, feedback and tier marks are final native SVG. Two HUD/tray mockups retained. Expanded layout/device reflow work remains explicitly deferred."
+    "safeInsets": {
+      "portraitMinimumPx": 24,
+      "compactMinimumPx": 8,
+      "leftRightMinimumPx": 8,
+      "compactMaxHeightPx": 520
+    },
+    "zOrder": {
+      "world": 0,
+      "readOnlyShield": 5,
+      "hud": 10,
+      "worldFeedback": 20,
+      "scrim": 40,
+      "sheet": 50,
+      "sheetFeedback": 60,
+      "saveBanner": 80
+    },
+    "motion": {
+      "scrimOpacity": 0.24,
+      "openMs": 160,
+      "openEasing": "ease-out",
+      "closeMs": 120,
+      "closeEasing": "ease-in",
+      "sheetTranslatePx": 12,
+      "reducedMotion": "none"
+    },
+    "hud": {
+      "portraitHeightPx": 160,
+      "narrowHeightPx": 212,
+      "compactHeightPx": 72,
+      "compactMinimumInnerWidthPx": 556,
+      "compactColumnsPx": [
+        104,
+        88,
+        80,
+        "minmax(88,1fr)",
+        112,
+        44
+      ],
+      "rowHeightPx": 44,
+      "rowGapPx": 8,
+      "iconPx": 24,
+      "spawnLines": [
+        "Spawn now",
+        "{cost}"
+      ],
+      "compactTimer": "time/full/waiting",
+      "narrowRowYs": [
+        8,
+        60,
+        112,
+        164
+      ]
+    },
+    "sheets": {
+      "maxWidthPx": 600,
+      "sideContentInsetPx": 16,
+      "portraitMaxUsableFraction": 0.8,
+      "compactTopGapPx": 16,
+      "headerPx": 80,
+      "compactHeaderPx": 64,
+      "footerPx": 80,
+      "actionHeightPx": 48,
+      "gapPx": 8,
+      "bodyBottomPaddingPx": 16,
+      "scrollbarPx": 6,
+      "requestedHeightsPx": {
+        "garden": 440,
+        "capacity": 440,
+        "bias": 624,
+        "compendium": 624,
+        "dex": 624,
+        "offline": 480,
+        "settings": 480
+      },
+      "modalInputPolicy": "cancel held drag first; pause world input, continue simulation"
+    },
+    "buildings": {
+      "comparisonHeightPx": 112,
+      "biasComparisonHeightPx": 96,
+      "helperLinePx": 22,
+      "pendingCopy": "Upgrading…",
+      "shortFundsFooterPx": 104
+    },
+    "bias": {
+      "columns": 3,
+      "twoColumnsBelowContentPx": 300,
+      "choiceHeightPx": 104,
+      "portraitPx": 48,
+      "noneHeightPx": 44,
+      "unknownCopy": "Unknown seed",
+      "noneCopy": "None · normal mix"
+    },
+    "compendium": {
+      "toolbarHeightPx": 56,
+      "instructionHeightPx": 44,
+      "cardHeightPx": 144,
+      "portraitPx": 64,
+      "payActionHeightPx": 48,
+      "cardGapPx": 8,
+      "paymentMode": "either currency"
+    },
+    "dex": {
+      "tabsHeightPx": 48,
+      "tabHeightPx": 44,
+      "columns": 3,
+      "twoColumnsBelowSheetPx": 360,
+      "compactFiveColumnsMinSheetPx": 560,
+      "cardMinimumHeightPx": 148,
+      "gapPx": 8,
+      "portraitPx": 80,
+      "detailPortraitPx": 96,
+      "recipePortraitPx": 48,
+      "narrowRecipePortraitPx": 40,
+      "recipeMinimumHeightPx": 144,
+      "unknownRecipeHeightPx": 72,
+      "portraitExemplar": {
+        "bodyId": "round",
+        "faceId": "classic",
+        "frame": "stand",
+        "faceState": "open",
+        "scale": 1
+      },
+      "unknownAsset": "icon_unknown",
+      "virtualisation": "engineering; preserve scroll/focus/order; no Pixi portraits"
+    },
+    "feedback": {
+      "worldMaxWidthPx": 420,
+      "discoveryMinHeightPx": 96,
+      "refusalMinHeightPx": 72,
+      "inlineMinHeightPx": 44,
+      "portraitPx": 56,
+      "visibleSeconds": 2.5,
+      "inlineSuccessSeconds": 2,
+      "policy": "batch coalesce discovery awards; queue milestones; offline report consumes its rewards"
+    },
+    "save": {
+      "portraitMinHeightPx": {
+        "unsaved": 80,
+        "recovery": 104,
+        "update": 80
+      },
+      "compactMinHeightPx": {
+        "unsaved": 64,
+        "recovery": 72,
+        "update": 64
+      },
+      "priority": [
+        "update",
+        "unsaved",
+        "recovery"
+      ],
+      "copy": {
+        "unsaved": [
+          "Progress can’t be saved right now.",
+          "You can keep playing in this session."
+        ],
+        "recovery": [
+          "We loaded an older save.",
+          "Your newer one is kept safe."
+        ],
+        "update": [
+          "Please update the game.",
+          "Your save needs a newer version."
+        ]
+      },
+      "persistence": "warning/update non-dismissible; recovery explicit dismiss"
+    },
+    "settings": {
+      "audioRowPx": 56,
+      "toggleTargetPx": [
+        52,
+        44
+      ],
+      "sliderSectionPx": 104,
+      "sliderHitHeightPx": 44,
+      "sliderRailHeightPx": 6,
+      "sliderThumbPx": 24,
+      "sliderThumbAsset": "ui_slider_thumb",
+      "sliderRange": [
+        0,
+        100
+      ],
+      "sliderStep": 1,
+      "defaults": {
+        "audio": true,
+        "music": 70,
+        "sfx": 80
+      },
+      "placeholderCopy": "Audio is coming soon."
+    },
+    "numberDisplay": {
+      "balances": "floor, truncate one decimal k/M/B/T; scientific at 1e15; omit .0",
+      "costs": "exact grouped integers; affordability on raw state",
+      "intervalDecimals": 1,
+      "algorithmOwner": "Claude"
+    },
+    "refusals": {
+      "materialsCost": "Not enough Materials.",
+      "potatokensCost": "Not enough Potatokens.",
+      "maxLevel": "This building is fully upgraded.",
+      "full": "Garden is full. Make room for a kid.",
+      "noRoom": "No clear spot by the Garden. Move a kid aside.",
+      "locked": "Build the Compendium first.",
+      "undiscovered": "Discover this kid first.",
+      "notSpawnable": "This kid can’t be favoured by the Garden."
+    }
+  },
+  "stateBorderImageRepeat": {
+    "default": "stretch",
+    "disabled": "round"
   }
 }

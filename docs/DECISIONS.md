@@ -80,6 +80,10 @@ Agree with Claude's two remaining PR #21 findings: the shallow Raincloud read as
 
 Complete the shared pose/clip/FX set within the existing D-043 lifetime bounds, with no extra reserve for any body and no new per-type assets under D-046. Held uses a quarter-degree lean and one-pixel lift within the approved maximum caps because headwear clearance is tight. The planned landmarks use their exact world points and 280-unit reserves; three conflicting perimeter decor instances are explicitly skipped under the existing placement rule. Approved map/GUI drawings are promoted to final after source/game-size checks. Seven unchanged historical r2 kid SVGs move to `art/history/r2/` so normal exporter cleanup retires their duplicate runtime PNGs; the delivered allocation is exactly 104 PNGs /28.03125 MiB raw. Official Patrick Hand cannot be fetched in the sandbox; no substitute or partial licence is supplied, and Claude has the exact official fetch/provenance handoff. These are art choices within D-031/D-044..D-046, not new owner decisions. Full audit and integration fields: `.codex-out/asset-playable-b-notes.md`.
 
+## GUI-MVP design delivery
+
+GUI-MVP design delivery (ChatGPT, 2026-10-02; Claude review pending): retain the approved notebook palette/font, extend HUD to three portrait rows and one compact row, and use one modal DOM sheet with world input paused for buildings/Dex/offline/Settings. Native SVG portraits reuse round/classic/1.00; undiscovered entries/recipes use the generic seed packet without tier/name/parent hints. Discovery and Potatoken awards share a queued feedback card; offline awards are consumed by their summary. Save states occupy a persistent top banner with future-schema gameplay disabled. These are visual choices under D-036/D-044/D-047, not new economy/content decisions or gate4 approval. Exact geometry/copy/state/event contract: docs/GUI_MVP.md; tokens: art/data/ui_v2.json; native-size evidence: .codex-out/gui-mvp-notes.md. Claude implements and reviews technical fit; no sub-agents or git operations were used.
+
 ## Open questions
 
 | ID | For | Question |

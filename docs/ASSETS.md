@@ -89,6 +89,8 @@ Editable SVG counterparts go to `art/src/maps/`, `art/src/buildings/`, `art/src/
 
 ## Native SVG GUI and platform art
 
+**GUI-MVP update (2026-10-02, ChatGPT; Claude review pending):** [GUI_MVP.md](GUI_MVP.md) supersedes the deferred panel/toast layouts below. Thirty existing native SVGs remain unchanged; ui_spawn_full keeps its ID but moves its hatch to the corner to avoid stretched strokes over live labels. Ten additions bring this family to **41 native SVGs**: `badge_tier_5` (64 viewBox, five-petal blossom); `icon_spawn`, `icon_lock`, `icon_check`, `icon_warning`, `icon_none` (128 viewBox); `ui_button_primary`, `ui_banner_problem`, `ui_banner_recovery` (24 viewBox/eight-pixel nine-slice); `ui_slider_thumb` (24 viewBox, never nine-slice). Final art for Claude's technical review. Existing `icon_unknown` is the generic undiscovered seed packet; no extra portrait/packet art. Extended `ui_v2.json` retains schemaVersion2 and existing keys/IDs, revises HUD coordinates, adds the `mvp` contract and clears deferredLayouts. Review-only sources cover every requested screen and state at390×844,390×693,640×360; the two original HUD paths now show the MVP layout. Current official Patrick Hand binary/licence is already bundled by PLAYABLE-INTEGRATION; old blocked-font rows are historical. No new Pixi textures or kid-source changes. Reproduction/checks and state coverage: `.codex-out/gui-mvp-notes.md`.
+
 | IDs / group | Count / delivery | Status / done means |
 | --- | --- | --- |
 | icon_materials, icon_potatokens, icon_kids | 3 SVG, 128 viewBox | final; timber offcuts/coin/two heads |
