@@ -7,9 +7,9 @@ import type { GameEvent, RejectReason } from '../sim/game';
 
 export type FeedbackItem =
   /** A recipe's first discovery; `newKid` when the child type is new to the Dex too. */
-  | { kind: 'discovery'; childType: KidId; newKid: boolean; potatokens: number; milestone: number }
+  | { kind: 'discovery'; childType: KidId; kidId?: number; newKid: boolean; potatokens: number; milestone: number }
   /** A kid type first seen from the Garden or Compendium (no recipe, no invented reward). */
-  | { kind: 'newKid'; childType: KidId; milestone: number }
+  | { kind: 'newKid'; childType: KidId; kidId?: number; milestone: number }
   /** A discovery award with no matching fusion in the batch. */
   | { kind: 'recipeReward'; potatokens: number }
   | { kind: 'milestone'; potatokens: number; kids: number }
@@ -30,7 +30,7 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
         const newKid = !known.has(e.child.type);
         known.add(e.child.type);
         if (e.firstDiscovery) {
-          current = { kind: 'discovery', childType: e.child.type, newKid, potatokens: 0, milestone: 0 };
+          current = { kind: 'discovery', childType: e.child.type, kidId: e.child.id, newKid, potatokens: 0, milestone: 0 };
           out.push(current);
         } else {
           // A repeat recipe gets no card; its awards (none expected) attach to nothing.
@@ -41,7 +41,7 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
       case 'spawned': {
         if (!known.has(e.kid.type)) {
           known.add(e.kid.type);
-          current = { kind: 'newKid', childType: e.kid.type, milestone: 0 };
+          current = { kind: 'newKid', childType: e.kid.type, kidId: e.kid.id, milestone: 0 };
           out.push(current);
         } else {
           current = null;

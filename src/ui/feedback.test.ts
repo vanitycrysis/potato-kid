@@ -86,7 +86,7 @@ describe('feedback cards (GUI_MVP §9)', () => {
     addKid(g.state.world, 'water', 340, 1500, createRng(0), 0, defaultBox(60));
     const items = feedbackFor(g.step([]), new Set(['plain', 'water']), g.state.discoveredKids.length);
     expect(items).toEqual([
-      { kind: 'discovery', childType: 'firefighter', newKid: true, potatokens: c.balance.economy.discoveryPotatokens, milestone: 7 },
+      { kind: 'discovery', childType: 'firefighter', kidId: expect.any(Number), newKid: true, potatokens: c.balance.economy.discoveryPotatokens, milestone: 7 },
     ]);
   });
 });

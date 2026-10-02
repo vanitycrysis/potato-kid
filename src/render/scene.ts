@@ -65,6 +65,7 @@ export class MapScene {
   private readonly listeners = new Set<(e: GameEvent) => void>();
   private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
   private readonly resumeListeners = new Set<(report: OfflineReport) => void>();
+  private readonly shownListeners = new Set<(kidId: number) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
   private readonly views = new Map<number, KidRigView>();
@@ -174,6 +175,20 @@ export class MapScene {
   /** Calls `fn` after every offline catch-up (cold load or resume), with its report. */
   listenResume(fn: (report: OfflineReport) => void): void {
     this.resumeListeners.add(fn);
+  }
+
+  /**
+   * Calls `fn` when a kid's view appears: at once, or after its costume loads (ROSTER-SCALE).
+   * Feedback about a newborn waits for this, not for the sim event (Codex review, PR #35).
+   */
+  listenShown(fn: (kidId: number) => void): void {
+    this.shownListeners.add(fn);
+  }
+
+  /** Whether a kid is drawn now, or still exists waiting for its costume. */
+  viewState(kidId: number): 'shown' | 'pending' | 'gone' {
+    if (this.views.has(kidId)) return 'shown';
+    return this.pendingViews.has(kidId) && this.game.state.world.kids.some((k) => k.id === kidId) ? 'pending' : 'gone';
   }
 
   /** Settles any held kid now (a cancelled touch), e.g. before the GUI layout shifts. */
@@ -395,6 +410,7 @@ export class MapScene {
     this.views.set(kid.id, view);
     this.prev.set(kid.id, { x: kid.x, y: kid.y });
     this.kidLayer.addChild(view.root);
+    for (const fn of this.shownListeners) fn(kid.id);
     return view;
   }
 

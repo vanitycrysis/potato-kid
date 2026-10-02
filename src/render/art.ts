@@ -58,7 +58,15 @@ const pixiLoader: TextureLoader = {
 export class TextureStore {
   /** Loaded textures by asset name; views read this map directly. */
   readonly map = new Map<string, Texture>();
+  /** Each type's costume load, in flight or done; dropped on failure so it can retry. */
   private readonly typeLoads = new Map<KidId, Promise<void>>();
+  /**
+   * Costume textures actually loaded, per type, tracked apart from the load promise: a
+   * partly failed load still owns what it loaded, so release frees it (Codex review, PR #35).
+   */
+  private readonly owned = new Map<KidId, Set<string>>();
+  /** Bumped by every release: a load that started before it is stale when it lands. */
+  private readonly generation = new Map<KidId, number>();
   /** Unloads in flight: a reload waits for them, or Pixi would hand back a texture being destroyed. */
   private readonly unloading = new Map<string, Promise<void>>();
   private readonly costumeAssets: Map<KidId, string[]>;
@@ -74,7 +82,13 @@ export class TextureStore {
   /** Loads every non-costume asset: the shared art that is always on screen. */
   async loadShared(): Promise<void> {
     const costume = new Set([...this.costumeAssets.values()].flat());
-    await Promise.all([...byName.keys()].filter((n) => !costume.has(n)).map((n) => this.loadOne(n)));
+    await Promise.all(
+      [...byName.keys()]
+        .filter((n) => !costume.has(n))
+        .map(async (n) => {
+          if (!this.map.has(n)) this.map.set(n, await this.fetch(n));
+        }),
+    );
   }
 
   /** Whether a type's costume is ready to draw. */
@@ -89,7 +103,8 @@ export class TextureStore {
   ensure(type: KidId): Promise<void> {
     const existing = this.typeLoads.get(type);
     if (existing) return existing;
-    const p = Promise.all((this.costumeAssets.get(type) ?? []).map((a) => this.loadOne(a))).then(() => {});
+    const gen = this.generation.get(type) ?? 0;
+    const p = Promise.all((this.costumeAssets.get(type) ?? []).map((a) => this.loadCostume(type, a, gen))).then(() => {});
     this.typeLoads.set(type, p);
     p.catch(() => {
       if (this.typeLoads.get(type) === p) this.typeLoads.delete(type);
@@ -99,40 +114,58 @@ export class TextureStore {
 
   /** Frees a type's costume textures (no kid of that type is drawn any more). */
   release(type: KidId): void {
-    if (!this.typeLoads.has(type)) return;
+    // Any load still in flight for this type is now stale and frees itself when it lands.
+    this.generation.set(type, (this.generation.get(type) ?? 0) + 1);
     this.typeLoads.delete(type);
-    for (const a of this.costumeAssets.get(type) ?? []) {
+    for (const a of this.owned.get(type) ?? []) {
       const t = this.map.get(a);
       this.map.delete(a);
       t?.destroy(false);
-      const url = this.urlOf(a);
-      if (!url) continue;
-      const done = this.loader.unload(url).catch(() => {});
-      this.unloading.set(a, done);
-      void done.then(() => {
-        if (this.unloading.get(a) === done) this.unloading.delete(a);
-      });
+      this.unload(a);
     }
+    this.owned.delete(type);
   }
 
-  /** Types whose costumes are loaded or loading. */
+  /** Types whose costumes are loaded, partly loaded or loading. */
   get loadedTypes(): KidId[] {
-    return [...this.typeLoads.keys()];
+    return [...new Set([...this.typeLoads.keys(), ...[...this.owned].filter(([, set]) => set.size > 0).map(([t]) => t)])];
   }
 
-  private async loadOne(name: string): Promise<void> {
+  private async loadCostume(type: KidId, name: string, gen: number): Promise<void> {
     if (this.map.has(name)) return;
+    const tex = await this.fetch(name);
+    if ((this.generation.get(type) ?? 0) !== gen) {
+      // Released while this was loading: never repopulate the map (Codex review, PR #35).
+      tex.destroy(false);
+      this.unload(name);
+      return;
+    }
+    this.map.set(name, tex);
+    let set = this.owned.get(type);
+    if (!set) this.owned.set(type, (set = new Set()));
+    set.add(name);
+  }
+
+  /** Fetches one asset (after any unload of it still in flight), with its trim applied. */
+  private async fetch(name: string): Promise<Texture> {
     const url = this.urlOf(name);
     if (!url) throw new Error(`Missing art "${name}" (rig coverage should have caught this at boot)`);
     // A release of this asset may still be unloading: finish it first (Codex review, PR #35).
     await this.unloading.get(name);
     const base = await this.loader.load(url);
     const t = trimOf(name);
-    this.map.set(
-      name,
-      t
-        ? new Texture({ source: base.source, frame: new Rectangle(0, 0, t[2], t[3]), orig: new Rectangle(0, 0, t[4], t[5]), trim: new Rectangle(t[0], t[1], t[2], t[3]) })
-        : base,
-    );
+    return t
+      ? new Texture({ source: base.source, frame: new Rectangle(0, 0, t[2], t[3]), orig: new Rectangle(0, 0, t[4], t[5]), trim: new Rectangle(t[0], t[1], t[2], t[3]) })
+      : base;
+  }
+
+  private unload(name: string): void {
+    const url = this.urlOf(name);
+    if (!url) return;
+    const done = this.loader.unload(url).catch(() => {});
+    this.unloading.set(name, done);
+    void done.then(() => {
+      if (this.unloading.get(name) === done) this.unloading.delete(name);
+    });
   }
 }

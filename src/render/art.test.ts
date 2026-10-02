@@ -60,3 +60,53 @@ describe('TextureStore (ROSTER-SCALE; Codex review, PR #35)', () => {
     expect(store.ready('hero')).toBe(true);
   });
 });
+
+describe('TextureStore releases (Codex review, PR #35 round 2)', () => {
+  /** A loader whose loads complete only when released by the test. */
+  function gatedLoader(failing: Set<string> = new Set()) {
+    const gates: { url: string; open: () => void }[] = [];
+    const unloaded: string[] = [];
+    const loader: TextureLoader = {
+      load: (url) =>
+        new Promise<Texture>((resolve, reject) => {
+          gates.push({ url, open: () => (failing.has(url) ? reject(new Error('fetch failed')) : resolve(tex())) });
+        }),
+      unload: async (url) => {
+        unloaded.push(url);
+      },
+    };
+    return { loader, gates, unloaded };
+  }
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it('a load that lands after its type was released never repopulates the map', async () => {
+    const g = gatedLoader();
+    const store = new TextureStore(rig, g.loader, (n) => n);
+    const pending = store.ensure('hero');
+    await flush();
+    store.release('hero');
+    for (const gate of g.gates) gate.open();
+    await pending;
+    await flush();
+    expect(store.ready('hero')).toBe(false);
+    for (const c of rig.costumes.hero!.components) expect(store.map.has(c.asset)).toBe(false);
+    expect(g.unloaded).toEqual(expect.arrayContaining(rig.costumes.hero!.components.map((c) => c.asset)));
+  });
+
+  it('a partly failed load still owns what it loaded, so release frees it', async () => {
+    const parts = rig.costumes.hero!.components.map((c) => c.asset);
+    expect(parts.length).toBeGreaterThan(1);
+    const g = gatedLoader(new Set([parts[1]!]));
+    const store = new TextureStore(rig, g.loader, (n) => n);
+    const pending = store.ensure('hero');
+    await flush();
+    for (const gate of g.gates) gate.open();
+    await expect(pending).rejects.toThrow('fetch failed');
+    await flush();
+    expect(store.map.has(parts[0]!)).toBe(true);
+    expect(store.loadedTypes).toContain('hero');
+    store.release('hero');
+    expect(store.map.has(parts[0]!)).toBe(false);
+    expect(g.unloaded).toContain(parts[0]);
+  });
+});

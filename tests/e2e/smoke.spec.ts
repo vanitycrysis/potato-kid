@@ -683,3 +683,21 @@ test('costumes load when a type appears and are released after it leaves (ROSTER
   expect(errors).toEqual([]);
 });
 
+
+test('a discovery card waits until its kid is drawn, even if the costume loads slowly', async ({ page }) => {
+  test.setTimeout(60_000);
+  // Lantern's costume downloads take 3 s (a slow network).
+  await page.route('**/kid_lantern_*', async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.continue();
+  });
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  await expect.poll(() => page.evaluate((id) => !!window.__PK__!.screenPointOf(id), glass)).toBe(true);
+  await dropOnto(page, hero, glass);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
+  const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
+  await expect(page.locator('.feedback')).toContainText('New discovery', { timeout: 15_000 });
+  expect(await page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
+  expect(errors).toEqual([]);
+});
