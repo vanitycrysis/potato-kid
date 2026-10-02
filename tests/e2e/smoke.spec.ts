@@ -702,3 +702,51 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
   expect(await page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => {
+  const measure = (page: Page) =>
+    page.evaluate(() => ({
+      mode: document.querySelector('.hud')!.getAttribute('data-mode'),
+      fit: document.documentElement.dataset.hudFit,
+      band:
+        Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top) -
+        document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
+    }));
+
+  for (const kind of ['unsaved', 'recovery'] as const) {
+    test(`568x320 with the ${kind} banner keeps the 44 px band via the two-row HUD`, async ({ page }) => {
+      await page.setViewportSize({ width: 568, height: 320 });
+      await boot(page, '?seed=3&debug=1&calm=1');
+      await page.evaluate((k) => window.__PK__!.debugSaveStatus!({ unsaved: k === 'unsaved', recovery: k === 'recovery', readOnly: false }), kind);
+      await expect.poll(() => measure(page)).toMatchObject({ mode: 'tworow', fit: 'usual' });
+      // 44 px of play plus the two 8 px world gaps.
+      expect((await measure(page)).band).toBeGreaterThanOrEqual(44 + 16);
+    });
+  }
+
+  test('640x360 keeps the usual compact HUD; dismissing restores the usual layout at 568x320', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: true, readOnly: false }));
+    await expect.poll(() => measure(page)).toMatchObject({ mode: 'compact', fit: 'usual' });
+    await page.setViewportSize({ width: 568, height: 320 });
+    await expect.poll(() => measure(page)).toMatchObject({ mode: 'tworow' });
+    await page.getByRole('button', { name: 'Dismiss save recovery notice' }).click();
+    await expect.poll(() => measure(page)).toMatchObject({ mode: 'portrait', fit: 'usual' });
+  });
+
+  test('too short for any HUD and the band: the world hides and the GUI becomes a page', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'page' });
+    await expect(page.locator('#app')).toBeHidden();
+    await expect(page.locator('.page-hint')).toBeVisible();
+    await page.locator('.tray').scrollIntoViewIfNeeded();
+    await expect(page.locator('.tray-label').first()).toBeVisible();
+    await page.setViewportSize({ width: 568, height: 700 });
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual' });
+    await expect(page.locator('#app')).toBeVisible();
+  });
+});
+
