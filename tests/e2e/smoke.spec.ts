@@ -384,3 +384,11 @@ for (const [w, h] of [[640, 360], [568, 320]] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+test('the build ships the bundled font with its full licence (SIL OFL condition 2)', async ({ request }) => {
+  const res = await request.get('/assets/PatrickHand-OFL.txt');
+  expect(res.ok()).toBe(true);
+  const text = await res.text();
+  expect(text).toContain('Copyright (c) 2010-2012 Patrick Wagesreiter');
+  expect(text).toContain('SIL OPEN FONT LICENSE Version 1.1');
+});

@@ -301,6 +301,7 @@ export class MapScene {
     this.placing.delete(kidId);
     this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT, spot: start };
     this.pending.push({ type: 'pickUp', kidId });
+    this.views.get(kidId)?.pickedUp();
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
@@ -406,6 +407,7 @@ export class MapScene {
     // (Codex review, PR #5): the same free-spot answer, so it never jumps or overlaps.
     const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn) ?? { x: cmd.x, y: cmd.y };
     this.placing.set(this.drag.kidId, spot);
+    this.views.get(this.drag.kidId)?.dropped();
     this.drag = undefined;
   }
 

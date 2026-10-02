@@ -76,6 +76,11 @@ export class KidRigView {
     this.shadow.position.set(sh.offsetPx[0], sh.offsetPx[1]);
 
     this.rigC.addChild(this.canvas);
+    // Shadow and effects are decoration: only the kid itself is a press target, so a big
+    // effect canvas never turns empty ground into a pick-up (Codex review, PR #24).
+    this.shadow.eventMode = 'none';
+    this.fxBehind.eventMode = 'none';
+    this.fxAbove.eventMode = 'none';
     this.scaled.addChild(this.shadow, this.fxBehind, this.rigC, this.fxAbove);
     this.root.addChild(this.scaled);
     this.picker = new ClipPicker(rig);
@@ -87,6 +92,15 @@ export class KidRigView {
   play(name: OneShot): void {
     this.picker.play(name);
     this.startEffect(name);
+  }
+
+  /** The player picked this kid up / let go of it (see ClipPicker.pickUp). */
+  pickedUp(): void {
+    this.picker.pickUp();
+  }
+
+  dropped(): void {
+    this.picker.drop();
   }
 
   /**

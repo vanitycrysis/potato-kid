@@ -33,7 +33,6 @@ export function clipLength(rig: KidRig, name: string): number {
 export class ClipPicker {
   /** `fresh`: started since the last frame, so it shows its first entry before time advances. */
   private oneShot: { name: OneShot; t: number; fresh: boolean } | undefined;
-  private wasHeld = false;
   private heldT = 0;
   private activityKind = '';
   private activityT = 0;
@@ -46,22 +45,25 @@ export class ClipPicker {
     this.oneShot = { name, t: 0, fresh: true };
   }
 
+  /**
+   * The player picked this kid up. Driven by the gesture, not by sampling `held`, so a
+   * press and release between two frames still plays both clips (Codex review, PR #24).
+   * Pick-up interrupts any pose by the next presentation frame (scheduler note).
+   */
+  pickUp(): void {
+    this.heldT = 0;
+    this.oneShot = { name: 'pick_up', t: 0, fresh: true };
+  }
+
+  /** The player let go (drop or cancel): ends a pick-up even mid-clip, then plays the drop. */
+  drop(): void {
+    if (this.oneShot?.name === 'pick_up') this.oneShot = undefined;
+    this.play('drop');
+  }
+
   /** The clip to show this frame. `dt` is real seconds since the last call. */
   advance(activity: Activity, held: boolean, dt: number): ClipPick {
-    if (held !== this.wasHeld) {
-      this.wasHeld = held;
-      this.heldT = 0;
-      if (held) {
-        // Pick-up interrupts any pose by the next presentation frame (scheduler note).
-        this.oneShot = { name: 'pick_up', t: 0, fresh: true };
-      } else {
-        // Releasing ends the pick-up even if it hadn't finished, then the drop plays.
-        if (this.oneShot?.name === 'pick_up') this.oneShot = undefined;
-        this.play('drop');
-      }
-    } else if (held) {
-      this.heldT += dt;
-    }
+    if (held) this.heldT += dt;
     if (this.oneShot) {
       if (this.oneShot.fresh) this.oneShot.fresh = false;
       else this.oneShot.t += dt;

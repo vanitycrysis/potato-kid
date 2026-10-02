@@ -29,23 +29,36 @@ describe('which clip a kid shows (scheduler.priority)', () => {
     const p = new ClipPicker(rig);
     p.play('spawn');
     p.advance(walk, false, FRAME);
+    p.pickUp();
     expect(p.advance(walk, true, FRAME).name).toBe('pick_up');
     const heldNames = run(p, clipLength(rig, 'pick_up') + 0.2, true);
     expect(heldNames.at(-1)).toBe('held');
+    p.drop();
     expect(p.advance(walk, false, FRAME).name).toBe('drop');
     expect(run(p, clipLength(rig, 'drop') + 0.1).at(-1)).toBe('walk');
   });
 
   it('a quick tap (release before the pick-up ends) still plays the drop', () => {
     const p = new ClipPicker(rig);
+    p.pickUp();
     p.advance(walk, true, FRAME);
+    p.drop();
+    expect(p.advance(walk, false, FRAME).name).toBe('drop');
+  });
+
+  it('a press and release between two frames still plays the drop (Codex review, PR #24)', () => {
+    // The sim can apply both commands before the next frame, so the view never sees held.
+    const p = new ClipPicker(rig);
+    p.advance(walk, false, FRAME);
+    p.pickUp();
+    p.drop();
     expect(p.advance(walk, false, FRAME).name).toBe('drop');
   });
 
   it('a lower-priority one-shot cannot replace a higher one', () => {
     const p = new ClipPicker(rig);
-    p.advance(walk, true, FRAME);
-    p.advance(walk, false, FRAME); // drop playing
+    p.pickUp();
+    p.drop(); // drop playing
     p.play('spawn');
     expect(p.playing).toBe('drop');
   });
