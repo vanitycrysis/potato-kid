@@ -855,5 +855,90 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     await page.keyboard.press('Escape');
     expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(false);
   });
+
+  test('a card visible when a sheet opens keeps its time until the sheet closes (Codex review, PR #39)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 250, 1500), b: window.__PK__!.debugAdd!('water', 830, 700) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await garden(page).click();
+    await page.waitForTimeout(3200); // longer than a card's 2.5 s
+    await page.keyboard.press('Escape');
+    expect(await page.locator('.feedback').textContent()).toContain('New discovery');
+  });
+
+  test('opening a sheet ends a pan in progress (Codex review, PR #39)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // Start panning on empty ground.
+    await page.mouse.move(200, 600);
+    await page.mouse.down();
+    await page.mouse.move(220, 560, { steps: 3 });
+    await page.evaluate(() => (document.querySelectorAll('.tray-cell')[0] as HTMLButtonElement).click());
+    await expect(page.locator('.sheet')).toBeVisible();
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000));
+    await page.mouse.move(300, 300, { steps: 5 });
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000))).toEqual(before);
+    await page.mouse.up();
+  });
+
+  test('save banners stay above an open sheet and usable (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await garden(page).click();
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: true, readOnly: false }));
+    const onTop = await page.evaluate(() => {
+      const b = document.querySelector('.banner')!.getBoundingClientRect();
+      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return !!hit?.closest('.banner');
+    });
+    expect(onTop).toBe(true);
+    await page.getByRole('button', { name: 'Dismiss save recovery notice' }).click();
+    await expect(page.locator('.banner')).toHaveCount(0);
+  });
+
+  test('a banner appearing under an open sheet re-places it below the banner (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await garden(page).click();
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.querySelector('.sheet')!.getBoundingClientRect().top - document.querySelector('.banner')!.getBoundingClientRect().bottom),
+      )
+      .toBeGreaterThanOrEqual(0);
+  });
+
+  test('page mode: a sheet flows in the page with its action reachable (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.locator('.tray-cell').nth(0).scrollIntoViewIfNeeded();
+    await page.locator('.tray-cell').nth(0).click();
+    const action = page.locator('.sheet-action');
+    await action.scrollIntoViewIfNeeded();
+    await expect(action).toBeInViewport();
+    expect(await page.locator('.sheet-body').evaluate((e) => e.getBoundingClientRect().height)).toBeGreaterThan(100);
+  });
+
+  test('a refusal on a short sheet scrolls into view (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 32 }));
+    await garden(page).click();
+    await page.evaluate(() => {
+      (document.querySelector('.sheet-action') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ materials: -32 });
+    });
+    await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
+    const inBody = await page.evaluate(() => {
+      const r = document.querySelector('.sheet-status')!.getBoundingClientRect();
+      const body = document.querySelector('.sheet-body')!.getBoundingClientRect();
+      return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
+    });
+    expect(inBody).toBe(true);
+  });
 });
 

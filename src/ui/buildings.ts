@@ -122,6 +122,9 @@ export class BuildingSheets {
         row.hidden = !msg;
         text.textContent = msg;
         mark.replaceChildren(icon(this.refusal ? 'icon_warning' : 'icon_check', '', 'ui-icon-24'));
+        // On a short sheet the row may sit below the visible body: bring it into view, or a
+        // refusal (or a 2 s success) would go unseen (Codex review, PR #39).
+        if (msg) row.scrollIntoView({ block: 'nearest' });
       },
     };
   }

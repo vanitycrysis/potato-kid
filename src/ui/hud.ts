@@ -100,7 +100,9 @@ export class Hud {
     this.feedback.addEventListener('pointerenter', () => (this.hover = true));
     this.feedback.addEventListener('pointerleave', () => (this.hover = false));
     // Page mode orders banner, hint, HUD (GUI_MVP §3.1); the hint is hidden otherwise.
-    this.top.append(this.banners, this.pageHint, this.hud, this.feedback);
+    // Banners have their own layer above any sheet (z 80) and are never made inert; the
+    // top stack sits below them (GUI_MVP §§2, 10; Codex review, PR #39).
+    this.top.append(this.pageHint, this.hud, this.feedback);
 
     const tray = el(
       'nav',
@@ -112,7 +114,7 @@ export class Hud {
     );
     tray.setAttribute('aria-label', 'Buildings');
     const dex = this.comingSoon('icon_dex', 'Potato-Dex', 'dex-button');
-    document.body.append(this.shield, this.top, dex, tray);
+    document.body.append(this.shield, this.banners, this.top, dex, tray);
     this.sheets = new Sheets(
       scene,
       () => [this.top, tray, dex, document.getElementById('app')!].filter(Boolean),
@@ -124,11 +126,19 @@ export class Hud {
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the tray and Dex button at the bottom (GUI_MVP §2; Codex review, PR #15).
     const measure = () => {
+      // The top stack starts below any banner (+ 8 px).
+      const banner = this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0;
+      this.top.style.marginTop = `${banner}px`;
       this.layout();
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top));
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
+    // A banner appearing or changing size moves the HUD down and re-places an open sheet.
+    new ResizeObserver(() => {
+      measure();
+      this.sheets.place();
+    }).observe(this.banners);
     // In page mode the body sizes to its content, so a taller window doesn't resize it:
     // the viewport itself must trigger re-selection too (GUI_MVP §3.1).
     window.addEventListener('resize', measure);
@@ -253,7 +263,7 @@ export class Hud {
     if (!this.persistentBanner()) return;
 
     const banner = this.banners.getBoundingClientRect().height;
-    const top = this.top.getBoundingClientRect().top;
+    const top = this.banners.getBoundingClientRect().top;
     const bottom = Math.min(...['.tray', '.dex-button'].map((q) => document.querySelector(q)?.getBoundingClientRect().top ?? h)) - 8;
     // A: the tallest HUD that still leaves the band (Y = HUD top, E = band bottom).
     const hudTop = top + banner + 8;
@@ -392,8 +402,9 @@ export class Hud {
     // once, which only ever frees space under a held kid (Codex review, PR #33).
     if (this.showing && this.bandBelow(this.top.getBoundingClientRect().bottom) < 44) this.unshow();
     if (this.scene.dragging || this.save.readOnly) return;
-    // Cards that arrive while a sheet is open wait until it closes (GUI_MVP §9).
-    if (this.sheets.isOpen && !this.showing) return;
+    // While a sheet is open, a visible card keeps its time and nothing new is shown, so no
+    // card plays out unseen behind the modal (GUI_MVP §9; Codex review, PR #39).
+    if (this.sheets.isOpen) return;
     const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
     if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
       const r = this.queue.splice(refusal, 1)[0]!;

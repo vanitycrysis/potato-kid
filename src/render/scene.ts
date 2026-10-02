@@ -62,11 +62,24 @@ interface Drag {
  */
 export class MapScene {
   readonly game: Game;
+  private paused = false;
+
   /**
    * While a GUI sheet is open, world input (pick-up, pan, edge scroll) is paused; the
-   * simulation and income keep running (GUI_MVP §2).
+   * simulation and income keep running (GUI_MVP §2). Pausing also ends any pan and its
+   * inertia (Codex review, PR #39).
    */
-  inputPaused = false;
+  get inputPaused(): boolean {
+    return this.paused;
+  }
+
+  set inputPaused(on: boolean) {
+    this.paused = on;
+    if (on) {
+      this.pan = undefined;
+      this.panVelocity = { x: 0, y: 0 };
+    }
+  }
   private readonly listeners = new Set<(e: GameEvent) => void>();
   private readonly stepListeners = new Set<(events: GameEvent[]) => void>();
   private readonly resumeListeners = new Set<(report: OfflineReport) => void>();
@@ -452,6 +465,7 @@ export class MapScene {
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
+    if (this.paused) return;
     if (this.pan && e.pointerId === this.pan.pointerId) {
       this.movePan(e);
       return;

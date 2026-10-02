@@ -97,6 +97,7 @@ export class Sheets {
     // UI touches never reach the world (D-022).
     for (const t of [scrim, sheet]) t.addEventListener('pointerdown', (e) => e.stopPropagation());
     document.body.append(scrim, sheet);
+    document.documentElement.dataset.sheetOpen = 'true';
     for (const b of this.background()) b.inert = true;
     document.addEventListener('keydown', this.onKey, true);
 
@@ -112,6 +113,7 @@ export class Sheets {
     const c = this.current;
     if (!c) return;
     this.current = null;
+    delete document.documentElement.dataset.sheetOpen;
     document.removeEventListener('keydown', this.onKey, true);
     for (const b of this.background()) b.inert = false;
     this.scene.inputPaused = false;
@@ -153,6 +155,7 @@ export class Sheets {
   place(): void {
     const c = this.current;
     if (!c) return;
+    // Page mode (GUI_MVP §3.1) is laid out by sheets.css, which overrides this geometry.
     const inset = safeInsets();
     const w = window.visualViewport?.width ?? window.innerWidth;
     const h = window.visualViewport?.height ?? window.innerHeight;
