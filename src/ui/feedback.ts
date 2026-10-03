@@ -97,5 +97,7 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'Discover this kid first.';
     case 'notSpawnable':
       return 'This kid can’t be favoured by the Garden.';
+    case 'gone':
+      return 'This kid has already left the map.';
   }
 }

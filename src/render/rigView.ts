@@ -153,6 +153,39 @@ export class KidRigView {
     this.drawEffects(dt);
   }
 
+  /**
+   * Going home (D-048, GUI_MVP §13.2): the rig's own wave clip for `clipMs`, then a stand
+   * fading out over `fadeMs`; reduced motion is a stand that fades over `reducedFadeMs`.
+   * `ms` is foreground time since the send. Returns false once fully faded.
+   */
+  depart(x: number, y: number, ms: number, t: { clipMs: number; fadeMs: number; reducedFadeMs: number }): boolean {
+    // No effect plays on a farewell: one still running (a discovery sparkle) ends now
+    // rather than freezing in place (GUI_MVP §13.2; Codex review, PR #50).
+    if (this.fxSprites.size || this.effects.active.length) {
+      this.effects.clear();
+      for (const s of this.fxSprites.values()) s.destroy();
+      this.fxSprites.clear();
+    }
+    this.root.position.set(x, y);
+    this.root.zIndex = y;
+    const wave = this.rig.clips.wave;
+    let frame: ClipFrame;
+    let alpha: number;
+    if (this.reducedMotion || !wave) {
+      frame = this.staticFrame('idle');
+      alpha = 1 - ms / t.reducedFadeMs;
+    } else if (ms < t.clipMs) {
+      frame = frameAt(wave, ms / 1000, false);
+      alpha = 1;
+    } else {
+      frame = this.staticFrame('idle');
+      alpha = 1 - (ms - t.clipMs) / t.fadeMs;
+    }
+    this.apply(frame, undefined);
+    this.root.alpha = Math.max(0, Math.min(1, alpha));
+    return alpha > 0;
+  }
+
   destroy(): void {
     this.root.destroy({ children: true });
   }

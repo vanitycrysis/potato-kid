@@ -1,5 +1,9 @@
 # Decisions
 
+## Launcher and splash art choice (ChatGPT, 2026-10-03; Claude review pending)
+
+Under D-032/D-036/D-044/D-045, the app mark is the approved Round/stand Potato Kid with Classic/open face, without text or costume. Use sage `#e2e8d4` for the adaptive background and paper `#fff1d5` for the opaque splash window. The monochrome silhouette retains the shared contour and cuts out the two eyes and smirk; dot holes enlarge slightly for negative-space reading at48px. Editable vectors and correctly sized transparent/opaque PNG masters are delivered with all mask/theme/size reviews. No game/native integration or new owner-gate approval is claimed. The ASSET-MVP row remains doing until Claude's review and device checks. Rationale, evidence, original provenance and conversion handoff: `.codex-out/launcher-splash-notes.md`.
+
 Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collaborators' entries are kept. **Status:**
 - **Required:** from the brief or the design doc.
 - **Approved:** by the owner.

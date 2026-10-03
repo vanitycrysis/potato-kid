@@ -44,7 +44,7 @@ export type Command =
   | { type: 'sendHome'; kidId: number };
 
 /** Why a purchase or setting was refused; the UI explains it, and nothing changes. */
-export type RejectReason = 'cost' | 'maxLevel' | 'full' | 'noRoom' | 'locked' | 'undiscovered' | 'notSpawnable';
+export type RejectReason = 'cost' | 'maxLevel' | 'full' | 'noRoom' | 'locked' | 'undiscovered' | 'notSpawnable' | 'gone';
 
 export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline';
 
@@ -400,7 +400,12 @@ export class Game {
         continue;
       }
       const kid = world.kids.find((k) => k.id === c.kidId);
-      if (!kid) continue; // e.g. consumed before the command arrived
+      if (!kid) {
+        // Consumed before the command arrived. A drag just ends; a send home is answered,
+        // so the player hears why nothing happened (GUI_MVP §13.3).
+        if (c.type === 'sendHome') events.push({ type: 'rejected', command: 'sendHome', reason: 'gone' });
+        continue;
+      }
       if (c.type === 'sendHome') {
         world.kids.splice(world.kids.indexOf(kid), 1);
         events.push({ type: 'sentHome', kid });
