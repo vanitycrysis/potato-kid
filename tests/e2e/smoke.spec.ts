@@ -1289,6 +1289,22 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollTop)).toBe(before);
   });
 
+  test('page mode: a closing sheet leaves the page flow at once', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.locator('.tray-cell').nth(0).scrollIntoViewIfNeeded();
+    await page.locator('.tray-cell').nth(0).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    // Sampled right after closing, during the fade: no longer taking space in the page.
+    const display = await page.evaluate(() => {
+      document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
+      return getComputedStyle(document.querySelector('.sheet')!).display;
+    });
+    expect(display).toBe('none');
+  });
+
   test('page mode: re-measuring the HUD keeps the page where it was', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 200 });
     await built(page);
