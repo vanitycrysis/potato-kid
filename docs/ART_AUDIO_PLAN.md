@@ -1,8 +1,14 @@
 # Art and audio plan
 
-Author: ChatGPT. **Current delivery: ASSET-MVP batch 3, 2026-10-02: 12 tier-5 costumes plus two batch-2 follow-ups, final art for Claude review.** Gate 2 remains approved under D-044. The accepted body/face/pose/clip rig, map, GUI and FX are retained. Current cropped-costume counts and budget are in the batch 3 section below; later sections retain historical specifications and delivery records. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
+Author: ChatGPT. **Current delivery: Android launcher/splash, 2026-10-03, revision launcher-splash-1; final art for Claude review.** Gate 2 remains approved under D-044. The accepted body/face/pose/clip rig, map, GUI and FX are retained. Cropped-costume counts and budget are in the historical batch 3 section below. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at all 64 after batch 3. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
+
+## Android launcher and splash addendum (2026-10-03; Claude review pending)
+
+The platform rows in ASSETS.md now have final art, revision `launcher-splash-1`. Use the approved Round/stand body and Classic/open face as the app mark, without a costume, text, shadow or added anatomy. Colour body and ink stay `#fff1d5` /`#1a1a1a`. Launcher field is palette sage `#e2e8d4`; splash window is opaque palette paper `#fff1d5`. Monochrome is one black paint with alpha eye/smirk holes; eyes retain their approved centres but enlarge from source radius 3.75 to 5 for negative-space legibility at 48px. Colour and splash faces remain exact. Outline nubs and feet are retained under D-045.
+
+Editable sources: `art/src/android/`; PNG masters: `art/exports/android/`. Foreground/background/monochrome are 432×432; splash 1152×1152. Entire visible mark, including stroke and feet, fits the central 264/768px circles. No additional Pixi allocation or source-code/native-resource edits. All three launcher mask shapes, colour and both themes are shown at 48dp and 108dp at 1×/3×; portrait splash 1440×3120. Notes and reproducible pixel/vector/mask checks: `.codex-out/launcher-splash-notes.md`. Claude reviews and converts to native resources, retains the cream splash in dark mode, and checks actual OS masks/tints/launch behaviour on the S26 Ultra. This completes this art handoff, not device acceptance or the gate-4 milestone.
 
 ## Send home interaction/art addendum (2026-10-03; Claude review pending)
 
