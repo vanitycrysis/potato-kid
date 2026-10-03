@@ -1,5 +1,20 @@
 # Asset provenance
 
+## Android launcher and splash (ChatGPT, 2026-10-03; Claude review pending)
+
+Author/art owner: ChatGPT (Codex). Revision `launcher-splash-1`; original work for Potato Kid. Tools: editable SVG composition and original negative-space vector paths using Node.js v24.19.0; Playwright Chromium PNG export and review mockups; actual-PNG alpha/RGB/radius checks and independent sampled SVG geometry/mask checks. No image generator, external artwork, tracing, downloaded art, font in the masters or baked app-name text. Licence: original project artwork; PNGs and mockups inherit their SVG sources.
+
+Colour mark directly reuses ChatGPT's approved `art/src/kids/kid_body_round_stand.svg` and `art/src/kids/kid_face_classic_open.svg` without changing them. They were originally authored for Potato Kid under the earlier provenance entries. All original references were inspected via `.codex-out/reference-contact-sheet.png`; approved `art/previews/ingame/faces-plain.png`, `types-20x9.png` and `art/previews/ui/send_home_shown_390x844.png` informed consistency and palette choices. Supplied references remain untouched and are not traced or embedded. Colours come from the unchanged `art/data/ui_v2.json`: paper `#fff1d5`, ink `#1a1a1a`, sage `#e2e8d4`. Monochrome uses one black paint and transparent eye/smirk holes, with a small optical enlargement of dot holes for 48px readability; it adds no anatomy.
+
+| Asset ID | Editable source | PNG master | Status |
+| --- | --- | --- | --- |
+| android_launcher_foreground | `art/src/android/android_launcher_foreground.svg` | `art/exports/android/android_launcher_foreground.png` (432×432 RGBA) | final /launcher-splash-1; Claude review pending |
+| android_launcher_background | `art/src/android/android_launcher_background.svg` | `art/exports/android/android_launcher_background.png` (432×432, opaque sage) | final /launcher-splash-1; Claude review pending |
+| android_launcher_foreground_monochrome | `art/src/android/android_launcher_foreground_monochrome.svg` | `art/exports/android/android_launcher_foreground_monochrome.png` (432×432 RGBA) | final /launcher-splash-1; Claude review pending |
+| android_splash_logo | `art/src/android/android_splash_logo.svg` | `art/exports/android/android_splash_logo.png` (1152×1152 RGBA) | final /launcher-splash-1; Claude review pending |
+
+The 40 review SVG/PNG pairs in `art/previews/android/` are original art-compositor outputs: 36 individual mask/appearance/size/density combinations, two overview sheets, a safe-circle sheet and a 1440×3120 splash frame. Review text is outside the delivered masters. They are not engine/OS/device screenshots or acceptance evidence. Actual themed tints come from Android; review tints are examples from the GUI palette. Exact source/master/shared-source SHA-256, dimensions, exported alpha bounds and complete preview inventory: `.codex-out/launcher-splash-inventory.json`. Check results: `.codex-out/launcher-splash-check.json`; reproduction/conversion handoff: `.codex-out/launcher-splash-notes.md`. The pre-edit preservation snapshot covers 927 files under src/android/references/art/assets. The only existing protected-file change is this provenance entry; prior artwork and all code/native resources remain byte-identical. Claude commits/pushes unchanged as ChatGPT; no git operations or external publication by Codex.
+
 
 
 ## ASSET-MVP batch 2: new tier 4 costumes (2026-10-02; Claude review pending)
