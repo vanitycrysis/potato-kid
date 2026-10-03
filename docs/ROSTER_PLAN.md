@@ -94,7 +94,10 @@ Nine of the 48 new costumes place compact caps on head_top. ASSET-MVP must compa
 
 Also compare this cluster with existing Firefighter, Gardener, Snowman and Picnic headwear and the other proposed caps, especially Greenhouse, Captain and Observatory. These are targets for drawing and review, not evidence that the finished silhouettes pass.
 
-**New designs have no pixels yet: their grayscale readability is a production acceptance check, not a claimed pass.** In ASSET-MVP, inspect each at ~55 CSS px in colour and grayscale alongside all prior types, then on every body/face/pose. Redraw a colliding primary cue before exporting; do not solve it by colour, extra face details, a new physique or many miniature symbols. A paper object may reuse construction methods but each Dex costume must have a distinct visible silhouette. Keep cues compact inside existing bounds, especially all rear wheel/trellis/sail designs.
+**Art production status (2026-10-02): all 64 planned kids have costume art after ASSET-MVP batch 3. The 12 tier-5 kids and Aurora/Terrarium follow-ups are final for Claude review; in-engine/device recognition remains an acceptance check.** In ASSET-MVP, inspect each at ~55 CSS px in colour and grayscale alongside all prior types, then on every body/face/pose. Redraw a colliding primary cue before exporting; do not solve it by colour, extra face details, a new physique or many miniature symbols. A paper object may reuse construction methods but each Dex costume must have a distinct visible silhouette. Keep cues compact inside existing bounds, especially all rear wheel/trellis/sail designs.
+
+
+Batch-3 drawing review keeps the Mosaic L, Moon Garden deep crescent and Winter Market three-scallop outline targets. The crescent's lower point and awning scallops are raised clear of the crown; the trellis, fair wheel and mill sails sit left so their primary outline is visible, while the folded stretcher projects at the left hip. Cake gets a visible square-ended unlit candle and flat tier sides. Aurora deliberately leaves the thin curtain/shaft form for a broad lobed light sheet; Terrarium loses its lid/tab and angular shoulders for a continuous tall dome to separate it from Lantern. No gameplay/content/rig/envelope change. Current comparison sheets and per-kid everyday-object checks: .codex-out/asset-mvp-3-notes.md.
 
 ## MVP roster
 
@@ -141,7 +144,7 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `greenhouse` | 4 | Greenhouse Kid | Garden & Growing | Low pitched glass roof with square frame; sage; head_top roof + torso seed-tray bib (2). | R31: `gardener + glassblower` |
 | `bouquet` | 4 | Bouquet Kid | Garden & Growing | Broad hand-held fan of three flower heads; dusty rose; hand_right bouquet + torso tied paper wrap (2). | R32: `flower + gardener` |
 | `bonsai` | 4 | Bonsai Kid | Garden & Growing | Two flat offset foliage shelves on a bent trunk; leaf green; head_top tree + torso shallow tray (2). | R33: `gardener + sprout` |
-| `terrarium` | 4 | Terrarium Kid | Garden & Growing | Tall filled bell-jar cap offset to the left crown, with rounded shoulder, flat lifting tab and visible moss/mushroom; moss green; head_top glass garden + torso mushroom label (2). | R34: `mushroom + glassblower` |
+| `terrarium` | 4 | Terrarium Kid | Garden & Growing | Narrow tall continuous domed glass cloche offset to the left crown, with visible moss/mushroom and no lid, lifting tab, loop or square shoulders; moss green; head_top glass garden + torso mushroom label (2). | R34: `mushroom + glassblower` |
 | `teapot` | 4 | Teapot Kid | Kitchen & Table | Low lid cap and short upright hollow-ended left spout, bare belly; tea green; head_top lid + torso side spout + back loop handle (3). | R35: `tea + potter` |
 | `cookie` | 4 | Cookie Kid | Kitchen & Table | Tilted near-round cookie cap with one large upper-right bite notch; cocoa brown; head_top cookie + torso crumb-pocket bib (2). | R36: `baker + cocoa` |
 | `pretzel` | 4 | Pretzel Kid | Kitchen & Table | Tilted crossed-rope pretzel cap with one dominant upper-left dough loop, smaller lower-right loop and a diagonal rising twist; wheat gold; head_top pretzel + torso baker ribbon (2). | R37: `baker + blacksmith` |
@@ -153,18 +156,18 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `steamboat` | 4 | Steamboat Kid | Waterside & Voyages | Small cabin boat with a paddle wheel carried at the right hip, plus one flat funnel cap; navy; torso side boat/wheel + head_top funnel (2). | R43: `captain + whistle` |
 | `lifeguard` | 4 | Lifeguard Kid | Rescue & Care | Large open lifebuoy belt; rescue red; torso buoy + hand_right rescue float (2). | R44: `hero + captain` |
 | `kiln` | 4 | Kiln Kid | Craft & Workshop | Low brick arch cap with square shoulders, a flat top ledge and a broad bottom-open arch cutout; clay orange; head_top kiln arch + hand_right tile (2). | R45: `potter + forge` |
-| `aurora` | 4 | Aurora Kid | Weather & Sky | Smooth folded light ribbon rising along the left side, pale flowing bands and a flat hem tab; lilac; back light ribbon + torso light-pattern tab (2). | R46: `blizzard + crystal` |
+| `aurora` | 4 | Aurora Kid | Weather & Sky | Broad softly lobed flowing light sheet above and along the left crown, with pale folded bands and no shaft/crossbar; lilac; back light sheet + torso flat hem light-pattern tab (2). | R46: `blizzard + crystal` |
 | `festival` | 5 | Festival Kid | Play & Festival | Short crown of three triangular pennants; coral; head_top bunting + hand_right little drum (2). | R47: `picnic + lantern` |
 | `observatory` | 5 | Observatory Kid | Curiosity & Science | Large tilted short telescope tube on a compact stand; navy; hand_right telescope + head_top low slit-dome cap (2). | R48: `greenhouse + crystal` |
-| `botanical_garden` | 5 | Botanical Garden Kid | Garden & Growing | Squared trellis arch with two large leaf tabs; leaf green; back trellis + hand_right seed tray (2). | R49: `bonsai + greenhouse` |
-| `moon_garden` | 5 | Moon Garden Kid | Garden & Growing | One tilted crescent-moon cap with unequal pointed tips and a deep side-open concavity; lilac; head_top crescent + hand_right mushroom lamp (2). | R50: `lantern + terrarium` |
-| `patisserie` | 5 | Patisserie Kid | Kitchen & Table | Three diminishing cake tiers with one short candle; dusty rose; head_top cake + hand_right piping bag (2). | R51: `cookie + teapot` |
+| `botanical_garden` | 5 | Botanical Garden Kid | Garden & Growing | Squared trellis arch offset to the left, with exposed dark-edged lattice and two broad leaf tabs; leaf green; back trellis + hand_right seed tray (2). | R49: `bonsai + greenhouse` |
+| `moon_garden` | 5 | Moon Garden Kid | Garden & Growing | One tilted thin-spined crescent cap with unequal pointed tips and a deep side-open concavity, both tips exposed above the crown; lilac; head_top crescent + hand_right mushroom lamp (2). | R50: `lantern + terrarium` |
+| `patisserie` | 5 | Patisserie Kid | Kitchen & Table | Three diminishing flat-sided cake tiers with a square-ended short unlit candle; dusty rose; head_top cake + hand_right piping bag (2). | R51: `cookie + teapot` |
 | `winter_market` | 5 | Winter Market Kid | Cozy & Seasons | Very shallow straight-topped stall awning cap with square end overhangs and three broad lower scallops; ice blue; head_top awning + torso cocoa sachet apron (2). | R52: `cocoa + snowglobe` |
 | `harbor` | 5 | Harbor Kid | Waterside & Voyages | Broad curved anchor with two flukes; sea blue; hand_right anchor + back paired mooring posts (2). | R53: `lighthouse + steamboat` |
 | `sky_fair` | 5 | Sky Fair Kid | Play & Festival | Small circular fair wheel with four box gondolas; coral; back wheel + torso ticket sash (2). | R54: `balloon + pinwheel` |
-| `rescue_station` | 5 | Rescue Station Kid | Rescue & Care | Folded A-frame rescue stretcher below shoulder level; rescue red; back stretcher + hand_right rescue torch (2). | R55: `lifeguard + lantern` |
+| `rescue_station` | 5 | Rescue Station Kid | Rescue & Care | Asymmetrically folded A-frame canvas rescue stretcher projecting beside the left hip below shoulder level; rescue red; back stretcher + hand_right rescue torch (2). | R55: `lifeguard + lantern` |
 | `sculpture_park` | 5 | Sculpture Park Kid | Craft & Workshop | One solid carved spiral sculpture on a stepped base; ice blue; head_top spiral + torso plinth belt (2). | R56: `ice_sculptor + aurora` |
-| `windmill` | 5 | Windmill Kid | Craft & Workshop | Four broad rectangular mill sails above the crown; wheat gold; back sails/hub + hand_right grain bag (2). | R57: `weather_vane + baker` |
+| `windmill` | 5 | Windmill Kid | Craft & Workshop | Four broad rectangular mill sails in an X above the left crown, exposed beside the body; wheat gold; back sails/hub + hand_right grain bag (2). | R57: `weather_vane + baker` |
 | `mosaic` | 5 | Mosaic Kid | Craft & Workshop | Stepped L-shaped tile cap with one tall left block, a broad rectangular top step and square ends; terracotta; head_top tessera cap + torso tiled apron (2). | R58: `kiln + crystal` |
 
 ## MVP recipes
