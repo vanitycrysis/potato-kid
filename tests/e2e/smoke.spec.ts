@@ -1900,9 +1900,21 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
     await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
-    // Back before the 650 ms farewell is over: that explanation was never seen.
-    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    // Back in the very frame the result lands, well before the 650 ms farewell is over (a
+    // click from the test could come too late on a slow runner): never seen, never recorded.
+    const explained = await page.evaluate(
+      () =>
+        new Promise<boolean>((done) => {
+          const wait = () => {
+            if (window.__PK__!.kids().length > 1) return requestAnimationFrame(wait);
+            (document.querySelector('.dex-back') as HTMLButtonElement).click();
+            done(window.__PK__!.settings().sendHomeExplained);
+          };
+          wait();
+        }),
+    );
+    expect(explained).toBe(false);
+    await page.waitForTimeout(1000);
     expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(false);
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
     await dialog(page).getByRole('button', { name: /on your map, to send home/ }).click();
@@ -2008,7 +2020,8 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await expect
       .poll(() =>
         status.evaluate((el) => {
-          const r = el.getBoundingClientRect();
+          // Its words, all in view (the box's blank margin may be clipped).
+          const r = el.querySelector('.card-text')!.getBoundingClientRect();
           const body = el.closest('.sheet-body')!.getBoundingClientRect();
           return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
         }),
