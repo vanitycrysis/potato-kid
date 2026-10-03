@@ -10,7 +10,8 @@ import type { SendHomeNotes } from './sendHome';
 /** What the feed needs from the scene. */
 export interface FeedScene {
   command(cmd: { type: 'sendHome'; kidId: number }): void;
-  readonly departureMs: number;
+  /** The kid's farewell is still playing. */
+  isDeparting(kidId: number): boolean;
 }
 
 export interface Message {
@@ -18,8 +19,8 @@ export interface Message {
   lines: () => string[];
   warn: boolean;
   first: boolean;
-  /** Not shown before this time (a success waits for its farewell). */
-  notBefore: number;
+  /** A success waits for this kid's farewell to end. */
+  waitFor?: number;
   /** Visible time still owed, ms. */
   ms: number;
   /** It has been on screen and readable (only then is a first explanation recorded). */
@@ -83,7 +84,7 @@ export class HomeFeed {
           lines: () => [this.notes.heading(name), ...(first ? this.notes.firstLines() : [this.notes.later()])],
           warn: false,
           first,
-          notBefore: performance.now() + this.scene.departureMs,
+          waitFor: p.kidId,
           ms: this.notes.visibleMs(first),
         });
         this.listener?.({ kidId: p.kidId, ok: true });
@@ -102,7 +103,7 @@ export class HomeFeed {
   warn(type: KidId): void {
     if (this.current) this.queue.unshift(this.current);
     this.current = null;
-    this.queue.unshift({ type, lines: () => [refusalText('gone')], warn: true, first: false, notBefore: 0, ms: this.notes.visibleMs(false) });
+    this.queue.unshift({ type, lines: () => [refusalText('gone')], warn: true, first: false, ms: this.notes.visibleMs(false) });
   }
 
   /**
@@ -130,7 +131,7 @@ export class HomeFeed {
       if (this.current.ms > 0) return this.current;
       this.current = null;
     }
-    const at = this.queue.findIndex((m) => m.type === type && m.notBefore <= now);
+    const at = this.queue.findIndex((m) => m.type === type && (m.waitFor === undefined || !this.scene.isDeparting(m.waitFor)));
     if (at < 0) return null;
     this.current = this.queue.splice(at, 1)[0]!;
     return this.current;

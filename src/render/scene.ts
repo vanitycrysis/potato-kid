@@ -46,6 +46,7 @@ export interface HomeView {
 
 /** A kid going home: its view plays the farewell, apart from the sim (GUI_MVP §13.2). */
 interface Departure {
+  kidId: number;
   view: KidRigView;
   /** Its costume stays loaded until the view is gone (§13.2). */
   type: KidId;
@@ -237,11 +238,12 @@ export class MapScene {
     return this.home?.state ?? 'hidden';
   }
 
-  /** How long a send home's farewell plays (its success card waits for it, §13.3). */
-  get departureMs(): number {
-    const d = this.art.home?.departure;
-    if (!d) return 0;
-    return this.art.reducedMotion ? d.reducedFadeMs : d.clipMs + d.fadeMs;
+  /**
+   * The kid's farewell is still playing (§13.3: its success waits for it). On the frame
+   * clock, not the wall clock: a slow frame plays at most 100 ms of it (Codex review, PR #54).
+   */
+  isDeparting(kidId: number): boolean {
+    return this.departures.some((d) => d.kidId === kidId);
   }
 
   /** Kids still playing their farewell, and where (tests). */
@@ -764,7 +766,7 @@ export class MapScene {
     this.drawn.delete(kid.id);
     this.pendingViews.delete(kid.id);
     view.root.eventMode = 'none';
-    this.departures.push({ view, type: kid.type, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
+    this.departures.push({ kidId: kid.id, view, type: kid.type, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
   }
 
   /**

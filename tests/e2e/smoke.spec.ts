@@ -1681,6 +1681,30 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
   });
 });
 
+/**
+ * Below 10 fps: every frame takes 150 ms, so the farewell (on the frame clock, at most
+ * 100 ms a frame) outlasts its 650 ms. Logs, per frame, [kids departing, message shown].
+ */
+async function slowFrames(page: Page, shown: string, ms: number): Promise<[number, boolean][]> {
+  return page.evaluate(
+    ([shown, ms]) =>
+      new Promise<[number, boolean][]>((done) => {
+        const log: [number, boolean][] = [];
+        const end = performance.now() + ms;
+        const frame = () => {
+          const t = performance.now();
+          while (performance.now() - t < 150);
+          const el = document.querySelector(shown) as HTMLElement | null;
+          log.push([window.__PK__!.home().departing, !!el && !el.hidden && el.offsetParent !== null]);
+          if (performance.now() < end) requestAnimationFrame(frame);
+          else done(log);
+        };
+        requestAnimationFrame(frame);
+      }),
+    [shown, ms] as const,
+  );
+}
+
 test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
   /** Picks a kid up and holds it over the Garden target for `ms`, then releases. */
   async function holdOverHome(page: Page, id: number, ms: number): Promise<void> {
@@ -1700,6 +1724,16 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     await page.waitForTimeout(200);
     return { id, errors };
   }
+
+  test('below 10 fps, the world card still waits for the farewell to end (Codex review, PR #54)', async ({ page }) => {
+    const { id } = await setup(page);
+    await holdOverHome(page, id, 450);
+    const log = await slowFrames(page, '.toast-home', 2500);
+    // The farewell spanned frames, the card never showed during it, and it came after.
+    expect(log.some(([d]) => d > 0)).toBe(true);
+    expect(log.filter(([d, shown]) => d > 0 && shown)).toEqual([]);
+    expect(log.some(([d, shown]) => d === 0 && shown)).toBe(true);
+  });
 
   test('holding over the Garden, then releasing, sends the kid home', async ({ page }) => {
     const { id, errors } = await setup(page);
@@ -2175,6 +2209,16 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => (document.querySelector('.sheet') as HTMLElement).scrollTop)).toBe(away.scrollTop);
     expect(await status.isVisible()).toBe(true);
+  });
+
+  test('below 10 fps, the Dex message still waits for the farewell to end (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    const log = await slowFrames(page, '.dex-home-status', 2500);
+    expect(log.some(([d]) => d > 0)).toBe(true);
+    expect(log.filter(([d, shown]) => d > 0 && shown)).toEqual([]);
+    expect(log.some(([d, shown]) => d === 0 && shown)).toBe(true);
   });
 
   test('Escape closes an open confirmation before the sheet', async ({ page }) => {

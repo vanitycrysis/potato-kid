@@ -423,7 +423,7 @@ export class Hud {
       const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
       const text = item.kind === 'refusal' ? refusalText(item.reason, item.command, currency) : undefined;
       const card: Card =
-        item.kind === 'sentHome' ? this.sentHomeCard(item.kidType, now) : { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
+        item.kind === 'sentHome' ? this.sentHomeCard(item) : { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
       // Refusals are never dropped: they wait like any card, but ahead of rewards.
       const firstReward = this.queue.findIndex((c) => c.item.kind !== 'refusal');
       if (item.kind === 'refusal' && firstReward >= 0) this.queue.splice(firstReward, 0, card);
@@ -477,7 +477,11 @@ export class Hud {
     // A card still waiting for its kid never holds up the ones behind it; one whose kid
     // was consumed before it appeared is shown anyway (the discovery did happen).
     for (const c of this.queue) {
-      if (c.notBefore === Infinity && 'kidId' in c.item && c.item.kidId !== undefined && this.scene.viewState(c.item.kidId) === 'gone') c.notBefore = now;
+      if (c.notBefore !== Infinity || !('kidId' in c.item) || c.item.kidId === undefined) continue;
+      // A farewell's card waits until the farewell has played (Codex review, PR #54).
+      if (c.item.kind === 'sentHome') {
+        if (!this.scene.isDeparting(c.item.kidId)) c.notBefore = now;
+      } else if (this.scene.viewState(c.item.kidId) === 'gone') c.notBefore = now;
     }
     const at = this.queue.findIndex((c) => c.notBefore <= now);
     const next = this.queue[at];
@@ -580,13 +584,14 @@ export class Hud {
    * this profile explains where the kid went, stays 6 s and can be closed; its copy follows
    * whether the Compendium is built when it appears, and only then is it marked as shown.
    */
-  private sentHomeCard(kidType: KidId, now: number): Card {
+  private sentHomeCard(item: Extract<FeedbackItem, { kind: 'sentHome' }>): Card {
+    const { kidType } = item;
     const first = this.notes.claimFirst();
     const lines = first ? [el('span', 'card-line'), el('span', 'card-line')] : [el('span', 'card-line', this.notes.later())];
     const text = el('div', 'card-text', el('span', 'card-heading', this.notes.heading(this.name(kidType))), ...lines);
     const node = el('div', 'toast toast-reward toast-home', icon('icon_garden', '', 'ui-icon-28'), text);
-    const item: FeedbackItem = { kind: 'sentHome', kidType };
-    const card: Card = { item, node, remaining: this.notes.visibleMs(first), notBefore: now + this.scene.departureMs };
+    // Waits for the farewell itself (below), however slowly it plays.
+    const card: Card = { item, node, remaining: this.notes.visibleMs(first), notBefore: Infinity };
     if (first) {
       const close = el('button', 'ui-button card-close', icon('icon_close', '', 'ui-icon-24'));
       close.type = 'button';

@@ -17,7 +17,7 @@ export type FeedbackItem =
   | { kind: 'arrival'; count: number }
   | { kind: 'refusal'; command: string; reason: RejectReason }
   /** A kid sent home (D-048, GUI_MVP §13.3). */
-  | { kind: 'sentHome'; kidType: KidId };
+  | { kind: 'sentHome'; kidType: KidId; kidId: number };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -69,7 +69,7 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
         }
         break;
       case 'sentHome':
-        out.push({ kind: 'sentHome', kidType: e.kid.type });
+        out.push({ kind: 'sentHome', kidType: e.kid.type, kidId: e.kid.id });
         break;
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });

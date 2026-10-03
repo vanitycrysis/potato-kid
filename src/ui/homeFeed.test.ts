@@ -6,7 +6,8 @@ import type { SendHomeNotes } from './sendHome';
 
 function setup() {
   const commands: unknown[] = [];
-  const scene = { command: (c: unknown) => void commands.push(c), departureMs: 0 };
+  const departing = new Set<number>();
+  const scene = { command: (c: unknown) => void commands.push(c), isDeparting: (id: number) => departing.has(id) };
   let explained = false;
   let queued = false;
   const notes = {
@@ -24,7 +25,7 @@ function setup() {
   const feed = new HomeFeed(scene, content, notes);
   feed.active = true;
   const sent = (id: number): GameEvent => ({ type: 'sentHome', kid: { id, type: 'fire' } as never });
-  return { feed, notes, commands, sent };
+  return { feed, notes, commands, sent, departing };
 }
 
 describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
@@ -36,6 +37,17 @@ describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
     expect(feed.onStep([sent(1)])).toHaveLength(1);
     feed.send(2, 'fire');
     expect(commands).toHaveLength(2);
+  });
+
+  it('a success waits for the farewell itself, however long it plays (Codex review, PR #54)', () => {
+    const { feed, sent, departing } = setup();
+    feed.send(1, 'fire');
+    departing.add(1);
+    feed.onStep([sent(1)]);
+    const now = performance.now();
+    expect(feed.tick('fire', now + 5000, true, false)).toBeNull();
+    departing.delete(1);
+    expect(feed.tick('fire', now + 5100, true, false)?.first).toBe(true);
   });
 
   it('an explanation seen while paused (hovered) is recorded, and its time holds (Codex review, PR #54)', () => {
