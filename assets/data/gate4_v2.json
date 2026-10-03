@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "gate4-design-1",
+  "revision": "gate4-design-2",
   "status": "Claude review pending",
   "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract",
   "assets": {
@@ -233,6 +233,16 @@
         64,
         64
       ]
+    },
+    "fx_plant_waiting": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
     }
   },
   "drop": {
@@ -277,7 +287,7 @@
         216
       ]
     ],
-    "plotCanvasScale": 0.5,
+    "plotCanvasScale": 0.75,
     "sourcePivot": [
       128,
       224
@@ -307,13 +317,29 @@
     "timer": "authoritative remaining foreground/offline time; no view timers",
     "sound": "sfx_plant",
     "sproutSound": "sfx_spawn",
-    "snapshotHappyOddsAtPlanting": true
+    "snapshotHappyOddsAtPlanting": true,
+    "composedSourceBounds": [
+      16,
+      108,
+      240,
+      240
+    ],
+    "waitingAsset": "fx_plant_waiting"
   },
   "variants": {
     "rainbow": {
       "mapAsset": "fx_variant_rainbow",
       "icon": "icon_variant_rainbow",
-      "bodyFilter": "none"
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
     },
     "mini": {
       "mapAsset": "fx_variant_mini",
@@ -391,7 +417,18 @@
     "happyMapAsset": "fx_happy",
     "happyIcon": "icon_happy",
     "durationRule": "refresh from now, never add remaining time",
-    "favouriteDistinctFromHate": true
+    "favouriteDistinctFromHate": true,
+    "layout": {
+      "order": "favourite first, then ordinary foods in pinned order, then refused food",
+      "rowMinimumCssPx": 64,
+      "rowGapCssPx": 8,
+      "priceButtonCssPx": [
+        160,
+        48
+      ],
+      "sharedOrdinaryEffect": true,
+      "sharedFavouriteEffect": true
+    }
   },
   "naming": {
     "maximumGraphemes": 24,

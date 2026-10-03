@@ -2,18 +2,18 @@
 
 ## GATE4-DESIGN delivery (2026-10-03; Claude review pending)
 
-Current additive delivery `gate4-design-1`; retained art and historical inventories below are unchanged. GUI_MVP §§14–18 supersede §13.
+Current additive delivery `gate4-design-2`, round 2 for PR #67 (B1–B3/N1); retained art and historical inventories below are unchanged. GUI_MVP §§14–18 supersede §13. Round-1 figures in the notes are historical.
 
 | Asset / contract | Delivery | Status |
 | --- | --- | --- |
 | Drop brackets / Garden target | Authored procedural geometry and sidecar; no hint tint or raster | final design; integration/review pending |
-| `fx_plant_plot/seed/shoot/leaves/ready` | Five256 SVGs/trimmed shared PNGs; pivot(128,224), world scale.5, four plot grounds | final art; Claude review pending |
-| `fx_variant_rainbow`, `fx_variant_mini`, `fx_happy` | Three256 SVGs/trimmed map PNGs; static external marks, no filters, Mini scale.72 | final art;1152 face/pose mask combinations pass |
+| `fx_plant_plot/seed/shoot/leaves/ready/waiting` | Six256 SVGs/trimmed shared PNGs; pivot(128,224), world scale.75, unchanged four plot grounds; dark basin/check and pause signs | round-2 art; Claude review pending; all alpha bounds inside300-unit reserve |
+| `fx_variant_rainbow`, `fx_variant_mini`, `fx_happy` | Three256 SVGs/trimmed PNGs; Rainbow36×19 CSS arch above costume-inclusive lifetime box, no filters; Mini/happy unchanged | round-2 art;41,472 crown/costume and1152 face/pose combinations pass |
 | `icon_variant_rainbow/mini`, `icon_happy` | Three128 native SVGs → assets/ui | final;0 Pixi bytes |
 | `icon_food_{id}` | Twelve128 native SVGs; pinned vocabulary in§17/gate4_v2.json | final; ready for PERSONALITY |
 | `sfx_plant` | WAV48 kHz16-bit mono/.360 s/−5.50 dBFS; score, checksum, Ogg/M4A | rendered/decoded; listening/WebView review pending |
-| Review/state contract |92 SVG+1× PNG screens at390×844/640×360, HTML index, exported sidecar | final review compositions; runtime/focus/device checks pending |
-| Runtime texture budget |198→206 PNGs;11,516,244→11,737,968 decoded bytes; **+221,724 (.21145 MiB)** |11.19420 MiB raw;32 MiB physical ceiling retained |
+| Review/state contract |114 SVG+1× PNG screens at390×844/640×360; compact food rows with shared effects,12-kid colour/gray crowns, plots and correct distinct Dex tiers | round-2 review compositions; runtime/focus/device checks pending |
+| Runtime texture budget |Before gate4:198 /11,516,244 bytes; round1:206 /11,737,968; round2:207 /11,865,816 |11.31612 MiB raw; **+127,848 bytes vs round1**,32 MiB physical ceiling retained |
 
 Sources `art/src/gate4/`; exports `npm run art:export`; no existing kid/face/costume/rig/map/source code changes. Platform masters/review PNGs are excluded from runtime accounting. Evidence, open numbers and limits: `.codex-out/gate4-design-notes.md`.
 
