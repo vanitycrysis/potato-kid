@@ -1,6 +1,7 @@
 import { pairKey } from '../content/validate';
 import { BUILDING_IDS, type BuildingId, type Content, type KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
+import { wanderOffline } from './offlineWander';
 import { blockedByScenery, findFreeSpot, gaps, kidRect, separate, touching } from './space';
 import {
   addKid,
@@ -378,6 +379,8 @@ export class Game {
 
     const events: GameEvent[] = [];
     const spawned: Kid[] = [];
+    /** Offline spawns' arrival, seconds into the absence. */
+    const arrived = new Map<number, number>();
     let materials = this.income * away;
     // First spawn when the current interval completes; a banked spawn (progress at the
     // interval) is due at once. At most `capacity` admissions, so the loop is bounded.
@@ -391,6 +394,7 @@ export class Game {
       s.gardenSpawns++;
       kid.grace = 0; // it has been around for a while
       spawned.push(kid);
+      arrived.set(kid.id, t);
       materials += this.incomeOf(kid.type) * Math.max(0, away - t);
       last = t;
       t += this.interval;
@@ -399,6 +403,20 @@ export class Game {
     // it keeps accumulating, holding at the interval (one banked spawn) when full.
     s.spawnProgress = Math.min(this.interval, last === undefined ? s.spawnProgress + away : Math.max(0, away - last));
     s.materials += materials;
+    // The world lived on (D-053): every kid wandered for its time away, offline spawns
+    // from where they arrived, and no recipe pair is left touching (no fusions offline).
+    if (away > 0) {
+      for (const kid of s.world.kids) kid.grace = Math.max(0, kid.grace - away);
+      const recipes = this.recipes;
+      wanderOffline(
+        s.world,
+        this.content.balance.wander,
+        this.content.balance.body.touchSlack,
+        this.rng,
+        (kid) => away - (arrived.get(kid.id) ?? 0),
+        (a, b) => recipes.has(pairKey(a.type, b.type)),
+      );
+    }
     this.syncRngState();
     let potatokens = 0;
     for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;

@@ -318,6 +318,9 @@ export class MapScene {
   /** Back from a suspension at wall-clock `now`: offline catch-up once, then tick again. */
   resume(now: number): OfflineReport {
     const report = this.game.reconcile(now);
+    // Kids wandered while away (D-053): they are found where they are, never seen sliding
+    // there from where they were left.
+    for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
     for (const kid of report.spawned) this.addView(kid);
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
