@@ -615,12 +615,13 @@ export class MapScene {
 
   /**
    * The kid under the finger at world point `p` (D-051). None over a usable Garden target,
-   * where the drop goes home instead (§13.1).
+   * where the drop goes home instead (§13.1). Only kids that are drawn: one still waiting
+   * for its costume is invisible, so it can't be a target (Codex review, PR #66).
    */
   private dropTargetAt(p: { x: number; y: number }): number | undefined {
     if (!this.drag) return undefined;
     if (this.home && this.homeEligible() && this.home.contains(p)) return undefined;
-    const boxes = new Map(this.game.state.world.kids.map((k) => [k.id, k.box]));
+    const boxes = new Map(this.game.state.world.kids.filter((k) => this.views.has(k.id)).map((k) => [k.id, k.box]));
     return kidUnder(p, this.drawn, boxes, this.drag.kidId);
   }
 

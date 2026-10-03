@@ -2357,16 +2357,16 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
 
 test.describe('forgiving drop (D-051)', () => {
   /**
-   * A crowded map: water at the centre of a tight ring of eight kids that fuse with
-   * neither plain, water nor each other. The ring leaves no free spot that touches water,
-   * so a drop can only fuse with it through the kid under the finger.
+   * A crowded map: `centre` (water) inside a tight ring of eight kids that fuse with
+   * neither it, `held` (plain) nor each other. The ring leaves no free spot that touches
+   * the centre, so a drop can only fuse with it through the kid under the finger.
    */
-  async function crowd(page: Page): Promise<{ plain: number; water: number; ring: number[] }> {
+  async function crowd(page: Page, held = 'plain', centre = 'water'): Promise<{ plain: number; water: number; ring: number[] }> {
     await boot(page, '?seed=3&debug=1&calm=1');
-    return page.evaluate(() => {
+    return page.evaluate(([held, centre]) => {
       const pk = window.__PK__!;
       const look = { body: 'round', scale: 1 };
-      const water = pk.debugAdd!('water', 540, 1100, look);
+      const water = pk.debugAdd!(centre, 540, 1100, look);
       const w = pk.kids().find((k) => k.id === water)!;
       const dx = w.box.right - w.box.left + 6;
       const dy = w.box.bottom - w.box.top + 6;
@@ -2375,9 +2375,9 @@ test.describe('forgiving drop (D-051)', () => {
       let i = 0;
       for (const sx of [-1, 0, 1])
         for (const sy of [-1, 0, 1]) if (sx || sy) ring.push(pk.debugAdd!(types[i++ % 3]!, w.x + sx * dx, w.y + sy * dy, look));
-      const plain = pk.debugAdd!('plain', 250, 1500, look);
+      const plain = pk.debugAdd!(held, 250, 1500, look);
       return { plain, water, ring };
-    });
+    }, [held, centre] as const);
   }
 
   /**
@@ -2430,5 +2430,25 @@ test.describe('forgiving drop (D-051)', () => {
     const rect = (k: (typeof kids)[number]) => ({ l: k.x + k.box.left, t: k.y + k.box.top, r: k.x + k.box.right, b: k.y + k.box.bottom });
     const me = rect(kids.find((k) => k.id === plain)!);
     for (const o of kids.filter((k) => k.id !== plain).map(rect)) expect(me.l < o.r && o.l < me.r && me.t < o.b && o.t < me.b).toBe(false);
+  });
+
+  test('a partner still waiting for its costume is invisible, so it is no target (Codex review, PR #66)', async ({ page }) => {
+    // Lantern's costume never arrives during the test; picnic + lantern is a recipe.
+    await page.route('**/kid_lantern_*', async (route) => {
+      await new Promise((r) => setTimeout(r, 60_000));
+      await route.continue().catch(() => {});
+    });
+    const { plain: picnic, water: lantern, ring } = await crowd(page, 'picnic', 'lantern');
+    await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), picnic)).toBe(true);
+    for (const id of ring) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
+    expect(await page.evaluate((k) => window.__PK__!.screenPointOf(k), lantern)).toBeUndefined();
+    await holdOver(page, picnic, lantern);
+    expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBeNull();
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    const kids = await page.evaluate(() => window.__PK__!.kids().map((k) => k.type));
+    expect(kids).not.toContain('festival');
+    expect(kids).toContain('lantern');
+    expect(kids).toContain('picnic');
   });
 });
