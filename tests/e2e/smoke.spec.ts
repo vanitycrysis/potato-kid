@@ -2009,25 +2009,40 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
     await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(7);
-    // Back during the farewell; reopen once it is over, so the message is ready the moment
-    // the new detail is built (before it is mounted).
-    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    // Back in the frame the result lands, during the farewell; reopen once it is over, so the
+    // message is ready the moment the new detail is built (before it is mounted).
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          const wait = () => {
+            if (window.__PK__!.kids().length > 7) return requestAnimationFrame(wait);
+            (document.querySelector('.dex-back') as HTMLButtonElement).click();
+            done();
+          };
+          wait();
+        }),
+    );
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(false);
     await page.waitForTimeout(800);
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    const status = dialog(page).locator('.dex-home-status');
-    await expect(status).toContainText('Still in your Potato-Dex.');
-    await expect
-      .poll(() =>
-        status.evaluate((el) => {
-          // Its words, all in view (the box's blank margin may be clipped).
-          const r = el.querySelector('.card-text')!.getBoundingClientRect();
-          const body = el.closest('.sheet-body')!.getBoundingClientRect();
-          return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
+    // Recorded only once its words are in view: checked in the frame the record appears
+    // (a Garden spawn may later push the message down, and that's fine once it was read).
+    const seen = await page.evaluate(
+      () =>
+        new Promise<boolean>((done) => {
+          const wait = () => {
+            if (!window.__PK__!.settings().sendHomeExplained) return requestAnimationFrame(wait);
+            const text = document.querySelector('.dex-home-status .card-text');
+            if (!text) return done(false);
+            const r = text.getBoundingClientRect();
+            const body = text.closest('.sheet-body')!.getBoundingClientRect();
+            done(r.top >= body.top - 1 && r.bottom <= body.bottom + 1);
+          };
+          wait();
         }),
-      )
-      .toBe(true);
-    await expect.poll(() => page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    );
+    expect(seen).toBe(true);
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('Still in your Potato-Dex.');
   });
 
   test('a result after the Dex closed keeps the explanation for the next send (Codex review, PR #54)', async ({ page }) => {
