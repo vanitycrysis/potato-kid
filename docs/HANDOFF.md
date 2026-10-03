@@ -19,7 +19,6 @@
 - **The repo is public now** (D-060, PR #64: the decision record plus a read-only CI token; the Codex review is clean). Merge #64 once CI is green. Public repos don't use the owner's Actions minutes.
 - **At handoff, CI was still running on PRs #61, #63 (this file) and #64.** Each has a clean Codex review posted, so merge each one when its CI is green.
 - **The owner has given full access and doesn't want permission questions** (see the memory file `no-permission-asks`). Still stop at the owner gates. Claude Code's auto-mode classifier blocked two actions anyway: turning on GitHub Pages, and stopping the stale Codex processes. Both are left to the owner.
-- The owner said this session needed no permission prompts. That was **for that session only**; don't assume it carries over.
 
 ## Open work at handoff (check each first)
 
