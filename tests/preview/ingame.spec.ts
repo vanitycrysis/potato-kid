@@ -1,4 +1,4 @@
-import { test, type Browser } from '@playwright/test';
+import { expect, test, type Browser } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 const OUT = 'art/previews/ingame';
@@ -12,7 +12,9 @@ async function open(browser: Browser, w: number, h: number, query: string) {
 }
 
 // Kids are placed 216 apart (wider than any silhouette box + touch slack) so recipe pairs
-// never touch and fuse; 20 per page in a 5 x 4 grid below the HUD; more pages as the roster grows.
+// never touch and fuse; 20 per page in a 5 x 4 grid below the HUD; more pages as the roster
+// grows. The grid sits where no scenery displaces a kid: a displaced kid can be pushed into
+// a recipe partner and fuse, so the test checks every kid stays where it was put.
 const PAGE = 20;
 const pages = Array.from({ length: Math.ceil(types.length / PAGE) }, (_, p) => types.slice(p * PAGE, (p + 1) * PAGE));
 for (const [name, w, h] of [['20x9', 412, 915], ['16x9', 360, 640]] as const) {
@@ -21,10 +23,12 @@ for (const [name, w, h] of [['20x9', 412, 915], ['16x9', 360, 640]] as const) {
     test(`every type, ${name}, page ${p + 1}, colour and grayscale`, async ({ browser }) => {
       const page = await open(browser, w, h, '?seed=31&debug=1&calm=1');
       await page.evaluate((list) => {
-        window.__PK__!.centerOn(1080, 1750);
-        list.forEach((t, i) => window.__PK__!.debugAdd!(t, 648 + (i % 5) * 216, 1450 + Math.floor(i / 5) * 260));
+        window.__PK__!.centerOn(1280, 1872);
+        list.forEach((t, i) => window.__PK__!.debugAdd!(t, 848 + (i % 5) * 216, 1572 + Math.floor(i / 5) * 260));
       }, ids);
       await page.waitForTimeout(1200);
+      const placed = await page.evaluate(() => window.__PK__!.kids().map((k) => ({ type: k.type, x: Math.round(k.x), y: Math.round(k.y) })));
+      expect(placed).toEqual(ids.map((type, i) => ({ type, x: 848 + (i % 5) * 216, y: 1572 + Math.floor(i / 5) * 260 })));
       await page.screenshot({ path: `${OUT}/types-${name}${suffix}.png` });
       await page.addStyleTag({ content: 'html{filter:grayscale(1)}' });
       await page.waitForTimeout(150);
