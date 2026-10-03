@@ -1,0 +1,36 @@
+{
+  "id": "sfx_plant",
+  "duration": 0.36,
+  "range": [
+    0.25,
+    0.5
+  ],
+  "peakDbfs": -5.5,
+  "intent": "Two soft earth-like wood knocks settle downward, followed by a small rounded seed pop; no victory melody.",
+  "events": [
+    {
+      "time": 0,
+      "duration": 0.16,
+      "voice": "wood",
+      "hz": 260,
+      "endHz": 185,
+      "gain": 1
+    },
+    {
+      "time": 0.075,
+      "duration": 0.18,
+      "voice": "wood",
+      "hz": 195,
+      "endHz": 155,
+      "gain": 0.6
+    },
+    {
+      "time": 0.17,
+      "duration": 0.19,
+      "voice": "pop",
+      "hz": 360,
+      "endHz": 270,
+      "gain": 0.35
+    }
+  ]
+}

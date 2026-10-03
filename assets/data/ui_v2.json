@@ -2142,7 +2142,13 @@
         "cancel": "Keep on map"
       },
       "newDecodedRasterBytes": 0,
-      "newPixiTextureBytes": 0
+      "newPixiTextureBytes": 0,
+      "supersededBy": "docs/GUI_MVP.md#14-gate-4-interaction-contract"
+    },
+    "gate4": {
+      "sidecar": "gate4_v2.json",
+      "revision": "gate4-design-1",
+      "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract"
     }
   },
   "stateBorderImageRepeat": {
