@@ -4,6 +4,8 @@
 
 ## Where we are
 
+- **Update, 2026-10-03: gate 4 came back with feedback** (D-050..D-059 in `DECISIONS.md`; tasks on the board in `TASKS.md`). Work through the board in its order of work, then take the MVP back to the owner as gate 4. The rest of this file is the earlier end-of-session note: still right about the build and how we work, but the owner has now answered the gate-4 questions below.
+
 - **Gates 1–3 are approved. The MVP is built, and gate 4 has been put to the owner** (2026-10-03). **We are waiting on the owner's verdict.** Don't start new feature work before it, except the items under "When the owner answers" once the owner has asked for them.
 - **`main` is at 9edf86c and there are no open PRs.** Everything is merged: Send home's Dex path (#54, after 11 Codex rounds), the gate-4 docs (#57) and the web-build fix (#58).
 - **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** (8 cues and a music loop) and the **Android** icon and splash are done.
