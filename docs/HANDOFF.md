@@ -1,44 +1,26 @@
-# Session handoff (2026-10-02 evening, for the next Claude session)
+# Session handoff (2026-10-03, for the next Claude session)
 
 Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` and `docs/TASKS.md`.
 
 ## Where we are
 
-- **Gates 1–3 are approved.** We're in **M3 / BUILD-MVP**, heading to **gate 4**: the complete MVP on the owner's Galaxy S26 Ultra.
-- **The GUI-MVP is fully built** to Codex's `docs/GUI_MVP.md`:
-  - HUD, feedback and save banners (#33); short viewports (#37);
-  - the Garden, Capacity and Bias sheets (#39);
-  - Compendium, offline summary and Settings (#41);
-  - the Potato-Dex (#43).
-- **Content:** batches 1 and 2 are imported (#38, #42: 52 kids). Batch 3 (#44) is merged, and its import (#47) brings the game to the full **64-kid, 58-recipe** MVP roster.
-- **The balance simulator** (#45) found a soft-lock:
-  - 17 of 64 types are parents in no recipe, and nothing removed kids, so the map clogged after about 25 minutes.
-  - **The owner chose Send home (D-048):** drop a kid on the Garden and it leaves the map; no refund.
-  - The sim command is in #45. The interaction design is with Codex (brief: "Send home" below). The engine and UI side follow.
-- **D-049:** the offline summary shows only after 60 s away (#46, merged; Codex's recommendation).
-- **Tests:** about 160 unit and 80 e2e (Playwright), all mutation-checked as they were added.
-
-## Open PRs and jobs at handoff
-
-Check each with `gh pr list` and `gh pr checks`.
-
-- **#45** balance simulator plus the `sendHome` sim command: Codex round 1 is fixed; round 2 in progress.
-- **#47** batch-3 import, the full 64-kid roster: Codex review in progress.
-- **#48** docs (this file, TASKS, DECISIONS D-048/D-049): needs a Codex review like any PR.
-- **Codex's Send-home design task** is running on `chatgpt/send-home-design` in the ChatGPT worktree. The brief covers drop target, armed state, departure, copy, accessibility and reduced motion, with a §13 in GUI_MVP. When it lands: commit it as ChatGPT, open the PR, review critically, then implement the gesture and feedback in a `claude/` PR.
-- Merged 2026-10-02: #40–#44 and #46 (D-049).
+- **Gates 1–3 are approved. The MVP is built; gate 4 is next.** See TASKS.md "Where things stand" for what's in it and what to bring the owner.
+- **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** and **Android** icon and splash are done.
+- **Send home** (D-048) is done end to end: drag a kid onto the Garden and hold 400 ms, or use the Dex detail's per-kid path.
+- **Tests:** about 170 unit and 100 e2e (Playwright), mutation-checked as they were added.
+- **The gate-4 build** is CI's `potato-kid-debug-apk` artifact from the latest `main` run (Actions → the `check` workflow → Artifacts). There is also a GitHub Pages build.
 
 ## Next, in order
 
-1. Merge #45, #47 and #48 once their reviews are clean and CI is green.
-2. Codex designs Send home; Claude implements the drag-to-Garden gesture, the target and the departure, with e2e tests. Then the simulator bot already uses `sendHome`.
-3. **Balance:**
-   - `npm run balance` reports pacing (8 seeds takes about 10 minutes).
-   - Today's bot finds all 52 kids in about 2 h of active play, and 75 % within 13–23 minutes. That's fast, but the bot is an idealised player.
-   - **How long the MVP should last is a product question for the owner at gate 4.** Bring the numbers; don't retune blindly.
-4. **Audio:** Codex delivers the 8 cues and the music loop as WAVs (ASSET-MVP; no music tool, D-010). Claude builds the runtime. Settings already stores On/Off and the volumes (`src/save/settings.ts`).
-5. **Codex still owes** icons and launcher/splash.
-6. **Gate 4:** an APK on the S26 Ultra, plus the D-034 performance pass (and 4× CPU throttle) and real texture allocations.
+1. **Gate 4:** the owner plays the APK on the S26 Ultra. Collect feedback on feel, performance, audio by ear, and the launcher icon.
+2. **Pacing:** ask the owner how long the MVP should last. `npm run balance` (4 seeds, about 15 min) on 64 kids: half the roster in about 10 min of idealized play, 75 % in about 1 h, 63 of 64 in 3 h. Then retune seed weights, prices and milestones in `balance.json` and rerun the simulator.
+3. **After gate 4:** ANIM-POLISH (D-047) and content waves toward about 500 kids (D-046).
+
+**Known gaps** (not testable in headless CI; check on the device):
+- the audio unlock on a real touch screen;
+- the `<audio loop>` seam once encoded;
+- the icon under the S26's own launcher mask;
+- the D-034 performance pass (and 4× CPU throttle) and real texture allocations.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -67,7 +49,11 @@ Check each with `gh pr list` and `gh pr checks`.
 - `debugSaveStatus` now persists across saves (it used to be cleared by the next save).
 - **Watch for flakes under parallel load:** run the full suite two or three times before calling a fix done. Two real bugs (a lazy-portrait race, the page-mode scroll clamp) showed up only that way.
 
+- **Never chain a commit after a test run with `&&` plus pipes:** a piped `grep` succeeds even when the tests fail. Twice this session a broken or failing state was committed that way. Check results first, then commit.
+- **Locators that match a hidden element's text pass** (`toContainText` ignores visibility). Sample `isVisible()` when what matters is whether something is shown.
+- Headless Chromium starts an `AudioContext` without any user gesture, whatever the autoplay flag, so audio unlock can't be tested there.
+
 ## Housekeeping
 
-- The old review worktrees `../potato-kid-review-20` to `-39` could not be deleted from this session ("Permission denied"; probably locked by finished Codex processes or the sandbox). Remove them with `git worktree prune` and delete the folders when they unlock. Keep `../potato-kid-chatgpt`.
+- The old review worktrees `../potato-kid-review-20` to `-39` could not be deleted from this session ("Permission denied"; probably locked by finished Codex processes or the sandbox). Remove them with `git worktree prune` and delete the folders when they unlock. Keep `../potato-kid-chatgpt`. `../potato-kid-fix51` (a temporary worktree with a copied `node_modules`) failed to delete with "Filename too long"; remove it with a long-path-aware tool.
 - Gate captures live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `C:\Users\Adria\potato-kid-gate3\`.
