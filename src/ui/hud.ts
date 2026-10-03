@@ -7,6 +7,7 @@ import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { formatClock, formatCount, formatExact } from './format';
 import { BuildingSheets } from './buildings';
 import { Dex } from './dex';
+import { HomeOverlay } from './homeOverlay';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
 import { portrait } from './portrait';
@@ -139,6 +140,18 @@ export class Hud {
     );
     this.buildings = new BuildingSheets(scene, content, this.sheets);
     this.dex = new Dex(scene, content, this.sheets, this.buildings);
+    // Send home (D-048): the target's label stays in the world area between HUD and tray.
+    const home = new HomeOverlay(() => {
+      const top = this.top.getBoundingClientRect();
+      return {
+        left: top.left,
+        right: top.right,
+        top: top.bottom + 8,
+        bottom: Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top) - 8,
+      };
+    });
+    scene.homeFits = (t, h) => home.fits(t, h);
+    scene.listenHome((v) => home.render(v));
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the tray and Dex button at the bottom (GUI_MVP §2; Codex review, PR #15).

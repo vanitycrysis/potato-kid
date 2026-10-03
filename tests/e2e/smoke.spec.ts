@@ -1607,3 +1607,97 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(dexButton(page)).toHaveAttribute('aria-label', 'Potato-Dex: Update the game to continue.');
   });
 });
+
+test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
+  /** Picks a kid up and holds it over the Garden target for `ms`, then releases. */
+  async function holdOverHome(page: Page, id: number, ms: number): Promise<void> {
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 8 });
+    await page.waitForTimeout(ms);
+    await page.mouse.up();
+  }
+
+  async function setup(page: Page): Promise<{ id: number; errors: string[] }> {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 760, 1000));
+    await page.waitForTimeout(200);
+    return { id, errors };
+  }
+
+  test('holding over the Garden, then releasing, sends the kid home', async ({ page }) => {
+    const { id, errors } = await setup(page);
+    const wallet = await page.evaluate(() => window.__PK__!.wallet());
+    await holdOverHome(page, id, 450);
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(false);
+    // It waves goodbye apart from the sim, then is gone.
+    expect(await page.evaluate(() => window.__PK__!.home().departing)).toBe(1);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.home().departing)).toBe(0);
+    // Still discovered; no refund.
+    await page.locator('.dex-button').click();
+    await expect(page.getByRole('button', { name: 'Fire Kid, Tier 1' })).toBeVisible();
+    const after = await page.evaluate(() => window.__PK__!.wallet());
+    expect(after.potatokens).toBe(wallet.potatokens);
+    expect(errors).toEqual([]);
+  });
+
+  test('releasing before the 400 ms dwell places the kid normally', async ({ page }) => {
+    const { id } = await setup(page);
+    await holdOverHome(page, id, 120);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+    expect(await page.evaluate(() => window.__PK__!.home())).toMatchObject({ state: 'hidden', departing: 0 });
+  });
+
+  test('the target labels each state, and hides when no kid is held', async ({ page }) => {
+    const { id } = await setup(page);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await expect(page.locator('.home-label:not(.home-probe)')).toBeHidden();
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(k.x + 30, k.y + 120, { steps: 6 });
+    await expect(page.locator('.home-label:not(.home-probe) .home-heading')).toHaveText('Send home');
+    await page.mouse.move(t.x, t.y, { steps: 6 });
+    await expect(page.locator('.home-label:not(.home-probe) .home-heading')).toHaveText('Keep holding…');
+    await expect(page.locator('.home-label:not(.home-probe) .home-heading')).toHaveText('Release to send home');
+    await expect(page.locator('.home-target')).toHaveAttribute('data-state', 'ready');
+    // Moving off resets: back to "Send home", and releasing there drops normally.
+    await page.mouse.move(k.x + 30, k.y + 120, { steps: 6 });
+    await expect(page.locator('.home-label:not(.home-probe) .home-heading')).toHaveText('Send home');
+    await page.mouse.up();
+    await expect(page.locator('.home-label:not(.home-probe)')).toBeHidden();
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+  });
+
+  test('a farewell ends at once rather than overlap a kid that arrives on its spot', async ({ page }) => {
+    const { id } = await setup(page);
+    await holdOverHome(page, id, 450);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.home().departing)).toBe(1);
+    // A kid appears right where the departing view stands (the sim knows nothing of it).
+    await page.evaluate(() => {
+      const at = window.__PK__!.home().departingAt[0]!;
+      window.__PK__!.debugAdd!('water', at.x, at.y);
+    });
+    await frames(page, 3);
+    expect(await page.evaluate(() => window.__PK__!.home().departing)).toBe(0);
+  });
+
+  test('a drop by the spawn outlet, below the target, is an ordinary drop', async ({ page }) => {
+    const { id } = await setup(page);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    // Just below the target's bottom edge (world y 556): outside, however long it is held.
+    const below = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 640));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(below.x, below.y, { steps: 8 });
+    await page.waitForTimeout(600);
+    expect(await page.evaluate(() => window.__PK__!.home().state)).toBe('shown');
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+  });
+});

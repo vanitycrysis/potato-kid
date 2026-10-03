@@ -1,11 +1,12 @@
-import { Application, Container, FederatedPointerEvent } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
 import type { KidRig, MapData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
-import { rectAt, resolveDrawn, touching } from '../sim/space';
+import { intersects, rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
+import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
 
@@ -24,6 +25,32 @@ export interface SceneArt {
   ambient: Ambient;
   obstacles: Obstacle[];
   reducedMotion: boolean;
+  /** Send home (D-048, GUI_MVP §13): Codex's target and departure tokens, and its ink. */
+  home?: {
+    target: HomeSpec;
+    departure: { clipMs: number; fadeMs: number; reducedFadeMs: number };
+    tether: { strokePx: number; dashPx: [number, number]; stopBeforeKidBoxPx: number };
+    ink: string;
+  } | undefined;
+}
+
+/** What the Send home overlay draws this frame, in screen (CSS px) coordinates. */
+export interface HomeView {
+  state: HomeState;
+  target: { left: number; top: number; right: number; bottom: number };
+  /** The raw pointer, while over the target. */
+  point: { x: number; y: number } | null;
+  /** The held kid's drawn silhouette box, while one is held. */
+  held: { left: number; top: number; right: number; bottom: number } | null;
+}
+
+/** A kid going home: its view plays the farewell, apart from the sim (GUI_MVP §13.2). */
+interface Departure {
+  view: KidRigView;
+  x: number;
+  y: number;
+  box: Kid['box'];
+  ms: number;
 }
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
@@ -121,6 +148,20 @@ export class MapScene {
   private acc = 0;
   /** Where each kid was drawn last frame, for render-time separation of held/placed previews. */
   private readonly drawn = new Map<number, { x: number; y: number }>();
+  /** Send home (D-048): the Garden target, its tether layer, and kids on their way out. */
+  private readonly home: HomeTarget | null;
+  private readonly homeLayer = new Graphics();
+  private readonly departures: Departure[] = [];
+  private readonly homeListeners = new Set<(v: HomeView) => void>();
+  /** Foreground time (ms): it only advances while frames run, never while hidden. */
+  private clock = 0;
+  /** The view last frame, to tell when the map moved under the finger. */
+  private lastView = '';
+  /**
+   * Whether the overlay can place the target's label (GUI_MVP §13.1); without room for it
+   * the target is not offered. Set by the GUI.
+   */
+  homeFits: (target: HomeView['target'], held: HomeView['held']) => boolean = () => true;
 
   constructor(
     private readonly app: Application,
@@ -149,7 +190,11 @@ export class MapScene {
       saved,
     );
     this.resident = new Set(Object.keys(content.balance.spawnWeights));
-    this.camera.addChild(buildMap(art.map, art.textures.map), this.kidLayer);
+    const [gx, gy] = art.map.garden.worldGround;
+    this.home = art.home ? new HomeTarget({ x: gx, y: gy }, art.home.target) : null;
+    // The tether is drawn beneath kids (GUI_MVP §13.1) and takes no input.
+    this.homeLayer.eventMode = 'none';
+    this.camera.addChild(buildMap(art.map, art.textures.map), this.homeLayer, this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -178,6 +223,21 @@ export class MapScene {
   /** Calls `fn` with every sim event, after the scene has handled it. */
   listen(fn: (e: GameEvent) => void): void {
     this.listeners.add(fn);
+  }
+
+  /** Calls `fn` every frame with what the Send home overlay should show (D-048). */
+  listenHome(fn: (v: HomeView) => void): void {
+    this.homeListeners.add(fn);
+  }
+
+  /** The Send home target's state (tests). */
+  get homeState(): HomeState {
+    return this.home?.state ?? 'hidden';
+  }
+
+  /** Kids still playing their farewell, and where (tests). */
+  get departing(): { x: number; y: number }[] {
+    return this.departures.map((d) => ({ x: d.x, y: d.y }));
   }
 
   /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
@@ -217,7 +277,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'sendHome' }>): void {
     this.pending.push(cmd);
   }
 
@@ -234,6 +294,9 @@ export class MapScene {
     if (this.pending.length) this.stepOnce(0);
     // Panning is dropped too: its pointerup may never arrive (Codex review, PR #11).
     this.pan = undefined;
+    // Hidden: departures are disposed, not replayed, and any dwell starts over (§13).
+    this.endDepartures();
+    this.home?.reset();
     this.panVelocity = { x: 0, y: 0 };
     this.app.ticker.stop();
   }
@@ -497,6 +560,17 @@ export class MapScene {
       return;
     }
     const w = this.toWorld(e);
+    // Released over the armed target, rechecked now: the kid goes home instead of landing
+    // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
+    if (this.home?.releases(this.clock, this.homeEligible(), w)) {
+      const { kidId, spot } = this.drag;
+      this.pending.push({ type: 'sendHome', kidId });
+      this.placing.set(kidId, spot);
+      this.views.get(kidId)?.dropped();
+      this.drag = undefined;
+      this.home.reset();
+      return;
+    }
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
     this.resolveHeld();
@@ -556,6 +630,7 @@ export class MapScene {
   }
 
   private cancelActiveDrag(): void {
+    this.home?.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
     this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY });
@@ -572,9 +647,136 @@ export class MapScene {
     this.drag = undefined;
   }
 
+  // --- Send home (D-048, GUI_MVP §13) ---------------------------------------
+
+  /** The target's projection on screen (CSS px). */
+  private homeScreenRect(): HomeView['target'] {
+    const r = this.home!.rect;
+    const a = this.camera.toGlobal({ x: r.minX, y: r.minY });
+    const b = this.camera.toGlobal({ x: r.maxX, y: r.maxY });
+    return { left: a.x, top: a.y, right: b.x, bottom: b.y };
+  }
+
+  /** The held kid's drawn silhouette box on screen. */
+  private heldScreenRect(): HomeView['held'] {
+    if (!this.drag) return null;
+    const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    if (!kid) return null;
+    const a = this.camera.toGlobal({ x: this.drag.spot.x + kid.box.left, y: this.drag.spot.y + kid.box.top });
+    const b = this.camera.toGlobal({ x: this.drag.spot.x + kid.box.right, y: this.drag.spot.y + kid.box.bottom });
+    return { left: a.x, top: a.y, right: b.x, bottom: b.y };
+  }
+
+  /**
+   * The target is offered only while a kid is held, input isn't paused, the whole target is
+   * inside the unobscured world view at a usable size, and its label has room (§13.1).
+   */
+  private homeEligible(): boolean {
+    if (!this.home || !this.drag || this.inputPaused) return false;
+    const r = this.homeScreenRect();
+    const { width, height } = this.app.screen;
+    const min = this.art.home!.target.minimumProjectedSidePx;
+    const onScreen = r.left >= 0 && r.right <= width && r.top >= this.insets.top && r.bottom <= height - this.insets.bottom;
+    return onScreen && r.right - r.left >= min && r.bottom - r.top >= min && this.homeFits(r, this.heldScreenRect());
+  }
+
+  private updateHome(): void {
+    if (!this.home) return;
+    const { width, height } = this.app.screen;
+    const view = `${this.cam.x},${this.cam.y},${this.cam.zoom},${width},${height},${this.insets.top},${this.insets.bottom}`;
+    const moved = view !== this.lastView;
+    this.lastView = view;
+    const point = this.drag ? this.camera.toLocal(this.dragScreen) : null;
+    const state = this.home.update(this.clock, this.homeEligible(), point ? { x: point.x, y: point.y } : null, moved);
+    const over = state === 'waiting' || state === 'ready';
+    this.drawTether(over);
+    const v: HomeView = {
+      state,
+      target: this.homeScreenRect(),
+      point: over ? { x: this.dragScreen.x, y: this.dragScreen.y } : null,
+      held: state === 'hidden' ? null : this.heldScreenRect(),
+    };
+    for (const fn of this.homeListeners) fn(v);
+  }
+
+  /**
+   * A static dashed line from the target's centre to the nearest point of the held kid's
+   * box, stopping short of it (§13.1). Screen-constant widths, so divided by the zoom.
+   */
+  private drawTether(show: boolean): void {
+    const g = this.homeLayer;
+    g.clear();
+    if (!show || !this.drag || !this.home) return;
+    const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    if (!kid) return;
+    const t = this.art.home!.tether;
+    const z = this.cam.zoom;
+    const r = this.home.rect;
+    const cx = (r.minX + r.maxX) / 2;
+    const cy = (r.minY + r.maxY) / 2;
+    const s = this.drag.spot;
+    const nx = Math.min(Math.max(cx, s.x + kid.box.left), s.x + kid.box.right);
+    const ny = Math.min(Math.max(cy, s.y + kid.box.top), s.y + kid.box.bottom);
+    const len = Math.hypot(nx - cx, ny - cy) - t.stopBeforeKidBoxPx / z;
+    if (len <= 0) return;
+    const ux = (nx - cx) / Math.hypot(nx - cx, ny - cy);
+    const uy = (ny - cy) / Math.hypot(nx - cx, ny - cy);
+    const [dash, gap] = [t.dashPx[0] / z, t.dashPx[1] / z];
+    for (let d = 0; d < len; d += dash + gap) {
+      const e = Math.min(len, d + dash);
+      g.moveTo(cx + ux * d, cy + uy * d).lineTo(cx + ux * e, cy + uy * e);
+    }
+    g.stroke({ width: t.strokePx / z, color: this.art.home!.ink });
+  }
+
+  /** The kid's view leaves the sim's world but waves goodbye where it was last drawn. */
+  private startDeparture(kid: Kid): void {
+    const view = this.views.get(kid.id);
+    if (!view || !this.art.home) {
+      this.removeView(kid.id);
+      return;
+    }
+    this.views.delete(kid.id);
+    this.prev.delete(kid.id);
+    this.drawn.delete(kid.id);
+    this.pendingViews.delete(kid.id);
+    view.root.eventMode = 'none';
+    this.departures.push({ view, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
+  }
+
+  /**
+   * Plays each farewell, and ends it early rather than ever overlapping a live kid, the
+   * held preview or a newer departure (no-overlap holds for what is drawn, §13.2).
+   */
+  private updateDepartures(dt: number): void {
+    const timing = this.art.home?.departure;
+    if (!timing) return;
+    const live = this.game.state.world.kids.flatMap((k) => {
+      const at = this.drag?.kidId === k.id ? this.drag.spot : this.drawn.get(k.id);
+      return at ? [rectAt(k.box, at.x, at.y)] : [];
+    });
+    for (let i = this.departures.length - 1; i >= 0; i--) {
+      const d = this.departures[i]!;
+      d.ms += dt * 1000;
+      const box = rectAt(d.box, d.x, d.y);
+      const newer = this.departures.slice(i + 1).map((n) => rectAt(n.box, n.x, n.y));
+      const blocked = [...live, ...newer].some((o) => intersects(box, o));
+      if (blocked || !d.view.depart(d.x, d.y, d.ms, timing)) {
+        d.view.destroy();
+        this.departures.splice(i, 1);
+      }
+    }
+  }
+
+  private endDepartures(): void {
+    for (const d of this.departures) d.view.destroy();
+    this.departures.length = 0;
+  }
+
   // --- Frame loop --------------------------------------------------------
 
   private frame(dt: number): void {
+    this.clock += dt * 1000;
     this.updateCamera(dt);
     this.releaseUnused(performance.now());
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are
@@ -597,6 +799,8 @@ export class MapScene {
     this.drawn.clear();
     for (const [id, pos] of drawn) this.drawn.set(id, pos);
     if (this.drag) this.resolveHeld();
+    this.updateHome();
+    this.updateDepartures(dt);
     for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
@@ -643,7 +847,9 @@ export class MapScene {
       // even on short landscape screens.
       const zy = zone(bottom - top - (held ? held.bottom - held.top : 0));
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
-      if ((ex || ey) && !this.drag.noRoom) {
+      // Over the Send home target, the map holds still (GUI_MVP §13.1).
+      const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready';
+      if ((ex || ey) && !this.drag.noRoom && !overHome) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();
@@ -671,9 +877,9 @@ export class MapScene {
         this.addView(e.kid).play('spawn');
         break;
       case 'sentHome': {
-        // Gone from the map (D-048); the departure's look is Codex's to design.
+        // Gone from the sim at once (D-048); its view stays briefly to wave goodbye.
         if (this.drag?.kidId === e.kid.id) this.drag = undefined;
-        this.removeView(e.kid.id);
+        this.startDeparture(e.kid);
         break;
       }
       case 'fused': {

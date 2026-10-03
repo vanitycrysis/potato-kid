@@ -6,7 +6,7 @@ import type { Content } from './content/types';
 import { handleBack } from './platform/back';
 import { Lifecycle } from './platform/lifecycle';
 import { exportedNames, TextureStore } from './render/art';
-import { MapScene } from './render/scene';
+import { MapScene, type SceneArt } from './render/scene';
 import { SaveManager, type SaveMode } from './save/manager';
 import { SettingsStore, type Settings } from './save/settings';
 import { PreferencesStorage } from './save/storage';
@@ -50,6 +50,8 @@ declare global {
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
+      /** Send home (D-048): the Garden target's state, and kids still waving goodbye. */
+      home: () => { state: string; departing: number; departingAt: { x: number; y: number }[] };
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -114,6 +116,7 @@ async function boot(): Promise<void> {
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
       obstacles: obstaclesFrom(mapData),
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      home: homeArt(),
     },
     loaded.state ?? undefined,
   );
@@ -180,6 +183,7 @@ async function boot(): Promise<void> {
     buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
+    home: () => ({ state: scene.homeState, departing: scene.departing.length, departingAt: scene.departing }),
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
@@ -208,6 +212,26 @@ async function boot(): Promise<void> {
     };
   }
   window.__PK__ = { ...hooks(), lastOffline: () => lastOffline };
+}
+
+/** Codex's Send home tokens (GUI_MVP §13), if this art delivery has them. */
+function homeArt(): SceneArt['home'] {
+  const sh = (uiData?.mvp as { sendHome?: SendHomeTokens } | undefined)?.sendHome;
+  const ink = uiData?.palette?.ink;
+  if (!sh || !ink) return undefined;
+  return {
+    target: sh.target,
+    departure: { clipMs: sh.departure.clipMs, fadeMs: sh.departure.fadeMs, reducedFadeMs: sh.departure.reducedMotion.fadeMs },
+    tether: sh.target.tether,
+    ink,
+  };
+}
+
+type HomeArt = NonNullable<SceneArt['home']>;
+
+interface SendHomeTokens {
+  target: HomeArt['target'] & { tether: HomeArt['tether'] };
+  departure: { clipMs: number; fadeMs: number; reducedMotion: { fadeMs: number } };
 }
 
 function calmed(c: Content): Content {
