@@ -1,6 +1,6 @@
 import type { BuildingId, Content } from '../content/types';
 import { pairKey } from '../content/validate';
-import { Game, type Command, type GameOptions } from './game';
+import { Game, type Command, type GameEvent, type GameOptions } from './game';
 import { rectAt, touching } from './space';
 import { STEP } from './world';
 
@@ -97,7 +97,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
           if (deadlocked(game, recipes)) deadTurns++;
         }
       }
-      game.step(commands);
+      bot.learn(game.step(commands));
       play += STEP;
       clock += STEP;
       if (game.state.world.kids.length < 0.3 * game.capacity) starvedTime += STEP;
@@ -135,9 +135,14 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
  * The scripted player: `decide` picks one action a turn, or null when it has nothing useful
  * to do. `tried` holds the type pairs it has seen touch (exposed for tests).
  */
-export function createBot(game: Game, content: Content, sendHome = true): { decide: () => Command[] | null; tried: Set<string> } {
+export function createBot(
+  game: Game,
+  content: Content,
+  sendHome = true,
+): { decide: () => Command[] | null; learn: (events: GameEvent[]) => void; tried: Set<string> } {
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const tried = new Set<string>();
+  let pending: Drop | null = null;
   /** The bot's one action this turn, or null when it has nothing useful to do. */
   const decide = (): Command[] | null => {
     const s = game.state;
@@ -152,10 +157,14 @@ export function createBot(game: Game, content: Content, sendHome = true): { deci
       const commands = drag(game, a.id, b);
       const contacts = dropContacts(commands);
       if (!contacts.includes(b.id)) return null;
-      for (const id of contacts) {
-        const other = s.world.kids.find((k) => k.id === id);
-        if (other) tried.add(pairKey(a.type, other.type));
-      }
+      // What was touched is learned only from the step's outcome (see `learnFromDrop`).
+      pending = {
+        mover: { id: a.id, type: a.type },
+        contacts: contacts.flatMap((id) => {
+          const k = s.world.kids.find((x) => x.id === id);
+          return k ? [{ id, type: k.type, grace: k.grace }] : [];
+        }),
+      };
       return commands;
     };
     // 2. Try a pair of types never tried together (the player doesn't know the recipes).
@@ -209,7 +218,12 @@ export function createBot(game: Game, content: Content, sendHome = true): { deci
     }
     return null;
   };
-  return { decide, tried };
+  /** After the step that applied the bot's commands: learn what its last drop tested. */
+  const learn = (events: GameEvent[]) => {
+    if (pending) learnFromDrop(tried, pending, events);
+    pending = null;
+  };
+  return { decide, learn, tried };
 }
 
 /** A full map on which no two kids make a recipe, and no upgrade is affordable. */
@@ -220,6 +234,33 @@ function deadlocked(game: Game, recipes: Map<string, string>): boolean {
     for (let j = i + 1; j < kids.length; j++) if (recipes.has(pairKey(kids[i]!.type, kids[j]!.type))) return false;
   }
   return purchase(game) === null;
+}
+
+/** A drop the bot made: who moved, and whom the landing touched (with their grace then). */
+export interface Drop {
+  mover: { id: number; type: string };
+  contacts: { id: number; type: string; grace: number }[];
+}
+
+/**
+ * What a drop really tested (Codex review, PR #45): a touched pair that fused, or one where
+ * both kids came through the step and the partner was out of its newborn grace. A pair
+ * interrupted by another fusion, or by grace, stays untried.
+ */
+export function learnFromDrop(tried: Set<string>, drop: Drop, events: GameEvent[]): void {
+  const consumed = new Set<number>();
+  const fusedWith = new Set<number>();
+  for (const e of events) {
+    if (e.type !== 'fused') continue;
+    const [p, q] = e.parents;
+    consumed.add(p.id).add(q.id);
+    if (p.id === drop.mover.id) fusedWith.add(q.id);
+    if (q.id === drop.mover.id) fusedWith.add(p.id);
+  }
+  for (const c of drop.contacts) {
+    const tested = fusedWith.has(c.id) || (!consumed.has(drop.mover.id) && !consumed.has(c.id) && c.grace === 0);
+    if (tested) tried.add(pairKey(drop.mover.type, c.type));
+  }
 }
 
 /** The kids a drag's drop really touches. */

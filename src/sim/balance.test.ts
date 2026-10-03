@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { content } from '../content';
-import { createBot, drag, simulate, type Scenario } from './balance';
+import { createBot, drag, learnFromDrop, simulate, type Scenario } from './balance';
 import { Game } from './game';
 import { createRng } from './rng';
 import { addKid, defaultBox } from './world';
@@ -76,5 +76,35 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
     const drop = commands.find((x) => x.type === 'drop');
     expect(drop && 'touching' in drop ? drop.touching : []).not.toContain(water.id);
     expect(g.step(commands).some((e) => e.type === 'fused')).toBe(false);
+  });
+});
+
+describe('what a drop tested (Codex review, PR #45)', () => {
+  const kid = (id: number, type: string) => ({ id, type }) as never;
+  const drop = {
+    mover: { id: 1, type: 'plain' },
+    contacts: [
+      { id: 2, type: 'water', grace: 0 },
+      { id: 3, type: 'fire', grace: 0 },
+    ],
+  };
+
+  it('a drop touching two recipe partners tests only the pair that fused', () => {
+    const tried = new Set<string>();
+    learnFromDrop(tried, drop, [{ type: 'fused', parents: [kid(1, 'plain'), kid(2, 'water')], child: kid(9, 'firefighter'), firstDiscovery: true }]);
+    expect([...tried]).toEqual(['plain|water']);
+  });
+
+  it('a drop that fused nothing tested every pair it touched', () => {
+    const tried = new Set<string>();
+    learnFromDrop(tried, drop, []);
+    expect([...tried].sort()).toEqual(['fire|plain', 'plain|water']);
+  });
+
+  it('a partner still in newborn grace, or consumed by another fusion, was not tested', () => {
+    const tried = new Set<string>();
+    const graced = { ...drop, contacts: [{ id: 2, type: 'water', grace: 1.5 }, drop.contacts[1]!] };
+    learnFromDrop(tried, graced, [{ type: 'fused', parents: [kid(3, 'fire'), kid(7, 'water')], child: kid(9, 'steam'), firstDiscovery: false }]);
+    expect([...tried]).toEqual([]);
   });
 });
