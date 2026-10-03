@@ -309,3 +309,43 @@ ChatGPT authored eight revised wave SVGs and eight revised fusion/discovery SVGs
 ## ASSET-MVP batch 2, Round 2 (2026-10-02)
 
 ChatGPT/Codex hand-authored eight original SVG revisions in the same near-black round ink and accent families: `kid_pretzel_front_pretzel`, `kid_terrarium_front_jar`, `kid_teapot_front_spout`, `kid_ice_sculptor_front_ice`, `kid_steamboat_front_hull`, `kid_aurora_back_curtain`, `kid_aurora_front_pendant`, `kid_soup_front_ladle`. No generated bitmap, external artwork, tracing, text or additional anatomy. Original reference files, nine approved batch-2 kids and all other art remain unchanged. Normal trimmed PNG derivatives inherit the source revision asset-mvp-2 round 2. Entire rig stays byte-identical. Current exact hashes, crop dimensions, offsets and unchanged component fits: .codex-out/asset-mvp-2-round2-inventory.json. Validation/preservation: .codex-out/asset-mvp-2-notes.md, Round 2. The earlier inventory is the historical round-1 record. Changes remain uncommitted for Claude to commit unchanged as ChatGPT.
+
+## ASSET-MVP batch 3 (2026-10-02; Claude review pending)
+
+Author/art owner: ChatGPT/Codex. **12 final tier-5 costumes /24 original SVG sources**, plus two hand-authored follow-up revisions. Revision asset-mvp-3; original work for Potato Kid. Tools: Node.js-authored SVG paths/circles, JSON sidecar, Playwright Chromium export/review, exported-alpha and independently sampled vector checks. No image generation, tracing, outside artwork, baked runtime text, samples or additional anatomy. References: the supplied 22 images via the reference contact sheet, all four available types-20x9 engine captures (pages 1/2 colour/gray) and accepted batch-2 round-2 sheets. The requested page-3 engine capture is absent from this worktree; no inspection of it is claimed. Reference files remain untouched and unembedded.
+
+| Asset ID | Original editable source | Status / revision |
+| --- | --- | --- |
+| kid_festival_front_bunting | `art/src/kids/kid_festival_front_bunting.svg` | final /asset-mvp-3 |
+| kid_festival_front_drum | `art/src/kids/kid_festival_front_drum.svg` | final /asset-mvp-3 |
+| kid_observatory_front_telescope | `art/src/kids/kid_observatory_front_telescope.svg` | final /asset-mvp-3 |
+| kid_observatory_front_dome | `art/src/kids/kid_observatory_front_dome.svg` | final /asset-mvp-3 |
+| kid_botanical_garden_back_trellis | `art/src/kids/kid_botanical_garden_back_trellis.svg` | final /asset-mvp-3 |
+| kid_botanical_garden_front_tray | `art/src/kids/kid_botanical_garden_front_tray.svg` | final /asset-mvp-3 |
+| kid_moon_garden_front_crescent | `art/src/kids/kid_moon_garden_front_crescent.svg` | final /asset-mvp-3 |
+| kid_moon_garden_front_lamp | `art/src/kids/kid_moon_garden_front_lamp.svg` | final /asset-mvp-3 |
+| kid_patisserie_front_cake | `art/src/kids/kid_patisserie_front_cake.svg` | final /asset-mvp-3 |
+| kid_patisserie_front_bag | `art/src/kids/kid_patisserie_front_bag.svg` | final /asset-mvp-3 |
+| kid_winter_market_front_awning | `art/src/kids/kid_winter_market_front_awning.svg` | final /asset-mvp-3 |
+| kid_winter_market_front_apron | `art/src/kids/kid_winter_market_front_apron.svg` | final /asset-mvp-3 |
+| kid_harbor_front_anchor | `art/src/kids/kid_harbor_front_anchor.svg` | final /asset-mvp-3 |
+| kid_harbor_back_posts | `art/src/kids/kid_harbor_back_posts.svg` | final /asset-mvp-3 |
+| kid_sky_fair_back_wheel | `art/src/kids/kid_sky_fair_back_wheel.svg` | final /asset-mvp-3 |
+| kid_sky_fair_front_ticket | `art/src/kids/kid_sky_fair_front_ticket.svg` | final /asset-mvp-3 |
+| kid_rescue_station_back_stretcher | `art/src/kids/kid_rescue_station_back_stretcher.svg` | final /asset-mvp-3 |
+| kid_rescue_station_front_torch | `art/src/kids/kid_rescue_station_front_torch.svg` | final /asset-mvp-3 |
+| kid_sculpture_park_front_spiral | `art/src/kids/kid_sculpture_park_front_spiral.svg` | final /asset-mvp-3 |
+| kid_sculpture_park_front_plinth | `art/src/kids/kid_sculpture_park_front_plinth.svg` | final /asset-mvp-3 |
+| kid_windmill_back_sails | `art/src/kids/kid_windmill_back_sails.svg` | final /asset-mvp-3 |
+| kid_windmill_front_grain | `art/src/kids/kid_windmill_front_grain.svg` | final /asset-mvp-3 |
+| kid_mosaic_front_tiles | `art/src/kids/kid_mosaic_front_tiles.svg` | final /asset-mvp-3 |
+| kid_mosaic_front_apron | `art/src/kids/kid_mosaic_front_apron.svg` | final /asset-mvp-3 |
+| kid_aurora_back_curtain | `art/src/kids/kid_aurora_back_curtain.svg` | final /asset-mvp-3 follow-up |
+| kid_terrarium_front_jar | `art/src/kids/kid_terrarium_front_jar.svg` | final /asset-mvp-3 follow-up |
+
+PNG derivatives inherit the source revision. Exact hashes, crop dimensions, offsets and authored components/pivots/fits: .codex-out/asset-mvp-3-export-inventory.json. The 50 unrelated original costumes, Aurora's hem tab, Terrarium's mushroom label, every shared body/face/pose/clip and all prior artwork/review sheets remain byte-identical. Root revision and 12 appended costume entries are the only rig changes. Validation/preservation/D-045/limits: .codex-out/asset-mvp-3-notes.md. Claude commits/pushes/reviews unchanged; no git command or external publication used.
+
+
+## ASSET-MVP batch 3 round 2 (2026-10-02)
+
+Author: ChatGPT (Codex); original editable vector drawings, revision asset-mvp-3-round2, no external raster/generator/reference source. Three primary components revised for PR #44: kid_windmill_back_sails.svg (tapered mill tower and separate sail panels), kid_rescue_station_back_stretcher.svg (hooked ladder, retained historical importer ID), kid_sky_fair_back_wheel.svg (five-cabin Ferris wheel). PNGs inherit these revisions. Earlier provenance entries remain historical. Both complete rig files, every component allocation/pivot/fit/follower, all other art and the eleven approved kids are byte-identical to the round-1 handoff. Exact old/new source and PNG SHA-256, dimensions, crop offsets and component metadata: .codex-out/asset-mvp-3-round2-inventory.json. Six new review sheets are reconstructed from the trimmed runtime PNGs; they are art compositor evidence, not engine captures. Validation and preservation: .codex-out/asset-mvp-3-notes.md, Round 2. Work remains uncommitted for Claude to commit/push unchanged as ChatGPT.
