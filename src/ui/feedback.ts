@@ -15,7 +15,9 @@ export type FeedbackItem =
   | { kind: 'milestone'; potatokens: number; kids: number }
   /** Instant spawns that landed (successive ones coalesce). */
   | { kind: 'arrival'; count: number }
-  | { kind: 'refusal'; command: string; reason: RejectReason };
+  | { kind: 'refusal'; command: string; reason: RejectReason }
+  /** A kid sent home (D-048, GUI_MVP §13.3). */
+  | { kind: 'sentHome'; kidType: KidId };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -65,6 +67,9 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
           if (last?.kind === 'milestone') last.potatokens += e.potatokens;
           else out.push({ kind: 'milestone', potatokens: e.potatokens, kids: discovered });
         }
+        break;
+      case 'sentHome':
+        out.push({ kind: 'sentHome', kidType: e.kid.type });
         break;
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });

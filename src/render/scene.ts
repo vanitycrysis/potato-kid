@@ -235,6 +235,13 @@ export class MapScene {
     return this.home?.state ?? 'hidden';
   }
 
+  /** How long a send home's farewell plays (its success card waits for it, §13.3). */
+  get departureMs(): number {
+    const d = this.art.home?.departure;
+    if (!d) return 0;
+    return this.art.reducedMotion ? d.reducedFadeMs : d.clipMs + d.fadeMs;
+  }
+
   /** Kids still playing their farewell, and where (tests). */
   get departing(): { x: number; y: number }[] {
     return this.departures.map((d) => ({ x: d.x, y: d.y }));

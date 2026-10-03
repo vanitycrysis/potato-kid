@@ -16,6 +16,8 @@ export interface SheetSpec {
   requestedHeight: number;
   /** Called every frame while open, so live values (balances, levels) stay current. */
   update?: () => void;
+  /** Escape: the sheet's own step back (e.g. closing an inline confirmation). True if handled. */
+  onEscape?: () => boolean;
   /** `replaced`: another sheet is opening in its place (not a player's dismissal). */
   onClose?: (replaced: boolean) => void;
 }
@@ -310,7 +312,7 @@ export class Sheets {
     if (!c) return;
     if (e.key === 'Escape') {
       e.preventDefault();
-      this.close();
+      if (!c.spec.onEscape?.()) this.close();
       return;
     }
     if (e.key !== 'Tab') return;

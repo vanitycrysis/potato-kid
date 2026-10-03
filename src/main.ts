@@ -94,7 +94,8 @@ async function boot(): Promise<void> {
   const storage = new PreferencesStorage();
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
-  const defaults = (uiData?.mvp as { settings?: { defaults?: Settings } } | undefined)?.settings?.defaults ?? { audio: true, music: 70, sfx: 80 };
+  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'sendHomeExplained'> } } | undefined)?.settings?.defaults;
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), sendHomeExplained: false };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
