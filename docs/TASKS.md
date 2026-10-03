@@ -2,22 +2,32 @@
 
 Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not owner approval. Since D-027, ChatGPT's role is run as Codex (`gpt-6.1-sol`, high effort) by Claude; Claude does no art (D-036).
 
-## Where things stand (Claude, 2026-10-02)
+## Where things stand (Claude, 2026-10-02, evening)
 
-**Gate 2 approved** (D-044). The owner liked the style ("matches the potato kid energy really well") and set two directions:
-- **D-045:** the face is only two dot eyes and the smirk; no eyebrows, noses, chins or other features unless they come from the costume. The dreamy face's lid strokes go.
-- **D-046:** about **500 kid types** long term. The MVP ships roughly 50–80; the pipeline scales to 500; the rest arrives in waves after gate 4.
+**Gates 1–3 are approved** (gate 2: D-044–D-046; gate 3: D-047). We're in **M3 / BUILD-MVP**, working toward **gate 4** (the MVP on the owner's S26 Ultra).
 
-**ASSET-PLAYABLE is done** (Codex; Claude's reviews: #21 in 3 rounds, #23 in 2 rounds):
-- final art for all 16 kids, with the D-045 face fix;
-- the remaining poses and clips, effects and landmarks;
-- the map and GUI art, now final.
+**Done in M3 so far**
+- **Economy:** currencies, buildings, instant spawn and the Compendium in the sim (#27).
+- **Offline catch-up** (#29), the **save system** (#30), and lifecycle wiring (#31).
+- **Roster:** ROSTER-PLAN (Codex, #28), a 64-type MVP roster with a recipe graph toward ~500 types. ROSTER-SCALE (#35): trimmed exports and per-type costume loading.
+- **GUI-MVP:** Codex's design (#32, #36). Claude's DOM implementation:
+  - HUD, feedback and save banners (#33)
+  - short viewports (#37)
+  - the Garden, Capacity and Bias sheets (#39)
+  - Compendium, offline summary and Settings (#41)
+  - the **Potato-Dex** (#43)
+- **Art:** ASSET-MVP batches 1 and 2 (Codex, #34 and #40, Claude-reviewed) are imported: **52 kids and 46 recipes** in content (#38, #42).
 
-**PLAYABLE-INTEGRATION is done** (#24). **Gate 3 approved** (D-047): the first playable passes on the S26 Ultra. Animation polish is noted for the polish phase after gate 4. The owner likes the font.
+**In flight**
+- **Batch 3** (#44, merged) and its import (#47): the full **64-kid** MVP roster.
+- **The balance simulator** (#45) found a soft-lock: the map clogs with kids that can't fuse. The owner chose **Send home** (D-048). The sim command is in #45; Codex is designing the interaction.
+- **D-049** (#46, merged): the offline summary shows only after 60 s away.
 
-**Now: M3 / BUILD-MVP** (Claude), with **ROSTER-PLAN** (Codex) in parallel.
-
-The v2 work merged before gate 2 (PRs #8, #10–#17) is listed in git history and in `docs/HANDOFF.md`.
+**Before gate 4**
+- Balance simulator and tuning (the six-seed weights, milestones and prices are provisional).
+- Audio (Codex's 8 cues and music loop, then the runtime; Settings already stores audio choices).
+- Icons and launcher/splash (Codex).
+- An on-device check.
 
 ## Board
 
@@ -32,12 +42,15 @@ The v2 work merged before gate 2 (PRs #8, #10–#17) is listed in git history an
 | GUI-V2 | Claude (impl) / ChatGPT (art) | HUD, tray, Dex button, toast | **done** (#15) | — |
 | GATE-2 | Owner | Approve the art style | **done** (D-044, 2026-10-02) | — |
 | ASSET-PLAYABLE | ChatGPT | A: D-045 face fix + final art for the 12 placeholder costumes. B: deferred poses and clips, FX, landmarks, font | **done** (#21, #23) | — |
-| ROSTER-PLAN | ChatGPT (names, themes, combinations) / Claude (IDs, validation, balance) | Roster plan toward ~500 types (D-046): themes, tiers, recipe graph, and the 50–80 that ship in the MVP | **doing** | Both agree; reachability and tier checks pass on the full graph |
-| ROSTER-SCALE | Claude | Engine and pipeline for ~500 types: per-type texture loading and unloading, Dex thumbnails, content validation at scale, art-export throughput | todo (part of BUILD-MVP) | Texture budget and frame time hold with 500 types in the data; tests pass; Codex review |
+| ROSTER-PLAN | ChatGPT (names, themes, combinations) / Claude (IDs, validation, balance) | Roster plan toward ~500 types (D-046): themes, tiers, recipe graph, and the 50–80 that ship in the MVP | **done** (#28: 64 MVP kids, 58 recipes, six seeds) | — |
+| ROSTER-SCALE | Claude | Engine and pipeline for ~500 types: per-type texture loading and unloading, Dex thumbnails, content validation at scale, art-export throughput | **done** (#35) | — |
 | PLAYABLE-INTEGRATION | Claude | Play part B's clips, FX and shadow; wave ambient; reduced motion; bundle the font | **done** (#24) | — |
 | GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | **done** (D-047, 2026-10-02) | — |
-| BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | **doing** | Tests pass; Codex review |
-| GUI-MVP | ChatGPT (design, art) / Claude (DOM implementation) | Design the MVP's panels and HUD additions: currencies, building upgrades, bias picker, compendium, Potato-Dex, instant spawn, offline-return summary, feedback for refusals and rewards, save banners | **doing** (art/spec delivered for review; implementation pending) | Claude review passes; Claude implements it |
-| ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | doing (batch 1 of 3: 20 new tier 1-3 costumes delivered; Claude review pending) | Claude review passes; device listening check |
+| BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | **doing** (economy #27, offline #29, save #30, lifecycle #31 done; balance simulator #45 in review; audio runtime to do) | Tests pass; Codex review |
+| GUI-MVP | ChatGPT (design, art) / Claude (DOM implementation) | Design the MVP's panels and HUD additions: currencies, building upgrades, bias picker, compendium, Potato-Dex, instant spawn, offline-return summary, feedback for refusals and rewards, save banners | **done** (design #32, #36; implementation #33, #37, #39, #41, #43; D-049 threshold #46) | — |
+| ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | **doing** (all 64 costumes done: #34, #40, #44; next the 8 cues, music loop, icons, launcher/splash) | Claude review passes; device listening check |
+| IMPORT-MVP | Claude | Bring each accepted art batch into content: kids, recipes, Dex milestones, previews | **review** (batches 1 and 2: #38, #42; batch 3, the full 64-kid roster, #47) | Validation, budget and preview checks pass; Codex review |
+| BALANCE-SIM | Claude | Balance simulator; tune seed weights, prices and milestones for the 64-kid roster | **doing** (simulator #45; how long the MVP should last is an owner question at gate 4) | Pacing agreed with the owner holds in simulation; Codex review |
+| SEND-HOME | ChatGPT (design, art) / Claude (sim, engine, UI) | D-048: drag a kid onto the Garden to send it home | **doing** (sim command #45; Codex designing the drop target and departure) | Codex design reviewed; engine/UI PR passes Codex review |
 | GATE-4 | Owner | Approve the MVP | todo | Explicit approval before polish |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |

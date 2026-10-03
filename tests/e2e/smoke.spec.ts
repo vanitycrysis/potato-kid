@@ -275,9 +275,8 @@ test('backgrounding mid-pan does not lock input', async ({ page }) => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  // Coming back shows the return summary (GUI_MVP §8); dismiss it.
-  await expect(page.getByRole('dialog', { name: 'Welcome back' })).toBeVisible();
-  await page.keyboard.press('Escape');
+  // A moment away shows no return summary (D-049).
+  await expect(page.locator('.sheet')).toHaveCount(0);
   // A fresh drag of the kid must work.
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   await page.mouse.move(p.x, p.y - 20);
@@ -1115,6 +1114,20 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     expect(errors).toEqual([]);
   });
 
+  test('a short absence credits its rewards but shows no summary (D-049)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
+    const before = await page.evaluate(() => window.__PK__!.wallet().materials);
+    await page.evaluate(() => window.__PK__!.debugAway!(59_000));
+    expect(await page.evaluate(() => window.__PK__!.lastOffline()!.seconds)).toBeCloseTo(59, 0);
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeGreaterThan(before);
+    await frames(page, 3);
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    // A minute or more does show it.
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toBeVisible();
+  });
+
   test('an absence beyond the cap says what was not credited', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugAway!(9 * 3600_000));
@@ -1153,8 +1166,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
     expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80 });
-    // A cold load with a save reconciles, so the summary comes first.
-    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    // A reload a moment later is too short an absence for the summary (D-049).
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByLabel('Music')).toHaveValue('100');
     expect(errors).toEqual([]);
@@ -1271,7 +1283,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.locator('.comp-card').nth(6).scrollIntoViewIfNeeded();
     const before = await page.evaluate(() => document.scrollingElement!.scrollTop);
     expect(before).toBeGreaterThan(200);
-    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
     await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
     await expect(page.getByRole('dialog', { name: 'Compendium' })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollTop)).toBe(before);
@@ -1537,7 +1549,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect.poll(() => dialog(page).locator('.comp-card').count()).toBeGreaterThanOrEqual(10);
     await dialog(page).locator('.sheet-body').evaluate((e) => (e.scrollTop = 700));
     await frames(page, 2);
-    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
     await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
     await expect(dialog(page).getByRole('tab', { name: 'Compendium' })).toHaveAttribute('aria-selected', 'true');
     await expect.poll(() => dialog(page).locator('.sheet-body').evaluate((e) => e.scrollTop)).toBe(700);
@@ -1565,7 +1577,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dexButton(page).click();
     await dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' }).click();
     await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Water Kid');
-    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
     await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
     await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Water Kid');
     // Back still returns to the grid, at its tile.
