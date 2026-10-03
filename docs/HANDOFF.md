@@ -1,37 +1,57 @@
-# Session handoff (2026-10-03, end of session, for the next Claude session)
+# Session handoff (2026-10-03, second session, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` and `docs/TASKS.md`.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-059**) and `docs/TASKS.md`. Pull `main` first.
 
 ## Where we are
 
-- **Update, 2026-10-03: gate 4 came back with feedback** (D-050..D-059 in `DECISIONS.md`; tasks on the board in `TASKS.md`). Work through the board in its order of work, then take the MVP back to the owner as gate 4. The rest of this file is the earlier end-of-session note: still right about the build and how we work, but the owner has now answered the gate-4 questions below.
+- **Gate 4 came back with feedback** (2026-10-03), not approval. The owner's answers are recorded as **D-050..D-059** (PR #60, merged), and every item is a task on the board in `TASKS.md`, with an order of work. After those tasks, the MVP goes back to the owner as gate 4.
+- In brief:
+  - The **icon is approved**.
+  - **Forgiving drop** (D-051): drop a kid onto another to try the pair; the kid under the finger is highlighted. No fusing screen.
+  - **Pacing** (D-052): a tutorial at 1 kid/min, then 20 min per kid, falling to about 8 min with Garden upgrades; much slower Materials.
+  - **Offline** (D-053): kids keep spawning and are found where they wandered; still no offline fusions.
+  - **Planting replaces Send home** (D-054): grows over time in plots, then sprouts a random kid, sometimes a variant. A planting sound is wanted.
+  - **Rainbow and Mini variants** of any kid (D-055).
+  - **Feeding** (D-056): a happy kid earns more and sprouts better variants; each type has a favourite food and a hated one, which it refuses.
+  - **Naming** (D-057) and **personalities** (D-058): a description, likes, hates and hobbies per type.
+  - **The wave becomes a fast stubby-arm wiggle** (D-059).
+  - **Music loop bug.**
+- The owner said this session needed no permission prompts. That was **for that session only**; don't assume it carries over.
 
-- **Gates 1–3 are approved. The MVP is built, and gate 4 has been put to the owner** (2026-10-03). **We are waiting on the owner's verdict.** Don't start new feature work before it, except the items under "When the owner answers" once the owner has asked for them.
-- **`main` is at 9edf86c and there are no open PRs.** Everything is merged: Send home's Dex path (#54, after 11 Codex rounds), the gate-4 docs (#57) and the web-build fix (#58).
-- **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** (8 cues and a music loop) and the **Android** icon and splash are done.
-- **Send home** (D-048) is done end to end: drag a kid onto the Garden and hold 400 ms, or use the Dex detail's per-kid path.
-- **Tests:** 179 unit and 112 e2e (Playwright), mutation-checked as they were added. CI is green on `main`.
-- **The gate-4 build** is CI's `potato-kid-debug-apk` artifact. The run given to the owner is https://github.com/vanitycrysis/potato-kid/actions/runs/37114541688 (`main` at e141907). Later `main` runs (#57, #58) are docs-only and build the same app. CI also uploads the web build as `potato-kid-web`. GitHub Pages is not available for this private repo (ENGINEERING_PLAN.md).
+## Open work at handoff (check each first)
 
-## What the owner was asked (gate 4)
-
-1. **Play the APK** on the S26 Ultra: feel and performance (dragging, fusing, scrolling), audio by ear (does sound start after the first tap; are volumes right; does the music loop without a click), and the icon on the home screen.
-2. **Pacing:** how long should the MVP last? In the simulator, an idealized player finds half the 64 kids in about 10 min of play, 75 % in about 1 h, and 63 of 64 in 3 h. A casual player (10 min every 3 h) finds 62 in 3 days. Real players are slower.
-3. **A Send-home sound:** may Claude ask Codex for one? (Claude does no audio design, D-036.)
-4. **Approve gate 4,** or send feedback.
-
-## When the owner answers
-
-- **Gate 4 approved:** record it in `DECISIONS.md` (the next number after D-049) and mark GATE-4 done in `TASKS.md`, in a docs PR. Then **ANIM-POLISH** (D-047) and content waves toward about 500 kids (D-046), starting from the ROSTER-SCALE plan.
-- **Feedback from the device:** turn each item into a task on the board. Bugs are Claude's; anything visual or audible goes to Codex (D-036).
-- **Pacing target:** BALANCE-SIM. Retune seed weights, prices and milestones in `src/content/balance.json` until `npm run balance` matches the target (4 seeds, about 15 min a run). Then a PR with the before and after numbers, and a Codex review.
-- **Send-home sound, yes:** a Codex task (ASSET-MVP audio follow-up) for one cue in the existing style (`art/audio`, `npm run audio:build`). Review it by ear against the other eight. Claude then maps `sentHome` in `src/audio/cues.ts`, choosing its priority alongside the existing cues, and plays it for both paths. The Dex confirm button then needs `data-cue="success"` so its tap doesn't play first.
-
-**Known gaps** (not testable in headless CI; only the device shows them):
-- the audio unlock on a real touch screen;
-- the `<audio loop>` seam once encoded;
-- the icon under the S26's own launcher mask;
-- the D-034 performance pass (and 4× CPU throttle) and real texture allocations.
+1. **PR #61, MUSIC-LOOP (Claude):** `claude/music-loop`.
+   - **What it does:** the music now loops on a decoded Web Audio buffer; the loop survives hide/show; a gesture wakes a context the system suspended; Off/On resumes from the same offset.
+   - **Tests:** `npm test` and all 113 e2e passed locally (first full run). The new test is mutation-checked.
+   - **Still to do:**
+     - **The Codex review is clean and posted on the PR.** Merge once CI is green (it was pending at handoff).
+     - Run the full local e2e suite two or three more times for flakes first.
+2. **PR #62, WAVE-WIGGLE (Codex art):** `chatgpt/wave-wiggle`.
+   - **Round 1:** Claude committed Codex's round 1 unchanged and merged `main` into the branch (TASKS.md conflict resolved to main's board).
+   - **Claude's review, round 1 (posted on the PR):** the nubs are stubby now, but the wiggle is **invisible at 55 px** (about 2 CSS px of travel), and many costumes hide the left nub. The review asks for a bigger angular sweep and a costume-agnostic fix, perhaps both nubs.
+   - **Round 2:** **Codex round 2 was running** in `../potato-kid-chatgpt` when the session ended. Check that worktree: `git status`, and `.codex-out/wave-wiggle-notes.md` for a "Round 2" section.
+     - If round 2 finished: commit it unchanged as ChatGPT, push, and review it critically at 55 px (colour and grayscale; the all-64 sheets).
+     - If round 2 is incomplete: discard the partial edits (`git checkout -- .`; `.codex-out` is git-ignored) and rerun it.
+   - **The round-2 prompt:** the round-1 task (below) plus "round 2: address every blocking point of Claude's review" and the PR #62 review pasted verbatim. Round 1's task asked for:
+     - stubby nubs (stand's size, never a limb) and a really fast wiggle;
+     - the existing sidecar format, within the D-043 reserves, with all 64 costumes still fitting;
+     - a complete reduced-motion mapping and a short clip;
+     - D-045 and D-046 respected, `art:export` and `npm test` green, and 55 px checks in `.codex-out/`;
+     - no `src/` edits.
+   - **Engine side, after the art passes:** `waveSeconds` derives from the clip (0.5 s now); Send home's farewell uses the same clip.
+3. **FUSE-DROP (Claude), next up.** Nothing written yet. The design worked out:
+   - **The target:** the kid whose drawn box overlaps the held kid's box at the *intended* position (`drag.x/y`, before `landingSpot` moves it to a free spot). If several, the one with the largest overlap area.
+   - **The scene** computes the target each frame in `resolveHeld()` (`src/render/scene.ts`), stores it on the `Drag`, and exposes it to tests (for example `__PK__.dropTarget()`).
+   - **The command:** `endDrag` sends `{ type: 'drop', ..., target }`.
+   - **The sim:** in `src/sim/game.ts`, `applyCommands` returns the targeted pair, and `resolveFusions` gives it priority (`d = -1`) ahead of the `seen` contacts. A non-recipe target just lands at the free spot (D-039). Kids in newborn grace stay ineligible.
+   - **Unless the drop is over the Garden**, where the home/plant target keeps priority.
+   - **The highlight's look is Codex's** (GATE4-DESIGN). Claude draws nothing (D-036), so ship the logic first and render the highlight once the design lands.
+   - **Tests:** unit tests for target choice and priority; e2e for a crowded drop onto a partner and onto a non-partner; mutation-check both.
+4. **Then, in the board's order:**
+   - **Claude:** PACING (`src/content/balance.json`, `npm run balance`; spawn is 12 s today, so the target is 60 s for a tutorial of about 10 spawns, then 1200 s falling to about 480 s at Garden level 10, a factor of about 0.903 per level) and OFFLINE-WANDER (`Game.reconcile` in `src/sim/game.ts`).
+   - **Codex:** GATE4-DESIGN, one big interaction-design and art task: the highlight, plots/seed/sprout, the Rainbow and Mini looks, foods, the kid card, feeding, naming, and the planting cue. Also PERSONALITY (text for 64 types plus liked and hated foods). Codex's worktree takes **one task at a time**, so queue them after WAVE-WIGGLE.
+   - **Claude, after those designs:** PLANTING (reuse Send home's 400 ms hold gesture), VARIANTS, FEED-NAME.
+   - Numbers that D-052..D-056 leave open (tutorial length, growing time, odds, prices, happiness duration) are Claude's to tune with the simulator, review with Codex, and show the owner at gate 4.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -57,6 +77,7 @@
 - A failing `tsc` makes `npm run build` fail and leaves a **stale `dist/`**. Read the build output before trusting test results.
 - **Retrying assertions** (`toBeHidden`, `toBeEmpty`) pass on transient UI by waiting it out. Use sampled checks for "never shown".
 - **Chrome makes a scrollable container with no focusable children a Tab stop.** Focus-trap tests must press Tab more than once.
+- **Mutation harness:** restore the file even when the mutant fails to build. A harness that returns early stacks mutants (it happened this session). Each mutant must compile, or it tests nothing.
 - `debugSaveStatus` now persists across saves (it used to be cleared by the next save).
 - **Watch for flakes under parallel load:** run the full suite two or three times before calling a fix done. Two real bugs (a lazy-portrait race, the page-mode scroll clamp) showed up only that way.
 - **Never chain a commit after a test run with `&&` plus pipes:** a piped `grep` succeeds even when the tests fail. Twice this session a broken or failing state was committed that way. Check results first, then commit.
@@ -68,10 +89,11 @@
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout; it was left on the merged `claude/send-home-dex`, so check out `main` and pull first.
-  - `potato-kid-chatgpt`: Codex's worktree; keep it.
-  - `potato-kid-review-50`: the Codex review worktree; keep it.
+  - `potato-kid-claude`: Claude's main checkout, left on `main`.
+  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/wave-wiggle`.
+  - `potato-kid-review-50`: the Codex review worktree, with `node_modules`.
   - `potato-kid-docs`: docs branches.
-  - The rest (`potato-kid-import3`, `potato-kid-review-41` to `-57` except `-50`, `potato-kid-fix51`) are finished and can be removed with `git worktree remove --force <dir>`. If that fails with "Permission denied" (locked by finished Codex processes) or "Filename too long", delete the folder by hand later and run `git worktree prune`.
-- Merged remote branches (`claude/*` and `chatgpt/*`) were never deleted. That's harmless; prune them only if the owner wants a tidy branch list.
-- Gate captures live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `C:\Users\Adria\potato-kid-gate3\`.
+- **Finished worktrees removed:** the old `potato-kid-import3` and `-review-41..57` worktrees were removed from git this session. Their **empty folders** remain, locked by about 26 stale Codex processes (and their `node` helpers) from 2026-10-02. The owner hasn't said whether to stop those processes; ask before killing them, then delete the folders.
+- **Merged remote branches** (`claude/*`, `chatgpt/*`) were never deleted. That's harmless.
+- **Gate captures** live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `-gate3\`.
+- **GitHub:** `gh` (authenticated) is used for PRs and comments.
