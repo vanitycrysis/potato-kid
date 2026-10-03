@@ -1,6 +1,25 @@
 # Art and audio plan
 
-Author: ChatGPT. **Current delivery: WAVE-WIGGLE, 2026-10-03, revision wave-wiggle-2; final art for Claude review.** Gate 2 remains approved under D-044. The wave now wiggles both stand-sized nubs; the remaining accepted rig, map, GUI and FX are retained. Current budget is in the wave addendum; earlier delivery counts below are historical. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
+## GATE4-DESIGN addendum (2026-10-03; Claude review pending)
+
+Current additive delivery `gate4-design-2` (round 2, PR #67, B1–B3/N1) follows D-051–D-058. **GUI_MVP §§14–18 supersede Send home/§13 and its addendum below.** Keep the approved Garden target/dwell. Larger dark plots stay inside the same reserve; ready/check and waiting/pause signs contrast with the three growth drawings. Locked slots stay off the lawn. Rainbow is a prominent static six-band arch above the costume-inclusive lifetime box, with every costume colour exact. Mini.72/minimum44 px pickup and the external happy sun are unchanged. Twelve foods stay pinned; the feed page shares effects above compact purchase rows. Balance remains Claude's work.
+
+| Item | Delivery / status |
+| --- | --- |
+| Interaction contract | GUI_MVP §§14–18 +exported gate4_v2.json; final, Claude review pending |
+| Visual assets |24 original SVGs =9 cropped shared map textures +15 DOM icons; no per-type work/filters/portrait cache |
+| Plot timeline |seed[0,.25), shoot[.25,.65), leaves[.65,1), broad check sign at1; pause sign while waiting; authoritative/offline progress unchanged |
+| Planting sound |sfx_plant,360 ms mono wood/pop,−5.50 dBFS; original existing synthesizer, checksum/Ogg/M4A supplied |
+| Sprout sound |Reuse sfx_spawn; discovery takes precedence; no new sprout master or offline cue replay |
+| Reduced motion |Static marks, instant seed/stages, existing reduced spawn, unchanged input/readable feedback timers |
+| Validation |114 viewport SVG/PNG mockups; zero visible horizontal text overflow;1152 face/pose/mark +41,472 crown/costume combinations, zero intersections |
+| Runtime decode |Before gate4:11,516,244 /198; round1:11,737,968 /206; round2:11,865,816 bytes /207 PNGs =11.31612 MiB; +127,848 vs round1 |
+
+The32 MiB physical ceiling includes texture slack/atlas pages/render targets/duplicates. No device acceptance is inferred from decoded storage. Platform masters/review images excluded; DOM SVG0 Pixi bytes. Four occupied plots use eight sprites/six textures; each variant adds one mark sprite and happy adds one, without pixel-filter work. Rainbow adds AABB projection/position/scale in a shared FX pass; no masks or render target. Claude measures batching/memory at capacity.
+
+Cue source `art/src/audio/planting.json`; render/check `node scripts/render-planting.mjs [--check]`, with unchanged synth/parameters. If rendering the original nine masters, run planting afterward to restore its additive checksum line. New Ogg/AAC derivatives use the existing build's ffmpeg settings; earlier encoded cues were left untouched. No listening, Android latency/mix or owner acceptance claimed. Priority discovery > fusion > upgrade > planting > spawn > pickup/place > UI tap; planting suppresses same-action place/spend/UI sounds. Reproduction/evidence/open numbers: `.codex-out/gate4-design-notes.md`.
+
+Author: ChatGPT. **Retained prior delivery: WAVE-WIGGLE, 2026-10-03, revision wave-wiggle-2; final art for Claude review.** Gate 2 remains approved under D-044. The wave now wiggles both stand-sized nubs; the remaining accepted rig, map, GUI and FX are retained. Current budget is in the wave addendum; earlier delivery counts below are historical. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at all 64 after batch 3. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 

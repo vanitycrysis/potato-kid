@@ -1,0 +1,464 @@
+{
+  "schemaVersion": 2,
+  "revision": "gate4-design-2",
+  "status": "Claude review pending",
+  "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract",
+  "assets": {
+    "fx_plant_plot": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "fx_plant_seed": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "fx_plant_shoot": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "fx_plant_leaves": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "fx_plant_ready": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "icon_variant_rainbow": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_variant_mini": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_happy": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "fx_variant_rainbow": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "fx_variant_mini": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "fx_happy": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    },
+    "icon_food_toast": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_berry_jam": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_berries": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_apple": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_carrot": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_corn": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_mushroom": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_pickle": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_cheese": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_soup": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_cocoa": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "icon_food_cracker": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ]
+    },
+    "fx_plant_waiting": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ]
+    }
+  },
+  "drop": {
+    "pointerRule": "raw world pointer, not lifted body; Garden takes priority",
+    "enterMs": 80,
+    "leaveMs": 80,
+    "maximumConcurrentMarks": 1,
+    "bracket": {
+      "offsetPx": 3,
+      "lengthPx": 9,
+      "paperStrokePx": 5,
+      "inkStrokePx": 2
+    },
+    "reducedMotion": "instant replacement"
+  },
+  "planting": {
+    "gardenId": "garden",
+    "rectRelativeWorld": [
+      -128,
+      -320,
+      128,
+      -64
+    ],
+    "dwellMs": 400,
+    "maximumPlots": 4,
+    "initialPlots": 1,
+    "plotOffsetsWorld": [
+      [
+        -96,
+        88
+      ],
+      [
+        96,
+        88
+      ],
+      [
+        -96,
+        216
+      ],
+      [
+        96,
+        216
+      ]
+    ],
+    "plotCanvasScale": 0.75,
+    "sourcePivot": [
+      128,
+      224
+    ],
+    "empty": "fx_plant_plot",
+    "stages": [
+      {
+        "from": 0,
+        "to": 0.25,
+        "asset": "fx_plant_seed"
+      },
+      {
+        "from": 0.25,
+        "to": 0.65,
+        "asset": "fx_plant_shoot"
+      },
+      {
+        "from": 0.65,
+        "to": 1,
+        "asset": "fx_plant_leaves"
+      },
+      {
+        "from": 1,
+        "asset": "fx_plant_ready"
+      }
+    ],
+    "timer": "authoritative remaining foreground/offline time; no view timers",
+    "sound": "sfx_plant",
+    "sproutSound": "sfx_spawn",
+    "snapshotHappyOddsAtPlanting": true,
+    "composedSourceBounds": [
+      16,
+      108,
+      240,
+      240
+    ],
+    "waitingAsset": "fx_plant_waiting"
+  },
+  "variants": {
+    "rainbow": {
+      "mapAsset": "fx_variant_rainbow",
+      "icon": "icon_variant_rainbow",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "mini": {
+      "mapAsset": "fx_variant_mini",
+      "icon": "icon_variant_mini",
+      "scale": 0.72,
+      "hitMinimumCssPx": 44
+    },
+    "mutuallyExclusive": true,
+    "reducedMotion": "same static looks"
+  },
+  "feeding": {
+    "foods": [
+      {
+        "id": "toast",
+        "name": "Toast",
+        "icon": "icon_food_toast"
+      },
+      {
+        "id": "berry_jam",
+        "name": "Berry jam",
+        "icon": "icon_food_berry_jam"
+      },
+      {
+        "id": "berries",
+        "name": "Berries",
+        "icon": "icon_food_berries"
+      },
+      {
+        "id": "apple",
+        "name": "Apple",
+        "icon": "icon_food_apple"
+      },
+      {
+        "id": "carrot",
+        "name": "Carrot",
+        "icon": "icon_food_carrot"
+      },
+      {
+        "id": "corn",
+        "name": "Corn",
+        "icon": "icon_food_corn"
+      },
+      {
+        "id": "mushroom",
+        "name": "Mushroom",
+        "icon": "icon_food_mushroom"
+      },
+      {
+        "id": "pickle",
+        "name": "Pickle",
+        "icon": "icon_food_pickle"
+      },
+      {
+        "id": "cheese",
+        "name": "Cheese",
+        "icon": "icon_food_cheese"
+      },
+      {
+        "id": "soup",
+        "name": "Soup",
+        "icon": "icon_food_soup"
+      },
+      {
+        "id": "cocoa",
+        "name": "Cocoa",
+        "icon": "icon_food_cocoa"
+      },
+      {
+        "id": "cracker",
+        "name": "Cracker",
+        "icon": "icon_food_cracker"
+      }
+    ],
+    "purchase": "atomic buy-and-feed from kid card; no inventory",
+    "happyMapAsset": "fx_happy",
+    "happyIcon": "icon_happy",
+    "durationRule": "refresh from now, never add remaining time",
+    "favouriteDistinctFromHate": true,
+    "layout": {
+      "order": "favourite first, then ordinary foods in pinned order, then refused food",
+      "rowMinimumCssPx": 64,
+      "rowGapCssPx": 8,
+      "priceButtonCssPx": [
+        160,
+        48
+      ],
+      "sharedOrdinaryEffect": true,
+      "sharedFavouriteEffect": true
+    }
+  },
+  "naming": {
+    "maximumGraphemes": 24,
+    "normalization": "NFC, trim and collapse spaces",
+    "characters": "Unicode letters, marks, decimal digits, space, apostrophe, curly apostrophe, hyphen",
+    "empty": "Use type name clears freely with explicit action"
+  },
+  "sheets": {
+    "kidRequestedHeight": 624,
+    "header": [
+      80,
+      64
+    ],
+    "footer": 80,
+    "actionsHeight": 48,
+    "bodyScroll": true
+  },
+  "openNumbers": [
+    "growDuration",
+    "plotUpgradePrices",
+    "rainbowOdds",
+    "miniOdds",
+    "rainbowIncomeMultiplier",
+    "foodPrices",
+    "happyDurationOrdinary",
+    "happyDurationFavourite",
+    "happyIncomeOrdinary",
+    "happyIncomeFavourite",
+    "happyOddsOrdinary",
+    "happyOddsFavourite",
+    "namePrice"
+  ]
+}
