@@ -70,6 +70,27 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
     expect(bot.decide()).toEqual([{ type: 'sendHome', kidId: expect.any(Number) }]);
   });
 
+  it('drags the other way when only the second kid of a pair can reach the first', () => {
+    const c = structuredClone(content);
+    c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
+    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
+    const g = new Game(c, { ...options, now: 0 }, 1);
+    const box = defaultBox(c.balance.body.radius);
+    // Potato first (lower id) and in the open; Water ringed, so only Water can travel.
+    const potato = addKid(g.state.world, 'plain', 1000, 2600, createRng(1), 0, box);
+    const water = addKid(g.state.world, 'water', 1000, 1200, createRng(2), 0, box);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * 2 * Math.PI;
+      addKid(g.state.world, 'aurora', 1000 + Math.cos(a) * 135, 1200 + Math.sin(a) * 175, createRng(10 + i), 0, box);
+    }
+    g.state.materials = 0;
+    const bot = createBot(g, c);
+    for (const p of ['aurora|plain', 'aurora|aurora', 'aurora|water']) bot.tried.add(p);
+    const act = bot.decide();
+    expect(act?.[0]).toEqual({ type: 'pickUp', kidId: water.id });
+    expect(g.step(act!).some((e) => e.type === 'fused' && e.parents.some((p) => p.id === potato.id))).toBe(true);
+  });
+
   it('claims contact only with kids its landing spot really touches', () => {
     const { g, water, mover } = ringed();
     const commands = drag(g, mover.id, water);

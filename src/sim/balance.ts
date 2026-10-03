@@ -150,6 +150,8 @@ export function createBot(
     const buy = purchase(game);
     if (buy) return [buy];
     const free = s.world.kids.filter((k) => !k.held && k.grace === 0);
+    // Either kid may be the one dragged: a pair is skipped only if neither direction lands
+    // touching (Codex review, PR #45).
     // A drag counts only if its landing reaches the partner; a crowded partner is skipped
     // and stays eligible, and every pair the drop really touches is now tried (Codex
     // review, PR #45).
@@ -171,7 +173,7 @@ export function createBot(
     for (let i = 0; i < free.length; i++) {
       for (let j = i + 1; j < free.length; j++) {
         if (tried.has(pairKey(free[i]!.type, free[j]!.type))) continue;
-        const act = attempt(free[i]!, free[j]!);
+        const act = attempt(free[i]!, free[j]!) ?? attempt(free[j]!, free[i]!);
         if (act) return act;
       }
     }
@@ -181,7 +183,7 @@ export function createBot(
       for (let j = i + 1; j < free.length; j++) {
         const result = recipes.get(pairKey(free[i]!.type, free[j]!.type));
         if (!result || !s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type)) || onMap.has(result)) continue;
-        const act = attempt(free[i]!, free[j]!);
+        const act = attempt(free[i]!, free[j]!) ?? attempt(free[j]!, free[i]!);
         if (act) return act;
       }
     }
@@ -191,7 +193,7 @@ export function createBot(
       for (let i = 0; i < free.length; i++) {
         for (let j = i + 1; j < free.length; j++) {
           if (!s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type))) continue;
-          const act = attempt(free[i]!, free[j]!);
+          const act = attempt(free[i]!, free[j]!) ?? attempt(free[j]!, free[i]!);
           if (act) return act;
         }
       }
