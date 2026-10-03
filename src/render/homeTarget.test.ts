@@ -64,4 +64,17 @@ describe('Send home target (GUI_MVP §13.1)', () => {
     expect(t.state).toBe('hidden');
     expect(t.releases(900, true, inside)).toBe(false);
   });
+
+  it('leaving and returning between frames ends an armed dwell (Codex review, PR #50)', () => {
+    const t = new HomeTarget(garden, spec);
+    const inside = { x: 1080, y: 428 };
+    t.update(0, true, inside, false);
+    t.update(500, true, inside, false);
+    // Pointer events with no frame between them: out, then back in, then release.
+    t.move({ x: 900, y: 428 });
+    t.move(inside);
+    expect(t.releases(510, true, inside)).toBe(false);
+    // The next frame starts a fresh dwell.
+    expect(t.update(520, true, inside, false)).toBe('waiting');
+  });
 });

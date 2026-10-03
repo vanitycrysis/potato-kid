@@ -523,6 +523,8 @@ export class MapScene {
     const start = this.placing.get(kidId) ?? { x: kid.x, y: kid.y };
     this.placing.delete(kidId);
     this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT, spot: start };
+    // A new gesture starts with no dwell (§13.1).
+    this.home?.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
   }
@@ -536,6 +538,7 @@ export class MapScene {
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
     this.dragScreen = { x: e.global.x, y: e.global.y };
     const w = this.toWorld(e);
+    this.home?.move(w);
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
   }

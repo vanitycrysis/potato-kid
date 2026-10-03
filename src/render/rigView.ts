@@ -159,6 +159,13 @@ export class KidRigView {
    * `ms` is foreground time since the send. Returns false once fully faded.
    */
   depart(x: number, y: number, ms: number, t: { clipMs: number; fadeMs: number; reducedFadeMs: number }): boolean {
+    // No effect plays on a farewell: one still running (a discovery sparkle) ends now
+    // rather than freezing in place (GUI_MVP §13.2; Codex review, PR #50).
+    if (this.fxSprites.size || this.effects.active.length) {
+      this.effects.clear();
+      for (const s of this.fxSprites.values()) s.destroy();
+      this.fxSprites.clear();
+    }
     this.root.position.set(x, y);
     this.root.zIndex = y;
     const wave = this.rig.clips.wave;

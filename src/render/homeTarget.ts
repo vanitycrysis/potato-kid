@@ -65,6 +65,18 @@ export class HomeTarget {
     return eligible && this.since !== null && this.contains(point) && now - this.since >= this.spec.dwellMs;
   }
 
+  /**
+   * A pointer move, between frames: leaving the target ends the dwell at once, so leaving
+   * and coming back before the next frame can't keep an old armed timer (Codex review,
+   * PR #50). Only a frame starts a new dwell.
+   */
+  move(point: { x: number; y: number }): void {
+    if (!this.contains(point)) {
+      this.since = null;
+      if (this.current !== 'hidden') this.current = 'shown';
+    }
+  }
+
   /** Cancel, eligibility loss, lifecycle: the dwell starts over. */
   reset(): void {
     this.since = null;
