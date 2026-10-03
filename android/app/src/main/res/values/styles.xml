@@ -16,7 +16,11 @@
     </style>
 
 
+    <!-- Launch: the AndroidX splash screen (Android 12+ behaviour on every version) with
+         Codex's logo on the cream window, then the app theme. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

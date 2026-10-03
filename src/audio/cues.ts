@@ -1,0 +1,37 @@
+import type { GameEvent } from '../sim/game';
+
+// Which sound a sim step gets (ART_AUDIO_PLAN audio priorities, Codex's design): one cue
+// per step, the most important event winning. Discovery replaces fusion for the same event.
+// Send home adds no sound (GUI_MVP §13); passive income never ticks.
+
+export type Cue = 'sfx_discovery' | 'sfx_fusion' | 'sfx_upgrade' | 'sfx_spawn' | 'sfx_place' | 'sfx_pick_up' | 'sfx_ui_tap' | 'sfx_spend';
+
+const PRIORITY: Cue[] = ['sfx_discovery', 'sfx_fusion', 'sfx_upgrade', 'sfx_spawn', 'sfx_place', 'sfx_pick_up'];
+
+/** The one cue for a step's events, or null. Offline arrivals are silent. */
+export function cueFor(events: GameEvent[]): Cue | null {
+  let best = -1;
+  const consider = (c: Cue) => {
+    const i = PRIORITY.length - PRIORITY.indexOf(c);
+    if (i > best) best = i;
+  };
+  for (const e of events) {
+    if (e.type === 'fused') consider(e.firstDiscovery ? 'sfx_discovery' : 'sfx_fusion');
+    else if (e.type === 'upgraded') consider('sfx_upgrade');
+    else if (e.type === 'spawned' && e.source !== 'offline') consider('sfx_spawn');
+    else if (e.type === 'dropped') consider('sfx_place');
+    else if (e.type === 'pickedUp') consider('sfx_pick_up');
+  }
+  return best < 0 ? null : PRIORITY[PRIORITY.length - best]!;
+}
+
+/** Spawn cues: at most one per 300 ms (several kids arriving at once make one sound). */
+export class SpawnLimiter {
+  private last = -Infinity;
+  allow(cue: Cue, now: number): boolean {
+    if (cue !== 'sfx_spawn') return true;
+    if (now - this.last < 300) return false;
+    this.last = now;
+    return true;
+  }
+}

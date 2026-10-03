@@ -1289,6 +1289,22 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollTop)).toBe(before);
   });
 
+  test('page mode: a closing sheet leaves the page flow at once', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.locator('.tray-cell').nth(0).scrollIntoViewIfNeeded();
+    await page.locator('.tray-cell').nth(0).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    // Sampled right after closing, during the fade: no longer taking space in the page.
+    const display = await page.evaluate(() => {
+      document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
+      return getComputedStyle(document.querySelector('.sheet')!).display;
+    });
+    expect(display).toBe('none');
+  });
+
   test('page mode: re-measuring the HUD keeps the page where it was', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 200 });
     await built(page);
@@ -1605,6 +1621,63 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));
     await expect(dexButton(page)).toBeDisabled();
     await expect(dexButton(page)).toHaveAttribute('aria-label', 'Potato-Dex: Update the game to continue.');
+  });
+});
+
+test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
+  const audio = (page: Page) => page.evaluate(() => window.__PK__!.audio());
+
+  test('silent until a gesture; then music follows Settings, and a discovery plays its cue', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    expect(await audio(page)).toMatchObject({ unlocked: false, musicPlaying: false, lastCue: null });
+    // Only the end of a press grants activation: a pointerdown alone doesn't unlock
+    // (Codex review, PR #53); its pointerup does.
+    // An empty spot of the map, inside the viewport (Codex review, PR #53).
+    await page.mouse.move(200, 600);
+    await page.mouse.down();
+    await page.waitForTimeout(200);
+    expect((await audio(page)).unlocked).toBe(false);
+    await page.mouse.up();
+    await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(true);
+    // Audio Off pauses it; On brings it back. Music at 0 % stays quiet.
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('radio', { name: 'Off' }).click();
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(false);
+    await page.getByRole('radio', { name: 'On' }).click();
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(true);
+    await page.getByLabel('Music').fill('0');
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(false);
+    await page.keyboard.press('Escape');
+    // A first discovery plays the discovery cue (it replaces the fusion cue).
+    await page.waitForTimeout(500); // cue buffers decode after the unlock
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 540, 2600);
+      window.__PK__!.debugAdd!('water', 540, 2600);
+    });
+    await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_discovery');
+    // Hiding the app stops it, rather than freezing it to finish later (Codex review, PR #53).
+    expect((await audio(page)).active).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect((await audio(page)).active).toBe(0);
+    expect(errors).toEqual([]);
+  });
+
+  test('a command button plays its success cue alone; other buttons tap (Codex review, PR #53)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.mouse.click(200, 600);
+    await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
+    await page.waitForTimeout(500);
+    const before = (await audio(page)).played.length;
+    await page.getByRole('button', { name: /Spawn a random Garden kid/ }).click();
+    await expect.poll(async () => (await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
+    await page.waitForTimeout(300);
+    expect((await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_ui_tap');
   });
 });
 

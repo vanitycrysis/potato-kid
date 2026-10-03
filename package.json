@@ -17,7 +17,8 @@
     "art:export": "node scripts/export-art.mjs",
     "art:check": "node scripts/export-art.mjs --check-only",
     "art:preview": "npm run build && playwright test -c playwright.preview.config.ts",
-    "balance": "node scripts/balance.mjs"
+    "balance": "node scripts/balance.mjs",
+    "audio:build": "node scripts/build-audio.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
