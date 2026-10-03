@@ -205,6 +205,8 @@ Independent validation covers all bodies, costumes, faces/states, birth sizes, c
 
 ## Audio production and handoff
 
+**MVP master delivery, 2026-10-03:** revision `audio-mvp-1`, eight mono cues and a 72 s stereo original loop are rendered under `art/audio/`, with explicit score, parameters, synthesis and analysis sources under `art/src/audio/`. Reproduce without npm: `node scripts/render-audio.mjs`; verify bytes: append `--check`. Music measures -18.00 LUFS (independently confirmed with installed ffmpeg), exact interval [0,3456000) at 48 kHz; numeric seam/peak/DC checks pass. Waveform/spectrogram PNGs: `art/previews/audio/`; measurements, intent, boundaries and limits: `.codex-out/audio-mvp-notes.md`. Claude's listening/technical review, encoding, runtime and device checks remain open; non-fatiguing repeat quality has not been judged by listening. No additional Send home sound is delivered.
+
 Aim for warm wood/pluck tones, rounded pops, a short discovery flourish and little clutter. No voices, wandering loops per kid, passive-income tick sounds or automatic failed-pairing cues.
 
 ChatGPT has no dedicated music-generation tool here. Compose one original sparse 60-90 second instrumental loop as MIDI/note-event data and render with a scripted synthesizer. The same reproducible synthesis route supplies eight short cues. Keep score/events, synthesis parameters, renderer and exact loop sample boundaries. Actual listening is required; if music fails, propose a concrete alternative to the owner rather than assume paid tools or a third-party library.
