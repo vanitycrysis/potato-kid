@@ -1160,12 +1160,12 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(page.locator('.settings-value').first()).toHaveText('69%');
     await page.keyboard.press('End');
     await page.getByRole('button', { name: 'Done' }).click();
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80 });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, sendHomeExplained: false });
 
     await page.evaluate(() => window.__PK__!.debugAway!(0)); // the game is saved, so the reload resumes it
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80 });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, sendHomeExplained: false });
     // A reload a moment later is too short an absence for the summary (D-049).
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByLabel('Music')).toHaveValue('100');
