@@ -467,6 +467,10 @@ test('a save from a newer app freezes the game and asks for an update (GUI_MVP �
   await expect(page.locator('.banner')).toContainText('Please update the game.');
   await expect(page.locator('.readonly-notice')).toContainText('Your save is kept safe.');
   await expect(page.locator('.hud-spawn')).toHaveAttribute('aria-disabled', 'true');
+  // Building launchers are disabled too, with the reason (Codex review, PR #39).
+  for (const name of ['Garden', 'Capacity', 'Bias']) {
+    await expect(page.getByRole('button', { name: `${name}: Update the game to continue.` })).toBeDisabled();
+  }
   const before = await page.evaluate(() => window.__PK__!.wallet());
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__PK__!.wallet())).toEqual(before);
@@ -572,8 +576,11 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.setViewportSize({ width: 568, height: 320 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
-    await page.waitForTimeout(600);
-    await expect(page.locator('.feedback')).toBeEmpty();
+    // Sampled, not retried: a card shown too early would vanish after 2.5 s and pass a retry.
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(150);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
     await page.setViewportSize({ width: 568, height: 800 });
     await expect(page.locator('.feedback')).toContainText('Not enough');
   });
@@ -762,6 +769,205 @@ test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => 
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'window' });
     await page.waitForTimeout(200);
     expect(await page.locator('.hud').evaluate((e) => e.scrollTop)).toBe(before);
+  });
+});
+
+test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
+  const garden = (page: Page) => page.locator('.tray-cell').nth(0);
+  const bias = (page: Page) => page.locator('.tray-cell').nth(2);
+
+  test('the Garden upgrades in place, and an unaffordable upgrade sends nothing', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    await garden(page).click();
+    const action = page.locator('.sheet-action');
+    await expect(action).toHaveAttribute('aria-disabled', 'true');
+    await action.click({ force: true }); // a deliberate tap on the disabled control
+    await page.waitForTimeout(300);
+    expect((await page.evaluate(() => window.__PK__!.buildings())).levels.garden).toBe(1);
+    // Nothing was sent: the engine would have answered with a refusal.
+    await expect(page.locator('.sheet-status')).toBeHidden();
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await expect(action).toHaveAttribute('aria-disabled', 'false');
+    const before = await page.evaluate(() => window.__PK__!.wallet().materials);
+    await action.click();
+    await expect(page.locator('.sheet-status')).toContainText('Garden is now level 2.');
+    expect((await page.evaluate(() => window.__PK__!.buildings())).levels.garden).toBe(2);
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThan(before);
+    await expect(page.locator('.sheet-subtitle')).toHaveText('Level 2 / 10');
+    await expect(page.locator('.sheet')).toBeVisible(); // stays open
+    expect(errors).toEqual([]);
+  });
+
+  test('an engine refusal shows inside the sheet, never as a world card', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 32 }));
+    await garden(page).click();
+    // Send the upgrade, then lose the Materials before the sim applies it.
+    await page.evaluate(() => {
+      (document.querySelector('.sheet-action') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ materials: -32 });
+    });
+    await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
+    // World cards wait while a sheet is open, so check after it closes too. Sampled, not a
+    // retrying assertion: a leaked 2.5 s card would eventually vanish and pass a retry.
+    await page.keyboard.press('Escape');
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(200);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+  });
+
+  test('Spawn bias: seeds are disabled until built, then a pick sets the target', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1');
+    await bias(page).click();
+    await expect(page.locator('.seed-card').first()).toHaveAttribute('aria-disabled', 'true');
+    await page.locator('.seed-card').first().click({ force: true });
+    await page.waitForTimeout(300);
+    expect((await page.evaluate(() => window.__PK__!.buildings())).biasTarget).toBeNull();
+    // The UI sent nothing (the engine would have refused it with "Build Spawn bias first.").
+    await expect(page.locator('.sheet-status')).toBeHidden();
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await page.locator('.sheet-action').click();
+    await expect(page.locator('.sheet-subtitle')).toHaveText(/Level 1 \//);
+    await page.locator('.seed-card').first().click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).toBe('plain');
+    await expect(page.locator('.seed-card').first()).toHaveAttribute('aria-checked', 'true');
+    await page.locator('.seed-none').click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).toBeNull();
+  });
+
+  test('Escape, the scrim and the X close; focus returns; the world ignores input meanwhile', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1300));
+    await page.waitForTimeout(200);
+    await garden(page).click();
+    await expect(page.locator('.sheet')).toBeVisible();
+    // A press on the scrim over a kid closes the sheet and does not pick the kid up.
+    const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    await page.mouse.click(p.x, p.y - 400);
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await expect(garden(page)).toBeFocused();
+    await garden(page).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    await garden(page).click();
+    await page.locator('.sheet-close').click();
+    await expect(page.locator('.sheet')).toHaveCount(0);
+    // With a sheet open, the world doesn't react to a drag at all.
+    await garden(page).click();
+    expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(true);
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(false);
+  });
+
+  test('a card visible when a sheet opens keeps its time until the sheet closes (Codex review, PR #39)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 250, 1500), b: window.__PK__!.debugAdd!('water', 830, 700) }));
+    await page.waitForTimeout(200);
+    await dropOnto(page, a, b);
+    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await garden(page).click();
+    await page.waitForTimeout(3200); // longer than a card's 2.5 s
+    await page.keyboard.press('Escape');
+    expect(await page.locator('.feedback').textContent()).toContain('New discovery');
+  });
+
+  test('opening a sheet ends a pan in progress (Codex review, PR #39)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // Start panning on empty ground.
+    await page.mouse.move(200, 600);
+    await page.mouse.down();
+    await page.mouse.move(220, 560, { steps: 3 });
+    await page.evaluate(() => (document.querySelectorAll('.tray-cell')[0] as HTMLButtonElement).click());
+    await expect(page.locator('.sheet')).toBeVisible();
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000));
+    await page.mouse.move(300, 300, { steps: 5 });
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000))).toEqual(before);
+    await page.mouse.up();
+  });
+
+  test('save banners stay above an open sheet and usable (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await garden(page).click();
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: true, readOnly: false }));
+    const onTop = await page.evaluate(() => {
+      const b = document.querySelector('.banner')!.getBoundingClientRect();
+      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return !!hit?.closest('.banner');
+    });
+    expect(onTop).toBe(true);
+    await page.getByRole('button', { name: 'Dismiss save recovery notice' }).click();
+    await expect(page.locator('.banner')).toHaveCount(0);
+  });
+
+  test('a banner appearing under an open sheet re-places it below the banner (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await garden(page).click();
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.querySelector('.sheet')!.getBoundingClientRect().top - document.querySelector('.banner')!.getBoundingClientRect().bottom),
+      )
+      .toBeGreaterThanOrEqual(0);
+  });
+
+  test('page mode: a sheet flows in the page with its action reachable (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.locator('.tray-cell').nth(0).scrollIntoViewIfNeeded();
+    await page.locator('.tray-cell').nth(0).click();
+    const action = page.locator('.sheet-action');
+    await action.scrollIntoViewIfNeeded();
+    await expect(action).toBeInViewport();
+    expect(await page.locator('.sheet-body').evaluate((e) => e.getBoundingClientRect().height)).toBeGreaterThan(100);
+  });
+
+  test('a refusal on a short sheet scrolls into view (Codex review, PR #39)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 32 }));
+    await garden(page).click();
+    await page.evaluate(() => {
+      (document.querySelector('.sheet-action') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ materials: -32 });
+    });
+    await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
+    const inBody = await page.evaluate(() => {
+      const r = document.querySelector('.sheet-status')!.getBoundingClientRect();
+      const body = document.querySelector('.sheet-body')!.getBoundingClientRect();
+      return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
+    });
+    expect(inBody).toBe(true);
+  });
+
+  test('keyboard: Shift+Tab from the heading stays in the sheet; arrows move and select seeds (Codex review, PR #39)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await bias(page).click();
+    await page.locator('.sheet-action').click();
+    await expect(page.locator('.sheet-subtitle')).toHaveText(/Level 1 \//);
+    await page.locator('.sheet-title').focus();
+    await page.keyboard.press('Shift+Tab');
+    expect(await page.evaluate(() => !!document.querySelector('.sheet')!.contains(document.activeElement))).toBe(true);
+    // Every choice, None included, is in the one labelled radio group.
+    const groups = await page.locator('.seed-card, .seed-none').evaluateAll((els) => new Set(els.map((e) => e.closest('[role="radiogroup"]'))).size);
+    expect(groups).toBe(1);
+    await expect(page.locator('.seed-none')).toHaveAttribute('role', 'radio');
+    expect(await page.locator('.seed-none').evaluate((e) => !!e.closest('[role="radiogroup"][aria-label="Choose a seed"]'))).toBe(true);
+    // One tab stop in the group: the selected choice (None while nothing is favoured).
+    expect(await page.locator('.seed-card, .seed-none').evaluateAll((els) => els.filter((e) => (e as HTMLElement).tabIndex === 0).length)).toBe(1);
+    await page.locator('.seed-none').focus();
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).toBe('plain');
+    await expect(page.locator('.seed-card').first()).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).not.toBe('plain');
+    await expect(page.locator('.seed-card').nth(1)).toBeFocused();
   });
 });
 

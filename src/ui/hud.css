@@ -98,6 +98,17 @@
 .feedback:empty {
   display: none;
 }
+/* Banners: their own layer above the modal scrim and sheet (GUI_MVP §2 z-order: 80). */
+.banners {
+  position: fixed;
+  top: var(--ui-st);
+  left: var(--ui-ml);
+  right: var(--ui-mr);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 /* Off-screen measurement of a card before it may be shown (play-band check). */
 .feedback-probe {
   position: fixed;
@@ -359,8 +370,14 @@
   display: none;
 }
 /* Banner, hint and HUD (in the top stack), then the tray, then the Dex button. */
+:root[data-hud-fit='page'] .banners {
+  position: static;
+  margin: 8px var(--ui-mr) 0 var(--ui-ml);
+  order: 0;
+}
 :root[data-hud-fit='page'] .top-stack {
   order: 1;
+  margin-top: 0 !important;
 }
 :root[data-hud-fit='page'] .tray {
   order: 2;

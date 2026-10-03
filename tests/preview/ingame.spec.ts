@@ -11,18 +11,25 @@ async function open(browser: Browser, w: number, h: number, query: string) {
   return page;
 }
 
+// Kids are placed 216 apart (wider than any silhouette box + touch slack) so recipe pairs
+// never touch and fuse; 20 per page in a 5 x 4 grid below the HUD; more pages as the roster grows.
+const PAGE = 20;
+const pages = Array.from({ length: Math.ceil(types.length / PAGE) }, (_, p) => types.slice(p * PAGE, (p + 1) * PAGE));
 for (const [name, w, h] of [['20x9', 412, 915], ['16x9', 360, 640]] as const) {
-  test(`every type, ${name}, colour and grayscale`, async ({ browser }) => {
-    const page = await open(browser, w, h, '?seed=31&debug=1&calm=1');
-    await page.evaluate((ids) => {
-      window.__PK__!.centerOn(1080, 1500);
-      ids.forEach((t, i) => window.__PK__!.debugAdd!(t, 690 + (i % 4) * 260, 980 + Math.floor(i / 4) * 280));
-    }, types);
-    await page.waitForTimeout(1200);
-    await page.screenshot({ path: `${OUT}/types-${name}.png` });
-    await page.addStyleTag({ content: 'html{filter:grayscale(1)}' });
-    await page.waitForTimeout(150);
-    await page.screenshot({ path: `${OUT}/types-${name}-gray.png` });
+  pages.forEach((ids, p) => {
+    const suffix = p === 0 ? '' : `-${p + 1}`;
+    test(`every type, ${name}, page ${p + 1}, colour and grayscale`, async ({ browser }) => {
+      const page = await open(browser, w, h, '?seed=31&debug=1&calm=1');
+      await page.evaluate((list) => {
+        window.__PK__!.centerOn(1080, 1750);
+        list.forEach((t, i) => window.__PK__!.debugAdd!(t, 648 + (i % 5) * 216, 1450 + Math.floor(i / 5) * 260));
+      }, ids);
+      await page.waitForTimeout(1200);
+      await page.screenshot({ path: `${OUT}/types-${name}${suffix}.png` });
+      await page.addStyleTag({ content: 'html{filter:grayscale(1)}' });
+      await page.waitForTimeout(150);
+      await page.screenshot({ path: `${OUT}/types-${name}${suffix}-gray.png` });
+    });
   });
 }
 

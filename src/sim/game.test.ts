@@ -183,7 +183,7 @@ describe('spawning', () => {
     const roomy = { minX: 0, minY: 0, maxX: 4000, maxY: 4000 };
     const game = new Game(testContent({ intervalSeconds: 1, capacity: 500 }), { bounds: roomy, spawnAt: garden }, 9);
     const types = new Set(run(game, 200).flatMap((e) => (e.type === 'spawned' ? [e.kid.type] : [])));
-    expect([...types].sort()).toEqual(['fire', 'plain', 'snow', 'water']);
+    expect([...types].sort()).toEqual(Object.keys(content.balance.spawnWeights).sort());
   });
 
   it('is deterministic for a seed', () => {
