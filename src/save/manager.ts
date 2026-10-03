@@ -1,6 +1,7 @@
 import type { Content } from '../content/types';
 import type { PersistedState } from '../sim/game';
 import { decode, encode, SAVE_SCHEMA, validateState } from './record';
+import { migrations } from './migrations';
 import type { SaveStorage } from './storage';
 
 // The save system (ENGINEERING_PLAN.md §4): two slots, A and B; writes alternate between
@@ -67,7 +68,7 @@ export class SaveManager {
     options: SaveOptions = {},
   ) {
     this.schema = options.schema ?? SAVE_SCHEMA;
-    this.migrations = options.migrations ?? {};
+    this.migrations = options.migrations ?? migrations(content);
     this.now = options.now ?? (() => Date.now());
   }
 

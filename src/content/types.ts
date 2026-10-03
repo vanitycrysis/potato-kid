@@ -24,8 +24,12 @@ export interface WanderBalance {
 }
 
 export interface SpawnBalance {
-  /** Seconds between Garden spawns at level 1. */
+  /** Seconds between Garden spawns at level 1, after the tutorial. */
   intervalSeconds: number;
+  /** The tutorial (D-052): this many first Garden spawns come every `tutorialIntervalSeconds`. */
+  tutorialSpawns: number;
+  /** Seconds between Garden spawns during the tutorial, whatever the Garden's level. */
+  tutorialIntervalSeconds: number;
   /** Map capacity at level 1. */
   capacity: number;
   /** Kids on a brand-new map. */

@@ -7,8 +7,8 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 **Gates 1–3 are approved. Gate 4 came back with feedback** (D-050..D-059): the icon is approved; the MVP gets a forgiving drop, much slower pacing, a world that lives on offline, planting with Rainbow and Mini variants (replacing Send home), feeding, naming, kid personalities, a stubby-arm wiggle, and a music-loop fix. Then gate 4 goes back to the owner.
 
 **Order of work**
-- **Done:** MUSIC-LOOP (#61) and WAVE-WIGGLE (#62); both go to the owner's device at the next gate-4 build.
-- **Now:** FUSE-DROP's engine side, then PACING and OFFLINE-WANDER (Claude); GATE4-DESIGN, then PERSONALITY (Codex).
+- **Done:** MUSIC-LOOP (#61), WAVE-WIGGLE (#62), FUSE-DROP's engine side (#66) and GATE4-DESIGN (#67); they go to the owner's device at the next gate-4 build.
+- **Now:** PACING, then OFFLINE-WANDER (Claude); PERSONALITY (Codex).
 - **After the design:** PLANTING, VARIANTS and FEED-NAME (Claude), with Codex's art and the planting cue.
 
 **Built for the MVP so far**
@@ -44,11 +44,11 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | BALANCE-SIM | Claude | Balance simulator; tune seed weights, prices and milestones for the 64-kid roster | **done** (simulator #45); the tuning moves to PACING | — |
 | SEND-HOME | ChatGPT (design, art) / Claude (sim, engine, UI) | D-048: drag a kid onto the Garden to send it home | **done**, superseded by PLANTING (D-054) (sim #45, design #49, drag #50, feedback and Dex path #54) | — |
 | MUSIC-LOOP | Claude | Gate-4 bug: the music doesn't always loop on the device. Make the loop seamless and keep it playing (also after app switches) | **done** (#61); the owner checks it on device at gate 4 | The loop has no gap or click and never stops on its own, in tests and on the owner's device |
-| FUSE-DROP | Claude (engine) / ChatGPT (highlight design) | D-051: releasing a kid onto another tries the pair; the kid under the finger is highlighted while dragging | **review** (engine side in a PR; the highlight is drawn once GATE4-DESIGN lands) | Drops onto a partner fuse even on a crowded map; drops onto a non-partner slide apart; the highlight never hints at recipes; e2e covered |
-| PACING | Claude | D-052: tutorial at one kid a minute, then 20 min falling to about 8 min with Garden upgrades; much slower Materials; retune prices and milestones with the simulator | todo | `npm run balance` shows the agreed schedule; PR with before and after numbers, reviewed by Codex |
+| FUSE-DROP | Claude (engine) / ChatGPT (highlight design) | D-051: releasing a kid onto another tries the pair; the kid under the finger is highlighted while dragging | **review** (engine side merged in #66; the highlight from GUI_MVP §14.1 is drawn next) | Drops onto a partner fuse even on a crowded map; drops onto a non-partner slide apart; the highlight never hints at recipes; e2e covered |
+| PACING | Claude | D-052: tutorial at one kid a minute, then 20 min falling to about 8 min with Garden upgrades; much slower Materials; retune prices and milestones with the simulator | **review** (PR with the simulator's before and after) | `npm run balance` shows the agreed schedule; PR with before and after numbers, reviewed by Codex |
 | OFFLINE-WANDER | Claude | D-053: on return, kids have moved and offline spawns have walked out from the Garden; no offline fusions | todo | Unit and e2e tests for positions after a long absence, with no recipe pair left touching |
 | GATE4-DESIGN | ChatGPT | Interaction design and art for D-051..D-058: the drop highlight, planting (plots, seed, growing, sprout), Rainbow and Mini looks, foods, feeding, naming and the kid card; plus a planting sound in the existing audio style | **done** (#67; Claude's review passed in round 2; the owner sees it at gate 4) | Claude's review passes (technical fit, consistency, D-045) |
-| PERSONALITY | ChatGPT (writing) / Claude (data format, validation) | D-058: a short description, likes, hates and hobbies for all 64 types, with a favourite and a hated food each (D-056) | todo | Every type has a personality that passes content validation; Claude's review passes |
+| PERSONALITY | ChatGPT (writing) / Claude (data format, validation) | D-058: a short description, likes, hates and hobbies for all 64 types, with a favourite and a hated food each (D-056) | **doing** (Codex, `chatgpt/personality`) | Every type has a personality that passes content validation; Claude's review passes |
 | PLANTING | Claude | D-054: the sim, save, engine and UI for planting, plots and sprouts (offline too), replacing Send home | todo (after GATE4-DESIGN) | Unit, save-migration and e2e tests; the balance simulator includes planting |
 | VARIANTS | Claude | D-055: Rainbow and Mini variants: odds, income, Dex marks, rendering from Codex's design | todo (after GATE4-DESIGN) | Tests for odds, income and saves; the Dex shows found variants |
 | FEED-NAME | Claude | D-056, D-057: buying and feeding food, happiness, naming, the kid card | todo (after GATE4-DESIGN and PERSONALITY) | Tests for prices, refusals, boosts and names in saves; e2e for the kid card |

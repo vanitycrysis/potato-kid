@@ -121,6 +121,8 @@ function validateSpawn(balance: unknown): string[] {
     if (typeof v !== 'number' || !Number.isFinite(v) || !ok(v)) errors.push(`balance.spawn.${key} must be ${rule}`);
   };
   num('intervalSeconds', (v) => v > 0, 'a finite number > 0');
+  num('tutorialSpawns', (v) => Number.isInteger(v) && v >= 0, 'an integer >= 0');
+  num('tutorialIntervalSeconds', (v) => v > 0, 'a finite number > 0');
   num('capacity', (v) => Number.isInteger(v) && v >= 2, 'an integer >= 2');
   num('startingKids', (v) => Number.isInteger(v) && v >= 0, 'an integer >= 0');
   num('newbornGraceSeconds', (v) => v >= 0, 'a finite number >= 0');

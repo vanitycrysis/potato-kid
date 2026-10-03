@@ -406,7 +406,8 @@ export class Dex {
       el('div', 'dex-detail-portrait', portrait(kidRig!, type, 96)),
       name,
       el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
-      el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type))} Materials / s`),
+      // Per hour: at the slow pacing (D-052) a per-second rate would round to 0.
+      el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type) * 3600)} Materials / h`),
       p.home.root,
       el('h3', 'sheet-section', 'Found recipes'),
       foundBox,

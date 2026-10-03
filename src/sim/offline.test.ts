@@ -15,7 +15,7 @@ const e = content.balance.economy;
 function testContent(edit: (c: Content) => void = () => {}): Content {
   const c = structuredClone(content);
   c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-  c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 12, capacity: 12 };
+  c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 12, capacity: 12 };
   edit(c);
   return c;
 }

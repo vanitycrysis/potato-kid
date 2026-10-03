@@ -92,6 +92,8 @@ export interface GameState {
   spawnRngState: number;
   /** Seconds accumulated toward the next spawn, in [0, interval]. Persisted (plan §3). */
   spawnProgress: number;
+  /** Garden spawns so far, online and offline: the first few make the tutorial (D-052). */
+  gardenSpawns: number;
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
   /** Recipe pair keys (`pairKey`) the player has triggered. */
@@ -186,6 +188,7 @@ export class Game {
       cosmeticRngState: this.cosmetic.state,
       spawnRngState: this.spawnRng.state,
       spawnProgress: 0,
+      gardenSpawns: 0,
       discoveredKids: [],
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,
@@ -238,10 +241,19 @@ export class Game {
     this.spawnRng.setState(copy.spawnRngState);
   }
 
-  /** Garden spawn interval, seconds: `base · factor^(level−1)` (plan §3). */
+  /**
+   * Garden spawn interval, seconds: the tutorial's for its first spawns (D-052), then
+   * `base · factor^(level−1)` (plan §3).
+   */
   get interval(): number {
-    const e = this.content.balance.economy;
-    return this.content.balance.spawn.intervalSeconds * e.gardenIntervalFactor ** (this.state.buildings.garden - 1);
+    const sp = this.content.balance.spawn;
+    if (this.state.gardenSpawns < sp.tutorialSpawns) return sp.tutorialIntervalSeconds;
+    return this.gardenInterval(this.state.buildings.garden);
+  }
+
+  /** The Garden's schedule at `level`, after the tutorial: what an upgrade buys. */
+  gardenInterval(level: number): number {
+    return this.content.balance.spawn.intervalSeconds * this.content.balance.economy.gardenIntervalFactor ** (level - 1);
   }
 
   /** Map capacity: `base + perLevel·(level−1)` (plan §3). */
@@ -364,27 +376,28 @@ export class Game {
     const away = Math.min(elapsed, capSeconds);
     s.accountedUntil = Math.max(s.accountedUntil, now);
 
-    const interval = this.interval;
     const events: GameEvent[] = [];
     const spawned: Kid[] = [];
     let materials = this.income * away;
     // First spawn when the current interval completes; a banked spawn (progress at the
     // interval) is due at once. At most `capacity` admissions, so the loop is bounded.
-    let t = Math.max(0, interval - s.spawnProgress);
+    // The interval is read per spawn: the tutorial can end partway through (D-052).
+    let t = Math.max(0, this.interval - s.spawnProgress);
     let last: number | undefined;
     // Tolerance absorbs float drift, as in advanceSpawn.
     while (t <= away + 1e-6 && s.world.kids.length < this.capacity) {
       const kid = this.spawnAtOutlet(() => this.rollSpawnType(), 'offline', events);
       if (!kid) break; // no free spot near the Garden: treat as full
+      s.gardenSpawns++;
       kid.grace = 0; // it has been around for a while
       spawned.push(kid);
       materials += this.incomeOf(kid.type) * Math.max(0, away - t);
       last = t;
-      t += interval;
+      t += this.interval;
     }
     // Phase rule (plan §3): after a spawn, progress restarts from the last one; otherwise
     // it keeps accumulating, holding at the interval (one banked spawn) when full.
-    s.spawnProgress = Math.min(interval, last === undefined ? s.spawnProgress + away : Math.max(0, away - last));
+    s.spawnProgress = Math.min(this.interval, last === undefined ? s.spawnProgress + away : Math.max(0, away - last));
     s.materials += materials;
     this.syncRngState();
     let potatokens = 0;
@@ -594,14 +607,17 @@ export class Game {
       this.blocked = false;
       return;
     }
+    // The interval this spawn completed, before the count moves past the tutorial.
+    const interval = this.interval;
     if (!this.spawnAtOutlet(() => this.rollSpawnType(), 'garden', events)) {
-      s.spawnProgress = Math.min(this.interval, raw);
+      s.spawnProgress = Math.min(interval, raw);
       this.blocked = true;
       return;
     }
+    s.gardenSpawns++;
     this.blocked = false;
     // Keep the overshoot so spawn timing doesn't drift with the step size.
-    s.spawnProgress = Math.max(0, Math.min(this.interval, raw - this.interval));
+    s.spawnProgress = Math.max(0, Math.min(this.interval, raw - interval));
   }
 
   /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */

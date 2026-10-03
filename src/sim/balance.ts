@@ -28,6 +28,14 @@ export interface Report {
   firstOfTier: Record<number, number | null>;
   /** Active play seconds until this share of the roster is discovered. */
   discovered: Record<'25' | '50' | '75' | '100', number | null>;
+  /** The same, in wall-clock seconds from the start, including time away (D-052). */
+  discoveredClock: Record<'25' | '50' | '75' | '100', number | null>;
+  /** When each building first reached each level: active play and wall-clock seconds. */
+  levelAt: Record<BuildingId, Record<number, { play: number; clock: number }>>;
+  /** Wall-clock seconds at which the tutorial's last spawn arrived (null: not reached). */
+  tutorialDone: number | null;
+  /** Materials per second at the end of each session, with its wall-clock time. */
+  income: { clock: number; perSecond: number }[];
   /** Share of active time with the map under 30 % of capacity (starvation, the main risk). */
   starvation: number;
   /** Share of the bot's turns with nothing useful to do. */
@@ -58,6 +66,10 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const firstOfTier: Record<number, number | null> = {};
   for (const k of content.kids) firstOfTier[k.tier] = null;
   const discovered: Report['discovered'] = { '25': null, '50': null, '75': null, '100': null };
+  const discoveredClock: Report['discoveredClock'] = { '25': null, '50': null, '75': null, '100': null };
+  const levelAt = Object.fromEntries(Object.keys(game.state.buildings).map((b) => [b, {}])) as Report['levelAt'];
+  let tutorialDone: number | null = null;
+  const income: Report['income'] = [];
   let firstRecipe: number | null = null;
   let play = 0;
   let starvedTime = 0;
@@ -75,8 +87,13 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       if (firstOfTier[tier] === null) firstOfTier[tier] = play;
     }
     for (const q of ['25', '50', '75', '100'] as const) {
-      if (discovered[q] === null && s.discoveredKids.length >= (roster * Number(q)) / 100) discovered[q] = play;
+      if (discovered[q] === null && s.discoveredKids.length >= (roster * Number(q)) / 100) {
+        discovered[q] = play;
+        discoveredClock[q] = clock;
+      }
     }
+    for (const [b, level] of Object.entries(s.buildings) as [BuildingId, number][]) levelAt[b][level] ??= { play, clock };
+    if (tutorialDone === null && s.gardenSpawns >= content.balance.spawn.tutorialSpawns) tutorialDone = clock;
   };
   note();
 
@@ -103,6 +120,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       if (game.state.world.kids.length < 0.3 * game.capacity) starvedTime += STEP;
       note();
     }
+    income.push({ clock, perSecond: game.income });
     if (session.away > 0) {
       clock += session.away;
       game.reconcile(clock * 1000);
@@ -117,6 +135,10 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     firstRecipe,
     firstOfTier,
     discovered,
+    discoveredClock,
+    levelAt,
+    tutorialDone,
+    income,
     starvation: play ? starvedTime / play : 0,
     stuck: turns ? stuckTurns / turns : 0,
     deadlocked: turns ? deadTurns / turns : 0,

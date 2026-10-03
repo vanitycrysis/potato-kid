@@ -6,7 +6,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 1;
+export const SAVE_SCHEMA = 2;
 
 export interface SaveRecord {
   schema: number;
@@ -72,6 +72,7 @@ export function validateState(state: unknown, content: Content): string[] {
   if (!finite(s.materials) || (s.materials as number) < 0) p.push('materials is invalid');
   if (!whole(s.potatokens)) p.push('potatokens is invalid');
   if (!whole(s.milestonesPaid)) p.push('milestonesPaid is invalid');
+  if (!whole(s.gardenSpawns)) p.push('gardenSpawns is invalid');
   if (!finite(s.accountedUntil)) p.push('accountedUntil is invalid');
   if (s.biasTarget !== null && !(typeof s.biasTarget === 'string' && s.biasTarget in content.balance.spawnWeights)) p.push('biasTarget is invalid');
   if (!Array.isArray(s.discoveredKids) || !s.discoveredKids.every((k) => typeof k === 'string' && kidIds.has(k))) p.push('discoveredKids has unknown kids');

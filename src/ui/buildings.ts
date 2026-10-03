@@ -261,8 +261,9 @@ export class BuildingSheets {
             const e = this.content.balance.economy;
             setSubtitle(`Level ${level} / ${b.maxLevel}`);
             if (building === 'garden') {
-              nowValue.textContent = `Every ${formatInterval(g.interval)}`;
-              nextValue.textContent = max ? '' : `Every ${formatInterval(g.interval * e.gardenIntervalFactor)}`;
+              // The level's schedule, not the tutorial's (D-052): that's what an upgrade changes.
+              nowValue.textContent = `Every ${formatInterval(g.gardenInterval(level))}`;
+              nextValue.textContent = max ? '' : `Every ${formatInterval(g.gardenInterval(level + 1))}`;
             } else {
               nowValue.textContent = `${g.capacity} kids`;
               nextValue.textContent = max ? '' : `${g.capacity + e.capacityPerLevel} kids`;

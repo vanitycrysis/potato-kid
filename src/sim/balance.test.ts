@@ -32,7 +32,7 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
   function ringed(capacity?: number) {
     const c = structuredClone(content);
     c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9, ...(capacity ? { capacity } : {}) };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9, ...(capacity ? { capacity } : {}) };
     const g = new Game(c, { ...options, now: 0 }, 1);
     const box = defaultBox(c.balance.body.radius);
     const ring = (type: string, x: number, y: number) => {
@@ -73,7 +73,7 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
   it('drags the other way when only the second kid of a pair can reach the first', () => {
     const c = structuredClone(content);
     c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
     const g = new Game(c, { ...options, now: 0 }, 1);
     const box = defaultBox(c.balance.body.radius);
     // Potato first (lower id) and in the open; Water ringed, so only Water can travel.
