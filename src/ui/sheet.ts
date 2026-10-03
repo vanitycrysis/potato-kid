@@ -38,6 +38,12 @@ export interface SheetSnapshot {
   launcher: HTMLElement | null;
 }
 
+/**
+ * Fired on a sheet when what scrolls its content changes (body, tight sheet or page):
+ * lazy lists re-target at once (see `Sheets.place`).
+ */
+export const SCROLLER_CHANGE = 'scrollerchange';
+
 /** Least body height beside a fixed bar: one 44 px control and its label (GUI_MVP §§2, 6). */
 const BODY_MIN = 22 + 4 + 44 + 16;
 
@@ -69,6 +75,8 @@ export class Sheets {
   } | null = null;
   /** True while `open` replaces a sheet, so its onClose knows it wasn't dismissed. */
   private replacing = false;
+  /** The scroll root last announced to the open sheet's lists. */
+  private announcedRoot: Element | null | undefined = undefined;
   private readonly onKey = (e: KeyboardEvent) => this.key(e);
 
   constructor(
@@ -162,6 +170,7 @@ export class Sheets {
     const watch = new ResizeObserver(() => this.place());
     watch.observe(bar);
     this.current = { spec, scrim, sheet, subtitle, bar, body, footer, launcher, watch };
+    this.announcedRoot = undefined;
     this.place();
     this.animate(true);
     title.focus({ preventScroll: true });
@@ -198,6 +207,9 @@ export class Sheets {
     // reaches the world, not the vanishing scrim.
     for (const t of [c.scrim, c.sheet]) t.style.pointerEvents = 'none';
     c.sheet.inert = true;
+    // Nor is it a dialog any more: assistive tech (and tests) see only the open one.
+    c.sheet.removeAttribute('role');
+    c.sheet.setAttribute('aria-hidden', 'true');
     if (this.reducedMotion || !m) remove();
     else {
       c.scrim.style.transition = `opacity ${m.closeMs}ms ease-in`;
@@ -252,6 +264,13 @@ export class Sheets {
     c.sheet.style.bottom = `${sb + hidden}px`;
     c.sheet.dataset.compact = String(compact);
     this.fitBar(c);
+    // Lists watching for visibility must re-target before the next intersection check, or
+    // it measures against an element that no longer clips and loads everything.
+    const root = this.scrollRoot;
+    if (root !== this.announcedRoot) {
+      this.announcedRoot = root;
+      c.sheet.dispatchEvent(new Event(SCROLLER_CHANGE));
+    }
   }
 
   /**

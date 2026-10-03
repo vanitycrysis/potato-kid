@@ -6,6 +6,7 @@ import type { GameEvent, OfflineReport } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { formatClock, formatCount, formatExact } from './format';
 import { BuildingSheets } from './buildings';
+import { Dex } from './dex';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
 import { portrait } from './portrait';
@@ -73,6 +74,8 @@ export class Hud {
   private last = performance.now();
   private readonly sheets: Sheets;
   private readonly buildings: BuildingSheets;
+  private readonly dex: Dex;
+  private readonly dexButton = el('button', 'ui-button dex-button', icon('icon_dex', '', 'ui-icon-24'));
   private readonly trayCells = new Map<string, HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
@@ -123,7 +126,10 @@ export class Hud {
       this.trayCell('compendium', 'Compendium'),
     );
     tray.setAttribute('aria-label', 'Buildings');
-    const dex = this.comingSoon('icon_dex', 'Potato-Dex', 'dex-button');
+    const dex = this.dexButton;
+    dex.type = 'button';
+    dex.setAttribute('aria-label', 'Potato-Dex');
+    dex.addEventListener('click', () => this.dex.open(dex));
     document.body.append(this.shield, this.banners, this.top, dex, tray);
     this.sheets = new Sheets(
       scene,
@@ -132,6 +138,7 @@ export class Hud {
       matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
     this.buildings = new BuildingSheets(scene, content, this.sheets);
+    this.dex = new Dex(scene, content, this.sheets, this.buildings);
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the tray and Dex button at the bottom (GUI_MVP §2; Codex review, PR #15).
@@ -140,6 +147,8 @@ export class Hud {
       const banner = this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0;
       this.top.style.marginTop = `${banner}px`;
       this.layout();
+      // Page mode changes what scrolls an open sheet.
+      this.sheets.place();
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top));
     };
     new ResizeObserver(measure).observe(document.body);
@@ -220,15 +229,6 @@ export class Hud {
     }
   }
 
-  /** Not built yet (sheets arrive with the next GUI slice): visibly disabled, reason announced. */
-  private comingSoon(iconName: string, label: string, className: string): HTMLButtonElement {
-    const b = el('button', `ui-button ${className}`, icon(iconName, '', 'ui-icon-24'));
-    b.type = 'button';
-    b.disabled = true;
-    b.setAttribute('aria-label', `${label} (coming soon)`);
-    return b;
-  }
-
   /** A tray button: opens its building's sheet. */
   private trayCell(key: 'garden' | 'capacity' | 'bias' | 'compendium', label: string): HTMLButtonElement {
     const b = el('button', 'tray-cell', icon(`icon_${key}`), el('span', 'tray-label', label));
@@ -262,7 +262,8 @@ export class Hud {
       const back = this.interrupted;
       this.interrupted = null;
       if (!back) return;
-      if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
+      if (back.key === 'dex') this.dex.open(back.launcher);
+      else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
       else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
         this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search });
     });
@@ -278,6 +279,10 @@ export class Hud {
     // Staying in the HUD scroll window keeps its offset; entering it starts at 0 (§3.1).
     const wasWindow = root.dataset.hudFit === 'window';
     const scroll = wasWindow ? this.hud.scrollTop : 0;
+    // Measuring the usual layout briefly shortens the page, which would clamp a page-mode
+    // scroll to the top: it is put back if the page stays (Codex review, PR #41 follow-up).
+    const page = document.scrollingElement ?? root;
+    const pageScroll = root.dataset.hudFit === 'page' ? page.scrollTop : null;
     const w = window.visualViewport?.width ?? window.innerWidth;
     const h = window.visualViewport?.height ?? window.innerHeight;
     root.dataset.compact = h <= 520 ? 'true' : 'false';
@@ -315,6 +320,7 @@ export class Hud {
     this.scene.cancelDrag();
     root.dataset.hudFit = 'page';
     this.hud.dataset.mode = 'narrow';
+    if (pageScroll !== null) page.scrollTop = pageScroll;
   }
 
   /** An unsaved or recovery banner is up (read-only hides the HUD instead). */
@@ -511,7 +517,11 @@ export class Hud {
         const lines: Node[] = [el('span', 'card-heading', heading), el('span', 'card-name', this.name(item.childType)), this.tier(item.childType)];
         if (item.kind === 'discovery' && item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
         if (item.milestone > 0) lines.push(el('span', 'card-line', `Dex milestone · +${formatExact(item.milestone)} Potatokens`));
-        return el('div', 'toast toast-reward', portrait(kidRig!, item.childType, 56), el('div', 'card-text', ...lines));
+        // The whole card opens this kid in the Potato-Dex (GUI_MVP §9).
+        const card = el('button', 'toast toast-reward toast-button', portrait(kidRig!, item.childType, 56), el('div', 'card-text', ...lines));
+        card.type = 'button';
+        card.addEventListener('click', () => this.dex.open(null, item.childType));
+        return card;
       }
       case 'milestone':
         return el(
@@ -545,6 +555,9 @@ export class Hud {
       cell.disabled = this.save.readOnly;
       cell.setAttribute('aria-label', this.save.readOnly ? `${label}: Update the game to continue.` : label);
     }
+    // A read-only save gives the Dex nothing real to show (GUI_MVP §10).
+    this.dexButton.disabled = this.save.readOnly;
+    this.dexButton.setAttribute('aria-label', this.save.readOnly ? 'Potato-Dex: Update the game to continue.' : 'Potato-Dex');
     this.banners.replaceChildren();
     document.documentElement.dataset.readonly = String(this.save.readOnly);
     this.shield.replaceChildren();

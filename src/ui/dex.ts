@@ -1,0 +1,452 @@
+import { kidRig } from '../content/artData';
+import type { Content, KidId, RecipeDef } from '../content/types';
+import { pairKey } from '../content/validate';
+import type { MapScene } from '../render/scene';
+import type { BuildingSheets } from './buildings';
+import { el, icon, shortName } from './dom';
+import { formatRate } from './format';
+import { LazyPortraits, portrait } from './portrait';
+import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
+
+// The Potato-Dex (docs/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
+// Compendium in one modal. Undiscovered kids and recipes are uniform packets: nothing in
+// them (tier, name, order mark or parent) gives away what they are.
+
+type Tab = 'kids' | 'recipes' | 'compendium';
+
+const TABS: [Tab, string][] = [
+  ['kids', 'Kids'],
+  ['recipes', 'Recipes'],
+  ['compendium', 'Compendium'],
+];
+
+interface Shown {
+  sheet: OpenSheet;
+  tabs: Map<Tab, HTMLButtonElement>;
+  /** The tab's own fixed content, below the tab strip (the Compendium's balances). */
+  tabBar: HTMLElement;
+  kids: KidsPanel | null;
+  recipes: RecipesPanel | null;
+  compendium: { update(): void; dispose(): void } | null;
+  panel: HTMLElement;
+}
+
+interface KidsPanel {
+  root: HTMLElement;
+  grid: HTMLElement;
+  detail: HTMLElement;
+  /** The kid whose detail is showing, if any, and its recipe portraits. */
+  showing: KidId | null;
+  detailPortraits: LazyPortraits | null;
+  update(): void;
+  dispose(): void;
+}
+
+interface RecipesPanel {
+  root: HTMLElement;
+  update(): void;
+  dispose(): void;
+}
+
+export class Dex {
+  private tab: Tab = 'kids';
+  private filter = '';
+  private readonly scroll: Record<'kids' | 'recipes', number> = { kids: 0, recipes: 0 };
+  private shown: Shown | null = null;
+  /** Inconsistent saves are reported once, never shown (GUI_MVP §7). */
+  private warned = new Set<string>();
+
+  constructor(
+    private readonly scene: MapScene,
+    private readonly content: Content,
+    private readonly sheets: Sheets,
+    private readonly buildings: BuildingSheets,
+  ) {}
+
+  get isOpen(): boolean {
+    return this.shown !== null;
+  }
+
+  /**
+   * Opens the Dex where the player left it (tab, filter, scroll), or on `kid`'s detail when
+   * a discovery card asks for it (GUI_MVP §§7, 9).
+   */
+  open(launcher: HTMLElement | null, kid?: KidId): void {
+    if (kid !== undefined) this.tab = 'kids';
+    const tabs = new Map<Tab, HTMLButtonElement>();
+    const strip = el('div', 'dex-tabs');
+    strip.setAttribute('role', 'tablist');
+    strip.setAttribute('aria-label', 'Potato-Dex sections');
+    const sheet = this.sheets.open(
+      {
+        key: 'dex',
+        icon: 'icon_dex',
+        title: 'Potato-Dex',
+        requestedHeight: 624,
+        update: () => this.update(),
+        onClose: () => this.closed(),
+      },
+      launcher,
+    );
+    for (const [i, [tab, label]] of TABS.entries()) {
+      const b = el('button', 'ui-button dex-tab', label);
+      b.type = 'button';
+      b.id = `dex-tab-${tab}`;
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-controls', 'dex-panel');
+      b.addEventListener('click', () => this.select(tab));
+      // Arrows move between tabs and select (one tab stop for the strip).
+      b.addEventListener('keydown', (e) => {
+        const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        const to = e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : step ? (i + step + TABS.length) % TABS.length : -1;
+        if (to < 0) return;
+        e.preventDefault();
+        const next = TABS[to]![0];
+        this.select(next);
+        this.shown?.tabs.get(next)?.focus();
+      });
+      tabs.set(tab, b);
+      strip.append(b);
+    }
+    const tabBar = el('div', 'dex-tab-bar');
+    sheet.bar.append(strip, tabBar);
+    const panel = el('div', 'dex-panel');
+    panel.id = 'dex-panel';
+    panel.setAttribute('role', 'tabpanel');
+    sheet.body.append(panel);
+    // Lazy portraits re-target as soon as what scrolls changes.
+    sheet.body.closest('.sheet')?.addEventListener(SCROLLER_CHANGE, () => this.update());
+    this.shown = { sheet, tabs, tabBar, kids: null, recipes: null, compendium: null, panel };
+    this.render(kid);
+  }
+
+  /** Switches tab, keeping each list's place (GUI_MVP §7). */
+  private select(tab: Tab): void {
+    if (!this.shown || tab === this.tab) return;
+    this.remember();
+    this.tab = tab;
+    this.render();
+  }
+
+  /** Records the current list's scroll, for when its tab (or the Dex) comes back. */
+  private remember(): void {
+    const s = this.shown;
+    if (!s || this.tab === 'compendium' || (this.tab === 'kids' && s.kids?.showing)) return;
+    this.scroll[this.tab] = this.sheets.snapshot()?.scrollTop ?? 0;
+  }
+
+  private render(kid?: KidId): void {
+    const s = this.shown!;
+    for (const [tab, b] of s.tabs) {
+      const on = tab === this.tab;
+      b.setAttribute('aria-selected', String(on));
+      b.classList.toggle('is-selected', on);
+      b.tabIndex = on ? 0 : -1;
+    }
+    s.panel.setAttribute('aria-labelledby', `dex-tab-${this.tab}`);
+    s.kids?.dispose();
+    s.recipes?.dispose();
+    s.compendium?.dispose();
+    s.kids = s.recipes = s.compendium = null;
+    s.panel.replaceChildren();
+    s.tabBar.replaceChildren();
+    s.sheet.footer.replaceChildren();
+    if (this.tab === 'kids') {
+      s.kids = this.kidsPanel();
+      s.panel.append(s.kids.root);
+      s.kids.update();
+      if (kid !== undefined && this.discovered(kid)) this.showDetail(kid);
+      else s.sheet.scrollTo(this.scroll.kids);
+    } else if (this.tab === 'recipes') {
+      s.recipes = this.recipesPanel();
+      s.panel.append(s.recipes.root);
+      s.recipes.update();
+      s.sheet.scrollTo(this.scroll.recipes);
+    } else {
+      s.compendium = this.buildings.embedCompendium(s.panel, s.sheet.footer, (t) => s.sheet.setSubtitle(t), s.tabBar);
+      s.compendium.update();
+      s.sheet.scrollTo(0);
+    }
+    this.update();
+  }
+
+  private update(): void {
+    const s = this.shown;
+    if (!s) return;
+    if (this.tab === 'compendium') {
+      // The Compendium tab keeps the building's own subtitle (GUI_MVP §6).
+      s.compendium?.update();
+      return;
+    }
+    // Kept every frame: by the time a close is reported, the sheet's scroll is gone.
+    this.remember();
+    s.sheet.setSubtitle(`${this.game.state.discoveredKids.length} / ${this.content.kids.length} discovered`);
+    s.kids?.update();
+    s.recipes?.update();
+  }
+
+  private closed(): void {
+    const s = this.shown;
+    this.shown = null;
+    s?.kids?.dispose();
+    s?.recipes?.dispose();
+    s?.compendium?.dispose();
+  }
+
+  private get game() {
+    return this.scene.game;
+  }
+
+  private discovered(type: KidId): boolean {
+    return this.game.state.discoveredKids.includes(type);
+  }
+
+  private kid(type: KidId) {
+    return this.content.kids.find((k) => k.id === type)!;
+  }
+
+  private tierMark(tier: number, size: 20 | 24, text: string): HTMLElement {
+    return el('span', `tier dex-tier-${size}`, icon(`badge_tier_${tier}`, '', `ui-icon-${size}`), text);
+  }
+
+  // --- Kids -------------------------------------------------------------------------------
+
+  /**
+   * The whole roster in content order: discovered kids as buttons, the rest as uniform
+   * packets. A search shows matching discovered kids only (GUI_MVP §7).
+   */
+  private kidsPanel(): KidsPanel {
+    const portraits = new LazyPortraits(kidRig!, 80);
+    const field = el('input', 'comp-search');
+    field.type = 'search';
+    field.id = 'dex-search';
+    field.autocomplete = 'off';
+    field.placeholder = 'Search discovered names';
+    field.value = this.filter;
+    const label = el('label', 'comp-search-label', 'Find a discovered kid');
+    label.htmlFor = field.id;
+    const summary = el('p', 'sheet-helper');
+    const empty = el('p', 'sheet-helper', 'No discovered kids match.');
+    const grid = el('div', 'dex-grid');
+    grid.setAttribute('role', 'list');
+    grid.setAttribute('aria-label', 'Kids');
+    const search = el('div', 'dex-search', label, field, summary, empty);
+    const detail = el('div', 'dex-detail');
+    detail.hidden = true;
+    const root = el('div', 'dex-kids', search, grid, detail);
+
+    // Cells are kept and reordered, never rebuilt: discovered kids in roster order, then
+    // identical packets. Interleaving packets in roster order would give away each unknown
+    // kid's tier by its position (GUI_MVP §7).
+    const knownCells = new Map<KidId, { cell: HTMLElement; name: string }>();
+    const unknownCells: HTMLElement[] = [];
+    const cell = (node: HTMLElement) => {
+      const item = el('div', 'dex-cell', node);
+      item.setAttribute('role', 'listitem');
+      return item;
+    };
+    let known = -1;
+    let unknown = 0;
+    const filter = () => {
+      const q = this.filter.trim().toLowerCase();
+      let matches = 0;
+      // A search never matches an undiscovered kid, by any name or id.
+      for (const c of unknownCells) c.hidden = q !== '';
+      for (const t of knownCells.values()) {
+        t.cell.hidden = q !== '' && !t.name.toLowerCase().includes(q);
+        if (!t.cell.hidden) matches++;
+      }
+      summary.hidden = q === '' || unknown === 0;
+      summary.textContent = `${unknown} still undiscovered`;
+      empty.hidden = q === '' || matches > 0;
+    };
+    field.addEventListener('input', () => {
+      this.filter = field.value;
+      filter();
+    });
+
+    const panel: KidsPanel = {
+      root,
+      grid,
+      detail,
+      showing: null,
+      detailPortraits: null,
+      update: () => {
+        // Five columns on a wide compact sheet, three from 360 px, else two (GUI_MVP §7).
+        const sheetEl = root.closest('.sheet') as HTMLElement | null;
+        const width = sheetEl?.getBoundingClientRect().width ?? 0;
+        grid.dataset.cols = sheetEl?.dataset.compact === 'true' && width >= 560 ? '5' : width >= 360 ? '3' : '2';
+        portraits.watch(this.sheets.scrollRoot);
+        panel.detailPortraits?.watch(this.sheets.scrollRoot);
+        const n = this.game.state.discoveredKids.length;
+        if (n === known) return;
+        known = n;
+        const order: HTMLElement[] = [];
+        for (const kid of this.content.kids) {
+          if (!this.discovered(kid.id)) continue;
+          let c = knownCells.get(kid.id);
+          if (!c) {
+            c = { cell: cell(this.kidTile(kid.id, portraits)), name: kid.name };
+            knownCells.set(kid.id, c);
+          }
+          order.push(c.cell);
+        }
+        unknown = this.content.kids.length - order.length;
+        while (unknownCells.length < unknown) unknownCells.push(cell(this.unknownTile()));
+        unknownCells.length = unknown;
+        // Reordering moves nodes, which drops focus: put it back.
+        const focused = document.activeElement as HTMLElement | null;
+        grid.replaceChildren(...order, ...unknownCells);
+        if (focused && grid.contains(focused)) focused.focus({ preventScroll: true });
+        filter();
+      },
+      dispose: () => {
+        portraits.dispose();
+        panel.detailPortraits?.dispose();
+      },
+    };
+    return panel;
+  }
+
+  private kidTile(type: KidId, portraits: LazyPortraits): HTMLElement {
+    const k = this.kid(type);
+    const b = el(
+      'button',
+      'ui-button dex-tile',
+      portraits.add(type),
+      el('span', 'dex-tile-name', shortName(k.name)),
+      this.tierMark(k.tier, 20, `T${k.tier}`),
+    );
+    b.type = 'button';
+    b.dataset.kid = type;
+    b.setAttribute('aria-label', `${k.name}, Tier ${k.tier}`);
+    b.addEventListener('click', () => this.showDetail(type));
+    return b;
+  }
+
+  /** The same packet for every unknown kid: no tier, number or name (GUI_MVP §7). */
+  private unknownTile(): HTMLElement {
+    const t = el('div', 'dex-tile dex-unknown', icon('icon_unknown', '', 'ui-icon-80'), el('span', 'dex-tile-name', 'Undiscovered'));
+    t.setAttribute('aria-label', 'Undiscovered kid');
+    return t;
+  }
+
+  /** A discovered kid's detail, in place of the grid; Back returns to its tile (§7). */
+  private showDetail(type: KidId): void {
+    const p = this.shown?.kids;
+    if (!p) return;
+    if (!p.showing) this.scroll.kids = this.sheets.snapshot()?.scrollTop ?? 0;
+    p.showing = type;
+    const k = this.kid(type);
+    const back = el('button', 'ui-button dex-back', 'Back to kids');
+    back.type = 'button';
+    back.addEventListener('click', () => this.hideDetail());
+    const found = this.content.recipes.filter((r) => this.revealed(r) && (r.a === type || r.b === type || r.result === type));
+    const list = el('div', 'dex-recipes');
+    p.detailPortraits?.dispose();
+    const portraits = new LazyPortraits(kidRig!, 48);
+    p.detailPortraits = portraits;
+    for (const r of found) list.append(this.recipeRow(r, portraits));
+    const name = el('h3', 'dex-detail-name', k.name);
+    p.detail.replaceChildren(
+      back,
+      el('div', 'dex-detail-portrait', portrait(kidRig!, type, 96)),
+      name,
+      el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
+      el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type))} Materials / s`),
+      el('h3', 'sheet-section', 'Found recipes'),
+      found.length ? list : el('p', 'sheet-helper', 'No recipes found for this kid yet.'),
+    );
+    portraits.watch(this.sheets.scrollRoot);
+    for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid]) node.hidden = true;
+    p.detail.hidden = false;
+    this.shown!.sheet.scrollTo(0);
+    back.focus({ preventScroll: true });
+  }
+
+  private hideDetail(): void {
+    const p = this.shown?.kids;
+    if (!p?.showing) return;
+    const type = p.showing;
+    p.showing = null;
+    p.detailPortraits?.dispose();
+    p.detailPortraits = null;
+    p.detail.hidden = true;
+    p.detail.replaceChildren();
+    for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid]) node.hidden = false;
+    this.shown!.sheet.scrollTo(this.scroll.kids);
+    p.grid.querySelector<HTMLElement>(`[data-kid="${type}"]`)?.focus({ preventScroll: true });
+  }
+
+  // --- Recipes ----------------------------------------------------------------------------
+
+  /**
+   * Found recipes in content order, then one generic card per recipe still unknown. A
+   * recipe is revealed by its pair key, and only if every kid in it is discovered.
+   */
+  private recipesPanel(): RecipesPanel {
+    let portraits = new LazyPortraits(kidRig!, 48);
+    const progress = el('p', 'sheet-helper dex-progress');
+    const list = el('div', 'dex-recipes');
+    list.setAttribute('role', 'list');
+    list.setAttribute('aria-label', 'Recipes');
+    const root = el('div', 'dex-recipes-panel', progress, list);
+    let shownKey = '';
+    return {
+      root,
+      update: () => {
+        portraits.watch(this.sheets.scrollRoot);
+        const s = this.game.state;
+        const key = `${s.discoveredRecipes.length}|${s.discoveredKids.length}`;
+        if (key === shownKey) return;
+        shownKey = key;
+        const found = this.content.recipes.filter((r) => this.revealed(r));
+        progress.textContent = `${found.length} / ${this.content.recipes.length} recipes found`;
+        portraits.dispose();
+        portraits = new LazyPortraits(kidRig!, 48);
+        const rows: HTMLElement[] = found.map((r) => this.recipeRow(r, portraits));
+        for (let i = found.length; i < this.content.recipes.length; i++) rows.push(this.unknownRecipe());
+        list.replaceChildren(...rows);
+        portraits.watch(this.sheets.scrollRoot);
+      },
+      dispose: () => portraits.dispose(),
+    };
+  }
+
+  /** Found by its pair key, with every kid in it discovered; else it stays hidden (§7). */
+  private revealed(r: RecipeDef): boolean {
+    const key = pairKey(r.a, r.b);
+    if (!this.game.state.discoveredRecipes.includes(key)) return false;
+    const ok = [r.a, r.b, r.result].every((t) => this.discovered(t));
+    if (!ok && !this.warned.has(key)) {
+      this.warned.add(key);
+      console.warn(`Potato-Dex: recipe ${key} is found but not all its kids are discovered; it stays hidden.`);
+    }
+    return ok;
+  }
+
+  private recipeRow(r: RecipeDef, portraits: LazyPortraits): HTMLElement {
+    const end = (type: KidId) => el('div', 'dex-end', portraits.add(type), el('span', 'dex-end-name', shortName(this.kid(type).name)));
+    const sym = (s: string) => {
+      const x = el('span', 'dex-sym', s);
+      x.setAttribute('aria-hidden', 'true');
+      return x;
+    };
+    const row = el('div', 'dex-recipe ui-surface', end(r.a), sym('+'), end(r.b), sym('→'), end(r.result));
+    row.setAttribute('role', 'listitem');
+    row.setAttribute('aria-label', `${this.kid(r.a).name} plus ${this.kid(r.b).name} makes ${this.kid(r.result).name}`);
+    return row;
+  }
+
+  /** Every unknown recipe looks the same: no symbols, silhouettes, tier or name (§7). */
+  private unknownRecipe(): HTMLElement {
+    const row = el(
+      'div',
+      'dex-recipe-unknown ui-surface',
+      icon('icon_unknown', '', 'ui-icon-32'),
+      el('div', 'dex-unknown-text', el('span', '', 'Unknown recipe'), el('span', 'sheet-helper', 'Keep experimenting.')),
+    );
+    row.setAttribute('role', 'listitem');
+    return row;
+  }
+}
