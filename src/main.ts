@@ -64,6 +64,8 @@ declare global {
       debugAudioInterrupt?: () => void;
       /** Send home (D-048): the Garden target's state, and kids still waving goodbye. */
       home: () => { state: string; departing: number; departingAt: { x: number; y: number }[] };
+      /** Forgiving drop (D-051): the kid under the finger while one is held, else null. */
+      dropTarget: () => number | null;
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -207,6 +209,7 @@ async function boot(): Promise<void> {
     settings: () => settings.value,
     audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
     home: () => ({ state: scene.homeState, departing: scene.departing.length, departingAt: scene.departing }),
+    dropTarget: () => scene.dropTarget,
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),

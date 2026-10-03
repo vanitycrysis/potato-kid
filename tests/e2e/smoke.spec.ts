@@ -2354,3 +2354,81 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await expect(card.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
   });
 });
+
+test.describe('forgiving drop (D-051)', () => {
+  /**
+   * A crowded map: water at the centre of a tight ring of eight kids that fuse with
+   * neither plain, water nor each other. The ring leaves no free spot that touches water,
+   * so a drop can only fuse with it through the kid under the finger.
+   */
+  async function crowd(page: Page): Promise<{ plain: number; water: number; ring: number[] }> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    return page.evaluate(() => {
+      const pk = window.__PK__!;
+      const look = { body: 'round', scale: 1 };
+      const water = pk.debugAdd!('water', 540, 1100, look);
+      const w = pk.kids().find((k) => k.id === water)!;
+      const dx = w.box.right - w.box.left + 6;
+      const dy = w.box.bottom - w.box.top + 6;
+      const types = ['blizzard', 'kite', 'hero'];
+      const ring: number[] = [];
+      let i = 0;
+      for (const sx of [-1, 0, 1])
+        for (const sy of [-1, 0, 1]) if (sx || sy) ring.push(pk.debugAdd!(types[i++ % 3]!, w.x + sx * dx, w.y + sy * dy, look));
+      const plain = pk.debugAdd!('plain', 250, 1500, look);
+      return { plain, water, ring };
+    });
+  }
+
+  /**
+   * Picks `a` up and puts the finger just inside the top of `b`'s box, then waits for the
+   * target to settle. The held body floats 70 units higher, over the kid above `b`, so
+   * this tells the finger's point from the lifted body's (Codex review, PR #63).
+   */
+  async function holdOver(page: Page, a: number, b: number): Promise<void> {
+    const from = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, a);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    const to = await page.evaluate((id) => {
+      const k = window.__PK__!.kids().find((kid) => kid.id === id)!;
+      return window.__PK__!.worldToScreen(k.x, k.y + k.box.top + 10);
+    }, b);
+    await page.mouse.move(to.x, to.y, { steps: 12 });
+    await frames(page, 3);
+  }
+
+  const ids = (page: Page) => page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
+
+  test('dropping onto a partner in a crowd fuses it, though the bodies never touch', async ({ page }) => {
+    const { plain, water, ring } = await crowd(page);
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBeNull();
+    await holdOver(page, plain, water);
+    expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBe(water);
+    await page.mouse.up();
+    await expect
+      .poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type)), { timeout: 3000 })
+      .toContain('firefighter');
+    const left = await ids(page);
+    expect(left).not.toContain(plain);
+    expect(left).not.toContain(water);
+    for (const id of ring) expect(left).toContain(id);
+    expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBeNull();
+  });
+
+  test('dropping onto a non-partner in a crowd lands it apart, with no fusion', async ({ page }) => {
+    const { plain, water, ring } = await crowd(page);
+    await page.waitForTimeout(200);
+    const right = ring[6]!; // the blizzard directly right of water
+    await holdOver(page, plain, right);
+    expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBe(right);
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    const kids = await page.evaluate(() => window.__PK__!.kids());
+    expect(kids.map((k) => k.id).sort((p, q) => p - q)).toEqual([plain, water, ...ring].sort((p, q) => p - q));
+    // It slid to a free spot (D-039): no box overlaps another.
+    const rect = (k: (typeof kids)[number]) => ({ l: k.x + k.box.left, t: k.y + k.box.top, r: k.x + k.box.right, b: k.y + k.box.bottom });
+    const me = rect(kids.find((k) => k.id === plain)!);
+    for (const o of kids.filter((k) => k.id !== plain).map(rect)) expect(me.l < o.r && o.l < me.r && me.t < o.b && o.t < me.b).toBe(false);
+  });
+});
