@@ -1646,7 +1646,13 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
 
   test('releasing before the 400 ms dwell places the kid normally', async ({ page }) => {
     const { id } = await setup(page);
-    await holdOverHome(page, id, 120);
+    // Straight in and straight out: a stepped move can itself take 400 ms on a slow runner.
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y);
+    await page.mouse.up();
     await page.waitForTimeout(300);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
     expect(await page.evaluate(() => window.__PK__!.home())).toMatchObject({ state: 'hidden', departing: 0 });
