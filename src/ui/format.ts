@@ -56,3 +56,9 @@ export function formatDuration(seconds: number): string {
 export function formatInterval(seconds: number): string {
   return `${(Math.round(seconds * 10) / 10).toFixed(1)} s`;
 }
+
+/** A per-second rate: whole numbers plain, otherwise to one decimal (`0.5`, `2`, `1.5`). */
+export function formatRate(value: number): string {
+  const tenths = Math.round(value * 10) / 10;
+  return Number.isInteger(tenths) ? String(tenths) : tenths.toFixed(1);
+}

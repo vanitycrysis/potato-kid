@@ -6,7 +6,7 @@ import { el, icon, shortName } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
 import { LazyPortraits, portrait } from './portrait';
-import type { Sheets } from './sheet';
+import { SCROLLER_CHANGE, type Sheets } from './sheet';
 
 // Garden, Capacity, Spawn bias and Compendium sheets (docs/GUI_MVP.md §§4-6, Codex's design, D-036).
 // Each sheet is built once and updated in place every frame, so focus is never lost; the
@@ -89,6 +89,26 @@ export class BuildingSheets {
   /** The open sheet's search text, for a snapshot (GUI_MVP §8). */
   get searchText(): string {
     return this.search;
+  }
+
+  /**
+   * The Compendium's content inside another sheet: the Potato-Dex's Compendium tab reaches
+   * the same locked and built states as the tray (GUI_MVP §§6-7). `dispose` when the tab
+   * goes away.
+   */
+  embedCompendium(body: HTMLElement, footer: HTMLElement, setSubtitle: (t: string) => void, bar: HTMLElement): { update(): void; dispose(): void } {
+    this.pending = null;
+    this.success = null;
+    this.refusal = null;
+    this.arrived = null;
+    const view = this.compendiumSheet().mount(body, footer, setSubtitle, bar);
+    return {
+      update: () => view.update(),
+      dispose: () => {
+        this.portraits?.dispose();
+        this.portraits = null;
+      },
+    };
   }
 
   /**
@@ -485,6 +505,7 @@ export class BuildingSheets {
     let known = -1;
     this.portraits?.dispose();
     this.portraits = new LazyPortraits(kidRig!, 64);
+    body.closest('.sheet')?.addEventListener(SCROLLER_CHANGE, () => this.portraits?.watch(this.sheets.scrollRoot));
     const filter = () => {
       const q = this.search.trim().toLowerCase();
       let shown = 0;

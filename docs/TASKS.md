@@ -45,10 +45,16 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | ROSTER-SCALE | Claude | Engine and pipeline for ~500 types: per-type texture loading and unloading, Dex thumbnails, content validation at scale, art-export throughput | **done** (#35) | — |
 | PLAYABLE-INTEGRATION | Claude | Play part B's clips, FX and shadow; wave ambient; reduced motion; bundle the font | **done** (#24) | — |
 | GATE-3 | Owner | Approve the first playable (on the S26 Ultra) | **done** (D-047, 2026-10-02) | — |
+<<<<<<< HEAD
 | BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | **doing** (economy #27, offline #29, save #30, lifecycle #31 done; balance simulator and audio runtime to do) | Tests pass; Codex review |
 | GUI-MVP | ChatGPT (design, art) / Claude (DOM implementation) | Design the MVP's panels and HUD additions: currencies, building upgrades, bias picker, compendium, Potato-Dex, instant spawn, offline-return summary, feedback for refusals and rewards, save banners | **review** (design #32, #36; implementation #33, #37, #39, #41 done; Potato-Dex #43 in review) | Claude review passes; Claude implements it |
 | ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | **doing** (costume batches 1 and 2 done: #34, #40; batch 3, the 12 tier-5 kids, in review #44; then cues, music, icons, launcher/splash) | Claude review passes; device listening check |
 | IMPORT-MVP | Claude | Bring each accepted art batch into content: kids, recipes, Dex milestones, previews | **doing** (batches 1 and 2: #38, #42; batch 3 after #44) | Validation, budget and preview checks pass; Codex review |
 | BALANCE-SIM | Claude | Balance simulator; tune seed weights, prices and milestones for the 64-kid roster | todo | Pacing targets in the design doc hold in simulation; Codex review |
+=======
+| BUILD-MVP | Claude | Currencies, buildings, Dex, compendium, offline + lifecycle, save, balance simulator, audio | **doing** | Tests pass; Codex review |
+| GUI-MVP | ChatGPT (design, art) / Claude (DOM implementation) | Design the MVP's panels and HUD additions: currencies, building upgrades, bias picker, compendium, Potato-Dex, instant spawn, offline-return summary, feedback for refusals and rewards, save banners | **doing** (art/spec delivered for review; implementation pending) | Claude review passes; Claude implements it |
+| ASSET-MVP | ChatGPT | Full roster polish, icons, font, 8 cues, music loop, launcher/splash | **doing** (batch 3 of 3: tier-5 art and Aurora/Terrarium follow-ups delivered; Claude review pending; later audio/platform work remains) | Claude review passes; device listening check |
+>>>>>>> origin/main
 | GATE-4 | Owner | Approve the MVP | todo | Explicit approval before polish |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |

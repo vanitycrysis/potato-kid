@@ -1,9 +1,36 @@
 # Art and audio plan
 
-Author: ChatGPT. Current delivery: **ASSET-MVP batch 2, 2026-10-02: 16 new tier-4 costumes, final art for Claude review.** Gate 2 remains approved under D-044. The accepted body/face/pose/clip rig, map, GUI and FX are retained. Current cropped-costume counts and budget are in the batch 2 section below; later sections retain historical specifications and delivery records. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
+Author: ChatGPT. **Current delivery: ASSET-MVP batch 3, 2026-10-02: 12 tier-5 costumes plus two batch-2 follow-ups, final art for Claude review.** Gate 2 remains approved under D-044. The accepted body/face/pose/clip rig, map, GUI and FX are retained. Current cropped-costume counts and budget are in the batch 3 section below; later sections retain historical specifications and delivery records. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
 
-Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at 52 after this batch. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
+Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at all 64 after batch 3. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 
+
+
+
+## ASSET-MVP batch 3: tier 5 and two follow-ups (2026-10-02; Claude review pending)
+
+Twelve tier-5 costumes are **final art for Claude review**, revision `asset-mvp-3`. The complete art roster is **64 types /127 costume components**, using the unchanged 32 body poses and 12 face states. New sources: art/src/kids; sidecar: art/data/kid_rig_v2.json; trimmed exports: assets/sprites/kids and assets/data. Every new costume uses two shared components; no physique, face, pose, clip, attachment, lifetime bound or tier art changes. Content import and engine/device checks remain Claude's work. Earlier delivery sections below are historical.
+
+| Kid ID | Tier | Costume / primary read | Components / attachments | Status |
+| --- | ---: | --- | --- | --- |
+| festival | 5 | Three broad hanging pennants on one short bowed bunting cord; small carried drum. | front/head_top: `kid_festival_front_bunting`; front/hand_right: `kid_festival_front_drum` | final; batch 3, Claude review pending |
+| observatory | 5 | Broad diagonal telescope barrel with flared objective, short eyepiece and compact tripod; low slit dome is secondary. | front/hand_right: `kid_observatory_front_telescope`; front/head_top: `kid_observatory_front_dome` | final; batch 3, Claude review pending |
+| botanical_garden | 5 | Square left-offset trellis with open lattice and two projecting broad leaf tabs; tiny carried seed tray. | back/head_top: `kid_botanical_garden_back_trellis`; front/hand_right: `kid_botanical_garden_front_tray` | final; batch 3, Claude review pending |
+| moon_garden | 5 | Tilted thin-spined crescent with unequal tips and deep right-open concavity; low hand-held mushroom lamp. | front/head_top: `kid_moon_garden_front_crescent`; front/hand_right: `kid_moon_garden_front_lamp` | final; batch 3, Claude review pending |
+| patisserie | 5 | Three diminishing cake tiers with one short unlit candle; pointed soft piping bag at the hand. | front/head_top: `kid_patisserie_front_cake`; front/hand_right: `kid_patisserie_front_bag` | final; batch 3, Claude review pending |
+| winter_market | 5 | Shallow square-ended striped stall awning with three deep broad lower scallops; cocoa sachet hem apron. | front/head_top: `kid_winter_market_front_awning`; front/torso: `kid_winter_market_front_apron` | final; batch 3, Claude review pending |
+| harbor | 5 | Broad blunt anchor with open top ring and two upward-curving flukes; short paired rear mooring posts. | front/hand_right: `kid_harbor_front_anchor`; back/torso: `kid_harbor_back_posts` | final; batch 3, Claude review pending |
+| sky_fair | 5 | Offset open fairground wheel with four box gondolas breaking its circumference; ticket sash at the hem. | back/head_top: `kid_sky_fair_back_wheel`; front/torso: `kid_sky_fair_front_ticket` | final; batch 3, Claude review pending |
+| rescue_station | 5 | Compact folded A-frame canvas stretcher at left hip below the shoulder; small carried rescue torch. | back/torso: `kid_rescue_station_back_stretcher`; front/hand_right: `kid_rescue_station_front_torch` | final; batch 3, Claude review pending |
+| sculpture_park | 5 | Single thick carved curling spiral on a short stepped foot above the crown; low plinth plaque. | front/head_top: `kid_sculpture_park_front_spiral`; front/torso: `kid_sculpture_park_front_plinth` | final; batch 3, Claude review pending |
+| windmill | 5 | Four broad rectangular mill sails in an X with a solid center hub; small grain sack at the hand. | back/head_top: `kid_windmill_back_sails`; front/hand_right: `kid_windmill_front_grain` | final; batch 3, Claude review pending |
+| mosaic | 5 | Square-ended L-shaped tile cap with a tall left block, broad top step and lower right arm; tiled hem apron. | front/head_top: `kid_mosaic_front_tiles`; front/torso: `kid_mosaic_front_apron` | final; batch 3, Claude review pending |
+
+**Batch-2 follow-ups:** Aurora's existing rear light component becomes a broad softly lobed flowing light sheet with no upright shaft or crossbar; its hem tab is unchanged. Terrarium's existing jar component becomes a narrow continuous domed glass cloche without a lid, lifting tab, loop or angular shoulders; its mushroom label is unchanged. Lantern and every other retained kid's components are byte-identical. Existing pivots, fits, IDs, order and layers remain exact. ROSTER_PLAN now records both concepts.
+
+The **24 new cropped PNGs** decode to **0.32022 MiB** (335,780 bytes). The two revised existing crops decode to 0.05775 MiB and replace their earlier exports. The complete export is **198 PNGs /10.91898 MiB**, including 171 kid layers /6.28192 MiB; storage-wide dimensions do not establish physical GPU residency or device performance. Zero additional lifetime reserve on all four bodies.
+
+All 55px colour/gray, 64-kid gray/outline, cap-cluster, isolated-cap, seated/held, 3x crop and supplementary review sheets use the asset-mvp-3- prefix in art/previews/roster. Reproduction, collision/everyday-object review, D-045 audit, exact inventory and limitations: [.codex-out/asset-mvp-3-notes.md](../.codex-out/asset-mvp-3-notes.md). Audio, icons, font and launcher/splash work remain outside this delivery.
 
 
 ## ASSET-MVP batch 2: new tier 4 costumes (2026-10-02; Claude review pending)

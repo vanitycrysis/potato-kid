@@ -489,6 +489,14 @@
 .toast-short {
   min-height: 72px;
 }
+/* A discovery card is one button that opens the kid in the Potato-Dex (§9). */
+.toast-button {
+  margin: 0;
+  background: none;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .card-text {
   display: flex;
   flex-direction: column;

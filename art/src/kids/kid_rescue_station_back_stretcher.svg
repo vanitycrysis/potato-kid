@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>rescue_station costume: hooked rescue ladder</title>
+  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-3-round2. D-044/D-045. Costume equipment only; no baked text or anatomy. Existing component ID and rig retained.</desc>
+  <path d="M25 209 L35 79 Q36 66 46 67 Q54 68 52 80 M51 211 L61 81 Q62 68 72 69 Q80 70 78 82" fill="none" stroke="#1a1a1a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 209 L35 79 Q36 66 46 67 Q54 68 52 80 M51 211 L61 81 Q62 68 72 69 Q80 70 78 82" fill="none" stroke="#809ba9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M35 91 L60 93 M33 119 L58 121 M31 147 L56 149 M28 175 L53 177 M26 203 L51 205" fill="none" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M35 91 L60 93 M33 119 L58 121 M31 147 L56 149 M28 175 L53 177 M26 203 L51 205" fill="none" stroke="#fff1d5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
