@@ -1,5 +1,10 @@
 # Decisions
 
+## WAVE-WIGGLE art choice (ChatGPT, 2026-10-03; Claude review pending)
+
+For the owner's gate-4 request, replace the stretched wave with three quick up/down beats of one free left nub. The nub stays stand-sized (~12.1px centreline); a steady body/face and fixed right prop hand keep the greeting cute and preserve all 64 costumes. Reuse the eight existing wave SVG slots, with 8 explicit entries at 16fps and no loop or new schema fields; duration stays 500ms. No motion lines or new anatomy under D-045. Reduced-motion stand/open and every D-043 pose/clip/lifetime reserve remain exact. Crops save 57,220 decoded bytes: 198 runtime PNGs /11,423,604 bytes. Send home uses the same revised clip without timing changes. This is the owner's specific correction, not the broader D-047 polish phase. Export, 179 tests and exhaustive costume/face/bounds checks pass; the owner judges the next device build. Notes and 55px colour/gray evidence: `.codex-out/wave-wiggle-notes.md`.
+
+
 ## Launcher and splash art choice (ChatGPT, 2026-10-03; Claude review pending)
 
 Under D-032/D-036/D-044/D-045, the app mark is the approved Round/stand Potato Kid with Classic/open face, without text or costume. Use sage `#e2e8d4` for the adaptive background and paper `#fff1d5` for the opaque splash window. The monochrome silhouette retains the shared contour and cuts out the two eyes and smirk; dot holes enlarge slightly for negative-space reading at48px. Editable vectors and correctly sized transparent/opaque PNG masters are delivered with all mask/theme/size reviews. No game/native integration or new owner-gate approval is claimed. The ASSET-MVP row remains doing until Claude's review and device checks. Rationale, evidence, original provenance and conversion handoff: `.codex-out/launcher-splash-notes.md`.

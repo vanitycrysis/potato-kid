@@ -1,8 +1,22 @@
 # Art and audio plan
 
-Author: ChatGPT. **Current delivery: Android launcher/splash, 2026-10-03, revision launcher-splash-1; final art for Claude review.** Gate 2 remains approved under D-044. The accepted body/face/pose/clip rig, map, GUI and FX are retained. Cropped-costume counts and budget are in the historical batch 3 section below. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
+Author: ChatGPT. **Current delivery: WAVE-WIGGLE, 2026-10-03, revision wave-wiggle-1; final art for Claude review.** Gate 2 remains approved under D-044. The wave now wiggles a stand-sized free left nub; the remaining accepted rig, map, GUI and FX are retained. Current budget is in the wave addendum; earlier delivery counts below are historical. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at all 64 after batch 3. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
+
+## WAVE-WIGGLE addendum (2026-10-03; Claude review pending)
+
+| Item | Art choice / status |
+| --- | --- |
+| Owner's gate-4 correction | Replace the stretched wave with a really fast stubby-arm wiggle; final art /wave-wiggle-1 for Claude review |
+| Shared drawing | One free left nub on each body; ~12.1 source px centreline against stand's ~13.8px, unchanged 7.5px ink. Same body contour, feet, crown nub, face and occupied right hand. No motion lines or expression marks |
+| Wave clip | `stand, high, low, high, low, high, low, stand`; 8 entries at 16fps, `loop:false`; 500ms unchanged. Explicit repetitions in existing fields; no new schema fields |
+| Costumes and D-043 | All 64 costumes retained, right-hand/head/torso/face transforms exact. Wave left attachment updated to nub tip/tilt. All pose/clip/lifetime boxes retained; each body needs 0 extra source px. Crops shrink |
+| Reduced motion | Existing `wave → stand / open / none` retained completely; Send home retains its inherited-face stand/fade150ms |
+| Texture budget | Same 198 runtime PNGs /171 kid layers /127 costume components. Total 11,423,604 decoded RGBA bytes (10.89440 MiB); 57,220 bytes smaller. Kid layers 6,561,292 bytes (6.25734 MiB). Physical GPU/residency acceptance remains Claude's check under the existing 32 MiB ceiling |
+| Verification | Export and 179 tests pass; 73,728 full clip/body/costume/face/state/size combinations pass bounds and face clearance. Eight 55px colour/gray clip strips, eight all-64 pose sheets and exact-timing HTML playback in `.codex-out/`; full notes and limits: `wave-wiggle-notes.md` |
+
+Three brief one-sided beats with a steady body and smirk give a friendly greeting without whole-body tremble. The hand-prop side stays stable so Baker/Blacksmith remain readable. Send home reuses this same revised wave; its 500ms clip and 650ms total remain unchanged. This owner-requested correction does not start the broader ANIM-POLISH work deferred by D-047. Claude reviews the assets and engine timing; the owner judges the next gate-4 build on device.
 
 ## Android launcher and splash addendum (2026-10-03; Claude review pending)
 
@@ -12,7 +26,7 @@ Editable sources: `art/src/android/`; PNG masters: `art/exports/android/`. Foreg
 
 ## Send home interaction/art addendum (2026-10-03; Claude review pending)
 
-Under owner-approved D-048, GUI_MVP §13 adds a static authored target inside the Garden's silhouette, a 400ms dwell/release guard and a specific-instance non-drag path in Dex detail. Departure reuses the unchanged four-entry wave at8fps for500ms, then stand fades150ms; reduced motion uses stand/fade150ms only. The presentation view never reserves sim space and is disposed immediately if a live silhouette enters its vacated position. No walk through scenery, new effect, sound, rig clip or raster art is needed. Target/tether geometry is specified by ChatGPT under D-033/D-036 and recorded in `ui_v2.json.mvp.sendHome`; Claude implements it. Additional decoded/Pixi bytes **0**; existing198-PNG storage inventory remains11,480,824 bytes. Exact states, geometry, copy, first-use explanation and acceptance checks: `docs/GUI_MVP.md` §13. Review evidence/limits: `.codex-out/send-home-notes.md`. This is MVP interaction work, not the post-gate-4 animation polish deferred by D-047.
+Under owner-approved D-048, GUI_MVP §13 adds a static authored target inside the Garden's silhouette, a 400ms dwell/release guard and a specific-instance non-drag path in Dex detail. Departure reuses the shared wave for500ms, then stand fades150ms; WAVE-WIGGLE now supplies eight entries at16fps with the same duration; reduced motion uses stand/fade150ms only. The presentation view never reserves sim space and is disposed immediately if a live silhouette enters its vacated position. No walk through scenery, new effect, sound, rig clip or raster art is needed. Target/tether geometry is specified by ChatGPT under D-033/D-036 and recorded in `ui_v2.json.mvp.sendHome`; Claude implements it. Additional decoded/Pixi bytes **0**; the original198-PNG storage inventory was11,480,824 bytes; WAVE-WIGGLE reduces it as recorded above. Exact states, geometry, copy, first-use explanation and acceptance checks: `docs/GUI_MVP.md` §13. Review evidence/limits: `.codex-out/send-home-notes.md`. This is MVP interaction work, not the post-gate-4 animation polish deferred by D-047.
 
 
 
@@ -97,7 +111,7 @@ Counts below are full-production timeline entries; repeated texture references d
 | seated | 4 / 2 / 2 s loop | sit x4; body + followers breathe <=1 px |
 | sleep | 4 / 1 / 4 s loop | sit x4; asleep face, <=1 px breath, no Z text |
 | wake | 3 / 8 / 0.375 s | sit, settle, stand; face asleep/blink/open + followers |
-| wave | 4 / 8 / 0.50 s | stand, wave_low, wave_high, stand; body + hand followers, unchanged face |
+| wave | 8 / 16 / 0.50 s | stand, wave_high, wave_low, wave_high, wave_low, wave_high, wave_low, stand; free left nub only, fixed body/face/right prop hand; wave-wiggle-1, Claude review pending |
 | pick_up | 2 / 12 / 0.167 s | stand, held; body + followers |
 | held | 4 / 4 / 1 s loop | held x4; rig lean <=2 degrees, lift <=6 canvas px; open face |
 | drop | 3 / 12 / 0.25 s | held, settle, stand; body + followers; drawn squash, no root enlargement |

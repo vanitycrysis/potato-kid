@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "asset-mvp-3",
+  "revision": "wave-wiggle-1",
   "status": "final",
   "delivery": {
     "scope": "first_playable_art",
@@ -481,10 +481,10 @@
             },
             "hand_left": {
               "position": [
-                24,
-                189
+                31,
+                159
               ],
-              "rotationDeg": 60,
+              "rotationDeg": -25,
               "scale": [
                 1,
                 1
@@ -559,10 +559,10 @@
             },
             "hand_left": {
               "position": [
-                29,
-                66
+                31,
+                149
               ],
-              "rotationDeg": -75,
+              "rotationDeg": 25,
               "scale": [
                 1,
                 1
@@ -1116,10 +1116,10 @@
             },
             "hand_left": {
               "position": [
-                36,
-                187
+                49,
+                154
               ],
-              "rotationDeg": 60,
+              "rotationDeg": -25,
               "scale": [
                 1,
                 1
@@ -1194,10 +1194,10 @@
             },
             "hand_left": {
               "position": [
-                39,
-                54
+                49,
+                144
               ],
-              "rotationDeg": -75,
+              "rotationDeg": 25,
               "scale": [
                 1,
                 1
@@ -1751,10 +1751,10 @@
             },
             "hand_left": {
               "position": [
-                20,
-                195
+                19,
+                166
               ],
-              "rotationDeg": 60,
+              "rotationDeg": -25,
               "scale": [
                 1,
                 1
@@ -1829,10 +1829,10 @@
             },
             "hand_left": {
               "position": [
-                26,
-                84
+                19,
+                156
               ],
-              "rotationDeg": -75,
+              "rotationDeg": 25,
               "scale": [
                 1,
                 1
@@ -2386,10 +2386,10 @@
             },
             "hand_left": {
               "position": [
-                23,
-                194
+                31,
+                168
               ],
-              "rotationDeg": 60,
+              "rotationDeg": -25,
               "scale": [
                 1,
                 1
@@ -2464,10 +2464,10 @@
             },
             "hand_left": {
               "position": [
-                32,
-                66
+                31,
+                158
               ],
-              "rotationDeg": -75,
+              "rotationDeg": 25,
               "scale": [
                 1,
                 1
@@ -7208,7 +7208,7 @@
       ]
     },
     "wave": {
-      "fps": 8,
+      "fps": 16,
       "loop": false,
       "boundsPxByBody": {
         "round": [
@@ -7250,6 +7250,18 @@
           }
         },
         {
+          "bodyFrame": "wave_high",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
           "bodyFrame": "wave_low",
           "faceState": "inherit",
           "rig": {
@@ -7263,6 +7275,42 @@
         },
         {
           "bodyFrame": "wave_high",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "wave_low",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "wave_high",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "wave_low",
           "faceState": "inherit",
           "rig": {
             "offsetPx": [
@@ -7293,7 +7341,7 @@
         "front"
       ],
       "faceRule": "preserve_current_state_and_smirk",
-      "note": "Free left nub waves; right hand and all other attachments stay fixed."
+      "note": "Three quick up/down beats of the existing free left nub at 16 fps, then rest. Nub stays stand-sized; body, face, right prop hand and all other attachments stay fixed. Eight entries / 16 fps = 0.5 s; no motion marks."
     },
     "pick_up": {
       "fps": 12,
