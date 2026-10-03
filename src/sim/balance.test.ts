@@ -33,6 +33,16 @@ describe('the report (Codex review, PR #68)', () => {
     expect(r.tutorialDone).toBeCloseTo(c.balance.spawn.tutorialSpawns * c.balance.spawn.tutorialIntervalSeconds, 6);
   });
 
+  it('income after an absence counts the kids that arrived while away', () => {
+    const c = structuredClone(content);
+    c.balance.spawn.startingKids = 0;
+    const r = simulate(c, options, { name: 'away', sessions: [{ play: 1, away: 3600 }], actionSeconds: 3 }, 1);
+    // On return, the tutorial's ten offline spawns are all earning, on top of what was there.
+    expect(r.income[0]!.clock).toBeCloseTo(1, 6);
+    expect(r.income.at(-1)!.clock).toBeCloseTo(3601, 6);
+    expect(r.income.at(-1)!.perSecond - r.income[0]!.perSecond).toBeGreaterThanOrEqual(10 * c.balance.economy.materialsPerSecond - 1e-9);
+  });
+
   it('shows income only for days the scenario reaches', async () => {
     const { incomeDays } = await import('./balance-cli');
     const day = 86_400;

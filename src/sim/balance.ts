@@ -34,7 +34,10 @@ export interface Report {
   levelAt: Record<BuildingId, Record<number, { play: number; clock: number }>>;
   /** Wall-clock seconds at which the tutorial's last spawn arrived (null: not reached). */
   tutorialDone: number | null;
-  /** Materials per second at the end of each session, with its wall-clock time. */
+  /**
+   * Materials per second over time: at the end of each session, and again on return after
+   * each absence, so kids that arrived while away count (Codex review, PR #68).
+   */
   income: { clock: number; perSecond: number }[];
   /** Share of active time with the map under 30 % of capacity (starvation, the main risk). */
   starvation: number;
@@ -132,6 +135,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       if (tutorialDone === null && need > 0 && game.state.gardenSpawns - before.spawns >= need) {
         tutorialDone = left + Math.max(0, before.interval - before.progress) + (need - 1) * content.balance.spawn.tutorialIntervalSeconds;
       }
+      income.push({ clock, perSecond: game.income });
       note();
     }
   }
