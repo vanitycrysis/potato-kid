@@ -54,7 +54,6 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const sendHome = scenario.sendHome ?? true;
   const tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
-  const tried = new Set<string>();
   const roster = content.kids.length;
   const firstOfTier: Record<number, number | null> = {};
   for (const k of content.kids) firstOfTier[k.tier] = null;
@@ -81,61 +80,8 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   };
   note();
 
-  /** The bot's one action this turn, or null when it has nothing useful to do. */
-  const decide = (): Command[] | null => {
-    const s = game.state;
-    // 1. Buy: the cheaper of Garden and Capacity, the Compendium once a few kids are known.
-    const buy = purchase(game);
-    if (buy) return [buy];
-    const free = s.world.kids.filter((k) => !k.held && k.grace === 0);
-    // 2. Try a pair of types never tried together (the player doesn't know the recipes).
-    for (let i = 0; i < free.length; i++) {
-      for (let j = i + 1; j < free.length; j++) {
-        const key = pairKey(free[i]!.type, free[j]!.type);
-        if (tried.has(key)) continue;
-        tried.add(key);
-        return drag(game, free[i]!.id, free[j]!);
-      }
-    }
-    // 3. Fuse a known recipe whose result isn't on the map: a new type opens new pairs.
-    const onMap = new Set(s.world.kids.map((k) => k.type));
-    for (let i = 0; i < free.length; i++) {
-      for (let j = i + 1; j < free.length; j++) {
-        const result = recipes.get(pairKey(free[i]!.type, free[j]!.type));
-        if (result && s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type)) && !onMap.has(result)) return drag(game, free[i]!.id, free[j]!);
-      }
-    }
-    // 3b. A full map with nothing new to try: fuse any known recipe to make room.
-    const full = s.world.kids.length >= game.capacity;
-    if (full) {
-      for (let i = 0; i < free.length; i++) {
-        for (let j = i + 1; j < free.length; j++) {
-          if (s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type))) return drag(game, free[i]!.id, free[j]!);
-        }
-      }
-    }
-    // 3c. Still full: send home (D-048) the kid with the fewest untried pairings on the
-    //     map (a dead end, or a spare copy), so the Garden can bring someone new.
-    if (full && sendHome && free.length) {
-      const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
-      const pick = free.reduce((best, k) => (untried(k.type) < untried(best.type) ? k : best));
-      return [{ type: 'sendHome', kidId: pick.id }];
-    }
-    // 4. Out of ideas with room to spare: bring back a known type that pairs untried with
-    //    the map (Compendium), else an instant spawn.
-    if (s.world.kids.length < game.capacity) {
-      if (s.buildings.compendium > 0) {
-        const pick = s.discoveredKids.find((t) => free.some((k) => !tried.has(pairKey(t, k.type))));
-        if (pick) {
-          const cost = game.respawnCost(pick);
-          if (s.materials >= cost.materials) return [{ type: 'respawn', kidType: pick, pay: 'materials' }];
-          if (s.potatokens >= cost.potatokens) return [{ type: 'respawn', kidType: pick, pay: 'potatokens' }];
-        }
-      }
-      if (s.potatokens >= content.balance.economy.instantSpawnPotatokens) return [{ type: 'instantSpawn' }];
-    }
-    return null;
-  };
+  const bot = createBot(game, content, sendHome);
+  const decide = bot.decide;
 
   for (const session of scenario.sessions) {
     const steps = Math.round(session.play / STEP);
@@ -185,6 +131,87 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   };
 }
 
+/**
+ * The scripted player: `decide` picks one action a turn, or null when it has nothing useful
+ * to do. `tried` holds the type pairs it has seen touch (exposed for tests).
+ */
+export function createBot(game: Game, content: Content, sendHome = true): { decide: () => Command[] | null; tried: Set<string> } {
+  const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
+  const tried = new Set<string>();
+  /** The bot's one action this turn, or null when it has nothing useful to do. */
+  const decide = (): Command[] | null => {
+    const s = game.state;
+    // 1. Buy: the cheaper of Garden and Capacity, the Compendium once a few kids are known.
+    const buy = purchase(game);
+    if (buy) return [buy];
+    const free = s.world.kids.filter((k) => !k.held && k.grace === 0);
+    // A drag counts only if its landing reaches the partner; a crowded partner is skipped
+    // and stays eligible, and every pair the drop really touches is now tried (Codex
+    // review, PR #45).
+    const attempt = (a: (typeof free)[number], b: (typeof free)[number]): Command[] | null => {
+      const commands = drag(game, a.id, b);
+      const contacts = dropContacts(commands);
+      if (!contacts.includes(b.id)) return null;
+      for (const id of contacts) {
+        const other = s.world.kids.find((k) => k.id === id);
+        if (other) tried.add(pairKey(a.type, other.type));
+      }
+      return commands;
+    };
+    // 2. Try a pair of types never tried together (the player doesn't know the recipes).
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        if (tried.has(pairKey(free[i]!.type, free[j]!.type))) continue;
+        const act = attempt(free[i]!, free[j]!);
+        if (act) return act;
+      }
+    }
+    // 3. Fuse a known recipe whose result isn't on the map: a new type opens new pairs.
+    const onMap = new Set(s.world.kids.map((k) => k.type));
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        const result = recipes.get(pairKey(free[i]!.type, free[j]!.type));
+        if (!result || !s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type)) || onMap.has(result)) continue;
+        const act = attempt(free[i]!, free[j]!);
+        if (act) return act;
+      }
+    }
+    // 3b. A full map with nothing new to try: fuse any known recipe to make room.
+    const full = s.world.kids.length >= game.capacity;
+    if (full) {
+      for (let i = 0; i < free.length; i++) {
+        for (let j = i + 1; j < free.length; j++) {
+          if (!s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type))) continue;
+          const act = attempt(free[i]!, free[j]!);
+          if (act) return act;
+        }
+      }
+    }
+    // 3c. Still full: send home (D-048) the kid with the fewest untried pairings on the
+    //     map (a dead end, or a spare copy), so the Garden can bring someone new.
+    if (full && sendHome && free.length) {
+      const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
+      const pick = free.reduce((best, k) => (untried(k.type) < untried(best.type) ? k : best));
+      return [{ type: 'sendHome', kidId: pick.id }];
+    }
+    // 4. Out of ideas with room to spare: bring back a known type that pairs untried with
+    //    the map (Compendium), else an instant spawn.
+    if (s.world.kids.length < game.capacity) {
+      if (s.buildings.compendium > 0) {
+        const pick = s.discoveredKids.find((t) => free.some((k) => !tried.has(pairKey(t, k.type))));
+        if (pick) {
+          const cost = game.respawnCost(pick);
+          if (s.materials >= cost.materials) return [{ type: 'respawn', kidType: pick, pay: 'materials' }];
+          if (s.potatokens >= cost.potatokens) return [{ type: 'respawn', kidType: pick, pay: 'potatokens' }];
+        }
+      }
+      if (s.potatokens >= content.balance.economy.instantSpawnPotatokens) return [{ type: 'instantSpawn' }];
+    }
+    return null;
+  };
+  return { decide, tried };
+}
+
 /** A full map on which no two kids make a recipe, and no upgrade is affordable. */
 function deadlocked(game: Game, recipes: Map<string, string>): boolean {
   const kids = game.state.world.kids;
@@ -193,6 +220,12 @@ function deadlocked(game: Game, recipes: Map<string, string>): boolean {
     for (let j = i + 1; j < kids.length; j++) if (recipes.has(pairKey(kids[i]!.type, kids[j]!.type))) return false;
   }
   return purchase(game) === null;
+}
+
+/** The kids a drag's drop really touches. */
+function dropContacts(commands: Command[]): number[] {
+  const drop = commands.find((c) => c.type === 'drop');
+  return drop?.type === 'drop' ? (drop.touching ?? []) : [];
 }
 
 /**
