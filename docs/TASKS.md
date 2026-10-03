@@ -8,7 +8,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 
 **Order of work**
 - **Done:** MUSIC-LOOP (#61), WAVE-WIGGLE (#62), FUSE-DROP's engine side (#66) and GATE4-DESIGN (#67); they go to the owner's device at the next gate-4 build.
-- **Now:** PACING, then OFFLINE-WANDER (Claude); PERSONALITY (Codex).
+- **Now:** PACING and OFFLINE-WANDER in review (Claude); PERSONALITY in review (Codex). Next: PLANTING, VARIANTS and FEED-NAME (Claude), from GUI_MVP §§14–18.
 - **After the design:** PLANTING, VARIANTS and FEED-NAME (Claude), with Codex's art and the planting cue.
 
 **Built for the MVP so far**
@@ -46,7 +46,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | MUSIC-LOOP | Claude | Gate-4 bug: the music doesn't always loop on the device. Make the loop seamless and keep it playing (also after app switches) | **done** (#61); the owner checks it on device at gate 4 | The loop has no gap or click and never stops on its own, in tests and on the owner's device |
 | FUSE-DROP | Claude (engine) / ChatGPT (highlight design) | D-051: releasing a kid onto another tries the pair; the kid under the finger is highlighted while dragging | **review** (engine side merged in #66; the highlight from GUI_MVP §14.1 is drawn next) | Drops onto a partner fuse even on a crowded map; drops onto a non-partner slide apart; the highlight never hints at recipes; e2e covered |
 | PACING | Claude | D-052: tutorial at one kid a minute, then 20 min falling to about 8 min with Garden upgrades; much slower Materials; retune prices and milestones with the simulator | **review** (PR with the simulator's before and after) | `npm run balance` shows the agreed schedule; PR with before and after numbers, reviewed by Codex |
-| OFFLINE-WANDER | Claude | D-053: on return, kids have moved and offline spawns have walked out from the Garden; no offline fusions | todo | Unit and e2e tests for positions after a long absence, with no recipe pair left touching |
+| OFFLINE-WANDER | Claude | D-053: on return, kids have moved and offline spawns have walked out from the Garden; no offline fusions | **review** (PR after PACING) | Unit and e2e tests for positions after a long absence, with no recipe pair left touching |
 | GATE4-DESIGN | ChatGPT | Interaction design and art for D-051..D-058: the drop highlight, planting (plots, seed, growing, sprout), Rainbow and Mini looks, foods, feeding, naming and the kid card; plus a planting sound in the existing audio style | **done** (#67; Claude's review passed in round 2; the owner sees it at gate 4) | Claude's review passes (technical fit, consistency, D-045) |
 | PERSONALITY | ChatGPT (writing) / Claude (data format, validation) | D-058: a short description, likes, hates and hobbies for all 64 types, with a favourite and a hated food each (D-056) | **doing** (Codex, `chatgpt/personality`) | Every type has a personality that passes content validation; Claude's review passes |
 | PLANTING | Claude | D-054: the sim, save, engine and UI for planting, plots and sprouts (offline too), replacing Send home | todo (after GATE4-DESIGN) | Unit, save-migration and e2e tests; the balance simulator includes planting |
