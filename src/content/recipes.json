@@ -28,5 +28,21 @@
   {"a": "sail", "b": "fire", "result": "lighthouse"},
   {"a": "sail", "b": "plain", "result": "captain"},
   {"a": "steam", "b": "wind", "result": "whistle"},
-  {"a": "kite", "b": "wind", "result": "pinwheel"}
+  {"a": "kite", "b": "wind", "result": "pinwheel"},
+  {"a": "gardener", "b": "glassblower", "result": "greenhouse"},
+  {"a": "flower", "b": "gardener", "result": "bouquet"},
+  {"a": "gardener", "b": "sprout", "result": "bonsai"},
+  {"a": "mushroom", "b": "glassblower", "result": "terrarium"},
+  {"a": "tea", "b": "potter", "result": "teapot"},
+  {"a": "baker", "b": "cocoa", "result": "cookie"},
+  {"a": "baker", "b": "blacksmith", "result": "pretzel"},
+  {"a": "mushroom", "b": "chef", "result": "soup"},
+  {"a": "blizzard", "b": "glassblower", "result": "snowglobe"},
+  {"a": "snowman", "b": "potter", "result": "ice_sculptor"},
+  {"a": "pinwheel", "b": "blacksmith", "result": "weather_vane"},
+  {"a": "captain", "b": "fire", "result": "balloon"},
+  {"a": "captain", "b": "whistle", "result": "steamboat"},
+  {"a": "hero", "b": "captain", "result": "lifeguard"},
+  {"a": "potter", "b": "forge", "result": "kiln"},
+  {"a": "blizzard", "b": "crystal", "result": "aurora"}
 ]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatClock, formatCount, formatDuration, formatExact, formatInterval } from './format';
+import { formatClock, formatCount, formatDuration, formatExact, formatInterval, formatRate } from './format';
 
 describe('number display (GUI_MVP §3)', () => {
   it('counters truncate, never round up', () => {
@@ -42,5 +42,12 @@ describe('number display (GUI_MVP §3)', () => {
     expect(formatInterval(12)).toBe('12.0 s');
     expect(formatInterval(10.2)).toBe('10.2 s');
     expect(formatInterval(12 * 0.85 * 0.85)).toBe('8.7 s');
+  });
+
+  it('rates show whole numbers plainly, else one decimal', () => {
+    expect(formatRate(0.5)).toBe('0.5');
+    expect(formatRate(1)).toBe('1');
+    expect(formatRate(8)).toBe('8');
+    expect(formatRate(1.25)).toBe('1.3');
   });
 });

@@ -69,6 +69,40 @@
   top: 0;
 }
 
+/* A tight sheet (a fixed bar would crowd the body out): everything below the sticky header
+   scrolls as one, above a sticky footer (Codex review, PR #41). */
+.sheet[data-tight='true'] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sheet[data-tight='true'] .sheet-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ui-paper);
+}
+.sheet[data-tight='true'] .sheet-body {
+  flex: none;
+  overflow: visible;
+}
+.sheet[data-tight='true'] .sheet-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--ui-paper);
+}
+
+/* Fixed region above the body (Compendium toolbar and message, GUI_MVP §6). */
+.sheet-bar {
+  flex: none;
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sheet-bar:empty {
+  display: none;
+}
+
 /* Body: the only scrolling part; 8 px gaps, 16 px bottom padding, 6 px scrollbar. */
 .sheet-body {
   flex: 1;
@@ -250,6 +284,425 @@
 .ui-icon-48 {
   width: 48px;
   height: 48px;
+}
+
+.compare-value-small {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* Compendium (§6): locked intro, then a fixed 56 px wallet and 44 px message over a
+   scrolling search field and 144 px kid cards. */
+.comp-lock {
+  display: flex;
+  justify-content: center;
+}
+.comp-centred {
+  text-align: center;
+}
+.comp-toolbar {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 22px;
+  line-height: 28px;
+}
+.comp-wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.comp-message {
+  margin: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.comp-search-label {
+  margin-top: 8px;
+}
+.comp-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1.5px solid var(--ui-ink);
+  border-radius: 8px;
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+  font: inherit;
+}
+.comp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.comp-card {
+  min-height: 144px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  column-gap: 8px;
+  row-gap: 0;
+  align-items: start;
+}
+.comp-title {
+  display: flex;
+  flex-direction: column;
+  min-height: 64px;
+}
+.comp-name {
+  font-size: 18px;
+  line-height: 24px;
+}
+.comp-tier {
+  min-height: 24px;
+}
+.comp-buys {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ui-button.comp-buy {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ui-button.comp-buy.is-full {
+  border-image-source: var(--ui-spawn-full);
+}
+.comp-arrived {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  margin-top: 8px;
+}
+
+/* Offline-return summary (§8): three 56 px stat rows, 8 px apart. */
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.stat-row {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stat-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
+  line-height: 24px;
+}
+.stat-exact {
+  font-size: 16px;
+  line-height: 22px;
+}
+.stat-value {
+  font-size: 22px;
+  line-height: 28px;
+  text-align: right;
+}
+
+/* Settings (§11): 56 px audio row with a 104 x 44 On/Off toggle; 104 px slider sections
+   with a 44 px hit track, a 6 px sage rail and a 24 px thumb from x 12 to C - 12. */
+.settings-row {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-audio-icon {
+  display: inline-flex;
+}
+.settings-label {
+  flex: 1;
+  font-size: 22px;
+  line-height: 28px;
+}
+.settings-toggle {
+  display: flex;
+}
+.ui-button.settings-choice {
+  width: 52px;
+  min-height: 44px;
+  font-size: 16px;
+}
+.ui-button.settings-choice.is-selected {
+  border-image-source: var(--ui-button-selected);
+}
+.settings-section {
+  min-height: 104px;
+  padding-top: 24px;
+  box-sizing: border-box;
+}
+.settings-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.settings-slider-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.settings-value {
+  font-size: 16px;
+  line-height: 22px;
+}
+.settings-section.is-off .settings-slider-label,
+.settings-section.is-off .settings-value {
+  color: var(--ui-disabled);
+}
+.settings-slider {
+  --fill: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  touch-action: pan-y;
+  cursor: pointer;
+}
+.settings-slider:disabled {
+  cursor: default;
+}
+/* The rail; the filled part runs to the thumb's centre, which travels from 12 to C - 12. */
+.settings-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--ui-sceneryInk) 55%, transparent), color-mix(in srgb, var(--ui-sceneryInk) 55%, transparent))
+      0 0 / calc(12px + (100% - 24px) * var(--fill)) 100% no-repeat,
+    var(--ui-sage);
+}
+.settings-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--ui-sceneryInk) 55%, transparent), color-mix(in srgb, var(--ui-sceneryInk) 55%, transparent))
+      0 0 / calc(12px + (100% - 24px) * var(--fill)) 100% no-repeat,
+    var(--ui-sage);
+}
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border: 0;
+  background: var(--ui-slider-thumb) center / 24px 24px no-repeat;
+}
+.settings-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: var(--ui-slider-thumb) center / 24px 24px no-repeat;
+}
+/* Off: no fill; the rail gets a 1 px secondary-ink dashed outline (2 px dash, 4 px gap). */
+.settings-slider:disabled::-webkit-slider-runnable-track {
+  background:
+    repeating-linear-gradient(90deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 0 0 / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 0 100% / 100% 1px no-repeat,
+    repeating-linear-gradient(180deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 0 0 / 1px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 100% 0 / 1px 100% no-repeat,
+    var(--ui-sage);
+}
+.settings-slider:disabled::-moz-range-track {
+  background:
+    repeating-linear-gradient(90deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 0 0 / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 0 100% / 100% 1px no-repeat,
+    repeating-linear-gradient(180deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 0 0 / 1px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--ui-sceneryInk) 0 2px, transparent 2px 6px) 100% 0 / 1px 100% no-repeat,
+    var(--ui-sage);
+}
+
+/* Potato-Dex (§7): a 48 px strip of three equal 44 px tabs, then the tab's content. */
+.ui-icon-32 {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.ui-icon-80 {
+  width: 80px;
+  height: 80px;
+  flex: none;
+}
+.dex-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-height: 48px;
+  align-items: center;
+}
+.ui-button.dex-tab {
+  min-height: 44px;
+  font-size: 16px;
+  line-height: 20px;
+}
+.ui-button.dex-tab.is-selected {
+  border-image-source: var(--ui-button-selected);
+}
+.dex-tab-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-tab-bar:empty {
+  display: none;
+}
+.dex-panel,
+.dex-kids,
+.dex-search,
+.dex-detail,
+.dex-recipes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-search .sheet-helper {
+  margin: 0;
+}
+
+/* Kids grid: 148 px cards, 8 px gaps; a long name grows its whole row equally. */
+.dex-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.dex-grid[data-cols='2'] {
+  --cols: 2;
+}
+.dex-grid[data-cols='5'] {
+  --cols: 5;
+}
+.dex-cell {
+  display: flex;
+}
+.ui-button.dex-tile,
+.dex-tile {
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 148px;
+  padding: 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.dex-unknown {
+  border: 8px solid transparent;
+  border-image: var(--ui-button) 8 fill / 8px stretch;
+}
+.dex-tile-name {
+  min-height: 44px;
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.dex-tile .tier {
+  margin-top: auto;
+}
+.dex-tier-20 {
+  min-height: 20px;
+  line-height: 20px;
+}
+.dex-tier-24 {
+  min-height: 24px;
+}
+
+/* Detail: Back, a 96 px portrait, the full name, tier, income, then found recipes. */
+.ui-button.dex-back {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+}
+.dex-detail-portrait,
+.dex-detail-tier {
+  display: flex;
+  justify-content: center;
+}
+.dex-detail-name {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* Recipes: 144 px cards of three endpoint columns around 26 px + and → columns. */
+.dex-recipes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-recipe {
+  min-height: 144px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr) 26px minmax(0, 1fr);
+  align-items: start;
+}
+.dex-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.dex-end-name {
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.dex-sym {
+  font-size: 18px;
+  line-height: 48px;
+  text-align: center;
+}
+@container (max-width: 299px) {
+  .dex-end .portrait {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .dex-end .portrait-canvas {
+    transform: scale(0.15625) !important;
+  }
+  .dex-sym {
+    line-height: 40px;
+  }
+}
+.dex-recipe-unknown {
+  min-height: 72px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dex-unknown-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  line-height: 22px;
 }
 
 /* Page mode with a sheet open (GUI_MVP §3.1): the sheet replaces the hint, HUD and

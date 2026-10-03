@@ -1,13 +1,17 @@
 import { kidRig, uiData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
-import type { GameEvent } from '../sim/game';
+import type { SettingsStore } from '../save/settings';
+import type { GameEvent, OfflineReport } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { formatClock, formatCount, formatExact } from './format';
 import { BuildingSheets } from './buildings';
+import { Dex } from './dex';
 import { el, icon, ui } from './dom';
+import { openOfflineSummary } from './offline';
 import { portrait } from './portrait';
-import { Sheets } from './sheet';
+import { openSettings } from './settings';
+import { Sheets, type SheetSnapshot } from './sheet';
 import './hud.css';
 // Patrick Hand (D-031), chosen by Codex, bundled locally under the SIL OFL (assets/PROVENANCE.md).
 import fontUrl from '../../assets/fonts/patrick-hand/PatrickHand-Regular.ttf?url';
@@ -70,11 +74,17 @@ export class Hud {
   private last = performance.now();
   private readonly sheets: Sheets;
   private readonly buildings: BuildingSheets;
+  private readonly dex: Dex;
+  private readonly dexButton = el('button', 'ui-button dex-button', icon('icon_dex', '', 'ui-icon-24'));
   private readonly trayCells = new Map<string, HTMLButtonElement>();
+  /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
+  private summaryOpen = false;
+  private interrupted: (SheetSnapshot & { search: string }) | null = null;
 
   constructor(
     private readonly scene: MapScene,
     private readonly content: Content,
+    private readonly settings: SettingsStore,
   ) {
     this.applyTokens();
     this.known = new Set(scene.game.state.discoveredKids);
@@ -85,11 +95,14 @@ export class Hud {
     this.spawn.type = 'button';
     this.spawn.append(el('span', 'hud-spawn-label', 'Spawn now'), el('span', 'hud-spawn-price', icon('icon_potatokens', '', 'ui-icon-18'), this.spawnCost));
     this.spawn.addEventListener('click', () => this.instantSpawn());
-    const settings = this.comingSoon('icon_settings', 'Settings', 'hud-settings');
+    const gear = el('button', 'ui-button hud-settings', icon('icon_settings', '', 'ui-icon-24'));
+    gear.type = 'button';
+    gear.setAttribute('aria-label', 'Settings');
+    gear.addEventListener('click', () => openSettings(this.sheets, this.settings, gear));
     this.hud.append(
       el('span', 'hud-stat hud-materials', icon('icon_materials', 'Materials', 'ui-icon-24'), this.materials),
       el('span', 'hud-stat hud-potatokens', icon('icon_potatokens', 'Potatokens', 'ui-icon-24'), this.potatokens),
-      settings,
+      gear,
       el('span', 'hud-stat hud-population', icon('icon_kids', 'Kids', 'ui-icon-24'), this.count),
       el('span', 'hud-stat hud-timer', icon('icon_timer', '', 'ui-icon-24'), this.countdown),
       this.track,
@@ -113,7 +126,10 @@ export class Hud {
       this.trayCell('compendium', 'Compendium'),
     );
     tray.setAttribute('aria-label', 'Buildings');
-    const dex = this.comingSoon('icon_dex', 'Potato-Dex', 'dex-button');
+    const dex = this.dexButton;
+    dex.type = 'button';
+    dex.setAttribute('aria-label', 'Potato-Dex');
+    dex.addEventListener('click', () => this.dex.open(dex));
     document.body.append(this.shield, this.banners, this.top, dex, tray);
     this.sheets = new Sheets(
       scene,
@@ -122,6 +138,7 @@ export class Hud {
       matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
     this.buildings = new BuildingSheets(scene, content, this.sheets);
+    this.dex = new Dex(scene, content, this.sheets, this.buildings);
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the tray and Dex button at the bottom (GUI_MVP §2; Codex review, PR #15).
@@ -130,6 +147,8 @@ export class Hud {
       const banner = this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0;
       this.top.style.marginTop = `${banner}px`;
       this.layout();
+      // Page mode changes what scrolls an open sheet.
+      this.sheets.place();
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top));
     };
     new ResizeObserver(measure).observe(document.body);
@@ -150,8 +169,9 @@ export class Hud {
     scene.listenShown((kidId) => this.kidShown(kidId, performance.now()));
     // Offline catch-up can discover types; the summary reports them, so no card later
     // should call them new (Codex review, PR #33).
-    scene.listenResume(() => {
+    scene.listenResume((report) => {
       for (const t of scene.game.state.discoveredKids) this.known.add(t);
+      this.offlineSummary(report);
     });
     const tick = (now: number) => {
       this.render(now);
@@ -195,6 +215,7 @@ export class Hud {
       ['banner-problem', 'ui_banner_problem'],
       ['banner-recovery', 'ui_banner_recovery'],
       ['spawn-full', 'ui_spawn_full'],
+      ['slider-thumb', 'ui_slider_thumb'],
     ];
     for (const [k, name] of surfaces) s.setProperty(`--ui-${k}`, `url("${ui(name)}")`);
     // The font loads under the family name Codex's token gives, from the bundled file;
@@ -208,26 +229,11 @@ export class Hud {
     }
   }
 
-  /** Not built yet (sheets arrive with the next GUI slice): visibly disabled, reason announced. */
-  private comingSoon(iconName: string, label: string, className: string): HTMLButtonElement {
-    const b = el('button', `ui-button ${className}`, icon(iconName, '', 'ui-icon-24'));
-    b.type = 'button';
-    b.disabled = true;
-    b.setAttribute('aria-label', `${label} (coming soon)`);
-    return b;
-  }
-
-  /** A tray button: Garden, Capacity and Bias open their sheets; Compendium arrives later. */
+  /** A tray button: opens its building's sheet. */
   private trayCell(key: 'garden' | 'capacity' | 'bias' | 'compendium', label: string): HTMLButtonElement {
     const b = el('button', 'tray-cell', icon(`icon_${key}`), el('span', 'tray-label', label));
     b.type = 'button';
     this.trayCells.set(key, b);
-    if (key === 'compendium') {
-      // The Compendium sheet comes with the Dex in the next GUI slice.
-      b.disabled = true;
-      b.setAttribute('aria-label', `${label} (coming soon)`);
-      return b;
-    }
     b.setAttribute('aria-label', label);
     b.addEventListener('click', () => this.buildings.open(key, b));
     return b;
@@ -236,6 +242,31 @@ export class Hud {
   /** Android Back: closes an open sheet (returns whether it did). */
   back(): boolean {
     return this.sheets.back();
+  }
+
+  /**
+   * The offline-return summary, once per report (GUI_MVP §8). A sheet that was open is put
+   * away and comes back, where it was, when the summary is dismissed; a second report while
+   * the summary is up replaces it.
+   */
+  private offlineSummary(report: OfflineReport): void {
+    if (this.save.readOnly) return;
+    if (!this.summaryOpen) {
+      const open = this.sheets.snapshot();
+      this.interrupted = open && { ...open, search: this.buildings.searchText };
+    }
+    this.summaryOpen = true;
+    openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, (replaced) => {
+      if (replaced) return;
+      this.summaryOpen = false;
+      const back = this.interrupted;
+      this.interrupted = null;
+      if (!back) return;
+      if (back.key === 'dex') this.dex.open(back.launcher);
+      else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
+      else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
+        this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search });
+    });
   }
 
   /**
@@ -248,6 +279,10 @@ export class Hud {
     // Staying in the HUD scroll window keeps its offset; entering it starts at 0 (§3.1).
     const wasWindow = root.dataset.hudFit === 'window';
     const scroll = wasWindow ? this.hud.scrollTop : 0;
+    // Measuring the usual layout briefly shortens the page, which would clamp a page-mode
+    // scroll to the top: it is put back if the page stays (Codex review, PR #41 follow-up).
+    const page = document.scrollingElement ?? root;
+    const pageScroll = root.dataset.hudFit === 'page' ? page.scrollTop : null;
     const w = window.visualViewport?.width ?? window.innerWidth;
     const h = window.visualViewport?.height ?? window.innerHeight;
     root.dataset.compact = h <= 520 ? 'true' : 'false';
@@ -285,6 +320,7 @@ export class Hud {
     this.scene.cancelDrag();
     root.dataset.hudFit = 'page';
     this.hud.dataset.mode = 'narrow';
+    if (pageScroll !== null) page.scrollTop = pageScroll;
   }
 
   /** An unsaved or recovery banner is up (read-only hides the HUD instead). */
@@ -481,7 +517,12 @@ export class Hud {
         const lines: Node[] = [el('span', 'card-heading', heading), el('span', 'card-name', this.name(item.childType)), this.tier(item.childType)];
         if (item.kind === 'discovery' && item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
         if (item.milestone > 0) lines.push(el('span', 'card-line', `Dex milestone · +${formatExact(item.milestone)} Potatokens`));
-        return el('div', 'toast toast-reward', portrait(kidRig!, item.childType, 56), el('div', 'card-text', ...lines));
+        // The whole card opens this kid in the Potato-Dex (GUI_MVP §9).
+        const card = el('button', 'toast toast-reward toast-button', portrait(kidRig!, item.childType, 56), el('div', 'card-text', ...lines));
+        card.type = 'button';
+        // The card is the launcher: closing the Dex returns focus to it (Codex review, PR #43).
+        card.addEventListener('click', () => this.dex.open(card, item.childType));
+        return card;
       }
       case 'milestone':
         return el(
@@ -510,12 +551,14 @@ export class Hud {
   private renderBanners(): void {
     // Read-only: the building launchers are visibly unavailable, with the reason announced
     // (GUI_MVP §10; Codex review, PR #39).
-    for (const [key, cell] of this.trayCells) {
-      if (key === 'compendium') continue;
-      const label = cell.querySelector('.tray-label')?.textContent ?? key;
+    for (const cell of this.trayCells.values()) {
+      const label = cell.querySelector('.tray-label')?.textContent ?? '';
       cell.disabled = this.save.readOnly;
       cell.setAttribute('aria-label', this.save.readOnly ? `${label}: Update the game to continue.` : label);
     }
+    // A read-only save gives the Dex nothing real to show (GUI_MVP §10).
+    this.dexButton.disabled = this.save.readOnly;
+    this.dexButton.setAttribute('aria-label', this.save.readOnly ? 'Potato-Dex: Update the game to continue.' : 'Potato-Dex');
     this.banners.replaceChildren();
     document.documentElement.dataset.readonly = String(this.save.readOnly);
     this.shield.replaceChildren();

@@ -34,5 +34,21 @@
   {"id": "whistle", "tier": 3, "name": "Whistle Kid"},
   {"id": "pinwheel", "tier": 3, "name": "Pinwheel Kid"},
   {"id": "lantern", "tier": 4, "name": "Lantern Kid"},
-  {"id": "picnic", "tier": 4, "name": "Picnic Kid"}
+  {"id": "picnic", "tier": 4, "name": "Picnic Kid"},
+  {"id": "greenhouse", "tier": 4, "name": "Greenhouse Kid"},
+  {"id": "bouquet", "tier": 4, "name": "Bouquet Kid"},
+  {"id": "bonsai", "tier": 4, "name": "Bonsai Kid"},
+  {"id": "terrarium", "tier": 4, "name": "Terrarium Kid"},
+  {"id": "teapot", "tier": 4, "name": "Teapot Kid"},
+  {"id": "cookie", "tier": 4, "name": "Cookie Kid"},
+  {"id": "pretzel", "tier": 4, "name": "Pretzel Kid"},
+  {"id": "soup", "tier": 4, "name": "Soup Kid"},
+  {"id": "snowglobe", "tier": 4, "name": "Snowglobe Kid"},
+  {"id": "ice_sculptor", "tier": 4, "name": "Ice Sculptor Kid"},
+  {"id": "weather_vane", "tier": 4, "name": "Weather Vane Kid"},
+  {"id": "balloon", "tier": 4, "name": "Balloon Kid"},
+  {"id": "steamboat", "tier": 4, "name": "Steamboat Kid"},
+  {"id": "lifeguard", "tier": 4, "name": "Lifeguard Kid"},
+  {"id": "kiln", "tier": 4, "name": "Kiln Kid"},
+  {"id": "aurora", "tier": 4, "name": "Aurora Kid"}
 ]
