@@ -1,5 +1,49 @@
 # Asset provenance
 
+
+
+## ASSET-MVP batch 2: new tier 4 costumes (2026-10-02; Claude review pending)
+
+Author/art owner: ChatGPT/Codex. Revision `asset-mvp-2`; **16 final costumes /33 original SVG sources**. Licence: original work for Potato Kid. Tools: hand-authored SVG paths/circles and JSON using Node.js; Playwright Chromium export/review; exported-alpha and independently sampled source-geometry checks. No image generation, tracing, external art, samples, text baked into runtime art, or per-body/pose costume copies. References: all 22 supplied images via `.codex-out/reference-contact-sheet.png`, both approved 20x9 ingame captures, the accepted 36 costume sources and batch 1 round 2 sheets. Reference files remain untouched and unembedded.
+
+| New asset ID | Original editable source | Status / revision |
+| --- | --- | --- |
+| kid_greenhouse_front_roof | `art/src/kids/kid_greenhouse_front_roof.svg` | final /asset-mvp-2 |
+| kid_greenhouse_front_tray | `art/src/kids/kid_greenhouse_front_tray.svg` | final /asset-mvp-2 |
+| kid_bouquet_front_flowers | `art/src/kids/kid_bouquet_front_flowers.svg` | final /asset-mvp-2 |
+| kid_bouquet_front_wrap | `art/src/kids/kid_bouquet_front_wrap.svg` | final /asset-mvp-2 |
+| kid_bonsai_front_tree | `art/src/kids/kid_bonsai_front_tree.svg` | final /asset-mvp-2 |
+| kid_bonsai_front_tray | `art/src/kids/kid_bonsai_front_tray.svg` | final /asset-mvp-2 |
+| kid_terrarium_front_jar | `art/src/kids/kid_terrarium_front_jar.svg` | final /asset-mvp-2 |
+| kid_terrarium_front_mushroom | `art/src/kids/kid_terrarium_front_mushroom.svg` | final /asset-mvp-2 |
+| kid_teapot_back_handle | `art/src/kids/kid_teapot_back_handle.svg` | final /asset-mvp-2 |
+| kid_teapot_front_lid | `art/src/kids/kid_teapot_front_lid.svg` | final /asset-mvp-2 |
+| kid_teapot_front_spout | `art/src/kids/kid_teapot_front_spout.svg` | final /asset-mvp-2 |
+| kid_cookie_front_cookie | `art/src/kids/kid_cookie_front_cookie.svg` | final /asset-mvp-2 |
+| kid_cookie_front_pocket | `art/src/kids/kid_cookie_front_pocket.svg` | final /asset-mvp-2 |
+| kid_pretzel_front_pretzel | `art/src/kids/kid_pretzel_front_pretzel.svg` | final /asset-mvp-2 |
+| kid_pretzel_front_ribbon | `art/src/kids/kid_pretzel_front_ribbon.svg` | final /asset-mvp-2 |
+| kid_soup_front_pot | `art/src/kids/kid_soup_front_pot.svg` | final /asset-mvp-2 |
+| kid_soup_front_ladle | `art/src/kids/kid_soup_front_ladle.svg` | final /asset-mvp-2 |
+| kid_snowglobe_back_globe | `art/src/kids/kid_snowglobe_back_globe.svg` | final /asset-mvp-2 |
+| kid_snowglobe_front_pedestal | `art/src/kids/kid_snowglobe_front_pedestal.svg` | final /asset-mvp-2 |
+| kid_ice_sculptor_front_ice | `art/src/kids/kid_ice_sculptor_front_ice.svg` | final /asset-mvp-2 |
+| kid_ice_sculptor_front_holster | `art/src/kids/kid_ice_sculptor_front_holster.svg` | final /asset-mvp-2 |
+| kid_weather_vane_front_arrow | `art/src/kids/kid_weather_vane_front_arrow.svg` | final /asset-mvp-2 |
+| kid_weather_vane_front_compass | `art/src/kids/kid_weather_vane_front_compass.svg` | final /asset-mvp-2 |
+| kid_balloon_back_balloon | `art/src/kids/kid_balloon_back_balloon.svg` | final /asset-mvp-2 |
+| kid_balloon_front_basket | `art/src/kids/kid_balloon_front_basket.svg` | final /asset-mvp-2 |
+| kid_steamboat_front_hull | `art/src/kids/kid_steamboat_front_hull.svg` | final /asset-mvp-2 |
+| kid_steamboat_front_funnel | `art/src/kids/kid_steamboat_front_funnel.svg` | final /asset-mvp-2 |
+| kid_lifeguard_front_buoy | `art/src/kids/kid_lifeguard_front_buoy.svg` | final /asset-mvp-2 |
+| kid_lifeguard_front_float | `art/src/kids/kid_lifeguard_front_float.svg` | final /asset-mvp-2 |
+| kid_kiln_front_arch | `art/src/kids/kid_kiln_front_arch.svg` | final /asset-mvp-2 |
+| kid_kiln_front_tile | `art/src/kids/kid_kiln_front_tile.svg` | final /asset-mvp-2 |
+| kid_aurora_back_curtain | `art/src/kids/kid_aurora_back_curtain.svg` | final /asset-mvp-2 |
+| kid_aurora_front_pendant | `art/src/kids/kid_aurora_front_pendant.svg` | final /asset-mvp-2 |
+
+PNG derivatives inherit their SVG revision. Exact source/export SHA-256, crop dimensions, trim offsets, pivots/fits: `.codex-out/asset-mvp-2-inventory.json`. Existing art and all original trim entries remain unchanged. New sidecar entries and root revision only; shared body/face/pose/clip/lifetime metadata is retained. Review images are compositor artifacts, not runtime textures. Validation, D-045 audit, concept refinements and remaining device/engine checks: `.codex-out/asset-mvp-2-notes.md`. Claude reviews/commits/pushes unchanged; this delivery is left uncommitted.
+
 ## ASSET-MVP batch 1 (2026-10-02; Claude review pending)
 
 Author/art owner: ChatGPT/Codex. Revision `asset-mvp-1`; **20 final costumes /37 original SVG drawings**. Licence: original work for Potato Kid. Tools: hand-authored SVG paths/circles and JSON with Node.js, Playwright Chromium PNG export, original exported-PNG compositor and independent raster/vector checks. No image generation, tracing, imported artwork, samples, external fonts, baked runtime text or per-body/pose costume copies. References: all 22 supplied images inspected via `.codex-out/reference-contact-sheet.png`, approved `art/previews/ingame/types-20x9.png` and `types-20x9-gray.png`, and the accepted body/face/costume sources. References remain untouched and unembedded.

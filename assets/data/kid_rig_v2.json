@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "asset-mvp-1",
+  "revision": "asset-mvp-2",
   "status": "final",
   "delivery": {
     "scope": "first_playable_art",
@@ -4807,6 +4807,1010 @@
         },
         {
           "asset": "kid_pinwheel_front_sash",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "greenhouse": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_greenhouse_front_roof",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_greenhouse_front_tray",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "bouquet": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_bouquet_front_flowers",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.88,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_bouquet_front_wrap",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "bonsai": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_bonsai_front_tree",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_bonsai_front_tray",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "terrarium": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_terrarium_front_jar",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_terrarium_front_mushroom",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "teapot": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_teapot_back_handle",
+          "status": "final",
+          "layer": "back",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_teapot_front_lid",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_teapot_front_spout",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "cookie": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_cookie_front_cookie",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_cookie_front_pocket",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "pretzel": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_pretzel_front_pretzel",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_pretzel_front_ribbon",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "soup": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_soup_front_pot",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_soup_front_ladle",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.88,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "snowglobe": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_snowglobe_back_globe",
+          "status": "final",
+          "layer": "back",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_snowglobe_front_pedestal",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "ice_sculptor": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_ice_sculptor_front_ice",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.88,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_ice_sculptor_front_holster",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "weather_vane": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_weather_vane_front_arrow",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_weather_vane_front_compass",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "balloon": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_balloon_back_balloon",
+          "status": "final",
+          "layer": "back",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_balloon_front_basket",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "steamboat": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_steamboat_front_hull",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_steamboat_front_funnel",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "lifeguard": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_lifeguard_front_buoy",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              0.93
+            ],
+            "squat": [
+              1.08,
+              0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_lifeguard_front_float",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.88,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "kiln": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_kiln_front_arch",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_kiln_front_tile",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.88,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "aurora": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_aurora_back_curtain",
+          "status": "final",
+          "layer": "back",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_aurora_front_pendant",
           "status": "final",
           "layer": "front",
           "attachTo": "torso",
