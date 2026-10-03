@@ -233,8 +233,6 @@ export class BuildingSheets {
           el('div', 'compare-row', nextLabel, nextValue),
         );
         const grid = el('div', 'seed-grid');
-        grid.setAttribute('role', 'radiogroup');
-        grid.setAttribute('aria-label', 'Choose a seed');
         // The pool in content order; never hard-coded (GUI_MVP §5).
         const pool = Object.keys(this.content.balance.spawnWeights);
         const cards = pool.map((type, i) => {
@@ -264,7 +262,11 @@ export class BuildingSheets {
         }
         const choice = el('p', 'sheet-helper');
         const status = this.statusRow();
-        body.append(card, el('p', 'sheet-helper', 'Favours one seed; other kids can still arrive.'), el('h3', 'sheet-section', 'Choose a seed'), grid, none, choice, status.row);
+        // One labelled radio group holds every choice, None included (Codex review, PR #39).
+        const group = el('div', 'seed-group', grid, none);
+        group.setAttribute('role', 'radiogroup');
+        group.setAttribute('aria-label', 'Choose a seed');
+        body.append(card, el('p', 'sheet-helper', 'Favours one seed; other kids can still arrive.'), el('h3', 'sheet-section', 'Choose a seed'), group, choice, status.row);
         const short = el('p', 'sheet-helper footer-helper');
         const act = this.action(() => this.send({ type: 'upgrade', building: 'bias' }));
         footer.append(short, act.button);

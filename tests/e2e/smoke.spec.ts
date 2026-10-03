@@ -954,6 +954,11 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     await page.locator('.sheet-title').focus();
     await page.keyboard.press('Shift+Tab');
     expect(await page.evaluate(() => !!document.querySelector('.sheet')!.contains(document.activeElement))).toBe(true);
+    // Every choice, None included, is in the one labelled radio group.
+    const groups = await page.locator('.seed-card, .seed-none').evaluateAll((els) => new Set(els.map((e) => e.closest('[role="radiogroup"]'))).size);
+    expect(groups).toBe(1);
+    await expect(page.locator('.seed-none')).toHaveAttribute('role', 'radio');
+    expect(await page.locator('.seed-none').evaluate((e) => !!e.closest('[role="radiogroup"][aria-label="Choose a seed"]'))).toBe(true);
     // One tab stop in the group: the selected choice (None while nothing is favoured).
     expect(await page.locator('.seed-card, .seed-none').evaluateAll((els) => els.filter((e) => (e as HTMLElement).tabIndex === 0).length)).toBe(1);
     await page.locator('.seed-none').focus();

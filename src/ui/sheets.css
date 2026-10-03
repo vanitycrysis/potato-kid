@@ -234,6 +234,11 @@
 .tray-cell.is-selected {
   border-image-source: var(--ui-button-selected);
 }
+.seed-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .ui-button.seed-none {
   width: 100%;
   min-height: 44px;
