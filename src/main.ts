@@ -52,7 +52,16 @@ declare global {
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
       /** The audio runtime's state (tests). */
-      audio: () => { unlocked: boolean; musicPlaying: boolean; lastCue: string | null; played: string[]; active: number };
+      audio: () => {
+        unlocked: boolean;
+        musicPlaying: boolean;
+        music: { loop: boolean; seconds: number; sampleRate: number; at: number } | null;
+        lastCue: string | null;
+        played: string[];
+        active: number;
+      };
+      /** Only with `?debug=1`: the system suspends audio while the game is in front. */
+      debugAudioInterrupt?: () => void;
       /** Send home (D-048): the Garden target's state, and kids still waving goodbye. */
       home: () => { state: string; departing: number; departingAt: { x: number; y: number }[] };
       /** The stored player settings (GUI_MVP §11). */
@@ -196,7 +205,7 @@ async function boot(): Promise<void> {
     buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
-    audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, lastCue: null, played: [], active: 0 },
+    audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
     home: () => ({ state: scene.homeState, departing: scene.departing.length, departingAt: scene.departing }),
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
@@ -215,6 +224,7 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
+          debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
           debugGive: (amounts: { materials?: number; potatokens?: number }) => {
             scene.game.state.materials += amounts.materials ?? 0;

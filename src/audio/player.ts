@@ -2,10 +2,13 @@ import type { SettingsStore } from '../save/settings';
 import type { GameEvent } from '../sim/game';
 import { cueFor, SpawnLimiter, type Cue } from './cues';
 
-// The audio runtime (ART_AUDIO_PLAN audio section). Codex's cues are short, so they are
-// decoded once into Web Audio buffers. The 72 s music loop is streamed through a looping
-// media element instead: decoded, it would hold ~28 MB of PCM. Nothing plays until the
-// first gesture (browsers and WebViews require one); a failure stays silent.
+// The audio runtime (ART_AUDIO_PLAN audio section). Codex's cues and the 72 s music loop
+// are decoded into Web Audio buffers. The music loops on a buffer source, which is
+// sample-accurate: a looping media element (what we had first) seeks back at its end and
+// left a gap on the owner's device, and the WebView could pause it with nothing to start
+// it again (gate 4). The decoded loop holds ~28 MB of PCM at 48 kHz; that is the price of
+// a seamless loop. Nothing plays until the first gesture (browsers and WebViews require
+// one); a failure stays silent.
 
 const urls = import.meta.glob<string>('../../assets/audio/*.{ogg,m4a}', { query: '?url', import: 'default', eager: true });
 
@@ -24,12 +27,17 @@ export class AudioPlayer {
   private ctx: AudioContext | null = null;
   private sfx: GainNode | null = null;
   private readonly buffers = new Map<Cue, AudioBuffer>();
-  private readonly music: HTMLAudioElement | null;
+  private readonly musicUrl: string | undefined;
+  private musicGain: GainNode | null = null;
+  private musicBuffer: AudioBuffer | null = null;
+  private musicNode: AudioBufferSourceNode | null = null;
+  /** Where in the loop the music is (seconds) when musicStartedAt was taken. */
+  private musicOffset = 0;
+  /** The context time the current music node started at. */
+  private musicStartedAt = 0;
   private readonly limiter = new SpawnLimiter();
   private readonly ext = pickExt();
   private unlocked = false;
-  private gesture: () => void = () => {};
-  private gestureEvents: readonly string[] = [];
   private hidden = false;
   /** Sources still sounding: stopped, not frozen, when the app hides. */
   private readonly active = new Set<AudioBufferSourceNode>();
@@ -37,22 +45,18 @@ export class AudioPlayer {
   readonly played: Cue[] = [];
 
   constructor(private readonly settings: SettingsStore) {
-    const src = this.url('music_garden');
-    this.music = src ? new Audio(src) : null;
-    if (this.music) {
-      this.music.loop = true;
-      this.music.preload = 'auto';
-    }
+    this.musicUrl = this.url('music_garden');
     settings.onChange(() => this.apply());
     // A gesture unlocks audio, and it is the first moment music may start. Only the
     // *ending* of a touch grants user activation (pointerup/touchend), not pointerdown;
     // every gesture retries, since one without activation (e.g. Escape) can leave a
     // resume pending forever. The context's own state change marks it unlocked (Codex
-    // review, PR #53).
+    // review, PR #53). After that, a gesture wakes a context the system suspended while
+    // the game was in front (a call, another app taking audio focus), which nothing else
+    // would restart (gate 4: the music sometimes stopped).
     const events = ['pointerup', 'touchend', 'keydown', 'click'] as const;
-    this.gesture = () => this.tryUnlock();
-    this.gestureEvents = events;
-    for (const ev of events) window.addEventListener(ev, this.gesture, true);
+    const gesture = () => (this.unlocked ? this.wake() : this.tryUnlock());
+    for (const ev of events) window.addEventListener(ev, gesture, true);
     // A tap on a GUI button (not the world) gets the soft UI cue, unless its action has
     // its own success sound (data-cue="success"), which then plays alone.
     document.addEventListener('click', (e) => {
@@ -62,10 +66,22 @@ export class AudioPlayer {
   }
 
   /** Test hook: what the runtime is doing. */
-  get state(): { unlocked: boolean; musicPlaying: boolean; lastCue: Cue | null; played: Cue[]; active: number } {
+  get state(): {
+    unlocked: boolean;
+    musicPlaying: boolean;
+    /** The playing loop: its length and where in it the music is now (seconds). */
+    music: { loop: boolean; seconds: number; sampleRate: number; at: number } | null;
+    lastCue: Cue | null;
+    played: Cue[];
+    active: number;
+  } {
+    const node = this.musicNode;
     return {
       unlocked: this.unlocked,
-      musicPlaying: !!this.music && !this.music.paused,
+      musicPlaying: !!node && !this.hidden && this.ctx?.state === 'running',
+      music: node?.buffer
+        ? { loop: node.loop, seconds: node.buffer.duration, sampleRate: node.buffer.sampleRate, at: this.musicPosition() }
+        : null,
       lastCue: this.played[this.played.length - 1] ?? null,
       played: [...this.played],
       active: this.active.size,
@@ -78,7 +94,10 @@ export class AudioPlayer {
     if (cue) this.play(cue);
   }
 
-  /** The app is hidden: music pauses; effects stop (they don't resume later). */
+  /**
+   * The app is hidden: effects stop (they don't resume later); the music pauses with the
+   * suspended context and carries on from the same sample when it resumes.
+   */
   suspend(): void {
     this.hidden = true;
     for (const node of this.active) {
@@ -90,7 +109,6 @@ export class AudioPlayer {
     }
     // Cleared here: once the context is suspended, onended can't arrive.
     this.active.clear();
-    this.music?.pause();
     void this.ctx?.suspend().catch(() => {});
   }
 
@@ -115,6 +133,8 @@ export class AudioPlayer {
         this.ctx = new Ctx();
         this.sfx = this.ctx.createGain();
         this.sfx.connect(this.ctx.destination);
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.connect(this.ctx.destination);
         this.ctx.addEventListener('statechange', () => this.onRunning());
       }
       void this.ctx.resume().then(
@@ -126,35 +146,90 @@ export class AudioPlayer {
     }
   }
 
-  /** The context runs: unlocked for good; music may start and the cues load. */
+  /** Tests: the system suspends the context while the game is in front (a call). */
+  debugInterrupt(): void {
+    void this.ctx?.suspend().catch(() => {});
+  }
+
+  /** A gesture while unlocked: resume a context the system suspended under us. */
+  private wake(): void {
+    if (this.hidden || !this.ctx || this.ctx.state === 'running') return;
+    void this.ctx.resume().catch(() => {});
+  }
+
+  /** The context runs: unlocked for good; the cues and then the music load. */
   private onRunning(): void {
     if (this.unlocked || this.ctx?.state !== 'running') return;
     this.unlocked = true;
-    for (const ev of this.gestureEvents) window.removeEventListener(ev, this.gesture, true);
     this.apply();
     void Promise.all(
       CUES.map(async (cue) => {
-        const u = this.url(cue);
-        if (!u || !this.ctx) return;
-        try {
-          const data = await (await fetch(u)).arrayBuffer();
-          this.buffers.set(cue, await this.ctx.decodeAudioData(data));
-        } catch {
-          // A cue that fails to load stays silent.
-        }
+        const buffer = await this.load(this.url(cue));
+        if (buffer) this.buffers.set(cue, buffer);
       }),
-    );
+    ).then(async () => {
+      // The music after the cues: it is the big decode, and the cues are what a tap hears.
+      this.musicBuffer = await this.load(this.musicUrl);
+      this.apply();
+    });
+  }
+
+  /** Fetches and decodes one file; null (silence) if anything fails. */
+  private async load(url: string | undefined): Promise<AudioBuffer | null> {
+    if (!url || !this.ctx) return null;
+    try {
+      const data = await (await fetch(url)).arrayBuffer();
+      return await this.ctx.decodeAudioData(data);
+    } catch {
+      return null;
+    }
   }
 
   /** Settings → volumes and music state (On/Off, Music %, Sound effects %). */
   private apply(): void {
     const s = this.settings.value;
     if (this.sfx) this.sfx.gain.value = s.audio ? s.sfx / 100 : 0;
-    if (!this.music) return;
-    this.music.volume = Math.min(1, Math.max(0, s.music / 100));
+    if (this.musicGain) this.musicGain.gain.value = Math.min(1, Math.max(0, s.music / 100));
     const want = this.unlocked && !this.hidden && s.audio && s.music > 0;
-    if (want && this.music.paused) void this.music.play().catch(() => {});
-    else if (!want && !this.music.paused) this.music.pause();
+    if (want && !this.musicNode) this.startMusic();
+    else if (!want && this.musicNode) this.stopMusic();
+  }
+
+  /** Starts the loop where it last stopped. */
+  private startMusic(): void {
+    if (!this.ctx || !this.musicGain || !this.musicBuffer) return;
+    try {
+      const node = this.ctx.createBufferSource();
+      node.buffer = this.musicBuffer;
+      node.loop = true;
+      node.connect(this.musicGain);
+      node.start(0, this.musicOffset);
+      this.musicStartedAt = this.ctx.currentTime;
+      this.musicNode = node;
+    } catch {
+      // Audio is optional.
+    }
+  }
+
+  /** Where in the loop the music is (seconds). Context time stands still while suspended. */
+  private musicPosition(): number {
+    const length = this.musicBuffer?.duration ?? 0;
+    if (!this.ctx || !this.musicNode || length <= 0) return this.musicOffset;
+    return (this.musicOffset + this.ctx.currentTime - this.musicStartedAt) % length;
+  }
+
+  /** Stops the loop, remembering where it was. */
+  private stopMusic(): void {
+    const node = this.musicNode;
+    if (!node) return;
+    this.musicOffset = this.musicPosition();
+    try {
+      node.stop();
+    } catch {
+      // already stopped
+    }
+    node.disconnect();
+    this.musicNode = null;
   }
 
   private play(cue: Cue): void {
