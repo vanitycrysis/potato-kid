@@ -1616,7 +1616,8 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     expect(await audio(page)).toMatchObject({ unlocked: false, musicPlaying: false, lastCue: null });
     // Only the end of a press grants activation: a pointerdown alone doesn't unlock
     // (Codex review, PR #53); its pointerup does.
-    await page.mouse.move(200, 1300);
+    // An empty spot of the map, inside the viewport (Codex review, PR #53).
+    await page.mouse.move(200, 600);
     await page.mouse.down();
     await page.waitForTimeout(200);
     expect((await audio(page)).unlocked).toBe(false);
@@ -1651,7 +1652,7 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
 
   test('a command button plays its success cue alone; other buttons tap (Codex review, PR #53)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.mouse.click(200, 1300);
+    await page.mouse.click(200, 600);
     await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
     await page.waitForTimeout(500);
     const before = (await audio(page)).played.length;

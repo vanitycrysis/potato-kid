@@ -28,7 +28,8 @@ export class AudioPlayer {
   private readonly limiter = new SpawnLimiter();
   private readonly ext = pickExt();
   private unlocked = false;
-  private unlocking = false;
+  private gesture: () => void = () => {};
+  private gestureEvents: readonly string[] = [];
   private hidden = false;
   /** Sources still sounding: stopped, not frozen, when the app hides. */
   private readonly active = new Set<AudioBufferSourceNode>();
@@ -45,15 +46,13 @@ export class AudioPlayer {
     settings.onChange(() => this.apply());
     // A gesture unlocks audio, and it is the first moment music may start. Only the
     // *ending* of a touch grants user activation (pointerup/touchend), not pointerdown;
-    // listeners stay until an unlock succeeds, so a failed one retries on the next
-    // gesture (Codex review, PR #53).
+    // every gesture retries, since one without activation (e.g. Escape) can leave a
+    // resume pending forever. The context's own state change marks it unlocked (Codex
+    // review, PR #53).
     const events = ['pointerup', 'touchend', 'keydown', 'click'] as const;
-    const unlock = () => {
-      void this.unlock().then(() => {
-        if (this.unlocked) for (const ev of events) window.removeEventListener(ev, unlock, true);
-      });
-    };
-    for (const ev of events) window.addEventListener(ev, unlock, true);
+    this.gesture = () => this.tryUnlock();
+    this.gestureEvents = events;
+    for (const ev of events) window.addEventListener(ev, this.gesture, true);
     // A tap on a GUI button (not the world) gets the soft UI cue, unless its action has
     // its own success sound (data-cue="success"), which then plays alone.
     document.addEventListener('click', (e) => {
@@ -106,34 +105,45 @@ export class AudioPlayer {
     return Object.entries(urls).find(([p]) => p.endsWith(`/${name}.${this.ext}`))?.[1];
   }
 
-  private async unlock(): Promise<void> {
-    if (this.unlocked || this.unlocking) return;
-    this.unlocking = true;
+  /** One gesture's attempt: make the context once, then ask it to run. */
+  private tryUnlock(): void {
+    if (this.unlocked) return;
     try {
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
       if (!this.ctx) {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return;
         this.ctx = new Ctx();
         this.sfx = this.ctx.createGain();
         this.sfx.connect(this.ctx.destination);
+        this.ctx.addEventListener('statechange', () => this.onRunning());
       }
-      await this.ctx.resume();
-      if (this.ctx.state !== 'running') return; // not activated yet: the next gesture retries
-      this.unlocked = true;
-      this.apply();
-      await Promise.all(
-        CUES.map(async (cue) => {
-          const u = this.url(cue);
-          if (!u || !this.ctx) return;
-          const data = await (await fetch(u)).arrayBuffer();
-          this.buffers.set(cue, await this.ctx.decodeAudioData(data));
-        }),
+      void this.ctx.resume().then(
+        () => this.onRunning(),
+        () => {},
       );
     } catch {
-      // Audio is optional: a failed unlock or decode leaves the game silent, never broken.
-    } finally {
-      this.unlocking = false;
+      // Audio is optional: a failed unlock leaves the game silent, never broken.
     }
+  }
+
+  /** The context runs: unlocked for good; music may start and the cues load. */
+  private onRunning(): void {
+    if (this.unlocked || this.ctx?.state !== 'running') return;
+    this.unlocked = true;
+    for (const ev of this.gestureEvents) window.removeEventListener(ev, this.gesture, true);
+    this.apply();
+    void Promise.all(
+      CUES.map(async (cue) => {
+        const u = this.url(cue);
+        if (!u || !this.ctx) return;
+        try {
+          const data = await (await fetch(u)).arrayBuffer();
+          this.buffers.set(cue, await this.ctx.decodeAudioData(data));
+        } catch {
+          // A cue that fails to load stays silent.
+        }
+      }),
+    );
   }
 
   /** Settings → volumes and music state (On/Off, Music %, Sound effects %). */
