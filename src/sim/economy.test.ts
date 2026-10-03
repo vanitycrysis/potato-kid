@@ -316,8 +316,8 @@ describe('send home (D-048)', () => {
     expect(events.some((x) => x.type === 'spawned' && x.source === 'garden')).toBe(true);
   });
 
-  it('ignores a kid that is already gone', () => {
+  it('answers a kid that is already gone with a refusal, changing nothing', () => {
     const g = game();
-    expect(g.step([{ type: 'sendHome', kidId: 999 }], 0)).toEqual([]);
+    expect(g.step([{ type: 'sendHome', kidId: 999 }], 0)).toEqual([{ type: 'rejected', command: 'sendHome', reason: 'gone' }]);
   });
 });

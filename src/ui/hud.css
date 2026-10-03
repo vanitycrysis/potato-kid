@@ -616,3 +616,90 @@
   font-size: 16px;
   line-height: 22px;
 }
+
+/* --- Send home (§13.1, Codex's design): target, pointer mark and label --------------- */
+.home-target {
+  position: fixed;
+  z-index: 5;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.home-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.home-outline rect {
+  fill: none;
+  stroke: var(--ui-ink);
+  stroke-width: 2;
+}
+.home-target[data-state='shown'] .home-outline rect:last-child,
+.home-target[data-state='waiting'] .home-outline rect:last-child {
+  stroke-dasharray: 6 4;
+}
+.home-target[data-state='shown'] .home-outline rect:first-child,
+.home-target[data-state='waiting'] .home-outline rect:first-child {
+  display: none;
+}
+/* Ready: solid outline, a solid inset 4 px in, sage fill at 0.35. */
+.home-target[data-state='ready'] .home-outline rect:first-child {
+  fill: color-mix(in srgb, var(--ui-sage) 35%, transparent);
+}
+.home-state-icon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+}
+.home-point {
+  position: fixed;
+  z-index: 6;
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  margin: -5px 0 0 -5px;
+  background: var(--ui-paper);
+  border: 1.5px solid var(--ui-ink);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.home-label {
+  position: fixed;
+  z-index: 20;
+  box-sizing: border-box;
+  min-width: 232px;
+  min-height: 80px;
+  max-width: min(320px, calc(100vw - var(--ui-ml) - var(--ui-mr)));
+  padding: 0 8px;
+  border: 8px solid transparent;
+  border-image: var(--ui-toast) 8 fill / 8px stretch;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+  pointer-events: none;
+}
+.home-icon {
+  position: absolute;
+  left: 8px;
+  top: 2px;
+}
+.home-text {
+  display: flex;
+  flex-direction: column;
+}
+.home-heading {
+  padding-left: 32px;
+  font-size: 18px;
+  line-height: 24px;
+}
+.home-helper {
+  font-size: 16px;
+  line-height: 22px;
+}
+.home-probe {
+  left: -10000px;
+  top: 0;
+  visibility: hidden;
+}
