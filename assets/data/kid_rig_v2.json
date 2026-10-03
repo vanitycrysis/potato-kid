@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "wave-wiggle-1",
+  "revision": "wave-wiggle-2",
   "status": "final",
   "delivery": {
     "scope": "first_playable_art",
@@ -481,10 +481,10 @@
             },
             "hand_left": {
               "position": [
-                31,
-                159
+                23,
+                167
               ],
-              "rotationDeg": -25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -559,10 +559,10 @@
             },
             "hand_left": {
               "position": [
-                31,
-                149
+                23,
+                143
               ],
-              "rotationDeg": 25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -571,7 +571,7 @@
             "hand_right": {
               "position": [
                 199,
-                172
+                162
               ],
               "rotationDeg": 0,
               "scale": [
@@ -1116,10 +1116,10 @@
             },
             "hand_left": {
               "position": [
-                49,
-                154
+                44,
+                170
               ],
-              "rotationDeg": -25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -1194,10 +1194,10 @@
             },
             "hand_left": {
               "position": [
-                49,
-                144
+                44,
+                146
               ],
-              "rotationDeg": 25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -1206,7 +1206,7 @@
             "hand_right": {
               "position": [
                 187,
-                169
+                159
               ],
               "rotationDeg": 0,
               "scale": [
@@ -1751,10 +1751,10 @@
             },
             "hand_left": {
               "position": [
-                19,
-                166
+                15,
+                178
               ],
-              "rotationDeg": -25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -1829,10 +1829,10 @@
             },
             "hand_left": {
               "position": [
-                19,
-                156
+                15,
+                154
               ],
-              "rotationDeg": 25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -1841,7 +1841,7 @@
             "hand_right": {
               "position": [
                 211,
-                182
+                172
               ],
               "rotationDeg": 0,
               "scale": [
@@ -2386,10 +2386,10 @@
             },
             "hand_left": {
               "position": [
-                31,
-                168
+                27,
+                186
               ],
-              "rotationDeg": -25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -2464,10 +2464,10 @@
             },
             "hand_left": {
               "position": [
-                31,
-                158
+                27,
+                162
               ],
-              "rotationDeg": 25,
+              "rotationDeg": 0,
               "scale": [
                 1,
                 1
@@ -2476,7 +2476,7 @@
             "hand_right": {
               "position": [
                 196,
-                175
+                165
               ],
               "rotationDeg": 0,
               "scale": [
@@ -7341,7 +7341,7 @@
         "front"
       ],
       "faceRule": "preserve_current_state_and_smirk",
-      "note": "Three quick up/down beats of the existing free left nub at 16 fps, then rest. Nub stays stand-sized; body, face, right prop hand and all other attachments stay fixed. Eight entries / 16 fps = 0.5 s; no motion marks."
+      "note": "Three quick synchronized beats of both existing stubby nubs, 106.3 degree sweep and constant 15px length. Right-hand props follow an inset shared grip: high 10px above stand, low at stand, upright at unit scale. Body, face, head and torso stay fixed. Eight entries / 16 fps = 0.5 s; no motion marks."
     },
     "pick_up": {
       "fps": 12,

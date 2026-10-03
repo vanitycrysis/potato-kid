@@ -1,22 +1,22 @@
 # Art and audio plan
 
-Author: ChatGPT. **Current delivery: WAVE-WIGGLE, 2026-10-03, revision wave-wiggle-1; final art for Claude review.** Gate 2 remains approved under D-044. The wave now wiggles a stand-sized free left nub; the remaining accepted rig, map, GUI and FX are retained. Current budget is in the wave addendum; earlier delivery counts below are historical. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
+Author: ChatGPT. **Current delivery: WAVE-WIGGLE, 2026-10-03, revision wave-wiggle-2; final art for Claude review.** Gate 2 remains approved under D-044. The wave now wiggles both stand-sized nubs; the remaining accepted rig, map, GUI and FX are retained. Current budget is in the wave addendum; earlier delivery counts below are historical. Official Patrick Hand is already bundled by Claude, as recorded in assets/PROVENANCE.md.
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at all 64 after batch 3. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 
-## WAVE-WIGGLE addendum (2026-10-03; Claude review pending)
+## WAVE-WIGGLE addendum (2026-10-03; round 2 / PR #62; Claude review pending)
 
 | Item | Art choice / status |
 | --- | --- |
-| Owner's gate-4 correction | Replace the stretched wave with a really fast stubby-arm wiggle; final art /wave-wiggle-1 for Claude review |
-| Shared drawing | One free left nub on each body; ~12.1 source px centreline against stand's ~13.8px, unchanged 7.5px ink. Same body contour, feet, crown nub, face and occupied right hand. No motion lines or expression marks |
-| Wave clip | `stand, high, low, high, low, high, low, stand`; 8 entries at 16fps, `loop:false`; 500ms unchanged. Explicit repetitions in existing fields; no new schema fields |
-| Costumes and D-043 | All 64 costumes retained, right-hand/head/torso/face transforms exact. Wave left attachment updated to nub tip/tilt. All pose/clip/lifetime boxes retained; each body needs 0 extra source px. Crops shrink |
-| Reduced motion | Existing `wave → stand / open / none` retained completely; Send home retains its inherited-face stand/fade150ms |
-| Texture budget | Same 198 runtime PNGs /171 kid layers /127 costume components. Total 11,423,604 decoded RGBA bytes (10.89440 MiB); 57,220 bytes smaller. Kid layers 6,561,292 bytes (6.25734 MiB). Physical GPU/residency acceptance remains Claude's check under the existing 32 MiB ceiling |
-| Verification | Export and 179 tests pass; 73,728 full clip/body/costume/face/state/size combinations pass bounds and face clearance. Eight 55px colour/gray clip strips, eight all-64 pose sheets and exact-timing HTML playback in `.codex-out/`; full notes and limits: `wave-wiggle-notes.md` |
+| Owner's gate-4 correction | Both existing nubs wiggle quickly; final /wave-wiggle-2 for Claude review |
+| Shared drawing | Constant15 px centreline, 106.3-degree sweep /5.16 CSS px tip travel at 55 px. Roots on the outer ink edge; same contour/feet/crown/face. No motion lines or expression marks |
+| Wave clip | `stand, high, low, high, low, high, low, stand`;8 entries /16 fps, `loop:false`;500 ms unchanged; existing schema |
+| Props and D-043 | Right shared inset grip bobs from stand to10 px above stand, upright at unit scale. All 64 costume sources, pivots, fits and layers exact; head/torso/face stationary. Every pose/clip/lifetime box retained; zero extra reserve |
+| Reduced motion | Existing `wave → stand / open / none` retained completely; current Send home retains its inherited-face stand/fade150 ms |
+| Texture budget |198 runtime PNGs /171 kid layers /127 costume components. 11,516,244 decoded RGBA bytes (10.98275 MiB); kid layers 6,653,932 bytes (6.34568 MiB). +92,640 bytes versus round1, +35,420 versus original stretched wave. Physical GPU/residency check remains Claude's under 32 MiB |
+| Verification | Export and 179 tests pass; 73,728 combinations pass bounds/face clearance. All 256 body/costume pairs have at least12 high/low contrasting pixels at 55 px in colour and grayscale; Water remains weakest.24 game-size sheets and exact-timing old/round1/round2 playback; full notes and limits in `.codex-out/wave-wiggle-notes.md`, Round 2 |
 
-Three brief one-sided beats with a steady body and smirk give a friendly greeting without whole-body tremble. The hand-prop side stays stable so Baker/Blacksmith remain readable. Send home reuses this same revised wave; its 500ms clip and 650ms total remain unchanged. This owner-requested correction does not start the broader ANIM-POLISH work deferred by D-047. Claude reviews the assets and engine timing; the owner judges the next gate-4 build on device.
+Three simultaneous up/down beats of both short nubs answer the owner's plural arms. The upright inset grip gives tools a compact bob; a full tool rotation or ±14 px grip excursion caused face/bounds problems during authoring. Only shared hand transforms change, with no per-type exception. The current Send home consumer stays500 ms wave /650 ms total; D-054 replaces it separately. This correction does not start D-047's broader animation polish. Claude reviews animation feel and engine fit; the owner judges the next gate-4 device build.
 
 ## Android launcher and splash addendum (2026-10-03; Claude review pending)
 
@@ -111,7 +111,7 @@ Counts below are full-production timeline entries; repeated texture references d
 | seated | 4 / 2 / 2 s loop | sit x4; body + followers breathe <=1 px |
 | sleep | 4 / 1 / 4 s loop | sit x4; asleep face, <=1 px breath, no Z text |
 | wake | 3 / 8 / 0.375 s | sit, settle, stand; face asleep/blink/open + followers |
-| wave | 8 / 16 / 0.50 s | stand, wave_high, wave_low, wave_high, wave_low, wave_high, wave_low, stand; free left nub only, fixed body/face/right prop hand; wave-wiggle-1, Claude review pending |
+| wave | 8 / 16 / 0.50 s | stand, wave_high, wave_low, wave_high, wave_low, wave_high, wave_low, stand; both stubby nubs, steady body/face/headwear, upright shared prop bob; wave-wiggle-2, Claude review pending |
 | pick_up | 2 / 12 / 0.167 s | stand, held; body + followers |
 | held | 4 / 4 / 1 s loop | held x4; rig lean <=2 degrees, lift <=6 canvas px; open face |
 | drop | 3 / 12 / 0.25 s | held, settle, stand; body + followers; drawn squash, no root enlargement |
@@ -125,7 +125,7 @@ Replace current procedural hop/squash, squash-blink, 1.12 held scale and pop ove
 
 Attachments in every body frame: `ground`, `head_top`, `face_centre`, `torso`, `hand_left`, `hand_right`. Each records absolute source `position:[x,y]`, clockwise `rotationDeg`, `scale:[sx,sy]`. Ground is always [128,224], 0 degrees, [1,1]. Illustrative round/stand: head [128,56], face [128,116], torso [128,166], left hand [52,168], right hand [202,168]. Actual values for all 32 drawings are authored in production, never inferred from alpha bounds.
 
-Back/front are logical layers that may contain multiple independently attached components. One component = one 256 PNG and one sprite. Draw all back components before body, all front after face; component-array order is authoritative. Each has an authored source pivot and fit multiplier for each body. A torso wrap follows torso scale; headwear follows head_top; a hand prop follows its hand. Water's hood needs a loose opening that fits all faces/poses; do not bake four hoods. Wave the free left nub when a prop occupies the right hand. Face alpha stays unobstructed in all allowed combinations.
+Back/front are logical layers that may contain multiple independently attached components. One component = one 256 PNG and one sprite. Draw all back components before body, all front after face; component-array order is authoritative. Each has an authored source pivot and fit multiplier for each body. A torso wrap follows torso scale; headwear follows head_top; a hand prop follows its hand. Water's hood needs a loose opening that fits all faces/poses; do not bake four hoods. WAVE-WIGGLE round 2 moves both nubs; the inset right grip bobs props upright within the same reserves. Face alpha stays unobstructed in all allowed combinations.
 
 ASSETS.md assigns **26 front + 7 back components**, shared across every physique, face and pose. Picnic has three front parts and therefore five kid sprites including body/face. Performance fixtures must cover five sprites, not assume four draws from four logical layers. Fire flicker is authored <=2-degree rotation and 0.98-1.00 scale on existing back/head components, included in envelope; no additional fire frames.
 
