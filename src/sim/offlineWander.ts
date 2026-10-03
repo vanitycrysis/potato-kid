@@ -72,7 +72,8 @@ export function wanderOffline(
         const len = Math.hypot(dx, dy);
         if (len > reach) [dx, dy] = [(dx / len) * reach, (dy / len) * reach];
         const p = findFreeSpot(world, kid.box, reflect(kid.x + dx, ib.minX, ib.maxX), reflect(kid.y + dy, ib.minY, ib.maxY), kid.id);
-        if (p && clear(kid, p.x, p.y)) spot = p;
+        // Making room can push the spot past the reach (beside scenery): then it's no walk.
+        if (p && Math.hypot(p.x - kid.x, p.y - kid.y) <= reach + 1e-9 && clear(kid, p.x, p.y)) spot = p;
       }
     }
     // Staying put is fine unless a partner now stands touching it.

@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { content } from '../content';
+import type { KidRig, MapData } from '../content/artData';
+import { lookTable, obstaclesFrom } from '../content/artRules';
 import type { Content } from '../content/types';
 import { pairKey } from '../content/validate';
 import { Game } from './game';
@@ -111,6 +114,22 @@ describe('a long absence (D-053)', () => {
       const kid = place(g, 'plain', 1500, 2000);
       g.reconcile(T0 + 100);
       expect(dist(kid, { x: 1500, y: 2000 })).toBeLessThanOrEqual(w.speed * 0.1 + 1e-9);
+    }
+  });
+
+  it('beside scenery too: making room never carries a kid farther than it could walk (Codex review, PR #70)', () => {
+    const map = JSON.parse(readFileSync('art/data/map_garden_v2.json', 'utf8')) as MapData;
+    const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
+    const [mw, mh] = map.worldSize;
+    const options = { bounds: { minX: 0, minY: 0, maxX: mw, maxY: mh }, spawnAt: garden, now: T0, obstacles: obstaclesFrom(map), looks: lookTable(rig) };
+    for (const seed of [1, 11, 42]) {
+      for (const body of ['round', 'tall', 'squat', 'bean']) {
+        const g = new Game(testContent(), options, seed);
+        const kid = g.debugAddKid('plain', 1475.75, 620, { body, scale: 1 }); // against the Garden's reserve
+        const start = { x: kid.x, y: kid.y };
+        g.reconcile(T0 + 100);
+        expect(dist(kid, start), `seed ${seed}, ${body}`).toBeLessThanOrEqual(w.speed * 0.1 + 1e-9);
+      }
     }
   });
 
