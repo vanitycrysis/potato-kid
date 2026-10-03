@@ -28,9 +28,12 @@ export class AudioPlayer {
   private readonly limiter = new SpawnLimiter();
   private readonly ext = pickExt();
   private unlocked = false;
+  private unlocking = false;
   private hidden = false;
-  /** The last cue played (tests). */
-  lastCue: Cue | null = null;
+  /** Sources still sounding: stopped, not frozen, when the app hides. */
+  private readonly active = new Set<AudioBufferSourceNode>();
+  /** The cues played, most recent last (tests). */
+  readonly played: Cue[] = [];
 
   constructor(private readonly settings: SettingsStore) {
     const src = this.url('music_garden');
@@ -40,23 +43,34 @@ export class AudioPlayer {
       this.music.preload = 'auto';
     }
     settings.onChange(() => this.apply());
-    // The first gesture unlocks audio; it is also the first moment music may start.
+    // A gesture unlocks audio, and it is the first moment music may start. Only the
+    // *ending* of a touch grants user activation (pointerup/touchend), not pointerdown;
+    // listeners stay until an unlock succeeds, so a failed one retries on the next
+    // gesture (Codex review, PR #53).
+    const events = ['pointerup', 'touchend', 'keydown', 'click'] as const;
     const unlock = () => {
-      window.removeEventListener('pointerdown', unlock, true);
-      window.removeEventListener('keydown', unlock, true);
-      void this.unlock();
+      void this.unlock().then(() => {
+        if (this.unlocked) for (const ev of events) window.removeEventListener(ev, unlock, true);
+      });
     };
-    window.addEventListener('pointerdown', unlock, true);
-    window.addEventListener('keydown', unlock, true);
-    // A tap on any GUI button (not the world) gets the soft UI cue.
+    for (const ev of events) window.addEventListener(ev, unlock, true);
+    // A tap on a GUI button (not the world) gets the soft UI cue, unless its action has
+    // its own success sound (data-cue="success"), which then plays alone.
     document.addEventListener('click', (e) => {
-      if ((e.target as Element | null)?.closest?.('button')) this.play('sfx_ui_tap');
+      const button = (e.target as Element | null)?.closest?.('button');
+      if (button && (button as HTMLElement).dataset.cue !== 'success') this.play('sfx_ui_tap');
     });
   }
 
   /** Test hook: what the runtime is doing. */
-  get state(): { unlocked: boolean; musicPlaying: boolean; lastCue: Cue | null } {
-    return { unlocked: this.unlocked, musicPlaying: !!this.music && !this.music.paused, lastCue: this.lastCue };
+  get state(): { unlocked: boolean; musicPlaying: boolean; lastCue: Cue | null; played: Cue[]; active: number } {
+    return {
+      unlocked: this.unlocked,
+      musicPlaying: !!this.music && !this.music.paused,
+      lastCue: this.played[this.played.length - 1] ?? null,
+      played: [...this.played],
+      active: this.active.size,
+    };
   }
 
   /** A sim step: its one cue (see cueFor). */
@@ -65,9 +79,18 @@ export class AudioPlayer {
     if (cue) this.play(cue);
   }
 
-  /** The app is hidden: music pauses, effects stop. */
+  /** The app is hidden: music pauses; effects stop (they don't resume later). */
   suspend(): void {
     this.hidden = true;
+    for (const node of this.active) {
+      try {
+        node.stop();
+      } catch {
+        // already stopped
+      }
+    }
+    // Cleared here: once the context is suspended, onended can't arrive.
+    this.active.clear();
     this.music?.pause();
     void this.ctx?.suspend().catch(() => {});
   }
@@ -84,13 +107,18 @@ export class AudioPlayer {
   }
 
   private async unlock(): Promise<void> {
+    if (this.unlocked || this.unlocking) return;
+    this.unlocking = true;
     try {
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Ctx) return;
-      this.ctx = new Ctx();
-      this.sfx = this.ctx.createGain();
-      this.sfx.connect(this.ctx.destination);
+      if (!this.ctx) {
+        this.ctx = new Ctx();
+        this.sfx = this.ctx.createGain();
+        this.sfx.connect(this.ctx.destination);
+      }
       await this.ctx.resume();
+      if (this.ctx.state !== 'running') return; // not activated yet: the next gesture retries
       this.unlocked = true;
       this.apply();
       await Promise.all(
@@ -103,6 +131,8 @@ export class AudioPlayer {
       );
     } catch {
       // Audio is optional: a failed unlock or decode leaves the game silent, never broken.
+    } finally {
+      this.unlocking = false;
     }
   }
 
@@ -125,7 +155,10 @@ export class AudioPlayer {
     const node = this.ctx.createBufferSource();
     node.buffer = buffer;
     node.connect(this.sfx);
+    node.onended = () => this.active.delete(node);
+    this.active.add(node);
     node.start();
-    this.lastCue = cue;
+    this.played.push(cue);
+    if (this.played.length > 20) this.played.shift();
   }
 }

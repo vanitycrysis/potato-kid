@@ -93,6 +93,7 @@ export class Hud {
     this.track.setAttribute('role', 'progressbar');
     this.track.setAttribute('aria-label', 'Next kid');
     this.spawn.type = 'button';
+    this.spawn.dataset.cue = 'success'; // the spawn cue is its sound
     this.spawn.append(el('span', 'hud-spawn-label', 'Spawn now'), el('span', 'hud-spawn-price', icon('icon_potatokens', '', 'ui-icon-18'), this.spawnCost));
     this.spawn.addEventListener('click', () => this.instantSpawn());
     const gear = el('button', 'ui-button hud-settings', icon('icon_settings', '', 'ui-icon-24'));

@@ -1609,21 +1609,28 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 });
 
 test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
+  const audio = (page: Page) => page.evaluate(() => window.__PK__!.audio());
+
   test('silent until a gesture; then music follows Settings, and a discovery plays its cue', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
-    expect(await page.evaluate(() => window.__PK__!.audio())).toEqual({ unlocked: false, musicPlaying: false, lastCue: null });
-    // The first gesture unlocks audio and starts the music.
-    await page.mouse.click(200, 1300);
-    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().unlocked)).toBe(true);
-    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(true);
+    expect(await audio(page)).toMatchObject({ unlocked: false, musicPlaying: false, lastCue: null });
+    // Only the end of a press grants activation: a pointerdown alone doesn't unlock
+    // (Codex review, PR #53); its pointerup does.
+    await page.mouse.move(200, 1300);
+    await page.mouse.down();
+    await page.waitForTimeout(200);
+    expect((await audio(page)).unlocked).toBe(false);
+    await page.mouse.up();
+    await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(true);
     // Audio Off pauses it; On brings it back. Music at 0 % stays quiet.
     await page.getByRole('button', { name: 'Settings' }).click();
     await page.getByRole('radio', { name: 'Off' }).click();
-    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(false);
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(false);
     await page.getByRole('radio', { name: 'On' }).click();
-    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(true);
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(true);
     await page.getByLabel('Music').fill('0');
-    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(false);
+    await expect.poll(async () => (await audio(page)).musicPlaying).toBe(false);
     await page.keyboard.press('Escape');
     // A first discovery plays the discovery cue (it replaces the fusion cue).
     await page.waitForTimeout(500); // cue buffers decode after the unlock
@@ -1631,7 +1638,28 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
       window.__PK__!.debugAdd!('plain', 540, 2600);
       window.__PK__!.debugAdd!('water', 540, 2600);
     });
-    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().lastCue)).toBe('sfx_discovery');
+    await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_discovery');
+    // Hiding the app stops it, rather than freezing it to finish later (Codex review, PR #53).
+    expect((await audio(page)).active).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect((await audio(page)).active).toBe(0);
     expect(errors).toEqual([]);
+  });
+
+  test('a command button plays its success cue alone; other buttons tap (Codex review, PR #53)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.mouse.click(200, 1300);
+    await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
+    await page.waitForTimeout(500);
+    const before = (await audio(page)).played.length;
+    await page.getByRole('button', { name: /Spawn a random Garden kid/ }).click();
+    await expect.poll(async () => (await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
+    await page.waitForTimeout(300);
+    expect((await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_ui_tap');
   });
 });
