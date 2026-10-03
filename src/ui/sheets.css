@@ -532,6 +532,179 @@
     var(--ui-sage);
 }
 
+/* Potato-Dex (§7): a 48 px strip of three equal 44 px tabs, then the tab's content. */
+.ui-icon-32 {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.ui-icon-80 {
+  width: 80px;
+  height: 80px;
+  flex: none;
+}
+.dex-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-height: 48px;
+  align-items: center;
+}
+.ui-button.dex-tab {
+  min-height: 44px;
+  font-size: 16px;
+  line-height: 20px;
+}
+.ui-button.dex-tab.is-selected {
+  border-image-source: var(--ui-button-selected);
+}
+.dex-tab-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-tab-bar:empty {
+  display: none;
+}
+.dex-panel,
+.dex-kids,
+.dex-search,
+.dex-detail,
+.dex-recipes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-search .sheet-helper {
+  margin: 0;
+}
+
+/* Kids grid: 148 px cards, 8 px gaps; a long name grows its whole row equally. */
+.dex-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.dex-grid[data-cols='2'] {
+  --cols: 2;
+}
+.dex-grid[data-cols='5'] {
+  --cols: 5;
+}
+.dex-cell {
+  display: flex;
+}
+.ui-button.dex-tile,
+.dex-tile {
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 148px;
+  padding: 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.dex-unknown {
+  border: 8px solid transparent;
+  border-image: var(--ui-button) 8 fill / 8px stretch;
+}
+.dex-tile-name {
+  min-height: 44px;
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.dex-tile .tier {
+  margin-top: auto;
+}
+.dex-tier-20 {
+  min-height: 20px;
+  line-height: 20px;
+}
+.dex-tier-24 {
+  min-height: 24px;
+}
+
+/* Detail: Back, a 96 px portrait, the full name, tier, income, then found recipes. */
+.ui-button.dex-back {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+}
+.dex-detail-portrait,
+.dex-detail-tier {
+  display: flex;
+  justify-content: center;
+}
+.dex-detail-name {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* Recipes: 144 px cards of three endpoint columns around 26 px + and → columns. */
+.dex-recipes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-recipe {
+  min-height: 144px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr) 26px minmax(0, 1fr);
+  align-items: start;
+}
+.dex-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.dex-end-name {
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.dex-sym {
+  font-size: 18px;
+  line-height: 48px;
+  text-align: center;
+}
+@container (max-width: 299px) {
+  .dex-end .portrait {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .dex-end .portrait-canvas {
+    transform: scale(0.15625) !important;
+  }
+  .dex-sym {
+    line-height: 40px;
+  }
+}
+.dex-recipe-unknown {
+  min-height: 72px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dex-unknown-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  line-height: 22px;
+}
+
 /* Page mode with a sheet open (GUI_MVP §3.1): the sheet replaces the hint, HUD and
    navigation below the banner, at its natural height, in the scrolling page. */
 :root[data-hud-fit='page'][data-sheet-open] .sheet-scrim,
