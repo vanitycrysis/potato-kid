@@ -197,17 +197,19 @@ No store/marketing art, adventures, prestige or extra systems are added. Non-kid
 
 | ID | Cue | Master / duration | Needed for | Status / done means |
 | --- | --- | --- | --- | --- |
-| sfx_ui_tap | Soft confirmation | Mono WAV PCM 48 kHz/16-bit; 0.08-0.15 s | First playable | Planned; quiet repeated cue |
-| sfx_pick_up | Lift | Same; 0.10-0.25 s | First playable | Planned; clear lift |
-| sfx_place | Set down | Same; 0.10-0.25 s | First playable | Planned; distinct from lift |
-| sfx_spawn | New kid | Same; 0.20-0.40 s | First playable | Planned; restrained repetition |
-| sfx_fusion | Successful recipe | Same; 0.25-0.50 s | First playable | Planned; gentle success |
-| sfx_discovery | First discovery | Same; 0.60-1.20 s | MVP | Planned; replaces same-event fusion cue |
-| sfx_upgrade | Building upgrade | Same; 0.25-0.50 s | MVP | Planned; clear confirmation |
-| sfx_spend | Resource spend | Same; 0.10-0.25 s | MVP | Planned; only without a more specific success cue |
-| music_garden | Original instrumental loop | Stereo WAV PCM 48 kHz/16-bit; 60-90 s; note/MIDI source + loop sample boundaries | MVP | Planned scripted composition; seamless/non-fatiguing after listening |
+| sfx_ui_tap | Soft confirmation | Mono WAV PCM 48 kHz/16-bit; 0.08-0.15 s | First playable | Master rendered, audio-mvp-1; 0.120 s, -8.0 dBFS; quiet repeated cue; Claude/device review pending |
+| sfx_pick_up | Lift | Same; 0.10-0.25 s | First playable | Master rendered; 0.210 s, -4.0 dBFS; rising bright pluck; Claude/device review pending |
+| sfx_place | Set down | Same; 0.10-0.25 s | First playable | Master rendered; 0.190 s, -4.5 dBFS; lower settling knock; Claude/device review pending |
+| sfx_spawn | New kid | Same; 0.20-0.40 s | First playable | Master rendered; 0.340 s, -5.0 dBFS; restrained pop/pluck; Claude/device review pending |
+| sfx_fusion | Successful recipe | Same; 0.25-0.50 s | First playable | Master rendered; 0.460 s, -3.5 dBFS; gentle C/G success; Claude/device review pending |
+| sfx_discovery | First discovery | Same; 0.60-1.20 s | MVP | Master rendered; 1.160 s, -3.2 dBFS; C-E-G-D flourish; replaces same-event fusion; Claude/device review pending |
+| sfx_upgrade | Building upgrade | Same; 0.25-0.50 s | MVP | Master rendered; 0.480 s, -3.8 dBFS; G-C-E confirmation; Claude/device review pending |
+| sfx_spend | Resource spend | Same; 0.10-0.25 s | MVP | Master rendered; 0.180 s, -6.0 dBFS; descending wood pair; only without a more specific success cue; Claude/device review pending |
+| music_garden | Original instrumental loop | Stereo WAV PCM 48 kHz/16-bit; 60-90 s; note/MIDI source + loop sample boundaries | MVP | Master rendered; 72.000 s, -18.00 LUFS, -4.46 dBFS; exact loop [0,3456000) frames; numeric seam passed; listening/fatigue/encoded-loop review pending |
 
 ChatGPT delivers WAV masters and reproducible source only. Claude's ffmpeg build generates Ogg Vorbis/M4A AAC and verifies decode/looping on Howler/Android WebView. Listening/peak checks for SFX, near -18 LUFS starting target for music; no short-SFX LUFS requirement. Separate music/SFX controls and no passive-income tick cues.
+
+Audio delivery `audio-mvp-1` (ChatGPT, 2026-10-03): nine masters in **`art/audio/`**, sources/score/parameters in `art/src/audio/`, Node-only command `node scripts/render-audio.mjs`; `--check` verifies identical WAV bytes. Overview and individual waveform/spectrogram PNGs: `art/previews/audio/`; full written measurements/limits: `.codex-out/audio-mvp-notes.md`; exact SHA-256 and channel measurements: `.codex-out/audio-mvp-measurements.json`. Independent ffmpeg metering agrees on music loudness and confirms all true peaks below -3 dBTP; no encoding was performed. No listening or device acceptance claimed. Send home adds no cue (D-048 / GUI_MVP §13).
 
 ## Budget and acceptance
 
