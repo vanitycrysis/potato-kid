@@ -77,28 +77,64 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number): HTMLElement 
 }
 
 /**
- * A portrait that is composed only when it scrolls near view (long lists, GUI_MVP §7): the
- * box reserves its size at once, so rows never jump. `root` is the scrolling container;
- * `until` ends the wait when the list goes away, so unseen portraits retain nothing
- * (Codex review, PR #41).
+ * Portraits composed only when they scroll near view (long lists, GUI_MVP §7): each box
+ * reserves its size at once, so rows never jump. One observer serves a whole list and is
+ * re-targeted whenever what scrolls changes (the body, a tight sheet or the page), so
+ * lazy loading holds in every layout (Codex review, PR #41).
  */
-export function lazyPortrait(rig: KidRig, type: KidId, sizePx: number, root: HTMLElement, until: AbortSignal): HTMLElement {
-  const box = document.createElement('div');
-  box.className = 'portrait';
-  box.style.width = `${sizePx}px`;
-  box.style.height = `${sizePx}px`;
-  box.setAttribute('aria-hidden', 'true');
-  const io = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      io.disconnect();
-      box.replaceWith(portrait(rig, type, sizePx));
-    },
-    // About one row of overscan above and below (GUI_MVP §7).
-    { root, rootMargin: `${sizePx + 80}px 0px` },
-  );
-  if (until.aborted) return box;
-  io.observe(box);
-  until.addEventListener('abort', () => io.disconnect(), { once: true });
-  return box;
+export class LazyPortraits {
+  private io: IntersectionObserver | null = null;
+  private root: Element | null | undefined = undefined;
+  private readonly waiting = new Map<Element, () => void>();
+
+  constructor(
+    private readonly rig: KidRig,
+    private readonly sizePx: number,
+  ) {}
+
+  /** A reserved box for `type`, composed when it nears view. */
+  add(type: KidId): HTMLElement {
+    const box = document.createElement('div');
+    box.className = 'portrait';
+    box.style.width = `${this.sizePx}px`;
+    box.style.height = `${this.sizePx}px`;
+    box.setAttribute('aria-hidden', 'true');
+    this.waiting.set(box, () => box.replaceWith(portrait(this.rig, type, this.sizePx)));
+    this.io?.observe(box);
+    return box;
+  }
+
+  /** Watches against `root`, the element that scrolls now (null: the page itself). */
+  watch(root: Element | null): void {
+    if (root === this.root) return;
+    this.root = root;
+    this.io?.disconnect();
+    this.io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const compose = e.isIntersecting ? this.waiting.get(e.target) : undefined;
+          if (!compose) continue;
+          this.waiting.delete(e.target);
+          this.io?.unobserve(e.target);
+          compose();
+        }
+      },
+      // About one row of overscan above and below (GUI_MVP §7).
+      { root, rootMargin: `${this.sizePx + 80}px 0px` },
+    );
+    for (const box of this.waiting.keys()) this.io.observe(box);
+  }
+
+  /** The list is gone: nothing waits any more. */
+  dispose(): void {
+    this.io?.disconnect();
+    this.io = null;
+    this.root = undefined;
+    this.waiting.clear();
+  }
+
+  /** Portraits still waiting (tests). */
+  get pending(): number {
+    return this.waiting.size;
+  }
 }

@@ -5,7 +5,7 @@ import type { GameEvent } from '../sim/game';
 import { el, icon, shortName } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
-import { lazyPortrait, portrait } from './portrait';
+import { LazyPortraits, portrait } from './portrait';
 import type { Sheets } from './sheet';
 
 // Garden, Capacity, Spawn bias and Compendium sheets (docs/GUI_MVP.md §§4-6, Codex's design, D-036).
@@ -46,8 +46,8 @@ export class BuildingSheets {
   private search = '';
   /** The kid a Compendium purchase just brought back: its card says so for 2 s (§6). */
   private arrived: { type: KidId; until: number } | null = null;
-  /** Ends the open sheet's lazy portraits when it closes or its list is rebuilt. */
-  private lifetime = new AbortController();
+  /** The open Compendium list's portraits, composed as they near view. */
+  private portraits: LazyPortraits | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -62,8 +62,8 @@ export class BuildingSheets {
     this.refusal = null;
     this.arrived = null;
     this.search = restore?.search ?? '';
-    this.lifetime.abort();
-    this.lifetime = new AbortController();
+    this.portraits?.dispose();
+    this.portraits = null;
     const spec = building === 'bias' ? this.biasSheet() : building === 'compendium' ? this.compendiumSheet() : this.levelSheet(building);
     const sheet = this.sheets.open(
       {
@@ -74,7 +74,8 @@ export class BuildingSheets {
         update: () => this.controller?.update(),
         onClose: (replaced) => {
           this.controller = null;
-          this.lifetime.abort();
+          this.portraits?.dispose();
+          this.portraits = null;
           onClose?.(replaced);
         },
       },
@@ -482,6 +483,8 @@ export class BuildingSheets {
 
     const cards = new Map<KidId, CompendiumCard>();
     let known = -1;
+    this.portraits?.dispose();
+    this.portraits = new LazyPortraits(kidRig!, 64);
     const filter = () => {
       const q = this.search.trim().toLowerCase();
       let shown = 0;
@@ -513,7 +516,7 @@ export class BuildingSheets {
             if (!discovered.has(kid.id)) continue;
             let c = cards.get(kid.id);
             if (!c) {
-              c = this.compendiumCard(kid.id, body);
+              c = this.compendiumCard(kid.id);
               cards.set(kid.id, c);
               if (prev) prev.after(c.node);
               else list.prepend(c.node);
@@ -523,6 +526,7 @@ export class BuildingSheets {
           filter();
         }
         for (const c of cards.values()) c.update();
+        this.portraits?.watch(this.sheets.scrollRoot);
         status.update();
       },
     };
@@ -533,7 +537,7 @@ export class BuildingSheets {
   }
 
   /** One discovered kid: portrait, name, tier and the two alternative prices (GUI_MVP §6). */
-  private compendiumCard(type: KidId, root: HTMLElement): CompendiumCard {
+  private compendiumCard(type: KidId): CompendiumCard {
     const name = this.name(type);
     const tier = this.content.kids.find((k) => k.id === type)?.tier ?? 1;
     const buy = (pay: Pay) => {
@@ -557,7 +561,7 @@ export class BuildingSheets {
     const node = el(
       'article',
       'comp-card ui-surface',
-      lazyPortrait(kidRig!, type, 64, root, this.lifetime.signal),
+      this.portraits!.add(type),
       el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', icon(`badge_tier_${tier}`, '', 'ui-icon-24'), `Tier ${tier}`)),
       el('div', 'comp-buys', ...buttons.map((x) => x.b)),
       arrived,

@@ -80,6 +80,10 @@ export class Sheets {
     private readonly reducedMotion: boolean,
   ) {
     window.addEventListener('resize', () => this.place());
+    // A soft keyboard may shrink only the visual viewport: the sheet follows it, so its
+    // lower controls stay above the keyboard (GUI_MVP §2; Codex review, PR #41).
+    window.visualViewport?.addEventListener('resize', () => this.place());
+    window.visualViewport?.addEventListener('scroll', () => this.place());
   }
 
   get isOpen(): boolean {
@@ -95,9 +99,20 @@ export class Sheets {
     return c && { key: c.spec.key, scrollTop: this.scroller(c).scrollTop, launcher: c.launcher };
   }
 
-  /** What scrolls: the body, or the whole sheet when it is tight (see `place`). */
-  private scroller(c: { sheet: HTMLElement; body: HTMLElement }): HTMLElement {
+  /**
+   * What scrolls the open sheet's content: its body; the whole sheet when tight (see
+   * `place`); or, in page mode, the page itself (GUI_MVP §3.1; Codex review, PR #41).
+   */
+  private scroller(c: { sheet: HTMLElement; body: HTMLElement }): Element {
+    if (document.documentElement.dataset.hudFit === 'page') return document.scrollingElement ?? document.documentElement;
     return c.sheet.dataset.tight === 'true' ? c.sheet : c.body;
+  }
+
+  /** The element to observe visibility against (null: the page's viewport). */
+  get scrollRoot(): Element | null {
+    const c = this.current;
+    if (!c || document.documentElement.dataset.hudFit === 'page') return null;
+    return this.scroller(c);
   }
 
   /**
@@ -218,8 +233,11 @@ export class Sheets {
     if (!c) return;
     // Page mode (GUI_MVP §3.1) is laid out by sheets.css, which overrides this geometry.
     const inset = safeInsets();
-    const w = window.visualViewport?.width ?? window.innerWidth;
-    const h = window.visualViewport?.height ?? window.innerHeight;
+    const vv = window.visualViewport;
+    const w = vv?.width ?? window.innerWidth;
+    const h = vv?.height ?? window.innerHeight;
+    // The layout viewport below the visible one (a soft keyboard), which the sheet clears.
+    const hidden = vv ? Math.max(0, window.innerHeight - vv.offsetTop - vv.height) : 0;
     const compact = h <= 520;
     const st = Math.max(compact ? 8 : 24, inset.top);
     const sb = Math.max(compact ? 8 : 24, inset.bottom);
@@ -231,7 +249,7 @@ export class Sheets {
     c.sheet.style.width = `${width}px`;
     c.sheet.style.height = `${Math.max(0, height)}px`;
     c.sheet.style.left = `${ml + (w - ml - mr - width) / 2}px`;
-    c.sheet.style.bottom = `${sb}px`;
+    c.sheet.style.bottom = `${sb + hidden}px`;
     c.sheet.dataset.compact = String(compact);
     this.fitBar(c);
   }

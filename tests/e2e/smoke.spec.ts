@@ -1223,4 +1223,77 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.keyboard.press('Escape');
     expect(await page.evaluate(() => (window as unknown as { __liveObservers: number }).__liveObservers)).toBe(0);
   });
+  test('a soft keyboard that shrinks only the visual viewport keeps the sheet above it (Codex review, PR #41)', async ({ page }) => {
+    // Mobile browsers may resize only visualViewport for the keyboard; stand one in.
+    await page.addInitScript(() => {
+      let keyboard = 0;
+      const vv = new EventTarget();
+      Object.defineProperties(vv, {
+        width: { get: () => window.innerWidth },
+        height: { get: () => window.innerHeight - keyboard },
+        offsetTop: { get: () => 0 },
+        offsetLeft: { get: () => 0 },
+        scale: { get: () => 1 },
+      });
+      Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
+      (window as unknown as { __keyboard: (px: number) => void }).__keyboard = (px) => {
+        keyboard = px;
+        vv.dispatchEvent(new Event('resize'));
+      };
+    });
+    await built(page);
+    await compendium(page).click();
+    await page.getByLabel('Find a discovered kid').focus();
+    const visible = await page.evaluate(() => {
+      (window as unknown as { __keyboard: (px: number) => void }).__keyboard(400);
+      return window.innerHeight - 400;
+    });
+    await expect.poll(() => page.locator('.sheet').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(visible);
+    // The last price can still be scrolled above the keyboard.
+    const last = page.locator('.comp-buy').last();
+    await last.evaluate((e) => e.scrollIntoView({ block: 'nearest' }));
+    expect(await last.evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(visible);
+  });
+
+  test('page mode: a sheet interrupted by the summary comes back at its page position (Codex review, PR #41)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await built(page);
+    await page.evaluate(() => {
+      const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite'];
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+      window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
+    });
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await compendium(page).scrollIntoViewIfNeeded();
+    await compendium(page).click();
+    await expect(page.locator('.comp-card')).toHaveCount(10);
+    await page.locator('.comp-card').nth(6).scrollIntoViewIfNeeded();
+    const before = await page.evaluate(() => document.scrollingElement!.scrollTop);
+    expect(before).toBeGreaterThan(200);
+    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog', { name: 'Compendium' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.scrollingElement!.scrollTop)).toBe(before);
+  });
+
+  test('portraits stay lazy when the whole sheet scrolls (Codex review, PR #41)', async ({ page }) => {
+    await built(page);
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.evaluate(() => {
+      const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+      window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
+    });
+    await compendium(page).click({ force: true });
+    await expect(page.locator('.comp-card')).toHaveCount(14);
+    await expect(page.locator('.sheet')).toHaveAttribute('data-tight', 'true');
+    await page.waitForTimeout(300);
+    // Only cards within a row of view are composed (here, none yet); scrolling the sheet
+    // composes what it reaches, and the rest still wait.
+    await page.locator('.comp-card').first().scrollIntoViewIfNeeded();
+    await expect(page.locator('.comp-card').first().locator('.portrait-canvas')).toHaveCount(1);
+    expect(await page.locator('.comp-card .portrait-canvas').count()).toBeLessThan(8);
+    await page.locator('.comp-card').last().scrollIntoViewIfNeeded();
+    await expect(page.locator('.comp-card').last().locator('.portrait-canvas')).toHaveCount(1);
+  });
 });
