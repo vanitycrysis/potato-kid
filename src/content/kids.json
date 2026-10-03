@@ -50,5 +50,17 @@
   {"id": "steamboat", "tier": 4, "name": "Steamboat Kid"},
   {"id": "lifeguard", "tier": 4, "name": "Lifeguard Kid"},
   {"id": "kiln", "tier": 4, "name": "Kiln Kid"},
-  {"id": "aurora", "tier": 4, "name": "Aurora Kid"}
+  {"id": "aurora", "tier": 4, "name": "Aurora Kid"},
+  {"id": "festival", "tier": 5, "name": "Festival Kid"},
+  {"id": "observatory", "tier": 5, "name": "Observatory Kid"},
+  {"id": "botanical_garden", "tier": 5, "name": "Botanical Garden Kid"},
+  {"id": "moon_garden", "tier": 5, "name": "Moon Garden Kid"},
+  {"id": "patisserie", "tier": 5, "name": "Patisserie Kid"},
+  {"id": "winter_market", "tier": 5, "name": "Winter Market Kid"},
+  {"id": "harbor", "tier": 5, "name": "Harbor Kid"},
+  {"id": "sky_fair", "tier": 5, "name": "Sky Fair Kid"},
+  {"id": "rescue_station", "tier": 5, "name": "Rescue Station Kid"},
+  {"id": "sculpture_park", "tier": 5, "name": "Sculpture Park Kid"},
+  {"id": "windmill", "tier": 5, "name": "Windmill Kid"},
+  {"id": "mosaic", "tier": 5, "name": "Mosaic Kid"}
 ]

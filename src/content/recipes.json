@@ -44,5 +44,17 @@
   {"a": "captain", "b": "whistle", "result": "steamboat"},
   {"a": "hero", "b": "captain", "result": "lifeguard"},
   {"a": "potter", "b": "forge", "result": "kiln"},
-  {"a": "blizzard", "b": "crystal", "result": "aurora"}
+  {"a": "blizzard", "b": "crystal", "result": "aurora"},
+  {"a": "picnic", "b": "lantern", "result": "festival"},
+  {"a": "greenhouse", "b": "crystal", "result": "observatory"},
+  {"a": "bonsai", "b": "greenhouse", "result": "botanical_garden"},
+  {"a": "lantern", "b": "terrarium", "result": "moon_garden"},
+  {"a": "cookie", "b": "teapot", "result": "patisserie"},
+  {"a": "cocoa", "b": "snowglobe", "result": "winter_market"},
+  {"a": "lighthouse", "b": "steamboat", "result": "harbor"},
+  {"a": "balloon", "b": "pinwheel", "result": "sky_fair"},
+  {"a": "lifeguard", "b": "lantern", "result": "rescue_station"},
+  {"a": "ice_sculptor", "b": "aurora", "result": "sculpture_park"},
+  {"a": "weather_vane", "b": "baker", "result": "windmill"},
+  {"a": "kiln", "b": "crystal", "result": "mosaic"}
 ]
