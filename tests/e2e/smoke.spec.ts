@@ -1662,6 +1662,9 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     expect((await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_ui_tap');
+  });
+});
+
 test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
   /** Picks a kid up and holds it over the Garden target for `ms`, then releases. */
   async function holdOverHome(page: Page, id: number, ms: number): Promise<void> {
