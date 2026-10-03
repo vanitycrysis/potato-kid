@@ -42,6 +42,13 @@ describe('number display (GUI_MVP §3)', () => {
     expect(formatInterval(12)).toBe('12.0 s');
     expect(formatInterval(10.2)).toBe('10.2 s');
     expect(formatInterval(12 * 0.85 * 0.85)).toBe('8.7 s');
+    expect(formatInterval(59.94)).toBe('59.9 s');
+  });
+
+  it('intervals of a minute or more show as durations (D-052)', () => {
+    expect(formatInterval(59.96)).toBe('1 m 00 s');
+    expect(formatInterval(1200)).toBe('20 m 00 s');
+    expect(formatInterval(1200 * 0.903)).toBe('18 m 04 s');
   });
 
   it('rates show whole numbers plainly, else one decimal', () => {

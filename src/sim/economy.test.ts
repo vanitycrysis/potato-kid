@@ -13,7 +13,7 @@ const garden = { x: 1000, y: 300 };
 function testContent(edit: (c: Content) => void = () => {}): Content {
   const c = structuredClone(content);
   c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-  c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
+  c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
   edit(c);
   return c;
 }

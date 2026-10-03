@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { content } from '../content';
 import { Game, type PersistedState } from '../sim/game';
 import { SaveManager } from './manager';
-import { decode, encode, validateState } from './record';
+import { decode, encode, SAVE_SCHEMA, validateState } from './record';
 import { MemoryStorage, type SaveStorage } from './storage';
 
 const bounds = { minX: 0, minY: 0, maxX: 2160, maxY: 3840 };
@@ -95,7 +95,7 @@ describe('saving and loading', () => {
 
 describe('records', () => {
   it('a tampered or torn record fails its checksum', () => {
-    const raw = encode(1, 1, 1, newGame().persisted());
+    const raw = encode(SAVE_SCHEMA, 1, 1, newGame().persisted());
     expect(decode(raw)).not.toBeNull();
     expect(decode(raw.replace('"materials":0', '"materials":9999'))).toBeNull();
     expect(decode(raw.slice(0, raw.length - 20))).toBeNull();
@@ -117,7 +117,7 @@ describe('failure paths (plan §4)', () => {
   it('one corrupt slot: loads the other, archives the corrupt bytes, then may reuse that slot', async () => {
     const storage = new TestStorage();
     const g = newGame();
-    storage.data.set('slotA', encode(1, 7, 1, g.persisted()));
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 7, 1, g.persisted()));
     storage.data.set('slotB', 'garbage{');
     const m = new SaveManager(storage, content);
     const r = await m.load();
@@ -142,7 +142,7 @@ describe('failure paths (plan §4)', () => {
   it('a failed archive keeps the slot protected; with the other slot in play, nothing is written', async () => {
     const storage = new TestStorage();
     const g = newGame();
-    storage.data.set('slotA', encode(1, 3, 1, g.persisted()));
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 3, 1, g.persisted()));
     storage.data.set('slotB', 'corrupt');
     storage.failWrites = (key) => key.startsWith('archive/');
     const m = new SaveManager(storage, content);
@@ -156,7 +156,7 @@ describe('failure paths (plan §4)', () => {
   it('an archive that reads back different bytes does not free the slot', async () => {
     const storage = new TestStorage();
     const g = newGame();
-    storage.data.set('slotA', encode(1, 3, 1, g.persisted()));
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 3, 1, g.persisted()));
     storage.data.set('slotB', 'corrupt');
     // The archive write "succeeds", but the stored copy is not the original.
     const read = storage.read.bind(storage);
@@ -170,7 +170,7 @@ describe('failure paths (plan §4)', () => {
   it('a save from a newer app: read-only, never written', async () => {
     const storage = new TestStorage();
     const g = newGame();
-    storage.data.set('slotA', encode(1, 4, 1, g.persisted()));
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 4, 1, g.persisted()));
     storage.data.set('slotB', encode(99, 5, 2, g.persisted()));
     const m = new SaveManager(storage, content);
     const r = await m.load();
@@ -193,7 +193,7 @@ describe('failure paths (plan §4)', () => {
     const g = newGame();
     const bad = g.persisted();
     bad.world.nextKidId = 1; // every kid id is now >= nextKidId
-    storage.data.set('slotA', encode(1, 2, 1, bad));
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 2, 1, bad));
     const m = new SaveManager(storage, content);
     const r = await m.load();
     expect(validateState(bad, content)).not.toEqual([]);
@@ -201,7 +201,7 @@ describe('failure paths (plan §4)', () => {
     expect(r.mode).toBe('unsaved');
     await m.save(g.persisted());
     // Its bytes are archived and never overwritten; no slot is written this session.
-    expect(storage.data.get('slotA')).toBe(encode(1, 2, 1, bad));
+    expect(storage.data.get('slotA')).toBe(encode(SAVE_SCHEMA, 2, 1, bad));
     expect(storage.writes).toHaveLength(1);
     expect(storage.writes[0]).toMatch(/^archive\/A-r2-/);
   });
@@ -232,8 +232,8 @@ describe('Codex review, PR #30', () => {
     const g = newGame();
     const bad = g.persisted();
     bad.world.nextKidId = 1;
-    const rawB = encode(1, 9, 1, bad);
-    storage.data.set('slotA', encode(1, 10, 1, g.persisted()));
+    const rawB = encode(SAVE_SCHEMA, 9, 1, bad);
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 10, 1, g.persisted()));
     storage.data.set('slotB', rawB);
     const m = new SaveManager(storage, content);
     const r = await m.load();
@@ -252,8 +252,8 @@ describe('Codex review, PR #30', () => {
     const g = newGame();
     const bad = g.persisted();
     bad.world.nextKidId = 1;
-    const rawB = encode(1, 9, 1, bad);
-    storage.data.set('slotA', encode(1, 10, 1, g.persisted()));
+    const rawB = encode(SAVE_SCHEMA, 9, 1, bad);
+    storage.data.set('slotA', encode(SAVE_SCHEMA, 10, 1, g.persisted()));
     storage.data.set('slotB', rawB);
     storage.failWrites = (key) => key.startsWith('archive/');
     const m = new SaveManager(storage, content);
@@ -341,5 +341,38 @@ describe("Codex's round-3 trace (plan §4)", () => {
     await m.save(g.persisted());
     expect(storage.data.get('slotA')).toBe(rawA);
     expect(storage.writes.filter((k) => k.startsWith('slot'))).toEqual([]);
+  });
+});
+
+describe('schema 2: the tutorial counter (D-052)', () => {
+  /** A schema-1 state: today's state without the field schema 2 added. */
+  function schema1(): Omit<PersistedState, 'gardenSpawns'> {
+    const rest: Partial<PersistedState> = newGame().persisted();
+    delete rest.gardenSpawns;
+    return rest as Omit<PersistedState, 'gardenSpawns'>;
+  }
+
+  it('a new game starts at the beginning of the tutorial', () => {
+    expect(newGame().persisted().gardenSpawns).toBe(0);
+  });
+
+  it('a schema-1 save loads past the tutorial: it was played on the old fast schedule', async () => {
+    expect(SAVE_SCHEMA).toBe(2);
+    const storage = new TestStorage();
+    const old = schema1();
+    storage.data.set('slotA', encode(1, 4, 1, old as PersistedState));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual({ ...old, gardenSpawns: content.balance.spawn.tutorialSpawns });
+    // It plays on the slow schedule at once.
+    const game = new Game(structuredClone(content), options, 5, r.state!);
+    expect(game.interval).toBe(content.balance.spawn.intervalSeconds * content.balance.economy.gardenIntervalFactor ** (game.state.buildings.garden - 1));
+  });
+
+  it('a schema-2 save must carry a whole, non-negative count', () => {
+    const state = newGame().persisted() as unknown as Record<string, unknown>;
+    for (const bad of [undefined, -1, 1.5, Number.NaN, '3']) {
+      expect(validateState({ ...state, gardenSpawns: bad }, content)).toContain('gardenSpawns is invalid');
+    }
+    expect(validateState({ ...state, gardenSpawns: 7 }, content)).toEqual([]);
   });
 });

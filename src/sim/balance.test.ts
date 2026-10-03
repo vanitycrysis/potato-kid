@@ -24,6 +24,40 @@ describe('balance simulator', () => {
   });
 });
 
+describe('the report (Codex review, PR #68)', () => {
+  it('a tutorial that ends while away is dated by its last spawn, not the return', () => {
+    const c = structuredClone(content);
+    c.balance.spawn.startingKids = 0;
+    // 1 s of play, then an hour away: spawns at 60, 120, ... 600 s.
+    const r = simulate(c, options, { name: 'away', sessions: [{ play: 1, away: 3600 }], actionSeconds: 3 }, 1);
+    expect(r.tutorialDone).toBeCloseTo(c.balance.spawn.tutorialSpawns * c.balance.spawn.tutorialIntervalSeconds, 6);
+  });
+
+  it('income after an absence counts the kids that arrived while away', () => {
+    const c = structuredClone(content);
+    c.balance.spawn.startingKids = 0;
+    const r = simulate(c, options, { name: 'away', sessions: [{ play: 1, away: 3600 }], actionSeconds: 3 }, 1);
+    // On return, the tutorial's ten offline spawns are all earning, on top of what was there.
+    expect(r.income[0]!.clock).toBeCloseTo(1, 6);
+    expect(r.income.at(-1)!.clock).toBeCloseTo(3601, 6);
+    expect(r.income.at(-1)!.perSecond - r.income[0]!.perSecond).toBeGreaterThanOrEqual(10 * c.balance.economy.materialsPerSecond - 1e-9);
+  });
+
+  it('session clocks land exactly on their boundaries, however many steps they took', () => {
+    const day = 86_400;
+    const r = simulate(content, options, { name: 'days', sessions: Array.from({ length: 3 }, () => ({ play: 1800, away: day - 1800 })), actionSeconds: 4 }, 1);
+    // Each session's end and return, with no drift from summing 0.1 s steps.
+    expect(r.income.map((x) => x.clock)).toEqual([1800, day, day + 1800, 2 * day, 2 * day + 1800, 3 * day]);
+  });
+
+  it('shows income only for days the scenario reaches', async () => {
+    const { incomeDays } = await import('./balance-cli');
+    const day = 86_400;
+    expect(incomeDays({ name: 'hour', sessions: [{ play: 3600, away: 0 }], actionSeconds: 3 })).toEqual([]);
+    expect(incomeDays({ name: 'week', sessions: [{ play: 600, away: 7 * day - 600 }], actionSeconds: 3 })).toEqual([1, 3, 7]);
+  });
+});
+
 describe('the bot drags like a player (Codex review, PR #45)', () => {
   /**
    * Water and Potato, each ringed by kids that make no recipe with either, so neither can
@@ -32,7 +66,7 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
   function ringed(capacity?: number) {
     const c = structuredClone(content);
     c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9, ...(capacity ? { capacity } : {}) };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9, ...(capacity ? { capacity } : {}) };
     const g = new Game(c, { ...options, now: 0 }, 1);
     const box = defaultBox(c.balance.body.radius);
     const ring = (type: string, x: number, y: number) => {
@@ -73,7 +107,7 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
   it('drags the other way when only the second kid of a pair can reach the first', () => {
     const c = structuredClone(content);
     c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, intervalSeconds: 1e9 };
     const g = new Game(c, { ...options, now: 0 }, 1);
     const box = defaultBox(c.balance.body.radius);
     // Potato first (lower id) and in the open; Water ringed, so only Water can travel.

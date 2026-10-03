@@ -13,7 +13,7 @@ const garden = { x: 500, y: 200 };
 function testContent(overrides: Partial<Content['balance']['spawn']> = {}): Content {
   const c = structuredClone(content);
   c.balance.wander = { speed: 0, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
-  c.balance.spawn = { ...c.balance.spawn, startingKids: 0, newbornGraceSeconds: 0, ...overrides };
+  c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, newbornGraceSeconds: 0, ...overrides };
   return c;
 }
 
@@ -214,7 +214,7 @@ describe('no overlap (D-039, D-043 boxes)', () => {
   it('never lets grounded kids overlap while a busy map runs', () => {
     const big = { minX: 0, minY: 0, maxX: 2160, maxY: 3840 };
     const c = structuredClone(content);
-    c.balance.spawn = { ...c.balance.spawn, capacity: 40, startingKids: 12, intervalSeconds: 2 };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, capacity: 40, startingKids: 12, intervalSeconds: 2 };
     const game = new Game(c, { bounds: big, spawnAt: { x: 1080, y: 300 } }, 21);
     for (let s = 0; s < 3000; s++) {
       game.step([]);
@@ -304,7 +304,7 @@ describe('scenery obstacles (map v2)', () => {
 
   it('wandering kids never walk into scenery', () => {
     const c = structuredClone(content);
-    c.balance.spawn = { ...c.balance.spawn, startingKids: 0 };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0 };
     const game = new Game(c, { bounds, spawnAt: { x: 200, y: 200 }, obstacles: [obstacle] }, 8);
     for (let i = 0; i < 6; i++) game.debugAddKid('fire', 150 + i * 130, 850);
     for (let s = 0; s < 2000; s++) {
@@ -336,6 +336,7 @@ describe('appearance and rests (ART-V2)', () => {
 
   it('rolls looks deterministically, scales boxes by size, and keeps gameplay rolls unchanged', () => {
     const c = structuredClone(content);
+    c.balance.spawn.tutorialIntervalSeconds = 12; // several spawns in the 60 s below
     const a = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 }, looks }, 5);
     const b = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 } }, 5);
     const spawnedA: string[] = [];
@@ -436,7 +437,7 @@ describe('render-time separation (Codex review, PR #14)', () => {
 describe('Codex review, PR #14 round 2', () => {
   it('a drop against a partner that is walking away still fuses (contact before wander)', () => {
     const c = structuredClone(content);
-    c.balance.spawn = { ...c.balance.spawn, startingKids: 0, intervalSeconds: 1e9, newbornGraceSeconds: 0 };
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, intervalSeconds: 1e9, newbornGraceSeconds: 0 };
     c.balance.wander = { speed: 40, turnChancePerSecond: 0, idleChancePerSecond: 0, idleSeconds: [1, 1], ambientChance: 0 };
     const game = new Game(c, { bounds, spawnAt: garden }, 1);
     const water = place(game, 'water', 500, 500);

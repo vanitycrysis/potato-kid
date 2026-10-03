@@ -52,9 +52,10 @@ export function formatDuration(seconds: number): string {
   return `${s} s`;
 }
 
-/** A Garden interval to the nearest 0.1 s: `12.0 s`. */
+/** A Garden interval: to the nearest 0.1 s under a minute (`12.0 s`), else as a duration (`18 m 03 s`). */
 export function formatInterval(seconds: number): string {
-  return `${(Math.round(seconds * 10) / 10).toFixed(1)} s`;
+  const tenths = Math.round(seconds * 10) / 10;
+  return tenths < 60 ? `${tenths.toFixed(1)} s` : formatDuration(Math.round(seconds));
 }
 
 /** A per-second rate: whole numbers plain, otherwise to one decimal (`0.5`, `2`, `1.5`). */

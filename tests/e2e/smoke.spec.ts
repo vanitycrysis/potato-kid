@@ -11,6 +11,17 @@ async function boot(page: Page, query: string): Promise<string[]> {
   return errors;
 }
 
+// Prices from the shipped balance, computed as the sim computes them, so tuning (D-052)
+// never strands a test with a stale amount.
+const balance = JSON.parse(readFileSync('src/content/balance.json', 'utf8')) as {
+  buildings: Record<string, { costBase: number; costGrowth: number }>;
+  economy: { respawnMaterials: number; materialsPerSecond: number };
+};
+/** Materials to upgrade `building` from `level`. */
+const price = (building: string, level: number) => Math.ceil(balance.buildings[building]!.costBase * balance.buildings[building]!.costGrowth ** level);
+/** Materials to bring back a kid of `tier` from the Compendium. */
+const respawnPrice = (tier: number) => Math.ceil(balance.economy.respawnMaterials * 2 ** (tier - 1));
+
 async function frames(page: Page, n: number): Promise<void> {
   await page.evaluate(async (count) => {
     for (let i = 0; i < count; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -419,10 +430,10 @@ test('time away is credited once: Garden spawns and income (plan §3)', async ({
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
   const before = await page.evaluate(() => window.__PK__!.wallet().materials);
-  await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+  await page.evaluate(() => window.__PK__!.debugAway!(300_000));
   const report = await page.evaluate(() => window.__PK__!.lastOffline());
-  expect(report!.seconds).toBeCloseTo(60, 0);
-  // calm: 12 s Garden, capacity 12, one kid placed -> five spawns in 60 s.
+  expect(report!.seconds).toBeCloseTo(300, 0);
+  // A new game is in the tutorial (D-052): a kid a minute, so five spawns in 5 min.
   expect(report!.spawned).toHaveLength(5);
   const after = await page.evaluate(() => window.__PK__!.wallet().materials);
   expect(after - before).toBeGreaterThanOrEqual(report!.materials - 1);
@@ -803,13 +814,14 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
   test('an engine refusal shows inside the sheet, never as a world card', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 32 }));
+    const cost = price('garden', 1);
+    await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), cost);
     await garden(page).click();
     // Send the upgrade, then lose the Materials before the sim applies it.
-    await page.evaluate(() => {
+    await page.evaluate((m) => {
       (document.querySelector('.sheet-action') as HTMLButtonElement).click();
-      window.__PK__!.debugGive!({ materials: -32 });
-    });
+      window.__PK__!.debugGive!({ materials: -m });
+    }, cost);
     await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
     // World cards wait while a sheet is open, so check after it closes too. Sampled, not a
     // retrying assertion: a leaked 2.5 s card would eventually vanish and pass a retry.
@@ -933,12 +945,13 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
   test('a refusal on a short sheet scrolls into view (Codex review, PR #39)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 32 }));
+    const cost = price('garden', 1);
+    await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), cost);
     await garden(page).click();
-    await page.evaluate(() => {
+    await page.evaluate((m) => {
       (document.querySelector('.sheet-action') as HTMLButtonElement).click();
-      window.__PK__!.debugGive!({ materials: -32 });
-    });
+      window.__PK__!.debugGive!({ materials: -m });
+    }, cost);
     await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
     const inBody = await page.evaluate(() => {
       const r = document.querySelector('.sheet-status')!.getBoundingClientRect();
@@ -983,12 +996,12 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
   /** A calm game with Potato and Fire discovered and the Compendium built. */
   async function built(page: Page): Promise<string[]> {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => {
+    await page.evaluate((m) => {
       window.__PK__!.debugAdd!('plain', 250, 1500);
       window.__PK__!.debugAdd!('fire', 830, 1500);
-      window.__PK__!.debugGive!({ materials: 120 });
+      window.__PK__!.debugGive!({ materials: m });
       window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
-    });
+    }, price('compendium', 0));
     await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().levels.compendium)).toBe(1);
     return errors;
   }
@@ -1000,7 +1013,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(page.locator('.sheet-subtitle')).toHaveText('Level 0 / 1');
     const build = page.locator('.sheet-action');
     await expect(build).toHaveAttribute('aria-disabled', 'true');
-    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 120 }));
+    await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), price('compendium', 0));
     await build.click();
     // Straight to the list in the same sheet, with no misplaced success message.
     await expect(page.locator('.sheet-subtitle')).toHaveText('Level 1 / 1 · Fully built');
@@ -1016,7 +1029,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.evaluate(() => window.__PK__!.debugGive!({ potatokens: 5 }));
     const [mat, pt] = [page.locator('.comp-buy').nth(0), page.locator('.comp-buy').nth(1)];
     await expect(mat).toHaveAttribute('aria-disabled', 'true');
-    await expect(mat).toHaveAttribute('aria-label', 'Bring back Potato Kid for 40 Materials: Not enough Materials.');
+    await expect(mat).toHaveAttribute('aria-label', `Bring back Potato Kid for ${respawnPrice(1)} Materials: Not enough Materials.`);
     await expect(pt).toHaveAttribute('aria-disabled', 'false');
     await expect(pt).toHaveAttribute('aria-label', 'Bring back Potato Kid for 1 Potatokens');
     await mat.click({ force: true }); // a deliberate tap on the unavailable price sends nothing
@@ -1036,7 +1049,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 
   test('an engine refusal keeps the currency the player chose, inside the sheet', async ({ page }) => {
     await built(page);
-    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 40 }));
+    await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), respawnPrice(1));
     await compendium(page).click();
     // Pay with Materials, then lose them before the sim applies the purchase.
     await page.evaluate(() => {
@@ -1440,14 +1453,14 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dexButton(page).click();
     await dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' }).click();
     await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Water Kid');
-    await expect(dialog(page).getByText('Earns 0.5 Materials / s')).toBeVisible();
+    await expect(dialog(page).getByText(`Earns ${Math.round(balance.economy.materialsPerSecond * 3600)} Materials / h`)).toBeVisible();
     await expect(dialog(page).locator('.dex-detail .dex-recipe')).toHaveAttribute('aria-label', 'Potato Kid plus Water Kid makes Firefighter Kid');
     await expect(dialog(page).getByRole('button', { name: 'Back to kids' })).toBeFocused();
     // Tier-2 Firefighter, no recipe of its own made yet (it is only a result here).
     await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
     await expect(dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' })).toBeFocused();
     await dialog(page).getByRole('button', { name: 'Firefighter Kid, Tier 2' }).click();
-    await expect(dialog(page).getByText('Earns 1 Materials / s')).toBeVisible();
+    await expect(dialog(page).getByText(`Earns ${Math.round(balance.economy.materialsPerSecond * 3600 * 2)} Materials / h`)).toBeVisible();
     await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
     await page.evaluate(() => window.__PK__!.debugAdd!('snow', 830, 2200));
     await dialog(page).getByRole('button', { name: 'Snow Kid, Tier 1' }).click();
@@ -1496,7 +1509,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dexButton(page).click();
     await dialog(page).getByRole('tab', { name: 'Compendium' }).click();
     await expect(dialog(page).locator('.sheet-subtitle')).toHaveText('Level 0 / 1');
-    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 120 }));
+    await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), price('compendium', 0));
     await dialog(page).getByRole('button', { name: /Build Compendium/ }).click();
     await expect(dialog(page).locator('.sheet-subtitle')).toHaveText('Level 1 / 1 · Fully built');
     await expect(dialog(page).locator('.comp-card')).toHaveCount(2);
@@ -1551,13 +1564,13 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('the Dex Compendium tab keeps its scroll through the offline summary (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
-    await page.evaluate(() => {
+    await page.evaluate((m) => {
       ['snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero', 'fire'].forEach((t, i) =>
         window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300),
       );
-      window.__PK__!.debugGive!({ materials: 120 });
+      window.__PK__!.debugGive!({ materials: m });
       window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
-    });
+    }, price('compendium', 0));
     await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().levels.compendium)).toBe(1);
     await dexButton(page).click();
     await dialog(page).getByRole('tab', { name: 'Compendium' }).click();

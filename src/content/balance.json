@@ -8,7 +8,9 @@
     "stone": 10
   },
   "spawn": {
-    "intervalSeconds": 12,
+    "intervalSeconds": 1200,
+    "tutorialSpawns": 10,
+    "tutorialIntervalSeconds": 60,
     "capacity": 12,
     "startingKids": 4,
     "newbornGraceSeconds": 2
@@ -28,14 +30,14 @@
     "ambientChance": 0.6
   },
   "economy": {
-    "materialsPerSecond": 0.5,
+    "materialsPerSecond": 0.005,
     "startingMaterials": 0,
     "startingPotatokens": 3,
-    "gardenIntervalFactor": 0.85,
+    "gardenIntervalFactor": 0.903,
     "capacityPerLevel": 4,
     "biasWeightPerLevel": 0.5,
     "instantSpawnPotatokens": 1,
-    "respawnMaterials": 40,
+    "respawnMaterials": 800,
     "respawnPotatokensPerTier": 1,
     "discoveryPotatokens": 1,
     "dexMilestones": [
@@ -80,24 +82,24 @@
       "startLevel": 1,
       "maxLevel": 10,
       "costBase": 20,
-      "costGrowth": 1.6
+      "costGrowth": 2.9
     },
     "capacity": {
       "startLevel": 1,
       "maxLevel": 10,
       "costBase": 25,
-      "costGrowth": 1.6
+      "costGrowth": 2.9
     },
     "bias": {
       "startLevel": 0,
       "maxLevel": 8,
-      "costBase": 40,
-      "costGrowth": 1.6
+      "costBase": 100,
+      "costGrowth": 2.2
     },
     "compendium": {
       "startLevel": 0,
       "maxLevel": 1,
-      "costBase": 120,
+      "costBase": 1000,
       "costGrowth": 1
     }
   }

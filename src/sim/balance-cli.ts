@@ -6,7 +6,8 @@ import { median, simulate, type Report, type Scenario } from './balance';
 import type { GameOptions } from './game';
 
 // `npm run balance`: plays the scenarios over several seeds on the real map and content
-// and prints the medians (ENGINEERING_PLAN §3). Run by scripts/balance.mjs through Vite.
+// and prints the medians (ENGINEERING_PLAN §3). Run by scripts/balance.mjs through Vite,
+// one process per seed and scenario.
 
 const map = JSON.parse(readFileSync('art/data/map_garden_v2.json', 'utf8')) as MapData;
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
@@ -21,43 +22,70 @@ const options: GameOptions = {
 };
 
 const HOUR = 3600;
+const DAY = 24 * HOUR;
 export const scenarios: Scenario[] = [
-  { name: 'active 3 h', sessions: [{ play: 3 * HOUR, away: 0 }], actionSeconds: 3 },
-  // Without Send home (D-048): how soon the map clogs with kids that can't fuse.
-  { name: 'active 3 h, no send home', sessions: [{ play: 3 * HOUR, away: 0 }], actionSeconds: 3, sendHome: false },
-  // Ten minutes every three hours for three days (24 sessions), offline in between.
-  { name: 'casual 3 days', sessions: Array.from({ length: 24 }, () => ({ play: 600, away: 3 * HOUR - 600 })), actionSeconds: 4 },
+  // The tutorial and the first upgrades, played without a break (D-052).
+  { name: 'first hour', sessions: [{ play: HOUR, away: 0 }], actionSeconds: 3 },
+  // Ten minutes every three hours for two weeks (112 sessions), offline in between.
+  { name: 'casual 14 days', sessions: Array.from({ length: 112 }, () => ({ play: 600, away: 3 * HOUR - 600 })), actionSeconds: 4 },
+  // One 30-minute evening session a day for two weeks: the long absences hit the 8 h cap.
+  { name: 'daily 30 min, 14 days', sessions: Array.from({ length: 14 }, () => ({ play: 1800, away: DAY - 1800 })), actionSeconds: 4 },
 ];
+
+/** The days whose income the report shows: only days the scenario reaches (Codex review, PR #68). */
+export function incomeDays(sc: Scenario): number[] {
+  const span = sc.sessions.reduce((t, s) => t + s.play + s.away, 0);
+  return [1, 3, 7, 14].filter((d) => d * DAY <= span);
+}
+
+/** One scenario on one seed (a child process of scripts/balance.mjs). */
+export function runOne(scenario: number, seed: number): Report {
+  return simulate(content, options, scenarios[scenario]!, seed);
+}
 
 const fmt = (s: number | null) => {
   if (s === null) return 'never';
   if (s < 90) return `${Math.round(s)} s`;
   if (s < 2 * HOUR) return `${Math.round(s / 60)} min`;
-  return `${(s / HOUR).toFixed(1)} h`;
+  if (s < 2 * DAY) return `${(s / HOUR).toFixed(1)} h`;
+  return `day ${(s / DAY).toFixed(1)}`;
 };
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 
-export function run(seeds = 8): string {
+/** The printed report: per scenario, the medians over its seeds. */
+export function summarize(reports: Report[][], seeds: number): string {
   const lines: string[] = [];
   const tiers = [...new Set(content.kids.map((k) => k.tier))].sort();
-  lines.push(`Roster ${content.kids.length} kids, ${content.recipes.length} recipes; ${seeds} seeds per scenario; times are active play.`);
-  for (const sc of scenarios) {
-    const reports: Report[] = [];
-    for (let seed = 1; seed <= seeds; seed++) reports.push(simulate(content, options, sc, seed));
-    const m = (f: (r: Report) => number | null) => fmt(median(reports.map(f)));
-    lines.push('', `## ${sc.name} (one action every ${sc.actionSeconds} s)`);
-    lines.push(`first recipe: ${m((r) => r.firstRecipe)}`);
-    lines.push(`first of tier: ${tiers.map((t) => `T${t} ${m((r) => r.firstOfTier[t] ?? null)}`).join(', ')}`);
-    lines.push(`roster found: ${(['25', '50', '75', '100'] as const).map((q) => `${q} % ${m((r) => r.discovered[q])}`).join(', ')}`);
+  const sp = content.balance.spawn;
+  lines.push(`Roster ${content.kids.length} kids, ${content.recipes.length} recipes; ${seeds} seeds per scenario.`);
+  lines.push(`Garden: ${sp.tutorialSpawns} tutorial spawns every ${fmt(sp.tutorialIntervalSeconds)}, then ${fmt(sp.intervalSeconds)} at L1.`);
+  scenarios.forEach((sc, i) => {
+    const rs = reports[i]!;
+    const m = (f: (r: Report) => number | null) => fmt(median(rs.map(f)));
+    const play = rs[0]!.end.playSeconds;
+    lines.push('', `## ${sc.name} (one action every ${sc.actionSeconds} s; ${fmt(play)} of play)`);
+    lines.push(`tutorial over: ${m((r) => r.tutorialDone)} (wall clock)`);
+    lines.push(`first recipe: ${m((r) => r.firstRecipe)}; first of tier (play): ${tiers.map((t) => `T${t} ${m((r) => r.firstOfTier[t] ?? null)}`).join(', ')}`);
+    lines.push(`roster found (play): ${(['25', '50', '75', '100'] as const).map((q) => `${q} % ${m((r) => r.discovered[q])}`).join(', ')}`);
+    lines.push(`roster found (wall clock): ${(['25', '50', '75', '100'] as const).map((q) => `${q} % ${m((r) => r.discoveredClock[q])}`).join(', ')}`);
+    for (const b of ['garden', 'capacity'] as const) {
+      const at = (lv: number, k: 'play' | 'clock') => m((r) => r.levelAt[b][lv]?.[k] ?? null);
+      lines.push(`${b} level reached (play / wall clock): ${[2, 3, 5, 10].map((lv) => `L${lv} ${at(lv, 'play')} / ${at(lv, 'clock')}`).join(', ')}`);
+    }
+    const days = incomeDays(sc);
+    const incomeAt = (t: number) => median(rs.map((r) => [...r.income].reverse().find((x) => x.clock <= t)?.perSecond ?? null));
+    const rate = (v: number | null) => (v === null ? '?' : v < 10 ? v.toFixed(2) : String(Math.round(v)));
+    lines.push(`income, Materials/s: end of first session ${rate(median(rs.map((r) => r.income[0]?.perSecond ?? null)))}${days.map((d) => `, day ${d} ${rate(incomeAt(d * DAY))}`).join('')}`);
     lines.push(
-      `starvation (map < 30 % full): ${pct(median(reports.map((r) => r.starvation))!)}; stuck turns: ${pct(median(reports.map((r) => r.stuck))!)}; ` +
-        `deadlocked turns: ${pct(median(reports.map((r) => r.deadlocked))!)} (worst seed ${pct(Math.max(...reports.map((r) => r.deadlocked)))})`,
+      `starvation (map < 30 % full): ${pct(median(rs.map((r) => r.starvation))!)}; stuck turns: ${pct(median(rs.map((r) => r.stuck))!)}; ` +
+        `deadlocked turns: ${pct(median(rs.map((r) => r.deadlocked))!)} (worst seed ${pct(Math.max(...rs.map((r) => r.deadlocked)))})`,
     );
-    const end = reports.map((r) => r.end);
+    const end = rs.map((r) => r.end);
     lines.push(
       `at the end: ${median(end.map((e) => e.kidsDiscovered))} kids, ${median(end.map((e) => e.recipesFound))} recipes; ` +
-        `garden L${median(end.map((e) => e.levels.garden))}, capacity L${median(end.map((e) => e.levels.capacity))}, compendium L${median(end.map((e) => e.levels.compendium))}`,
+        `garden L${median(end.map((e) => e.levels.garden))}, capacity L${median(end.map((e) => e.levels.capacity))}, compendium L${median(end.map((e) => e.levels.compendium))}; ` +
+        `${Math.round(median(end.map((e) => e.materials))!)} Materials, ${median(end.map((e) => e.potatokens))} Potatokens`,
     );
-  }
+  });
   return lines.join('\n');
 }
