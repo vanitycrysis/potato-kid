@@ -6,10 +6,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    // Node scripts that also run code inside Playwright's browser page.
-    files: ['scripts/**/*.mjs'],
+    // Node scripts (some also run code inside Playwright's browser page), including the
+    // art sources' generators (Codex's audio renderer).
+    files: ['scripts/**/*.mjs', 'art/src/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly', document: 'readonly', Image: 'readonly', DOMParser: 'readonly', btoa: 'readonly', unescape: 'readonly' },
+      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly', URL: 'readonly', document: 'readonly', Image: 'readonly', DOMParser: 'readonly', btoa: 'readonly', unescape: 'readonly' },
     },
   },
 );

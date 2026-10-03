@@ -1,0 +1,1024 @@
+{
+  "revision": "audio-mvp-1",
+  "eventFields": "time and duration in seconds; hz and optional endHz are linear-glide endpoints; gain is relative; pan -1 left to +1 right; named note is editorial only",
+  "sfx": [
+    {
+      "id": "sfx_ui_tap",
+      "duration": 0.12,
+      "range": [
+        0.08,
+        0.15
+      ],
+      "peakDbfs": -8,
+      "intent": "A tiny dry rounded wood tap, quiet enough for repeated navigation.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.12,
+          "voice": "wood",
+          "hz": 620,
+          "endHz": 560,
+          "gain": 1
+        }
+      ]
+    },
+    {
+      "id": "sfx_pick_up",
+      "duration": 0.21,
+      "range": [
+        0.1,
+        0.25
+      ],
+      "peakDbfs": -4,
+      "intent": "A light hollow pluck curling upward from 740 to 1040 Hz; the lifted kid feels buoyant. Brighter and rising, unlike place.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.21,
+          "voice": "lift",
+          "hz": 740,
+          "endHz": 1040,
+          "gain": 1
+        }
+      ]
+    },
+    {
+      "id": "sfx_place",
+      "duration": 0.19,
+      "range": [
+        0.1,
+        0.25
+      ],
+      "peakDbfs": -4.5,
+      "intent": "A lower soft wooden knock settling from 310 to 240 Hz. Short, grounded and clearly below pick-up.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.19,
+          "voice": "wood",
+          "hz": 310,
+          "endHz": 240,
+          "gain": 1
+        }
+      ]
+    },
+    {
+      "id": "sfx_spawn",
+      "duration": 0.34,
+      "range": [
+        0.2,
+        0.4
+      ],
+      "peakDbfs": -5,
+      "intent": "A rounded low pop followed by one soft G pluck, like a sprout appearing. Restrained for repeated births.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.16,
+          "voice": "pop",
+          "hz": 440,
+          "endHz": 330,
+          "gain": 0.85
+        },
+        {
+          "time": 0.075,
+          "duration": 0.265,
+          "voice": "pluck",
+          "hz": 783.990872,
+          "note": "G5",
+          "gain": 0.36
+        }
+      ]
+    },
+    {
+      "id": "sfx_fusion",
+      "duration": 0.46,
+      "range": [
+        0.25,
+        0.5
+      ],
+      "peakDbfs": -3.5,
+      "intent": "Two mellow C/G wooden plucks join a soft C octave answer. A gentle success, shorter than a discovery.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.34,
+          "voice": "pluck",
+          "hz": 523.251131,
+          "note": "C5",
+          "gain": 0.8
+        },
+        {
+          "time": 0.065,
+          "duration": 0.34,
+          "voice": "pluck",
+          "hz": 783.990872,
+          "note": "G5",
+          "gain": 0.58
+        },
+        {
+          "time": 0.145,
+          "duration": 0.315,
+          "voice": "pluck",
+          "hz": 1046.502261,
+          "note": "C6",
+          "gain": 0.36
+        }
+      ]
+    },
+    {
+      "id": "sfx_discovery",
+      "duration": 1.16,
+      "range": [
+        0.6,
+        1.2
+      ],
+      "peakDbfs": -3.2,
+      "intent": "A four-note C-E-G-D upward wooden flourish, with a soft held C/G foundation. Open-ended curiosity rather than a loud jackpot. Replaces fusion for that event.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.74,
+          "voice": "pluck",
+          "hz": 523.251131,
+          "note": "C5",
+          "gain": 0.65
+        },
+        {
+          "time": 0.115,
+          "duration": 0.7,
+          "voice": "pluck",
+          "hz": 659.255114,
+          "note": "E5",
+          "gain": 0.68
+        },
+        {
+          "time": 0.23,
+          "duration": 0.7,
+          "voice": "pluck",
+          "hz": 783.990872,
+          "note": "G5",
+          "gain": 0.7
+        },
+        {
+          "time": 0.345,
+          "duration": 0.815,
+          "voice": "pluck",
+          "hz": 1174.659072,
+          "note": "D6",
+          "gain": 0.56
+        },
+        {
+          "time": 0.38,
+          "duration": 0.78,
+          "voice": "bass",
+          "hz": 261.625565,
+          "note": "C4",
+          "gain": 0.3
+        },
+        {
+          "time": 0.38,
+          "duration": 0.78,
+          "voice": "pluck",
+          "hz": 391.995436,
+          "note": "G4",
+          "gain": 0.24
+        }
+      ]
+    },
+    {
+      "id": "sfx_upgrade",
+      "duration": 0.48,
+      "range": [
+        0.25,
+        0.5
+      ],
+      "peakDbfs": -3.8,
+      "intent": "Three compact rising G-C-E plucks, with a woody first note. A clear building confirmation, smaller than discovery.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.2,
+          "voice": "wood",
+          "hz": 391.995436,
+          "note": "G4",
+          "gain": 0.7
+        },
+        {
+          "time": 0.085,
+          "duration": 0.29,
+          "voice": "pluck",
+          "hz": 523.251131,
+          "note": "C5",
+          "gain": 0.6
+        },
+        {
+          "time": 0.17,
+          "duration": 0.31,
+          "voice": "pluck",
+          "hz": 659.255114,
+          "note": "E5",
+          "gain": 0.65
+        }
+      ]
+    },
+    {
+      "id": "sfx_spend",
+      "duration": 0.18,
+      "range": [
+        0.1,
+        0.25
+      ],
+      "peakDbfs": -6,
+      "intent": "A small descending pair of dry wooden beads. Neutral completion, used only when a more specific success cue does not apply.",
+      "events": [
+        {
+          "time": 0,
+          "duration": 0.12,
+          "voice": "wood",
+          "hz": 880,
+          "gain": 0.65
+        },
+        {
+          "time": 0.06,
+          "duration": 0.12,
+          "voice": "wood",
+          "hz": 660,
+          "gain": 0.8
+        }
+      ]
+    }
+  ],
+  "music": {
+    "id": "music_garden",
+    "title": "Small Hours in the Potato Garden",
+    "bpm": 80,
+    "meter": [
+      4,
+      4
+    ],
+    "bars": 24,
+    "duration": 72,
+    "loopStartSample": 0,
+    "loopEndSampleExclusive": 3456000,
+    "intent": "Sparse warm plucked notes over rounded wood bass and occasional quiet felt dyads. Six four-bar phrases vary a modest C-major/pentatonic thought across Cadd9, Am7, Fmaj7 and Gsus2. No drums, voices, busy ostinato or per-kid sound. The last suspended harmony resolves naturally into the first C; finite note and delay tails wrap through the exact seam.",
+    "events": [
+      {
+        "time": 0.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "C3",
+        "hz": 130.812783,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 0.48750000000000004,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.68,
+        "pan": -0.24
+      },
+      {
+        "time": 1.9124999999999999,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 3.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "A2",
+        "hz": 110,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 3.4875000000000003,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.57,
+        "pan": 0.24
+      },
+      {
+        "time": 5.0625,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 6.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "F3",
+        "hz": 174.614116,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 6.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "E4",
+        "hz": 329.627557,
+        "gain": 0.085,
+        "pan": -0.32
+      },
+      {
+        "time": 6.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.085,
+        "pan": 0.32
+      },
+      {
+        "time": 6.487500000000001,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.62,
+        "pan": -0.24
+      },
+      {
+        "time": 8.175,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 9.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "G3",
+        "hz": 195.997718,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 9.4875,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.54,
+        "pan": 0.24
+      },
+      {
+        "time": 10.8,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 12.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "C3",
+        "hz": 130.812783,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 12.637500000000001,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.68,
+        "pan": -0.24
+      },
+      {
+        "time": 13.912500000000001,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 15.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "A2",
+        "hz": 110,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 15.637500000000001,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.57,
+        "pan": 0.24
+      },
+      {
+        "time": 17.0625,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 18.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "F3",
+        "hz": 174.614116,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 18.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "C4",
+        "hz": 261.625565,
+        "gain": 0.085,
+        "pan": -0.32
+      },
+      {
+        "time": 18.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "E4",
+        "hz": 329.627557,
+        "gain": 0.085,
+        "pan": 0.32
+      },
+      {
+        "time": 18.637500000000003,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.62,
+        "pan": -0.24
+      },
+      {
+        "time": 20.174999999999997,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 21.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "G3",
+        "hz": 195.997718,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 21.637500000000003,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.54,
+        "pan": 0.24
+      },
+      {
+        "time": 22.799999999999997,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 24.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "C3",
+        "hz": 130.812783,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 24.450000000000003,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.68,
+        "pan": -0.24
+      },
+      {
+        "time": 25.912499999999998,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G5",
+        "hz": 783.990872,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 27.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "A2",
+        "hz": 110,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 27.450000000000003,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.57,
+        "pan": 0.24
+      },
+      {
+        "time": 29.0625,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 30.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "F3",
+        "hz": 174.614116,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 30.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.085,
+        "pan": -0.32
+      },
+      {
+        "time": 30.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.085,
+        "pan": 0.32
+      },
+      {
+        "time": 30.450000000000003,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.62,
+        "pan": -0.24
+      },
+      {
+        "time": 32.175,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 33.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "G3",
+        "hz": 195.997718,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 33.45,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.54,
+        "pan": 0.24
+      },
+      {
+        "time": 34.8,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 36.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "C3",
+        "hz": 130.812783,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 36.675,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.68,
+        "pan": -0.24
+      },
+      {
+        "time": 37.912499999999994,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 39.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "A2",
+        "hz": 110,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 39.675,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.57,
+        "pan": 0.24
+      },
+      {
+        "time": 41.0625,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 42.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "F3",
+        "hz": 174.614116,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 42.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.085,
+        "pan": -0.32
+      },
+      {
+        "time": 42.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.085,
+        "pan": 0.32
+      },
+      {
+        "time": 42.675,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.62,
+        "pan": -0.24
+      },
+      {
+        "time": 44.175,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 45.089999999999996,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "G3",
+        "hz": 195.997718,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 45.675,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.54,
+        "pan": 0.24
+      },
+      {
+        "time": 46.8,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 48.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "C3",
+        "hz": 130.812783,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 48.5625,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.68,
+        "pan": -0.24
+      },
+      {
+        "time": 49.912499999999994,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 51.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "A2",
+        "hz": 110,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 51.5625,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.57,
+        "pan": 0.24
+      },
+      {
+        "time": 53.0625,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 54.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "F3",
+        "hz": 174.614116,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 54.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "E4",
+        "hz": 329.627557,
+        "gain": 0.085,
+        "pan": -0.32
+      },
+      {
+        "time": 54.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.085,
+        "pan": 0.32
+      },
+      {
+        "time": 54.5625,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.62,
+        "pan": -0.24
+      },
+      {
+        "time": 56.175000000000004,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 57.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "G3",
+        "hz": 195.997718,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 57.5625,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.54,
+        "pan": 0.24
+      },
+      {
+        "time": 58.800000000000004,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 60.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "C3",
+        "hz": 130.812783,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 60.412499999999994,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "E5",
+        "hz": 659.255114,
+        "gain": 0.68,
+        "pan": -0.24
+      },
+      {
+        "time": 61.912499999999994,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 63.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "A2",
+        "hz": 110,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 63.412499999999994,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.57,
+        "pan": 0.24
+      },
+      {
+        "time": 65.0625,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.43,
+        "pan": -0.18
+      },
+      {
+        "time": 66.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "F3",
+        "hz": 174.614116,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 66.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "C4",
+        "hz": 261.625565,
+        "gain": 0.085,
+        "pan": -0.32
+      },
+      {
+        "time": 66.1875,
+        "duration": 5.2,
+        "voice": "felt",
+        "note": "E4",
+        "hz": 329.627557,
+        "gain": 0.085,
+        "pan": 0.32
+      },
+      {
+        "time": 66.4125,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "C5",
+        "hz": 523.251131,
+        "gain": 0.62,
+        "pan": -0.24
+      },
+      {
+        "time": 68.17500000000001,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "A4",
+        "hz": 440,
+        "gain": 0.43,
+        "pan": 0.18
+      },
+      {
+        "time": 69.09,
+        "duration": 2.85,
+        "voice": "bass",
+        "note": "G3",
+        "hz": 195.997718,
+        "gain": 0.43,
+        "pan": 0
+      },
+      {
+        "time": 69.4125,
+        "duration": 1.7,
+        "voice": "pluck",
+        "note": "D5",
+        "hz": 587.329536,
+        "gain": 0.54,
+        "pan": 0.24
+      },
+      {
+        "time": 71.69999999999999,
+        "duration": 1.9,
+        "voice": "pluck",
+        "note": "G4",
+        "hz": 391.995436,
+        "gain": 0.43,
+        "pan": -0.18
+      }
+    ]
+  }
+}

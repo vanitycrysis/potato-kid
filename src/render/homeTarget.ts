@@ -77,6 +77,11 @@ export class HomeTarget {
     }
   }
 
+  /** The view moved: the dwell starts over (the target may have slid under the finger). */
+  restartDwell(): void {
+    this.since = null;
+  }
+
   /** Cancel, eligibility loss, lifecycle: the dwell starts over. */
   reset(): void {
     this.since = null;

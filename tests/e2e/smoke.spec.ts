@@ -1646,7 +1646,13 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
 
   test('releasing before the 400 ms dwell places the kid normally', async ({ page }) => {
     const { id } = await setup(page);
-    await holdOverHome(page, id, 120);
+    // Straight in and straight out: a stepped move can itself take 400 ms on a slow runner.
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y);
+    await page.mouse.up();
     await page.waitForTimeout(300);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
     expect(await page.evaluate(() => window.__PK__!.home())).toMatchObject({ state: 'hidden', departing: 0 });
@@ -1671,6 +1677,23 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     await page.mouse.up();
     await expect(page.locator('.home-label:not(.home-probe)')).toBeHidden();
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+  });
+
+  test('a view change just before release restarts the dwell (Codex review, PR #50)', async ({ page }) => {
+    const { id } = await setup(page);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 8 });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.home().state)).toBe('ready');
+    // In one task, with no frame between: the camera moves a world unit, then release.
+    await page.evaluate(([x, y]) => {
+      window.__PK__!.centerOn(1080, 761);
+      document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: x, clientY: y, bubbles: true }));
+    }, [t.x, t.y] as const);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((c) => c.id === i), id)).toBe(true);
   });
 
   test('a farewell ends at once rather than overlap a kid that arrives on its spot', async ({ page }) => {

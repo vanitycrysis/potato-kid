@@ -1,5 +1,36 @@
 # Asset provenance
 
+## Android launcher and splash (ChatGPT, 2026-10-03; Claude review pending)
+
+Author/art owner: ChatGPT (Codex). Revision `launcher-splash-1`; original work for Potato Kid. Tools: editable SVG composition and original negative-space vector paths using Node.js v24.19.0; Playwright Chromium PNG export and review mockups; actual-PNG alpha/RGB/radius checks and independent sampled SVG geometry/mask checks. No image generator, external artwork, tracing, downloaded art, font in the masters or baked app-name text. Licence: original project artwork; PNGs and mockups inherit their SVG sources.
+
+Colour mark directly reuses ChatGPT's approved `art/src/kids/kid_body_round_stand.svg` and `art/src/kids/kid_face_classic_open.svg` without changing them. They were originally authored for Potato Kid under the earlier provenance entries. All original references were inspected via `.codex-out/reference-contact-sheet.png`; approved `art/previews/ingame/faces-plain.png`, `types-20x9.png` and `art/previews/ui/send_home_shown_390x844.png` informed consistency and palette choices. Supplied references remain untouched and are not traced or embedded. Colours come from the unchanged `art/data/ui_v2.json`: paper `#fff1d5`, ink `#1a1a1a`, sage `#e2e8d4`. Monochrome uses one black paint and transparent eye/smirk holes, with a small optical enlargement of dot holes for 48px readability; it adds no anatomy.
+
+| Asset ID | Editable source | PNG master | Status |
+| --- | --- | --- | --- |
+| android_launcher_foreground | `art/src/android/android_launcher_foreground.svg` | `art/exports/android/android_launcher_foreground.png` (432×432 RGBA) | final /launcher-splash-1; Claude review pending |
+| android_launcher_background | `art/src/android/android_launcher_background.svg` | `art/exports/android/android_launcher_background.png` (432×432, opaque sage) | final /launcher-splash-1; Claude review pending |
+| android_launcher_foreground_monochrome | `art/src/android/android_launcher_foreground_monochrome.svg` | `art/exports/android/android_launcher_foreground_monochrome.png` (432×432 RGBA) | final /launcher-splash-1; Claude review pending |
+| android_splash_logo | `art/src/android/android_splash_logo.svg` | `art/exports/android/android_splash_logo.png` (1152×1152 RGBA) | final /launcher-splash-1; Claude review pending |
+
+The 40 review SVG/PNG pairs in `art/previews/android/` are original art-compositor outputs: 36 individual mask/appearance/size/density combinations, two overview sheets, a safe-circle sheet and a 1440×3120 splash frame. Review text is outside the delivered masters. They are not engine/OS/device screenshots or acceptance evidence. Actual themed tints come from Android; review tints are examples from the GUI palette. Exact source/master/shared-source SHA-256, dimensions, exported alpha bounds and complete preview inventory: `.codex-out/launcher-splash-inventory.json`. Check results: `.codex-out/launcher-splash-check.json`; reproduction/conversion handoff: `.codex-out/launcher-splash-notes.md`. The pre-edit preservation snapshot covers 927 files under src/android/references/art/assets. The only existing protected-file change is this provenance entry; prior artwork and all code/native resources remain byte-identical. Claude commits/pushes unchanged as ChatGPT; no git operations or external publication by Codex.
+
+## MVP audio masters (2026-10-03; Claude listening review pending)
+
+Author/composer/audio owner: **ChatGPT (Codex)**, revision `audio-mvp-1`. Original work created for Potato Kid; no third-party audio, samples, soundfonts, downloaded content, external music service, or audio/synthesis library. All musical phrases, cue events, timbres and renderer are authored in this repository. Supplied character references, design-doc and approved warm wood/pluck direction inform mood only; no recording or reference audio was used. Existing references/art/font remain unchanged.
+
+| Asset IDs | Original editable source | Derivative |
+| --- | --- | --- |
+| sfx_ui_tap, sfx_pick_up, sfx_place, sfx_spawn, sfx_fusion, sfx_discovery, sfx_upgrade, sfx_spend | `art/src/audio/score.json` cue events; `art/src/audio/synthesis.json` voices | Matching mono PCM WAVs in `art/audio/` |
+| music_garden (*Small Hours in the Potato Garden*) | `art/src/audio/compose.mjs` authored phrase patterns; `score.json` 84 explicit note events; `synthesis.json` parameters | Stereo `art/audio/music_garden.wav`, 72 s, loop frames [0,3456000) |
+| Audio review PNGs | `art/src/audio/measure.mjs` and `plot.mjs`, original FFT/raster/font/PNG logic | `art/previews/audio/audio-mvp-review-sheet.png`, nine per-file panels and seam PNG |
+
+Tools: Node.js v24.19.0 on Windows x64, builtins only; `synth.mjs` original modal oscillators, deterministic excitation, smooth envelopes, finite delays and PCM encoder; `scripts/render-audio.mjs` rendering/audit command. WAVs verified identical byte for byte on repeated rendering. Reproduction on other Node/platform combinations is not claimed; hashes in `art/audio/masters.sha256` and `.codex-out/audio-mvp-measurements.json` identify exact delivered masters and synthesis source files. WAVs contain no external metadata/sample chunks. Node's built-in zlib produces PNG review derivatives; no image-generation tool or external font used for review plots.
+
+Measurement constants/method derived from the published [ITU-R BS.1770-5 Annex 1](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1770-5-202311-I!!PDF-E.pdf), implemented locally as an uncertified meter; short-file values are documented approximations. Already installed ffmpeg 8.1.1 was used only for independent read-only loudness/true-peak measurement, not synthesis, samples, mastering or encoding. That audit introduces no content or library dependency in the masters/renderer. Exact independent results: `.codex-out/audio-mvp-independent.json`.
+
+Delivery notes: `.codex-out/audio-mvp-notes.md`. Licence/provenance status: original project audio, no third-party content licence required. Claude reviews, commits and pushes unchanged as ChatGPT. No git command, external publication, Ogg/M4A build, runtime integration, actual listening or device acceptance was performed by Codex.
+
 
 
 ## ASSET-MVP batch 2: new tier 4 costumes (2026-10-02; Claude review pending)

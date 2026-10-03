@@ -1,0 +1,26 @@
+# Potato Kid MVP audio sources
+
+Original composition and synthesis by ChatGPT/Codex, revision `audio-mvp-1`, 2026-10-03. No samples, soundfonts, music tool, npm package, audio library or downloaded content. All masters are under `art/audio/`: eight mono cues and one stereo music loop, WAV PCM 48 kHz / 16-bit.
+
+From the repository root, using Node (delivery environment: **v24.19.0, Windows x64**):
+
+```sh
+node scripts/render-audio.mjs
+node scripts/render-audio.mjs --check
+```
+
+The first command renders all masters, SHA-256 inventory, measurements and PNG review sheets. `--check` renders in memory and compares every byte against the existing WAV before updating review/measurement artifacts; it never replaces a WAV. `--audit-only` reads and audits existing WAVs without synthesis. No timestamp, metadata chunk or random seed from the clock enters a master. Repeat rendering was checked bit for bit in the recorded environment; the committed hashes are authoritative on other Node versions/platforms. Polynomial oscillators, fixed PRNG seed, ordered double arithmetic, quantized master gain and a fixed PCM quantizer reduce platform dependence. Cross-platform identity has not been tested.
+
+`score.json` contains all explicit SFX/music events, durations, editorial note names, Hz, gains, panning and intent. `compose.mjs` preserves the authored six four-bar phrase patterns and fixed frequency table; run `node art/src/audio/compose.mjs` only to regenerate the explicit music events from that composition. It preserves cue events. The ordinary render reads the saved score directly.
+
+`synthesis.json` contains original voice partials, envelopes, filtered-noise amounts, seed, finite music delay taps, loudness target and peak ceiling. `synth.mjs` renders damped modal sine partials with smooth attacks/releases, faster-decaying upper partials, fixed-seed low-pass excitation and narrow stereo panning. Music has three finite delay taps and wraps each note/tap at the loop boundary, then uses a periodic DC-blocker state. Cues have 10 ms boundary fades and smooth residual-DC correction. No limiter, compressor, sample, soundfont or persistent per-kid sound is used. Peak matching differs by cue: the navigation/spend/spawn cues are intentionally quieter than major confirmations. Listening must establish final perceptual matching.
+
+`music_garden` is **24 bars in 4/4, 80 BPM, 72 seconds**, title *Small Hours in the Potato Garden*. It uses 84 events (24 wood-bass notes, 48 plucks, 12 quiet felt notes). Harmony cycles Cadd9 / Am7 / Fmaj7 / Gsus2. Six short melodic thoughts vary timing, contour and register. Exact loop interval is **[0, 3,456,000) sample frames**, per channel. Frame 3,455,999 joins frame 0. The last note and finite echoes continue across the seam; the master has no global fade or inserted silence. Nonzero first/last music values are intentional samples of a continuous waveform. For initial playback/final stopping Claude can apply a short runtime gain ramp, without fading each repeat.
+
+`measure.mjs` measures delivered, quantized PCM. RMS is mean channel power (full-scale sine = -3.01 dBFS). Loudness follows the published 48 kHz K-weighting coefficients and Annex 1 gates in [ITU-R BS.1770-5](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1770-5-202311-I!!PDF-E.pdf): 400 ms blocks at 100 ms hops, channel sum, absolute -70 and relative -10 LU gates. This implementation is not a certified meter. Cues shorter than 400 ms receive a clearly labelled **ungated whole-file K-weighted approximation**, not a standards-conforming integrated LUFS value. There is no short-SFX LUFS target. An optional independent ffmpeg audit is in `.codex-out/check-audio-independent.mjs`; ffmpeg is not required to render.
+
+Spectral centroid is the full-file power-weighted centroid of Hann-windowed 2048-point STFT frames, 512-sample hop, summing channel power; DC bin is excluded, boundary frames zero-padded. It is an objective pitch/brightness aid, not proof of perceptual distinctness. Loop continuity compares each channel's last/first values and slopes, seam jump against nearby maximum slopes, 20 ms adjacent RMS, and 4096-point Hann power spectra in adjacent 85.33 ms windows.
+
+`plot.mjs` writes PNG with Node zlib and an original tiny bitmap labelling font. Waveforms use per-column minima/maxima on fixed full-scale axes, music L/R separately. Spectrograms average channel power (no cancellation from mono downmix), 2048-point Hann windows, log-frequency 80-8000 Hz, common -90..0 dBFS colour range. Columns evenly sample time; the music overview is a visual summary, not an exhaustive transient detector. Its per-file panel and seam plot provide additional detail.
+
+Review artifacts: `art/previews/audio/audio-mvp-review-sheet.png`, nine `*-review.png` panels and `music_garden-seam.png`. Complete results and provenance hashes: `.codex-out/audio-mvp-measurements.json`; readable handoff: `.codex-out/audio-mvp-notes.md`. No listening, encoded playback, fatigue judgement or Android acceptance is claimed. Claude owns encoding and runtime; discovery replaces fusion, spawn is limited to one per 300 ms, spend plays only without a specific success cue, and Send home adds no sound. Preserve priorities discovery > fusion > upgrade > spawn > place/pick-up > UI tap.
