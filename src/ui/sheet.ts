@@ -16,15 +16,30 @@ export interface SheetSpec {
   requestedHeight: number;
   /** Called every frame while open, so live values (balances, levels) stay current. */
   update?: () => void;
-  onClose?: () => void;
+  /** `replaced`: another sheet is opening in its place (not a player's dismissal). */
+  onClose?: (replaced: boolean) => void;
 }
 
 export interface OpenSheet {
   readonly key: string;
+  /** A fixed region between the header and the scrolling body (Compendium toolbar). */
+  readonly bar: HTMLElement;
   readonly body: HTMLElement;
   readonly footer: HTMLElement;
   setSubtitle(text: string): void;
+  /** Scrolls whatever scrolls (the body, or a tight sheet) to `top`. */
+  scrollTo(top: number): void;
 }
+
+/** Where an open sheet was, so it can come back after a summary interrupts it (GUI_MVP §8). */
+export interface SheetSnapshot {
+  key: string;
+  scrollTop: number;
+  launcher: HTMLElement | null;
+}
+
+/** Least body height beside a fixed bar: one 44 px control and its label (GUI_MVP §§2, 6). */
+const BODY_MIN = 22 + 4 + 44 + 16;
 
 const motion = () => (uiData?.mvp as { motion?: { openMs: number; closeMs: number; sheetTranslatePx: number } } | undefined)?.motion;
 
@@ -41,7 +56,19 @@ function safeInsets(): { top: number; bottom: number; left: number; right: numbe
 }
 
 export class Sheets {
-  private current: { spec: SheetSpec; scrim: HTMLElement; sheet: HTMLElement; subtitle: HTMLElement; body: HTMLElement; footer: HTMLElement; launcher: HTMLElement | null } | null = null;
+  private current: {
+    spec: SheetSpec;
+    scrim: HTMLElement;
+    sheet: HTMLElement;
+    subtitle: HTMLElement;
+    bar: HTMLElement;
+    body: HTMLElement;
+    footer: HTMLElement;
+    launcher: HTMLElement | null;
+    watch: ResizeObserver;
+  } | null = null;
+  /** True while `open` replaces a sheet, so its onClose knows it wasn't dismissed. */
+  private replacing = false;
   private readonly onKey = (e: KeyboardEvent) => this.key(e);
 
   constructor(
@@ -53,6 +80,10 @@ export class Sheets {
     private readonly reducedMotion: boolean,
   ) {
     window.addEventListener('resize', () => this.place());
+    // A soft keyboard may shrink only the visual viewport: the sheet follows it, so its
+    // lower controls stay above the keyboard (GUI_MVP §2; Codex review, PR #41).
+    window.visualViewport?.addEventListener('resize', () => this.place());
+    window.visualViewport?.addEventListener('scroll', () => this.place());
   }
 
   get isOpen(): boolean {
@@ -63,12 +94,37 @@ export class Sheets {
     return this.current?.spec.key ?? null;
   }
 
+  snapshot(): SheetSnapshot | null {
+    const c = this.current;
+    return c && { key: c.spec.key, scrollTop: this.scroller(c).scrollTop, launcher: c.launcher };
+  }
+
+  /**
+   * What scrolls the open sheet's content: its body; the whole sheet when tight (see
+   * `place`); or, in page mode, the page itself (GUI_MVP §3.1; Codex review, PR #41).
+   */
+  private scroller(c: { sheet: HTMLElement; body: HTMLElement }): Element {
+    if (document.documentElement.dataset.hudFit === 'page') return document.scrollingElement ?? document.documentElement;
+    return c.sheet.dataset.tight === 'true' ? c.sheet : c.body;
+  }
+
+  /** The element to observe visibility against (null: the page's viewport). */
+  get scrollRoot(): Element | null {
+    const c = this.current;
+    if (!c || document.documentElement.dataset.hudFit === 'page') return null;
+    return this.scroller(c);
+  }
+
   /**
    * Opens a sheet (closing any other). A held kid is settled first and world input is
    * paused while it is open; simulation and income continue (GUI_MVP §2).
    */
   open(spec: SheetSpec, launcher: HTMLElement | null): OpenSheet {
-    if (this.current) this.close(false);
+    if (this.current) {
+      this.replacing = true;
+      this.close(false);
+      this.replacing = false;
+    }
     this.scene.cancelDrag();
     this.scene.inputPaused = true;
 
@@ -88,9 +144,10 @@ export class Sheets {
     close.setAttribute('aria-label', `Close ${spec.title}`);
     close.addEventListener('click', () => this.close());
     const header = el('header', 'sheet-header', icon(spec.icon, '', 'ui-icon-28 sheet-icon'), title, subtitle, close);
+    const bar = el('div', 'sheet-bar');
     const body = el('div', 'sheet-body');
     const footer = el('footer', 'sheet-footer');
-    const sheet = el('section', 'sheet ui-surface', header, body, footer);
+    const sheet = el('section', 'sheet ui-surface', header, bar, body, footer);
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-modal', 'true');
     sheet.setAttribute('aria-labelledby', titleId);
@@ -101,11 +158,25 @@ export class Sheets {
     for (const b of this.background()) b.inert = true;
     document.addEventListener('keydown', this.onKey, true);
 
-    this.current = { spec, scrim, sheet, subtitle, body, footer, launcher };
+    // The bar grows when a status appears: the fit is checked again (see `place`).
+    const watch = new ResizeObserver(() => this.place());
+    watch.observe(bar);
+    this.current = { spec, scrim, sheet, subtitle, bar, body, footer, launcher, watch };
     this.place();
     this.animate(true);
     title.focus({ preventScroll: true });
-    return { key: spec.key, body, footer, setSubtitle: (t) => (subtitle.textContent = t) };
+    const current = this.current;
+    return {
+      key: spec.key,
+      bar,
+      body,
+      footer,
+      setSubtitle: (t) => (subtitle.textContent = t),
+      scrollTo: (top) => {
+        this.place();
+        this.scroller(current).scrollTop = top;
+      },
+    };
   }
 
   /** Closes the open sheet; focus returns to whatever opened it (GUI_MVP §2). */
@@ -113,6 +184,7 @@ export class Sheets {
     const c = this.current;
     if (!c) return;
     this.current = null;
+    c.watch.disconnect();
     delete document.documentElement.dataset.sheetOpen;
     document.removeEventListener('keydown', this.onKey, true);
     for (const b of this.background()) b.inert = false;
@@ -122,6 +194,10 @@ export class Sheets {
       c.scrim.remove();
       c.sheet.remove();
     };
+    // While it fades out, the closed sheet takes no input: a touch right after closing
+    // reaches the world, not the vanishing scrim.
+    for (const t of [c.scrim, c.sheet]) t.style.pointerEvents = 'none';
+    c.sheet.inert = true;
     if (this.reducedMotion || !m) remove();
     else {
       c.scrim.style.transition = `opacity ${m.closeMs}ms ease-in`;
@@ -131,7 +207,7 @@ export class Sheets {
       c.sheet.style.transform = `translateY(${m.sheetTranslatePx}px)`;
       window.setTimeout(remove, m.closeMs);
     }
-    c.spec.onClose?.();
+    c.spec.onClose?.(this.replacing);
     if (restoreFocus) c.launcher?.focus({ preventScroll: true });
   }
 
@@ -157,8 +233,11 @@ export class Sheets {
     if (!c) return;
     // Page mode (GUI_MVP §3.1) is laid out by sheets.css, which overrides this geometry.
     const inset = safeInsets();
-    const w = window.visualViewport?.width ?? window.innerWidth;
-    const h = window.visualViewport?.height ?? window.innerHeight;
+    const vv = window.visualViewport;
+    const w = vv?.width ?? window.innerWidth;
+    const h = vv?.height ?? window.innerHeight;
+    // The layout viewport below the visible one (a soft keyboard), which the sheet clears.
+    const hidden = vv ? Math.max(0, window.innerHeight - vv.offsetTop - vv.height) : 0;
     const compact = h <= 520;
     const st = Math.max(compact ? 8 : 24, inset.top);
     const sb = Math.max(compact ? 8 : 24, inset.bottom);
@@ -170,8 +249,24 @@ export class Sheets {
     c.sheet.style.width = `${width}px`;
     c.sheet.style.height = `${Math.max(0, height)}px`;
     c.sheet.style.left = `${ml + (w - ml - mr - width) / 2}px`;
-    c.sheet.style.bottom = `${sb}px`;
+    c.sheet.style.bottom = `${sb + hidden}px`;
     c.sheet.dataset.compact = String(compact);
+    this.fitBar(c);
+  }
+
+  /**
+   * A fixed bar (the Compendium's balances, message and status) may leave the body too
+   * little room on a short screen, hiding search and every card. Then the bar scrolls with
+   * the body under a sticky header and footer, so every control stays reachable (GUI_MVP
+   * §2 required-action visibility; Codex review, PR #41).
+   */
+  private fitBar(c: { sheet: HTMLElement; bar: HTMLElement; body: HTMLElement }): void {
+    const was = c.sheet.dataset.tight === 'true';
+    const scroll = was ? c.sheet.scrollTop : c.body.scrollTop;
+    c.sheet.dataset.tight = 'false';
+    const tight = c.bar.childElementCount > 0 && c.body.clientHeight < BODY_MIN;
+    c.sheet.dataset.tight = String(tight);
+    if (tight !== was) (tight ? c.sheet : c.body).scrollTop = scroll;
   }
 
   private animate(opening: boolean): void {

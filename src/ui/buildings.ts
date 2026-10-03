@@ -4,20 +4,37 @@ import type { MapScene } from '../render/scene';
 import type { GameEvent } from '../sim/game';
 import { el, icon, shortName } from './dom';
 import { refusalText } from './feedback';
-import { formatExact, formatInterval } from './format';
-import { portrait } from './portrait';
+import { formatCount, formatExact, formatInterval } from './format';
+import { LazyPortraits, portrait } from './portrait';
 import type { Sheets } from './sheet';
 
-// Garden, Capacity and Spawn bias sheets (docs/GUI_MVP.md §§4-5, Codex's design, D-036).
+// Garden, Capacity, Spawn bias and Compendium sheets (docs/GUI_MVP.md §§4-6, Codex's design, D-036).
 // Each sheet is built once and updated in place every frame, so focus is never lost; the
 // command a sheet sent is kept, because refusals carry no context (GUI_MVP §9).
 
 const SUCCESS_MS = 2000;
 
-type Pending = { type: 'upgrade'; building: BuildingId } | { type: 'setBias'; kidType: KidId | null };
+type Pending =
+  | { type: 'upgrade'; building: BuildingId }
+  | { type: 'setBias'; kidType: KidId | null }
+  | { type: 'respawn'; kidType: KidId; pay: 'materials' | 'potatokens' };
+
+type Pay = 'materials' | 'potatokens';
 
 interface Controller {
   update(): void;
+}
+
+interface CompendiumCard {
+  node: HTMLElement;
+  name: string;
+  update(): void;
+}
+
+/** What a sheet can be reopened with after an interruption (GUI_MVP §8). */
+export interface SheetRestore {
+  scrollTop: number;
+  search?: string;
 }
 
 export class BuildingSheets {
@@ -25,6 +42,12 @@ export class BuildingSheets {
   private success: { text: string; until: number } | null = null;
   private refusal: string | null = null;
   private controller: Controller | null = null;
+  /** The Compendium's search text while its sheet is open (GUI_MVP §6). */
+  private search = '';
+  /** The kid a Compendium purchase just brought back: its card says so for 2 s (§6). */
+  private arrived: { type: KidId; until: number } | null = null;
+  /** The open Compendium list's portraits, composed as they near view. */
+  private portraits: LazyPortraits | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -32,25 +55,40 @@ export class BuildingSheets {
     private readonly sheets: Sheets,
   ) {}
 
-  /** Opens a building's sheet (Garden, Capacity or Bias). */
-  open(building: Exclude<BuildingId, 'compendium'>, launcher: HTMLElement | null): void {
+  /** Opens a building's sheet; `restore` brings back where it was (GUI_MVP §8). */
+  open(building: BuildingId, launcher: HTMLElement | null, restore?: SheetRestore, onClose?: (replaced: boolean) => void): void {
     this.pending = null;
     this.success = null;
     this.refusal = null;
-    const spec = building === 'bias' ? this.biasSheet() : this.levelSheet(building);
+    this.arrived = null;
+    this.search = restore?.search ?? '';
+    this.portraits?.dispose();
+    this.portraits = null;
+    const spec = building === 'bias' ? this.biasSheet() : building === 'compendium' ? this.compendiumSheet() : this.levelSheet(building);
     const sheet = this.sheets.open(
       {
         key: building,
         icon: `icon_${building}`,
         title: spec.title,
-        requestedHeight: building === 'bias' ? 624 : 440,
+        requestedHeight: building === 'bias' || building === 'compendium' ? 624 : 440,
         update: () => this.controller?.update(),
-        onClose: () => (this.controller = null),
+        onClose: (replaced) => {
+          this.controller = null;
+          this.portraits?.dispose();
+          this.portraits = null;
+          onClose?.(replaced);
+        },
       },
       launcher,
     );
-    this.controller = spec.mount(sheet.body, sheet.footer, (t) => sheet.setSubtitle(t));
+    this.controller = spec.mount(sheet.body, sheet.footer, (t) => sheet.setSubtitle(t), sheet.bar);
     this.controller.update();
+    if (restore) sheet.scrollTo(restore.scrollTop);
+  }
+
+  /** The open sheet's search text, for a snapshot (GUI_MVP §8). */
+  get searchText(): string {
+    return this.search;
   }
 
   /**
@@ -65,18 +103,24 @@ export class BuildingSheets {
       if (p.type === 'upgrade' && e.type === 'upgraded' && e.building === p.building) {
         this.pending = null;
         this.refusal = null;
-        const name = p.building === 'garden' ? 'Garden' : p.building === 'capacity' ? 'Capacity' : 'Spawn bias';
-        this.success = { text: `${name} is now level ${e.level}.`, until: performance.now() + SUCCESS_MS };
+        // Building the Compendium needs no message: the sheet swaps to its list (GUI_MVP §6).
+        const name = p.building === 'garden' ? 'Garden' : p.building === 'capacity' ? 'Capacity' : p.building === 'bias' ? 'Spawn bias' : null;
+        if (name) this.success = { text: `${name} is now level ${e.level}.`, until: performance.now() + SUCCESS_MS };
       } else if (p.type === 'setBias' && e.type === 'biasSet') {
         this.pending = null;
         this.refusal = null;
         const k = e.kidType;
         const text = k === null ? 'Bias cleared.' : this.discovered(k) ? `Bias set to ${shortName(this.name(k))}.` : 'Bias set to this seed.';
         this.success = { text, until: performance.now() + SUCCESS_MS };
+      } else if (p.type === 'respawn' && e.type === 'spawned' && e.source === 'compendium') {
+        this.pending = null;
+        this.refusal = null;
+        this.arrived = { type: e.kid.type, until: performance.now() + SUCCESS_MS };
       } else if (e.type === 'rejected' && e.command === p.type) {
         this.pending = null;
         this.success = null;
-        this.refusal = refusalText(e.reason, e.command, p.type === 'upgrade' ? 'materials' : undefined);
+        const currency = p.type === 'upgrade' ? 'materials' : p.type === 'respawn' ? p.pay : undefined;
+        this.refusal = refusalText(e.reason, e.command, currency);
         handled.push(e);
       }
     }
@@ -103,8 +147,11 @@ export class BuildingSheets {
     return this.game.state.discoveredKids.includes(type);
   }
 
-  /** The inline row under the body: a success for 2 s, or the latest refusal. */
-  private statusRow(): { row: HTMLElement; update(): void } {
+  /**
+   * The inline status row: a success for 2 s, or the latest refusal; otherwise `standing`
+   * (a condition such as a full Garden) when given.
+   */
+  private statusRow(standing?: () => string): { row: HTMLElement; update(): void } {
     const text = el('span', 'sheet-status-text');
     const mark = el('span', 'sheet-status-icon');
     const row = el('div', 'sheet-status', mark, text);
@@ -115,13 +162,14 @@ export class BuildingSheets {
       update: () => {
         const ok = this.success && this.success.until > performance.now() ? this.success.text : '';
         if (!ok) this.success = null;
-        const msg = this.refusal ?? ok;
-        const key = `${this.refusal ? 'r' : 'o'}${msg}`;
+        const warn = this.refusal ?? (ok ? null : standing?.() || null);
+        const msg = warn ?? ok;
+        const key = `${warn ? 'r' : 'o'}${msg}`;
         if (key === shown) return;
         shown = key;
         row.hidden = !msg;
         text.textContent = msg;
-        mark.replaceChildren(icon(this.refusal ? 'icon_warning' : 'icon_check', '', 'ui-icon-24'));
+        mark.replaceChildren(icon(warn ? 'icon_warning' : 'icon_check', '', 'ui-icon-24'));
         // On a short sheet the row may sit below the visible body: bring it into view, or a
         // refusal (or a 2 s success) would go unseen (Codex review, PR #39).
         if (msg) row.scrollIntoView({ block: 'nearest' });
@@ -329,6 +377,222 @@ export class BuildingSheets {
             status.update();
           },
         };
+      },
+    };
+  }
+
+  /** Compendium: build it, then bring back any discovered kid for either currency (GUI_MVP §6). */
+  private compendiumSheet() {
+    return {
+      title: 'Compendium',
+      mount: (body: HTMLElement, footer: HTMLElement, setSubtitle: (t: string) => void, bar: HTMLElement): Controller => {
+        let view: Controller | null = null;
+        let built: boolean | null = null;
+        return {
+          update: () => {
+            const level = this.game.state.buildings.compendium;
+            const max = this.content.balance.buildings.compendium.maxLevel;
+            const now = level >= 1;
+            if (now !== built) {
+              // Building it swaps straight to the list, scrolled to the top: no reopening.
+              const hadFocus = footer.contains(document.activeElement);
+              built = now;
+              bar.replaceChildren();
+              body.replaceChildren();
+              footer.replaceChildren();
+              view = now ? this.compendiumList(body, bar) : this.compendiumLocked(body, footer);
+              body.scrollTop = 0;
+              // The Build button is gone: keep focus in the sheet, on its heading.
+              if (hadFocus) body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus({ preventScroll: true });
+            }
+            setSubtitle(level >= max ? `Level ${level} / ${max} · Fully built` : `Level ${level} / ${max}`);
+            view!.update();
+          },
+        };
+      },
+    };
+  }
+
+  /** Not built yet: what it does, its price and the Build button (GUI_MVP §6). */
+  private compendiumLocked(body: HTMLElement, footer: HTMLElement): Controller {
+    const card = el(
+      'div',
+      'compare ui-surface',
+      el('div', 'compare-row', el('span', 'compare-label', 'Now'), el('span', 'compare-value', 'Not built')),
+      el('div', 'compare-row', el('span', 'compare-label', 'After building'), el('span', 'compare-value compare-value-small', 'Respawn known kids')),
+    );
+    const costText = el('span', '');
+    const holding = el('p', 'sheet-body-text');
+    const helper = el('p', 'sheet-helper');
+    const status = this.statusRow();
+    body.append(
+      el('div', 'comp-lock', icon('icon_lock', '', 'ui-icon-48')),
+      el('h3', 'sheet-section comp-centred', 'Keep a familiar kid close.'),
+      el('p', 'sheet-body-text', 'Build the Compendium to bring back kids you’ve already discovered.'),
+      card,
+      el('div', 'sheet-cost', icon('icon_materials', '', 'ui-icon-24'), costText),
+      holding,
+      helper,
+      status.row,
+    );
+    const act = this.action(() => this.send({ type: 'upgrade', building: 'compendium' }));
+    footer.append(act.button);
+    return {
+      update: () => {
+        const price = this.game.upgradeCost('compendium') ?? 0;
+        const have = this.game.state.materials;
+        costText.textContent = `Cost: ${formatExact(price)} Materials`;
+        holding.textContent = `You have ${formatExact(have)} Materials.`;
+        helper.textContent = have < price ? `Need ${formatExact(Math.ceil(price - have))} more Materials.` : 'Building happens right away.';
+        const waiting = this.pending?.type === 'upgrade';
+        act.set(waiting ? 'Building…' : 'Build Compendium', price, !waiting && have >= price, true);
+        status.update();
+      },
+    };
+  }
+
+  /**
+   * Built: balances and the payment message stay fixed; the search field, count and one
+   * card per discovered kid scroll (GUI_MVP §6). Cards are added as kids are discovered,
+   * never rebuilt, so focus and scroll hold; portraits compose as they scroll into view.
+   */
+  private compendiumList(body: HTMLElement, bar: HTMLElement): Controller {
+    const materials = el('span', 'comp-balance');
+    const potatokens = el('span', 'comp-balance');
+    const wallet = el(
+      'div',
+      'comp-toolbar',
+      el('span', 'comp-wallet', icon('icon_materials', '', 'ui-icon-24'), materials),
+      el('span', 'comp-wallet', icon('icon_potatokens', '', 'ui-icon-24'), potatokens),
+    );
+    const status = this.statusRow(() => (this.full ? refusalText('full') : ''));
+    bar.append(wallet, el('p', 'comp-message', 'Choose how to pay. Either price buys one kid.'), status.row);
+
+    const field = el('input', 'comp-search');
+    field.type = 'search';
+    field.id = 'compendium-search';
+    field.autocomplete = 'off';
+    field.placeholder = 'Search discovered names';
+    field.value = this.search;
+    const label = el('label', 'comp-search-label', 'Find a discovered kid');
+    label.htmlFor = field.id;
+    const count = el('p', 'sheet-helper');
+    const empty = el('p', 'sheet-helper');
+    const list = el('div', 'comp-list');
+    body.append(label, field, count, empty, list);
+
+    const cards = new Map<KidId, CompendiumCard>();
+    let known = -1;
+    this.portraits?.dispose();
+    this.portraits = new LazyPortraits(kidRig!, 64);
+    const filter = () => {
+      const q = this.search.trim().toLowerCase();
+      let shown = 0;
+      for (const c of cards.values()) {
+        c.node.hidden = q !== '' && !c.name.toLowerCase().includes(q);
+        if (!c.node.hidden) shown++;
+      }
+      count.textContent = cards.size === 1 ? '1 discovered kid' : `${cards.size} discovered kids`;
+      empty.hidden = shown > 0;
+      empty.textContent = cards.size === 0 ? 'No kids discovered yet.' : 'No discovered kids match.';
+    };
+    field.addEventListener('input', () => {
+      this.search = field.value;
+      filter();
+    });
+    return {
+      update: () => {
+        const g = this.game;
+        materials.textContent = formatCount(g.state.materials);
+        materials.parentElement!.setAttribute('aria-label', `${formatExact(g.state.materials)} Materials`);
+        potatokens.textContent = formatCount(g.state.potatokens);
+        potatokens.parentElement!.setAttribute('aria-label', `${formatExact(g.state.potatokens)} Potatokens`);
+        // New discoveries join in roster order, inserted around the existing cards.
+        if (g.state.discoveredKids.length !== known) {
+          known = g.state.discoveredKids.length;
+          const discovered = new Set(g.state.discoveredKids);
+          let prev: HTMLElement | null = null;
+          for (const kid of this.content.kids) {
+            if (!discovered.has(kid.id)) continue;
+            let c = cards.get(kid.id);
+            if (!c) {
+              c = this.compendiumCard(kid.id);
+              cards.set(kid.id, c);
+              if (prev) prev.after(c.node);
+              else list.prepend(c.node);
+            }
+            prev = c.node;
+          }
+          filter();
+        }
+        for (const c of cards.values()) c.update();
+        this.portraits?.watch(this.sheets.scrollRoot);
+        status.update();
+      },
+    };
+  }
+
+  private get full(): boolean {
+    return this.game.state.world.kids.length >= this.game.capacity;
+  }
+
+  /** One discovered kid: portrait, name, tier and the two alternative prices (GUI_MVP §6). */
+  private compendiumCard(type: KidId): CompendiumCard {
+    const name = this.name(type);
+    const tier = this.content.kids.find((k) => k.id === type)?.tier ?? 1;
+    const buy = (pay: Pay) => {
+      const price = el('span', '');
+      const b = el(
+        'button',
+        'ui-button comp-buy',
+        el('span', 'action-label', 'Bring back'),
+        el('span', 'action-price', icon(pay === 'materials' ? 'icon_materials' : 'icon_potatokens', '', 'ui-icon-18'), price),
+      );
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        if (b.getAttribute('aria-disabled') !== 'true') this.send({ type: 'respawn', kidType: type, pay });
+      });
+      return { b, price, pay };
+    };
+    const buttons = [buy('materials'), buy('potatokens')];
+    const arrived = el('div', 'comp-arrived', icon('icon_check', '', 'ui-icon-24'), 'Kid arrived at the Garden.');
+    arrived.setAttribute('role', 'status');
+    arrived.hidden = true;
+    const node = el(
+      'article',
+      'comp-card ui-surface',
+      this.portraits!.add(type),
+      el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', icon(`badge_tier_${tier}`, '', 'ui-icon-24'), `Tier ${tier}`)),
+      el('div', 'comp-buys', ...buttons.map((x) => x.b)),
+      arrived,
+    );
+    node.setAttribute('aria-label', name);
+    let shown = '';
+    return {
+      node,
+      name,
+      update: () => {
+        const g = this.game;
+        const cost = g.respawnCost(type);
+        const full = this.full;
+        const busy = this.pending !== null;
+        const just = this.arrived?.type === type && this.arrived.until > performance.now();
+        const afford = { materials: g.state.materials >= cost.materials, potatokens: g.state.potatokens >= cost.potatokens };
+        const key = `${cost.materials}|${cost.potatokens}|${full}|${busy}|${afford.materials}|${afford.potatokens}|${just}`;
+        if (key === shown) return;
+        shown = key;
+        arrived.hidden = !just;
+        for (const { b, price, pay } of buttons) {
+          const p = cost[pay];
+          const currency = pay === 'materials' ? 'Materials' : 'Potatokens';
+          price.textContent = formatExact(p);
+          // Full disables both; an unaffordable price disables only its own button.
+          const reason = full ? refusalText('full') : afford[pay] ? '' : refusalText('cost', 'respawn', pay);
+          b.setAttribute('aria-disabled', String(reason !== '' || busy));
+          b.classList.toggle('is-disabled', reason !== '');
+          b.classList.toggle('is-full', full);
+          b.setAttribute('aria-label', `Bring back ${name} for ${formatExact(p)} ${currency}${reason ? `: ${reason}` : ''}`);
+        }
       },
     };
   }
