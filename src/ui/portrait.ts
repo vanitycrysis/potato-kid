@@ -75,3 +75,26 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number): HTMLElement 
   box.append(canvas);
   return box;
 }
+
+/**
+ * A portrait that is composed only when it scrolls near view (long lists, GUI_MVP §7): the
+ * box reserves its size at once, so rows never jump. `root` is the scrolling container.
+ */
+export function lazyPortrait(rig: KidRig, type: KidId, sizePx: number, root: HTMLElement): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'portrait';
+  box.style.width = `${sizePx}px`;
+  box.style.height = `${sizePx}px`;
+  box.setAttribute('aria-hidden', 'true');
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      box.replaceWith(portrait(rig, type, sizePx));
+    },
+    // About one row of overscan above and below (GUI_MVP §7).
+    { root, rootMargin: `${sizePx + 80}px 0px` },
+  );
+  io.observe(box);
+  return box;
+}

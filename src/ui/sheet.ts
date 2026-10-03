@@ -16,14 +16,24 @@ export interface SheetSpec {
   requestedHeight: number;
   /** Called every frame while open, so live values (balances, levels) stay current. */
   update?: () => void;
-  onClose?: () => void;
+  /** `replaced`: another sheet is opening in its place (not a player's dismissal). */
+  onClose?: (replaced: boolean) => void;
 }
 
 export interface OpenSheet {
   readonly key: string;
+  /** A fixed region between the header and the scrolling body (Compendium toolbar). */
+  readonly bar: HTMLElement;
   readonly body: HTMLElement;
   readonly footer: HTMLElement;
   setSubtitle(text: string): void;
+}
+
+/** Where an open sheet was, so it can come back after a summary interrupts it (GUI_MVP §8). */
+export interface SheetSnapshot {
+  key: string;
+  scrollTop: number;
+  launcher: HTMLElement | null;
 }
 
 const motion = () => (uiData?.mvp as { motion?: { openMs: number; closeMs: number; sheetTranslatePx: number } } | undefined)?.motion;
@@ -42,6 +52,8 @@ function safeInsets(): { top: number; bottom: number; left: number; right: numbe
 
 export class Sheets {
   private current: { spec: SheetSpec; scrim: HTMLElement; sheet: HTMLElement; subtitle: HTMLElement; body: HTMLElement; footer: HTMLElement; launcher: HTMLElement | null } | null = null;
+  /** True while `open` replaces a sheet, so its onClose knows it wasn't dismissed. */
+  private replacing = false;
   private readonly onKey = (e: KeyboardEvent) => this.key(e);
 
   constructor(
@@ -63,12 +75,21 @@ export class Sheets {
     return this.current?.spec.key ?? null;
   }
 
+  snapshot(): SheetSnapshot | null {
+    const c = this.current;
+    return c && { key: c.spec.key, scrollTop: c.body.scrollTop, launcher: c.launcher };
+  }
+
   /**
    * Opens a sheet (closing any other). A held kid is settled first and world input is
    * paused while it is open; simulation and income continue (GUI_MVP §2).
    */
   open(spec: SheetSpec, launcher: HTMLElement | null): OpenSheet {
-    if (this.current) this.close(false);
+    if (this.current) {
+      this.replacing = true;
+      this.close(false);
+      this.replacing = false;
+    }
     this.scene.cancelDrag();
     this.scene.inputPaused = true;
 
@@ -88,9 +109,10 @@ export class Sheets {
     close.setAttribute('aria-label', `Close ${spec.title}`);
     close.addEventListener('click', () => this.close());
     const header = el('header', 'sheet-header', icon(spec.icon, '', 'ui-icon-28 sheet-icon'), title, subtitle, close);
+    const bar = el('div', 'sheet-bar');
     const body = el('div', 'sheet-body');
     const footer = el('footer', 'sheet-footer');
-    const sheet = el('section', 'sheet ui-surface', header, body, footer);
+    const sheet = el('section', 'sheet ui-surface', header, bar, body, footer);
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-modal', 'true');
     sheet.setAttribute('aria-labelledby', titleId);
@@ -105,7 +127,7 @@ export class Sheets {
     this.place();
     this.animate(true);
     title.focus({ preventScroll: true });
-    return { key: spec.key, body, footer, setSubtitle: (t) => (subtitle.textContent = t) };
+    return { key: spec.key, bar, body, footer, setSubtitle: (t) => (subtitle.textContent = t) };
   }
 
   /** Closes the open sheet; focus returns to whatever opened it (GUI_MVP §2). */
@@ -122,6 +144,10 @@ export class Sheets {
       c.scrim.remove();
       c.sheet.remove();
     };
+    // While it fades out, the closed sheet takes no input: a touch right after closing
+    // reaches the world, not the vanishing scrim.
+    for (const t of [c.scrim, c.sheet]) t.style.pointerEvents = 'none';
+    c.sheet.inert = true;
     if (this.reducedMotion || !m) remove();
     else {
       c.scrim.style.transition = `opacity ${m.closeMs}ms ease-in`;
@@ -131,7 +157,7 @@ export class Sheets {
       c.sheet.style.transform = `translateY(${m.sheetTranslatePx}px)`;
       window.setTimeout(remove, m.closeMs);
     }
-    c.spec.onClose?.();
+    c.spec.onClose?.(this.replacing);
     if (restoreFocus) c.launcher?.focus({ preventScroll: true });
   }
 
