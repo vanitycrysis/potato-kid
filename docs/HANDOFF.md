@@ -10,27 +10,27 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
   - the Garden, Capacity and Bias sheets (#39);
   - Compendium, offline summary and Settings (#41);
   - the Potato-Dex (#43).
-- **Content:** 52 kids and 46 recipes are imported (batches 1 and 2: #38, #42). Batch 3 (the 12 tier-5 kids, #44) is approved by Claude's art review. Its import brings the game to the full **64-kid** MVP roster.
+- **Content:** batches 1 and 2 are imported (#38, #42: 52 kids). Batch 3 (#44) is merged, and its import (#47) brings the game to the full **64-kid, 58-recipe** MVP roster.
 - **The balance simulator** (#45) found a soft-lock:
   - 17 of 64 types are parents in no recipe, and nothing removed kids, so the map clogged after about 25 minutes.
   - **The owner chose Send home (D-048):** drop a kid on the Garden and it leaves the map; no refund.
   - The sim command is in #45. The interaction design is with Codex (brief: "Send home" below). The engine and UI side follow.
-- **D-049:** the offline summary shows only after 60 s away (#46, Codex's recommendation).
+- **D-049:** the offline summary shows only after 60 s away (#46, merged; Codex's recommendation).
 - **Tests:** about 160 unit and 80 e2e (Playwright), all mutation-checked as they were added.
 
 ## Open PRs and jobs at handoff
 
 Check each with `gh pr list` and `gh pr checks`.
 
-- **#44** batch 3 art: approved; merge once CI is green. Then import it: run the import script pattern from #42 (tier 5 plus its 12 recipes), add a Dex milestone at 64, and regenerate the previews. There will be 4 pages; the preview grid already checks placements.
-- **#45** balance simulator plus the `sendHome` sim command: waiting on Codex's review.
-- **#46** D-049 summary threshold: waiting on Codex's review.
-- **#47-ish** docs (this file, TASKS, DECISIONS D-048/D-049): needs a Codex review like any PR.
-- **Codex Send-home design task:** the brief is in the session scratchpad as `codex-sendhome.md`. If it's lost, re-brief from D-048: drop target, armed state, departure, copy, accessibility, reduced motion; a §13 in GUI_MVP. Run it on a `chatgpt/send-home-design` branch once #44 has merged and the ChatGPT worktree is free.
+- **#45** balance simulator plus the `sendHome` sim command: Codex round 1 is fixed; round 2 in progress.
+- **#47** batch-3 import, the full 64-kid roster: Codex review in progress.
+- **#48** docs (this file, TASKS, DECISIONS D-048/D-049): needs a Codex review like any PR.
+- **Codex's Send-home design task** is running on `chatgpt/send-home-design` in the ChatGPT worktree. The brief covers drop target, armed state, departure, copy, accessibility and reduced motion, with a §13 in GUI_MVP. When it lands: commit it as ChatGPT, open the PR, review critically, then implement the gesture and feedback in a `claude/` PR.
+- Merged 2026-10-02: #40–#44 and #46 (D-049).
 
 ## Next, in order
 
-1. Merge #44; import batch 3 (64 kids).
+1. Merge #45, #47 and #48 once their reviews are clean and CI is green.
 2. Codex designs Send home; Claude implements the drag-to-Garden gesture, the target and the departure, with e2e tests. Then the simulator bot already uses `sendHome`.
 3. **Balance:**
    - `npm run balance` reports pacing (8 seeds takes about 10 minutes).

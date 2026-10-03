@@ -15,12 +15,13 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
   - short viewports (#37)
   - the Garden, Capacity and Bias sheets (#39)
   - Compendium, offline summary and Settings (#41)
-  - the **Potato-Dex** (#43, in review)
+  - the **Potato-Dex** (#43)
 - **Art:** ASSET-MVP batches 1 and 2 (Codex, #34 and #40, Claude-reviewed) are imported: **52 kids and 46 recipes** in content (#38, #42).
 
 **In flight**
-- **Batch 3** (#44): the 12 tier-5 kids, plus Aurora and Terrarium follow-ups. Claude asked for changes to Windmill, Rescue Station and Sky Fair; Codex is on round 2.
-- Its import then brings content to the full **64-kid** MVP roster.
+- **Batch 3** (#44, merged) and its import (#47): the full **64-kid** MVP roster.
+- **The balance simulator** (#45) found a soft-lock: the map clogs with kids that can't fuse. The owner chose **Send home** (D-048). The sim command is in #45; Codex is designing the interaction.
+- **D-049** (#46, merged): the offline summary shows only after 60 s away.
 
 **Before gate 4**
 - Balance simulator and tuning (the six-seed weights, milestones and prices are provisional).
