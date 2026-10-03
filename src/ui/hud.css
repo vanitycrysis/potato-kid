@@ -703,3 +703,15 @@
   top: 0;
   visibility: hidden;
 }
+/* Send home success (§13.3): the first one carries a 44 px close at the top right. */
+.toast-home {
+  position: relative;
+}
+.toast-home:has(.card-close) {
+  padding-right: 52px;
+}
+.ui-button.card-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+}

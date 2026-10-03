@@ -16,6 +16,8 @@ export interface SheetSpec {
   requestedHeight: number;
   /** Called every frame while open, so live values (balances, levels) stay current. */
   update?: () => void;
+  /** Escape: the sheet's own step back (e.g. closing an inline confirmation). True if handled. */
+  onEscape?: () => boolean;
   /** `replaced`: another sheet is opening in its place (not a player's dismissal). */
   onClose?: (replaced: boolean) => void;
 }
@@ -285,6 +287,12 @@ export class Sheets {
     c.sheet.dataset.tight = 'false';
     const tight = c.bar.childElementCount > 0 && c.body.clientHeight < BODY_MIN;
     c.sheet.dataset.tight = String(tight);
+    // Scrolling something into view (a message, a focused control) stops clear of the
+    // sticky header and footer, never under them (Codex review, PR #54).
+    const header = c.sheet.querySelector<HTMLElement>(':scope > .sheet-header');
+    const footer = c.sheet.querySelector<HTMLElement>(':scope > .sheet-footer');
+    c.sheet.style.scrollPaddingTop = tight && header ? `${header.offsetHeight}px` : '';
+    c.sheet.style.scrollPaddingBottom = tight && footer ? `${footer.offsetHeight}px` : '';
     if (tight !== was) (tight ? c.sheet : c.body).scrollTop = scroll;
   }
 
@@ -310,7 +318,7 @@ export class Sheets {
     if (!c) return;
     if (e.key === 'Escape') {
       e.preventDefault();
-      this.close();
+      if (!c.spec.onEscape?.()) this.close();
       return;
     }
     if (e.key !== 'Tab') return;

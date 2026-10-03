@@ -4,8 +4,12 @@ import { pairKey } from '../content/validate';
 import type { MapScene } from '../render/scene';
 import type { BuildingSheets } from './buildings';
 import { el, icon, shortName } from './dom';
+import { homeSection, type HomeSection } from './dexHome';
+import { HomeFeed } from './homeFeed';
 import { formatRate } from './format';
 import { LazyPortraits, portrait } from './portrait';
+import type { GameEvent } from '../sim/game';
+import type { SendHomeNotes } from './sendHome';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
 // The Potato-Dex (docs/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
@@ -41,6 +45,8 @@ interface KidsPanel {
   /** Rebuilds the detail's found recipes; the recipe count it last showed. */
   refreshFound: (() => void) | null;
   foundShown: number;
+  /** Send home for this kid's live copies (§13.4). */
+  home: HomeSection | null;
   update(): void;
   dispose(): void;
 }
@@ -66,7 +72,19 @@ export class Dex {
     private readonly content: Content,
     private readonly sheets: Sheets,
     private readonly buildings: BuildingSheets,
-  ) {}
+    notes: SendHomeNotes,
+    private readonly readOnly: () => boolean = () => false,
+  ) {
+    this.feed = new HomeFeed(scene, content, notes);
+  }
+
+  /** Sends made from the Dex and their messages, kept across details (Codex review, PR #54). */
+  private readonly feed: HomeFeed;
+
+  /** A step's events: the Dex answers its own sends, open or not (no world card for them). */
+  onStep(events: GameEvent[]): GameEvent[] {
+    return this.feed.onStep(events);
+  }
 
   get isOpen(): boolean {
     return this.shown !== null;
@@ -77,6 +95,7 @@ export class Dex {
    * a discovery card asks for it (GUI_MVP §§7, 9).
    */
   open(launcher: HTMLElement | null, kid?: KidId): void {
+    this.feed.active = true;
     if (kid !== undefined) this.tab = 'kids';
     const tabs = new Map<Tab, HTMLButtonElement>();
     const strip = el('div', 'dex-tabs');
@@ -89,6 +108,7 @@ export class Dex {
         title: 'Potato-Dex',
         requestedHeight: 624,
         update: () => this.update(),
+        onEscape: () => this.shown?.kids?.home?.collapse() ?? false,
         onClose: () => this.closed(),
       },
       launcher,
@@ -201,6 +221,8 @@ export class Dex {
   }
 
   private closed(): void {
+    this.feed.active = false;
+    this.feed.clear();
     const s = this.shown;
     this.shown = null;
     s?.kids?.dispose();
@@ -288,7 +310,9 @@ export class Dex {
       detailPortraits: null,
       refreshFound: null,
       foundShown: -1,
+      home: null,
       update: () => {
+        panel.home?.update();
         // Discoveries made under the open detail join its list (Codex review, PR #43).
         if (panel.showing && panel.foundShown !== this.game.state.discoveredRecipes.length) panel.refreshFound?.();
         // Five columns on a wide compact sheet, three from 360 px, else two (GUI_MVP §7).
@@ -322,6 +346,7 @@ export class Dex {
       dispose: () => {
         portraits.dispose();
         panel.detailPortraits?.dispose();
+        panel.home?.dispose();
       },
     };
     return panel;
@@ -373,6 +398,8 @@ export class Dex {
       portraits.watch(this.sheets.scrollRoot);
     };
     p.refreshFound();
+    p.home?.dispose();
+    p.home = homeSection(type, this.content, this.scene, this.feed, this.readOnly);
     const name = el('h3', 'dex-detail-name', k.name);
     p.detail.replaceChildren(
       back,
@@ -380,6 +407,7 @@ export class Dex {
       name,
       el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
       el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type))} Materials / s`),
+      p.home.root,
       el('h3', 'sheet-section', 'Found recipes'),
       foundBox,
     );
@@ -387,6 +415,9 @@ export class Dex {
     p.detail.hidden = false;
     this.shown!.sheet.scrollTo(0);
     back.focus({ preventScroll: true });
+    // Only now, mounted and scrolled: a waiting message can be drawn and brought into view
+    // (Codex review, PR #54).
+    p.home.update();
   }
 
   private hideDetail(): void {
@@ -396,6 +427,8 @@ export class Dex {
     p.showing = null;
     this.detail = null;
     p.refreshFound = null;
+    p.home?.dispose();
+    p.home = null;
     p.detailPortraits?.dispose();
     p.detailPortraits = null;
     p.detail.hidden = true;

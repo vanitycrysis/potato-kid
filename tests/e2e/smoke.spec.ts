@@ -1160,12 +1160,12 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(page.locator('.settings-value').first()).toHaveText('69%');
     await page.keyboard.press('End');
     await page.getByRole('button', { name: 'Done' }).click();
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80 });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, sendHomeExplained: false });
 
     await page.evaluate(() => window.__PK__!.debugAway!(0)); // the game is saved, so the reload resumes it
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80 });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, sendHomeExplained: false });
     // A reload a moment later is too short an absence for the summary (D-049).
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.getByLabel('Music')).toHaveValue('100');
@@ -1681,6 +1681,30 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
   });
 });
 
+/**
+ * Below 10 fps: every frame takes 150 ms, so the farewell (on the frame clock, at most
+ * 100 ms a frame) outlasts its 650 ms. Logs, per frame, [kids departing, message shown].
+ */
+async function slowFrames(page: Page, shown: string, ms: number): Promise<[number, boolean][]> {
+  return page.evaluate(
+    ([shown, ms]) =>
+      new Promise<[number, boolean][]>((done) => {
+        const log: [number, boolean][] = [];
+        const end = performance.now() + ms;
+        const frame = () => {
+          const t = performance.now();
+          while (performance.now() - t < 150);
+          const el = document.querySelector(shown) as HTMLElement | null;
+          log.push([window.__PK__!.home().departing, !!el && !el.hidden && el.offsetParent !== null]);
+          if (performance.now() < end) requestAnimationFrame(frame);
+          else done(log);
+        };
+        requestAnimationFrame(frame);
+      }),
+    [shown, ms] as const,
+  );
+}
+
 test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
   /** Picks a kid up and holds it over the Garden target for `ms`, then releases. */
   async function holdOverHome(page: Page, id: number, ms: number): Promise<void> {
@@ -1700,6 +1724,16 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     await page.waitForTimeout(200);
     return { id, errors };
   }
+
+  test('below 10 fps, the world card still waits for the farewell to end (Codex review, PR #54)', async ({ page }) => {
+    const { id } = await setup(page);
+    await holdOverHome(page, id, 450);
+    const log = await slowFrames(page, '.toast-home', 2500);
+    // The farewell spanned frames, the card never showed during it, and it came after.
+    expect(log.some(([d]) => d > 0)).toBe(true);
+    expect(log.filter(([d, shown]) => d > 0 && shown)).toEqual([]);
+    expect(log.some(([d, shown]) => d === 0 && shown)).toBe(true);
+  });
 
   test('holding over the Garden, then releasing, sends the kid home', async ({ page }) => {
     const { id, errors } = await setup(page);
@@ -1769,6 +1803,42 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     expect(await page.evaluate((i) => window.__PK__!.kids().some((c) => c.id === i), id)).toBe(true);
   });
 
+  test('world cards keep their order when a later farewell ends first (Codex review, PR #54)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 760, 1000), window.__PK__!.debugAdd!('fire', 1300, 1000)]);
+    await page.waitForTimeout(200);
+    // Both sent in one step; the second's farewell is cut short by a kid on its spot.
+    await page.evaluate(([a, b]) => {
+      window.__PK__!.debugCommand!({ type: 'sendHome', kidId: a! });
+      window.__PK__!.debugCommand!({ type: 'sendHome', kidId: b! });
+    }, ids);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.home().departing)).toBe(2);
+    // Per frame, until a card shows: how many farewells play, and the card's words.
+    const log = await page.evaluate(
+      () =>
+        new Promise<[number, string][]>((done) => {
+          const at = window.__PK__!.home().departingAt[1]!;
+          window.__PK__!.debugAdd!('fire', at.x, at.y); // its costume is loaded: drawn at once
+          const log: [number, string][] = [];
+          const end = performance.now() + 3000;
+          const frame = () => {
+            const card = document.querySelector('.toast-home');
+            log.push([window.__PK__!.home().departing, card?.textContent ?? '']);
+            if (card || performance.now() > end) done(log);
+            else requestAnimationFrame(frame);
+          };
+          requestAnimationFrame(frame);
+        }),
+    );
+    // Staged: the second farewell ended while the first still played.
+    expect(log.some(([d]) => d === 1)).toBe(true);
+    // The first card shown is the first send's, the explanation, after its own farewell.
+    const [departing, words] = log[log.length - 1]!;
+    expect(departing).toBe(0);
+    expect(words).toContain('Still in your Potato-Dex.');
+  });
+
   test('a farewell ends at once rather than overlap a kid that arrives on its spot', async ({ page }) => {
     const { id } = await setup(page);
     await holdOverHome(page, id, 450);
@@ -1795,5 +1865,443 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     await page.mouse.up();
     await page.waitForTimeout(300);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+  });
+});
+
+test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)', () => {
+  const dialog = (page: Page) => page.getByRole('dialog', { name: 'Potato-Dex' });
+
+  /** Two Fire Kids on the map, the Dex open on Fire's detail. */
+  async function fireDetail(page: Page): Promise<number[]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 300, 1500), window.__PK__!.debugAdd!('fire', 800, 1500)]);
+    await page.locator('.dex-button').click();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    return ids;
+  }
+
+  test('choose a particular kid, keep it, then send it home from the Dex', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 2');
+    const kid1 = dialog(page).getByRole('button', { name: 'Choose Fire Kid, kid 1 on your map, to send home' });
+    await kid1.click();
+    await expect(dialog(page).getByText('Send kid 1 home?')).toBeFocused();
+    // Choosing never sends: still two on the map.
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(2);
+    await dialog(page).getByRole('button', { name: 'Keep on map' }).click();
+    await expect(kid1).toBeFocused();
+    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
+
+    await kid1.click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    // Kid 1 is the lower id: exactly that one left.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 1');
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+    // The one left keeps its number.
+    await expect(dialog(page).getByRole('button', { name: /kid 2 on your map/ })).toBeVisible();
+    const status = dialog(page).locator('.dex-home-status');
+    await expect(status).toContainText('Fire Kid went home.');
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await expect(status).toContainText('Build Compendium to bring one back for a fee.');
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    // The Dex answered it: no world card afterwards. Sampled, not retried.
+    await page.keyboard.press('Escape');
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(200);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+  });
+
+  test('one send at a time, across confirmations (Codex review, PR #54)', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // In one task, before the sim's next step: confirm kid 1, then choose kid 2 and confirm.
+    await page.evaluate(() => {
+      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.dex-home button')].find((b) => b.textContent === t)!;
+      byText('Send this kid home').click();
+      document.querySelector<HTMLButtonElement>('[aria-label*="kid 2 on your map"]')!.click();
+      byText('Send this kid home').click();
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('Fire Kid went home.');
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+    await expect(dialog(page).locator('.dex-home-status')).not.toContainText('already left');
+  });
+
+  test('with many copies, the result stays in view while the heading takes focus (Codex review, PR #54)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
+    });
+    await page.locator('.dex-button').click();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    const status = dialog(page).locator('.dex-home-status');
+    await expect(status).toContainText('Fire Kid went home.');
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+    const inView = await status.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const body = el.closest('.sheet-body')!.getBoundingClientRect();
+      return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
+    });
+    expect(inView).toBe(true);
+  });
+
+  test('inline results keep the world timing: the explanation holds 6 s, then the next (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    const status = dialog(page).locator('.dex-home-status');
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await dialog(page).getByRole('button', { name: /kid 2 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    // The explanation isn't replaced early...
+    await page.waitForTimeout(3000);
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    // ...then the second, short message follows, and expires.
+    await expect(status).toContainText('Kept in your Potato-Dex. No refund.', { timeout: 6000 });
+    await expect(status).toBeHidden({ timeout: 5000 });
+  });
+
+  test('leaving before the farewell ends keeps the explanation for the next send (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    // Back in the very frame the result lands, well before the 650 ms farewell is over (a
+    // click from the test could come too late on a slow runner): never seen, never recorded.
+    const explained = await page.evaluate(
+      () =>
+        new Promise<boolean>((done) => {
+          const wait = () => {
+            if (window.__PK__!.kids().length > 1) return requestAnimationFrame(wait);
+            (document.querySelector('.dex-back') as HTMLButtonElement).click();
+            done(window.__PK__!.settings().sendHomeExplained);
+          };
+          wait();
+        }),
+    );
+    expect(explained).toBe(false);
+    await page.waitForTimeout(1000);
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(false);
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await dialog(page).getByRole('button', { name: /on your map, to send home/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('Still in your Potato-Dex.');
+  });
+
+  test('hovering the message pauses it; a refusal hands it back afterwards (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    const status = dialog(page).locator('.dex-home-status');
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    // A refusal interrupts: kid 2 is chosen, then fuses away.
+    await dialog(page).getByRole('button', { name: /kid 2 on your map/ }).click();
+    await page.mouse.move(5, 5); // not resting over the message, which would pause it
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
+    await expect(status).toContainText('This kid has already left the map.');
+    // After the refusal, the explanation returns with the time it had left.
+    await expect(status).toContainText('Still in your Potato-Dex.', { timeout: 5000 });
+    // Held under the pointer, it outlasts its 6 s.
+    await status.hover();
+    await page.waitForTimeout(7000);
+    // Sampled, not retried: an expired message keeps its text but is hidden.
+    expect(await status.isVisible()).toBe(true);
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await page.mouse.move(5, 5);
+    await expect(status).toBeHidden({ timeout: 8000 });
+  });
+
+  test('a send outlives its detail: leaving before the result makes no world card (Codex review, PR #54)', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // In one task, before the sim's next step: confirm, then leave the detail.
+    await page.evaluate(() => {
+      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === t)!;
+      byText('Send this kid home').click();
+      byText('Back to kids').click();
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+    await page.keyboard.press('Escape');
+    // Sampled, not retried: a leaked world card would vanish and pass a retry.
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(200);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+  });
+
+  test('a send outlives its detail: a reopened detail still waits for it (Codex review, PR #54)', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // In one task: confirm, leave, reopen and confirm another copy.
+    await page.evaluate(() => {
+      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === t)!;
+      byText('Send this kid home').click();
+      byText('Back to kids').click();
+      document.querySelector<HTMLButtonElement>('[aria-label="Fire Kid, Tier 1"]')!.click();
+      document.querySelector<HTMLButtonElement>('[aria-label*="kid 2 on your map"]')!.click();
+      byText('Send this kid home').click();
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+  });
+
+  test('a message scrolled out of view keeps its reading time (Codex review, PR #54)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
+    });
+    await page.locator('.dex-button').click();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    const status = dialog(page).locator('.dex-home-status');
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await page.mouse.move(5, 5);
+    // Scrolled away to the top of the detail for 7 s: the 6 s explanation isn't spent.
+    await dialog(page).locator('.sheet-body').evaluate((e) => (e.scrollTop = 0));
+    await page.waitForTimeout(7000);
+    await status.scrollIntoViewIfNeeded();
+    expect(await status.isVisible()).toBe(true);
+    await expect(status).toContainText('Still in your Potato-Dex.');
+  });
+
+  test('a result waiting for a reopened detail is shown on screen before it counts as read (Codex review, PR #54)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
+    });
+    await page.locator('.dex-button').click();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    // Back in the frame the result lands, during the farewell; reopen once it is over, so the
+    // message is ready the moment the new detail is built (before it is mounted).
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          const wait = () => {
+            if (window.__PK__!.kids().length > 7) return requestAnimationFrame(wait);
+            (document.querySelector('.dex-back') as HTMLButtonElement).click();
+            done();
+          };
+          wait();
+        }),
+    );
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(false);
+    await page.waitForTimeout(800);
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    // Recorded only once its words are in view: checked in the frame the record appears
+    // (a Garden spawn may later push the message down, and that's fine once it was read).
+    const seen = await page.evaluate(
+      () =>
+        new Promise<boolean>((done) => {
+          const wait = () => {
+            if (!window.__PK__!.settings().sendHomeExplained) return requestAnimationFrame(wait);
+            const text = document.querySelector('.dex-home-status .card-text');
+            if (!text) return done(false);
+            const r = text.getBoundingClientRect();
+            const body = text.closest('.sheet-body')!.getBoundingClientRect();
+            done(r.top >= body.top - 1 && r.bottom <= body.bottom + 1);
+          };
+          wait();
+        }),
+    );
+    expect(seen).toBe(true);
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('Still in your Potato-Dex.');
+  });
+
+  test('a result after the Dex closed keeps the explanation for the next send (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // In one task, before the sim's next step: confirm, then close the Dex.
+    await page.evaluate(() => {
+      [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Send this kid home')!.click();
+      document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
+    // A drag send now still gets the first, explaining card.
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 760, 1000));
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 8 });
+    await page.waitForTimeout(450);
+    await page.mouse.up();
+    await expect(page.locator('.feedback .toast-home')).toContainText('Still in your Potato-Dex.');
+  });
+
+  test('focus on a copy that fuses away moves to the section heading (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).focus();
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+  });
+
+  test('keyboard focus holds a message; a hovered explanation still counts as seen (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    const status = dialog(page).locator('.dex-home-status');
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    // Under a resting pointer it is paused, but it was seen: recorded at once.
+    await status.hover();
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    // A keyboard user can focus it to hold it past its 6 s.
+    await page.mouse.move(5, 5);
+    await status.focus();
+    await page.waitForTimeout(7000);
+    expect(await status.isVisible()).toBe(true);
+  });
+
+  /**
+   * A short screen with the save banner, so the sheet scrolls as one below a sticky header;
+   * a kid sent home, its first explanation read; a spacer for room to scroll it away (a
+   * longer detail, e.g. a type in many recipes).
+   */
+  async function tightMessage(page: Page) {
+    await page.setViewportSize({ width: 568, height: 300 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('fire', 300, 1500);
+      window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
+    });
+    await page.locator('.dex-button').click({ force: true });
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await expect(page.locator('.sheet')).toHaveAttribute('data-tight', 'true');
+    const status = dialog(page).locator('.dex-home-status');
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await page.mouse.move(5, 5);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      const spacer = document.createElement('div');
+      spacer.style.height = '400px';
+      document.querySelector('.sheet-body')!.append(spacer);
+    });
+    return status;
+  }
+
+  /** Scrolls the tight sheet to put the message somewhere; returns where things are. */
+  function place(page: Page, where: 'under header' | 'text under header' | 'below sheet') {
+    return page.evaluate((where) => {
+      const sheet = document.querySelector('.sheet') as HTMLElement;
+      const status = () => document.querySelector('.dex-home-status')!.getBoundingClientRect();
+      const text = () => document.querySelector('.dex-home-status .card-text')!.getBoundingClientRect();
+      const header = sheet.querySelector('.sheet-header')!.getBoundingClientRect().bottom;
+      const floor = sheet.getBoundingClientRect().bottom;
+      if (where === 'under header') sheet.scrollTop += status().bottom - header + 1;
+      else if (where === 'text under header') sheet.scrollTop += text().bottom - header + 1;
+      else sheet.scrollTop += status().top - floor - 1;
+      return { top: status().top, bottom: status().bottom, textBottom: text().bottom, header, floor, view: window.innerHeight, scrollTop: sheet.scrollTop };
+    }, where);
+  }
+
+  test('in a tight sheet, a message scrolled under the header or past the edge is not being read (Codex review, PR #54)', async ({ page }) => {
+    const status = await tightMessage(page);
+    // Its 6 s never run while hidden, whichever way: back in view, it is still there.
+    const under = await place(page, 'under header');
+    // In the viewport, inside the sheet body's (unclipped) box, yet covered or clipped.
+    expect(under.bottom).toBeGreaterThan(0);
+    expect(under.bottom).toBeLessThanOrEqual(under.header);
+    await page.waitForTimeout(6500);
+    await status.scrollIntoViewIfNeeded();
+    expect(await status.isVisible()).toBe(true);
+    const below = await place(page, 'below sheet');
+    expect(below.top).toBeGreaterThanOrEqual(below.floor);
+    expect(below.top).toBeLessThan(below.view);
+    await page.waitForTimeout(6500);
+    await status.scrollIntoViewIfNeeded();
+    expect(await status.isVisible()).toBe(true);
+    await expect(status).toBeHidden({ timeout: 9000 });
+  });
+
+  test('a sliver of the message box with its words hidden is not being read (Codex review, PR #54)', async ({ page }) => {
+    const status = await tightMessage(page);
+    const at = await place(page, 'text under header');
+    // Its blank margin shows below the header; every word is under it.
+    expect(at.bottom).toBeGreaterThan(at.header);
+    expect(at.textBottom).toBeLessThanOrEqual(at.header);
+    await page.waitForTimeout(6500);
+    await status.scrollIntoViewIfNeeded();
+    expect(await status.isVisible()).toBe(true);
+  });
+
+  test('a change on the map never scrolls back to a message already read (Codex review, PR #54)', async ({ page }) => {
+    const status = await tightMessage(page);
+    const away = await place(page, 'below sheet');
+    expect(away.top).toBeGreaterThanOrEqual(away.floor);
+    // Another Fire Kid arrives: the section updates, the scroll stays where the player put it.
+    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 1');
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (document.querySelector('.sheet') as HTMLElement).scrollTop)).toBe(away.scrollTop);
+    expect(await status.isVisible()).toBe(true);
+  });
+
+  test('below 10 fps, the Dex message still waits for the farewell to end (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    const log = await slowFrames(page, '.dex-home-status', 2500);
+    expect(log.some(([d]) => d > 0)).toBe(true);
+    expect(log.filter(([d, shown]) => d > 0 && shown)).toEqual([]);
+    expect(log.some(([d, shown]) => d === 0 && shown)).toBe(true);
+  });
+
+  test('Escape closes an open confirmation before the sheet', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
+    await expect(dialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+  });
+
+  test('a chosen kid that leaves before it is sent is never swapped for another', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // Kid 1 fuses away (Fire + Water make Steam) while its confirmation is open.
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('This kid has already left the map.');
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toContain(ids[1]);
+  });
+
+  test('a drag send gets a world card: the first explains, later ones are short', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const send = async (x: number) => {
+      const id = await page.evaluate((px) => window.__PK__!.debugAdd!('fire', px, 1000), x);
+      await page.waitForTimeout(200);
+      const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+      const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+      await page.mouse.move(k.x, k.y - 20);
+      await page.mouse.down();
+      await page.mouse.move(t.x, t.y, { steps: 8 });
+      await page.waitForTimeout(450);
+      await page.mouse.up();
+    };
+    await send(760);
+    const card = page.locator('.feedback .toast-home');
+    await expect(card).toContainText('Fire Kid went home.');
+    await expect(card).toContainText('Still in your Potato-Dex.');
+    await expect(card).toContainText('Build Compendium to bring one back for a fee.');
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    await card.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(card).toHaveCount(0);
+    await send(1400);
+    await expect(card).toContainText('Kept in your Potato-Dex. No refund.');
+    await expect(card.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
   });
 });

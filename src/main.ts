@@ -48,7 +48,7 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'sendHome'; kidId: number }) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
       /** The audio runtime's state (tests). */
@@ -97,7 +97,8 @@ async function boot(): Promise<void> {
   const storage = new PreferencesStorage();
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
-  const defaults = (uiData?.mvp as { settings?: { defaults?: Settings } } | undefined)?.settings?.defaults ?? { audio: true, music: 70, sfx: 80 };
+  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'sendHomeExplained'> } } | undefined)?.settings?.defaults;
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), sendHomeExplained: false };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -219,7 +220,7 @@ async function boot(): Promise<void> {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'sendHome'; kidId: number }) => scene.command(cmd),
         }
       : {}),
     };

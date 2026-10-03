@@ -9,6 +9,8 @@ export interface Settings {
   music: number;
   /** 0-100. */
   sfx: number;
+  /** The first Send home explanation has been shown (GUI_MVP §13.3). */
+  sendHomeExplained: boolean;
 }
 
 const KEY = 'settings';
@@ -31,6 +33,7 @@ export function parseSettings(text: string | null, defaults: Settings): Settings
     audio: typeof raw.audio === 'boolean' ? raw.audio : defaults.audio,
     music: volume(raw.music, defaults.music),
     sfx: volume(raw.sfx, defaults.sfx),
+    sendHomeExplained: typeof raw.sendHomeExplained === 'boolean' ? raw.sendHomeExplained : defaults.sendHomeExplained,
   };
 }
 

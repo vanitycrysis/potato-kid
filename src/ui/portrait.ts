@@ -42,15 +42,17 @@ function layer(name: string, src: string, at: Attachment | undefined, pivot: [nu
  * A portrait of `type` at `sizePx` CSS px. Throws if any layer is missing: a discovered
  * kid without art is a validation error, never a seed packet (GUI_MVP §7).
  */
-export function portrait(rig: KidRig, type: KidId, sizePx: number): HTMLElement {
+export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }): HTMLElement {
   const url = (name: string) => {
     const u = assetUrl(name);
     if (!u) throw new Error(`Missing art "${name}" for the ${type} portrait`);
     return u;
   };
   const [cw, ch] = rig.canvas;
-  const frame = rig.bodies[BODY]!.frames[FRAME]!;
-  const face = rig.faces[FACE]!;
+  // A particular kid's body and face, else the neutral exemplar.
+  const bodyId = look && rig.bodies[look.body] ? look.body : BODY;
+  const frame = rig.bodies[bodyId]!.frames[FRAME]!;
+  const face = rig.faces[look && rig.faces[look.face] ? look.face : FACE]!;
   const costume = rig.costumes[type];
 
   const canvas = document.createElement('div');
@@ -60,7 +62,7 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number): HTMLElement 
   canvas.style.transform = `scale(${sizePx / cw})`;
 
   const part = (c: NonNullable<typeof costume>['components'][number]) =>
-    layer(c.asset, url(c.asset), frame.attachments[c.attachTo], c.sourcePivot, c.fitByBody[BODY] ?? [1, 1]);
+    layer(c.asset, url(c.asset), frame.attachments[c.attachTo], c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]);
   // Layer order back → body → face → front, as in the world (rigView).
   for (const c of costume?.components ?? []) if (c.layer === 'back') canvas.append(part(c));
   canvas.append(layer(frame.asset, url(frame.asset), undefined, [0, 0]));
