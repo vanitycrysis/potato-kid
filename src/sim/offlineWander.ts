@@ -78,7 +78,9 @@ export function wanderOffline(
     }
     // Staying put is fine unless a partner now stands touching it.
     if (!spot && isFree(world, kid.box, kid.x, kid.y, kid.id) && clear(kid, kid.x, kid.y)) spot = { x: kid.x, y: kid.y };
-    if (!spot) spot = nearestClear(world, kid, ib, clear);
+    // Parting from a partner (no fusions offline) walks if it can: the nearest clear spot
+    // within reach first, and only then the nearest anywhere (Codex review, PR #70).
+    if (!spot) spot = nearestReachable(world, kid, ib, reach, clear) ?? nearestClear(world, kid, ib, clear);
     if (!spot) continue; // nowhere at all: leave it (a map this full can't happen within capacity)
     if (spot.x !== kid.x || spot.y !== kid.y) {
       kid.x = spot.x;
@@ -87,6 +89,32 @@ export function wanderOffline(
       kid.activity = { kind: 'walk' };
     }
   }
+}
+
+/** Rings tried within reach, and spots per ring. */
+const RINGS = 6;
+const ANGLES = 24;
+
+/** The free spot touching no partner nearest the kid within `reach`, on rings around it. */
+function nearestReachable(
+  world: World,
+  kid: Kid,
+  ib: { minX: number; minY: number; maxX: number; maxY: number },
+  reach: number,
+  clear: (kid: Kid, x: number, y: number) => boolean,
+): { x: number; y: number } | null {
+  if (reach <= 0) return null;
+  for (let ring = 1; ring <= RINGS; ring++) {
+    const r = (reach * ring) / RINGS;
+    for (let i = 0; i < ANGLES; i++) {
+      const a = (i / ANGLES) * Math.PI * 2;
+      const x = kid.x + Math.cos(a) * r;
+      const y = kid.y + Math.sin(a) * r;
+      if (x < ib.minX || x > ib.maxX || y < ib.minY || y > ib.maxY) continue;
+      if (isFree(world, kid.box, x, y, kid.id) && clear(kid, x, y)) return { x, y };
+    }
+  }
+  return null;
 }
 
 /** The free spot touching no partner nearest the kid, on a grid over the whole map. */

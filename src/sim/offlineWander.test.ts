@@ -133,6 +133,17 @@ describe('a long absence (D-053)', () => {
     }
   });
 
+  it('parting a touching recipe pair walks within reach when it can (Codex review, PR #70)', () => {
+    const g = game(undefined, 35);
+    // Touching, kept from fusing by newborn grace; a one-second absence (reach 40 units).
+    const a = place(g, 'plain', 500, 1000, 5);
+    const b = place(g, 'water', 620, 1000, 5);
+    g.reconcile(T0 + 1 * S);
+    expect(problems(g)).toEqual([]);
+    expect(dist(a, { x: 500, y: 1000 })).toBeLessThanOrEqual(w.speed * 1 + 1e-9);
+    expect(dist(b, { x: 620, y: 1000 })).toBeLessThanOrEqual(w.speed * 1 + 1e-9);
+  });
+
   it('offline spawns walk out from the Garden for the time since they arrived', () => {
     const g = game((c) => (c.balance.spawn.intervalSeconds = 600));
     const r = g.reconcile(T0 + 2 * HOUR * S);
