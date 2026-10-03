@@ -1495,6 +1495,71 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Firefighter Kid');
   });
 
+  test('Tab wraps inside the Dex: inactive tabs are not tab stops (Codex review, PR #43)', async ({ page }) => {
+    await twoKnown(page);
+    await dexButton(page).click();
+    await dialog(page).getByRole('tab', { name: 'Recipes' }).click();
+    // On Recipes the last real stop is the Recipes tab; Tab from it must wrap, not escape.
+    // (Chrome may also stop on a scrollable body, so keep pressing.)
+    await dialog(page).getByRole('tab', { name: 'Recipes' }).focus();
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))).toBe(true);
+    }
+  });
+
+  test('an open detail shows a recipe found while it is up (Codex review, PR #43)', async ({ page }) => {
+    await twoKnown(page);
+    await dexButton(page).click();
+    await dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' }).click();
+    await expect(dialog(page).getByText('No recipes found for this kid yet.')).toBeVisible();
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 540, 2600);
+      window.__PK__!.debugAdd!('water', 540, 2600);
+    });
+    await expect(dialog(page).locator('.dex-detail .dex-recipe')).toHaveAttribute('aria-label', 'Potato Kid plus Water Kid makes Firefighter Kid');
+    await expect(dialog(page).getByRole('button', { name: 'Back to kids' })).toBeFocused();
+  });
+
+  test('the Dex Compendium tab keeps its scroll through the offline summary (Codex review, PR #43)', async ({ page }) => {
+    await twoKnown(page);
+    await page.evaluate(() => {
+      ['snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero', 'fire'].forEach((t, i) =>
+        window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300),
+      );
+      window.__PK__!.debugGive!({ materials: 120 });
+      window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().levels.compendium)).toBe(1);
+    await dexButton(page).click();
+    await dialog(page).getByRole('tab', { name: 'Compendium' }).click();
+    // Placed kids may fuse into more types; any long list will do.
+    await expect.poll(() => dialog(page).locator('.comp-card').count()).toBeGreaterThanOrEqual(10);
+    await dialog(page).locator('.sheet-body').evaluate((e) => (e.scrollTop = 700));
+    await frames(page, 2);
+    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(dialog(page).getByRole('tab', { name: 'Compendium' })).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => dialog(page).locator('.sheet-body').evaluate((e) => e.scrollTop)).toBe(700);
+  });
+
+  test('Back focuses the search field when the kept search hides the kid (Codex review, PR #43)', async ({ page }) => {
+    await twoKnown(page);
+    await dexButton(page).click();
+    await dialog(page).getByLabel('Find a discovered kid').fill('wat');
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 540, 2600);
+      window.__PK__!.debugAdd!('water', 540, 2600);
+    });
+    const card = page.locator('.feedback .toast-button');
+    await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
+    await card.click();
+    await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Firefighter Kid');
+    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    await expect(dialog(page).getByLabel('Find a discovered kid')).toBeFocused();
+  });
+
   test('read-only disables the Dex with its reason', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));

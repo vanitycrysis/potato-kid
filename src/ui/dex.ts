@@ -38,6 +38,9 @@ interface KidsPanel {
   /** The kid whose detail is showing, if any, and its recipe portraits. */
   showing: KidId | null;
   detailPortraits: LazyPortraits | null;
+  /** Rebuilds the detail's found recipes; the recipe count it last showed. */
+  refreshFound: (() => void) | null;
+  foundShown: number;
   update(): void;
   dispose(): void;
 }
@@ -51,7 +54,7 @@ interface RecipesPanel {
 export class Dex {
   private tab: Tab = 'kids';
   private filter = '';
-  private readonly scroll: Record<'kids' | 'recipes', number> = { kids: 0, recipes: 0 };
+  private readonly scroll: Record<Tab, number> = { kids: 0, recipes: 0, compendium: 0 };
   private shown: Shown | null = null;
   /** Inconsistent saves are reported once, never shown (GUI_MVP §7). */
   private warned = new Set<string>();
@@ -131,7 +134,7 @@ export class Dex {
   /** Records the current list's scroll, for when its tab (or the Dex) comes back. */
   private remember(): void {
     const s = this.shown;
-    if (!s || this.tab === 'compendium' || (this.tab === 'kids' && s.kids?.showing)) return;
+    if (!s || (this.tab === 'kids' && s.kids?.showing)) return;
     this.scroll[this.tab] = this.sheets.snapshot()?.scrollTop ?? 0;
   }
 
@@ -165,7 +168,8 @@ export class Dex {
     } else {
       s.compendium = this.buildings.embedCompendium(s.panel, s.sheet.footer, (t) => s.sheet.setSubtitle(t), s.tabBar);
       s.compendium.update();
-      s.sheet.scrollTo(0);
+      // Back where it was, e.g. after the offline summary (Codex review, PR #43).
+      s.sheet.scrollTo(this.scroll.compendium);
     }
     this.update();
   }
@@ -173,13 +177,13 @@ export class Dex {
   private update(): void {
     const s = this.shown;
     if (!s) return;
+    // Kept every frame: by the time a close is reported, the sheet's scroll is gone.
+    this.remember();
     if (this.tab === 'compendium') {
       // The Compendium tab keeps the building's own subtitle (GUI_MVP §6).
       s.compendium?.update();
       return;
     }
-    // Kept every frame: by the time a close is reported, the sheet's scroll is gone.
-    this.remember();
     s.sheet.setSubtitle(`${this.game.state.discoveredKids.length} / ${this.content.kids.length} discovered`);
     s.kids?.update();
     s.recipes?.update();
@@ -271,7 +275,11 @@ export class Dex {
       detail,
       showing: null,
       detailPortraits: null,
+      refreshFound: null,
+      foundShown: -1,
       update: () => {
+        // Discoveries made under the open detail join its list (Codex review, PR #43).
+        if (panel.showing && panel.foundShown !== this.game.state.discoveredRecipes.length) panel.refreshFound?.();
         // Five columns on a wide compact sheet, three from 360 px, else two (GUI_MVP §7).
         const sheetEl = root.closest('.sheet') as HTMLElement | null;
         const width = sheetEl?.getBoundingClientRect().width ?? 0;
@@ -341,12 +349,19 @@ export class Dex {
     const back = el('button', 'ui-button dex-back', 'Back to kids');
     back.type = 'button';
     back.addEventListener('click', () => this.hideDetail());
-    const found = this.content.recipes.filter((r) => this.revealed(r) && (r.a === type || r.b === type || r.result === type));
-    const list = el('div', 'dex-recipes');
-    p.detailPortraits?.dispose();
-    const portraits = new LazyPortraits(kidRig!, 48);
-    p.detailPortraits = portraits;
-    for (const r of found) list.append(this.recipeRow(r, portraits));
+    const foundBox = el('div', 'dex-found');
+    p.refreshFound = () => {
+      p.foundShown = this.game.state.discoveredRecipes.length;
+      const found = this.content.recipes.filter((r) => this.revealed(r) && (r.a === type || r.b === type || r.result === type));
+      p.detailPortraits?.dispose();
+      const portraits = new LazyPortraits(kidRig!, 48);
+      p.detailPortraits = portraits;
+      const list = el('div', 'dex-recipes');
+      for (const r of found) list.append(this.recipeRow(r, portraits));
+      foundBox.replaceChildren(found.length ? list : el('p', 'sheet-helper', 'No recipes found for this kid yet.'));
+      portraits.watch(this.sheets.scrollRoot);
+    };
+    p.refreshFound();
     const name = el('h3', 'dex-detail-name', k.name);
     p.detail.replaceChildren(
       back,
@@ -355,9 +370,8 @@ export class Dex {
       el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
       el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type))} Materials / s`),
       el('h3', 'sheet-section', 'Found recipes'),
-      found.length ? list : el('p', 'sheet-helper', 'No recipes found for this kid yet.'),
+      foundBox,
     );
-    portraits.watch(this.sheets.scrollRoot);
     for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid]) node.hidden = true;
     p.detail.hidden = false;
     this.shown!.sheet.scrollTo(0);
@@ -369,13 +383,18 @@ export class Dex {
     if (!p?.showing) return;
     const type = p.showing;
     p.showing = null;
+    p.refreshFound = null;
     p.detailPortraits?.dispose();
     p.detailPortraits = null;
     p.detail.hidden = true;
     p.detail.replaceChildren();
     for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid]) node.hidden = false;
     this.shown!.sheet.scrollTo(this.scroll.kids);
-    p.grid.querySelector<HTMLElement>(`[data-kid="${type}"]`)?.focus({ preventScroll: true });
+    // Its tile, unless the kept search hides it: then the search field, so focus stays in
+    // the sheet (Codex review, PR #43).
+    const tile = p.grid.querySelector<HTMLElement>(`[data-kid="${type}"]`);
+    const target = tile && !tile.closest<HTMLElement>('.dex-cell')?.hidden ? tile : p.root.querySelector<HTMLElement>('#dex-search');
+    target?.focus({ preventScroll: true });
   }
 
   // --- Recipes ----------------------------------------------------------------------------

@@ -315,7 +315,9 @@ export class Sheets {
     }
     if (e.key !== 'Tab') return;
     const focusables = [...c.sheet.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(
-      (x) => !x.hasAttribute('disabled') && x.offsetParent !== null,
+      // Only real tab stops: a roving group's inactive members (tabindex -1) are skipped
+      // by native Tab, so the trap must skip them too (Codex review, PR #43).
+      (x) => !x.hasAttribute('disabled') && x.tabIndex >= 0 && x.offsetParent !== null,
     );
     if (focusables.length === 0) return;
     const first = focusables[0]!;
