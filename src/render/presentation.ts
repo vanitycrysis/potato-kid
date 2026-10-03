@@ -147,6 +147,11 @@ export class EffectTracks {
 
   constructor(private readonly rig: KidRig) {}
 
+  /** Ends every running effect. */
+  clear(): void {
+    this.tracks.clear();
+  }
+
   /** Starts the effect driven by `clipName` (e.g. "fusion"); a clip without one is ignored. */
   start(clipName: string): void {
     if (this.rig.clips[clipName]?.effect) this.tracks.set(clipName, 0);
