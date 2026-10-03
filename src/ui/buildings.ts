@@ -204,6 +204,8 @@ export class BuildingSheets {
     const price = el('span', 'action-price', icon('icon_materials', '', 'ui-icon-18'), costText);
     const button = el('button', 'ui-button sheet-action', label, price);
     button.type = 'button';
+    // Its success has its own sound (upgrade): no tap first (Codex review, PR #53).
+    button.dataset.cue = 'success';
     button.addEventListener('click', () => {
       if (button.getAttribute('aria-disabled') !== 'true') onClick();
     });
@@ -570,6 +572,7 @@ export class BuildingSheets {
         el('span', 'action-price', icon(pay === 'materials' ? 'icon_materials' : 'icon_potatokens', '', 'ui-icon-18'), price),
       );
       b.type = 'button';
+      b.dataset.cue = 'success'; // the arrival's spawn cue is its sound
       b.addEventListener('click', () => {
         if (b.getAttribute('aria-disabled') !== 'true') this.send({ type: 'respawn', kidType: type, pay });
       });

@@ -84,7 +84,7 @@ export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTM
     render();
   };
 
-  s.body.append(audioRow, el('p', 'sheet-helper', 'Audio is coming soon.'), music.section, sfx.section);
+  s.body.append(audioRow, music.section, sfx.section);
   const done = el('button', 'ui-button ui-primary sheet-action', el('span', 'action-label', 'Done'));
   done.type = 'button';
   done.addEventListener('click', () => sheets.close());
