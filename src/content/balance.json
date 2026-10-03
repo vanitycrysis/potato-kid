@@ -58,6 +58,14 @@
       {
         "kids": 36,
         "potatokens": 8
+      },
+      {
+        "kids": 44,
+        "potatokens": 9
+      },
+      {
+        "kids": 52,
+        "potatokens": 10
       }
     ],
     "offlineCapHours": 8
