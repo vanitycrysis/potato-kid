@@ -42,5 +42,5 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | IMPORT-MVP | Claude | Bring each accepted art batch into content | **done** (#38, #42, #47: 64 kids, 58 recipes) | — |
 | BALANCE-SIM | Claude | Balance simulator; tune seed weights, prices and milestones for the 64-kid roster | **review** (simulator #45; tuning waits on the owner's pacing answer at gate 4) | Pacing agreed with the owner holds in simulation |
 | SEND-HOME | ChatGPT (design, art) / Claude (sim, engine, UI) | D-048: drag a kid onto the Garden to send it home | **done** (sim #45, design #49, drag #50, feedback and Dex path #54) | — |
-| GATE-4 | Owner | Approve the MVP | **next** (APK from CI on `main`; pacing question) | Explicit approval before polish |
+| GATE-4 | Owner | Approve the MVP | **with the owner** (asked 2026-10-03: APK from CI run 37114541688, pacing, a Send-home sound) | Explicit approval before polish |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |
