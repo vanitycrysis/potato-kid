@@ -940,5 +940,25 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     });
     expect(inBody).toBe(true);
   });
+
+  test('keyboard: Shift+Tab from the heading stays in the sheet; arrows move and select seeds (Codex review, PR #39)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await bias(page).click();
+    await page.locator('.sheet-action').click();
+    await expect(page.locator('.sheet-subtitle')).toHaveText(/Level 1 \//);
+    await page.locator('.sheet-title').focus();
+    await page.keyboard.press('Shift+Tab');
+    expect(await page.evaluate(() => !!document.querySelector('.sheet')!.contains(document.activeElement))).toBe(true);
+    // One tab stop in the group: the selected choice (None while nothing is favoured).
+    expect(await page.locator('.seed-card, .seed-none').evaluateAll((els) => els.filter((e) => (e as HTMLElement).tabIndex === 0).length)).toBe(1);
+    await page.locator('.seed-none').focus();
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).toBe('plain');
+    await expect(page.locator('.seed-card').first()).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().biasTarget)).not.toBe('plain');
+    await expect(page.locator('.seed-card').nth(1)).toBeFocused();
+  });
 });
 

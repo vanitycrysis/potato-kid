@@ -249,6 +249,19 @@ export class BuildingSheets {
         none.type = 'button';
         none.setAttribute('role', 'radio');
         none.addEventListener('click', () => this.pick(null));
+        // One radio group, seeds then None: a single tab stop (the selected choice), and the
+        // arrow keys move and select as native radios do (Codex review, PR #39).
+        const radios = [...cards.map((c) => ({ el: c.b, value: c.type as KidId | null })), { el: none, value: null as KidId | null }];
+        for (const [i, r] of radios.entries()) {
+          r.el.addEventListener('keydown', (e) => {
+            const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+            const to = e.key === 'Home' ? 0 : e.key === 'End' ? radios.length - 1 : step ? (i + step + radios.length) % radios.length : -1;
+            if (to < 0) return;
+            e.preventDefault();
+            radios[to]!.el.focus();
+            this.pick(radios[to]!.value);
+          });
+        }
         const choice = el('p', 'sheet-helper');
         const status = this.statusRow();
         body.append(card, el('p', 'sheet-helper', 'Favours one seed; other kids can still arrive.'), el('h3', 'sheet-section', 'Choose a seed'), grid, none, choice, status.row);
@@ -292,6 +305,8 @@ export class BuildingSheets {
               c.b.setAttribute('aria-disabled', String(!enabled));
               c.b.classList.toggle('is-disabled', !built);
             }
+            const stop = radios.findIndex((r) => r.value === target);
+            for (const [i, r] of radios.entries()) r.el.tabIndex = i === (stop < 0 ? 0 : stop) ? 0 : -1;
             none.setAttribute('aria-checked', String(target === null));
             none.classList.toggle('is-selected', target === null);
             none.setAttribute('aria-disabled', String(!built || busy));

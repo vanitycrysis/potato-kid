@@ -206,7 +206,10 @@ export class Sheets {
     if (focusables.length === 0) return;
     const first = focusables[0]!;
     const last = focusables[focusables.length - 1]!;
-    if (e.shiftKey && (document.activeElement === first || !c.sheet.contains(document.activeElement))) {
+    // Backward from the first stop, or from anything not in the tab order (the heading
+    // focused on open), wraps to the last stop (Codex review, PR #39).
+    const active = document.activeElement as HTMLElement | null;
+    if (e.shiftKey && (active === first || !active || !focusables.includes(active))) {
       e.preventDefault();
       last.focus();
     } else if (!e.shiftKey && document.activeElement === last) {
