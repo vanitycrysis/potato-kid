@@ -75,3 +75,66 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number): HTMLElement 
   box.append(canvas);
   return box;
 }
+
+/**
+ * Portraits composed only when they scroll near view (long lists, GUI_MVP §7): each box
+ * reserves its size at once, so rows never jump. One observer serves a whole list and is
+ * re-targeted whenever what scrolls changes (the body, a tight sheet or the page), so
+ * lazy loading holds in every layout (Codex review, PR #41).
+ */
+export class LazyPortraits {
+  private io: IntersectionObserver | null = null;
+  private root: Element | null | undefined = undefined;
+  private readonly waiting = new Map<Element, () => void>();
+
+  constructor(
+    private readonly rig: KidRig,
+    private readonly sizePx: number,
+  ) {}
+
+  /** A reserved box for `type`, composed when it nears view. */
+  add(type: KidId): HTMLElement {
+    const box = document.createElement('div');
+    box.className = 'portrait';
+    box.style.width = `${this.sizePx}px`;
+    box.style.height = `${this.sizePx}px`;
+    box.setAttribute('aria-hidden', 'true');
+    this.waiting.set(box, () => box.replaceWith(portrait(this.rig, type, this.sizePx)));
+    this.io?.observe(box);
+    return box;
+  }
+
+  /** Watches against `root`, the element that scrolls now (null: the page itself). */
+  watch(root: Element | null): void {
+    if (root === this.root) return;
+    this.root = root;
+    this.io?.disconnect();
+    this.io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const compose = e.isIntersecting ? this.waiting.get(e.target) : undefined;
+          if (!compose) continue;
+          this.waiting.delete(e.target);
+          this.io?.unobserve(e.target);
+          compose();
+        }
+      },
+      // About one row of overscan above and below (GUI_MVP §7).
+      { root, rootMargin: `${this.sizePx + 80}px 0px` },
+    );
+    for (const box of this.waiting.keys()) this.io.observe(box);
+  }
+
+  /** The list is gone: nothing waits any more. */
+  dispose(): void {
+    this.io?.disconnect();
+    this.io = null;
+    this.root = undefined;
+    this.waiting.clear();
+  }
+
+  /** Portraits still waiting (tests). */
+  get pending(): number {
+    return this.waiting.size;
+  }
+}

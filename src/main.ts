@@ -8,9 +8,10 @@ import { Lifecycle } from './platform/lifecycle';
 import { exportedNames, TextureStore } from './render/art';
 import { MapScene } from './render/scene';
 import { SaveManager, type SaveMode } from './save/manager';
+import { SettingsStore, type Settings } from './save/settings';
 import { PreferencesStorage } from './save/storage';
 import type { GameEvent, OfflineReport } from './sim/game';
-import { Hud } from './ui/hud';
+import { Hud, type SaveStatus } from './ui/hud';
 
 /** How often a running game saves (plan §4). */
 const SAVE_EVERY_MS = 10_000;
@@ -49,11 +50,13 @@ declare global {
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
+      /** The stored player settings (GUI_MVP §11). */
+      settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
       debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
-      /** Only with `?debug=1`: shows a save banner state (screenshots and tests). */
+      /** Only with `?debug=1`: shows a save banner state until replaced (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
   }
@@ -86,8 +89,14 @@ async function boot(): Promise<void> {
   const gameContent = params.get('calm') === '1' ? calmed(content) : content;
 
   // Load before building the world (plan §4): nothing is written until this resolves.
-  const saves = new SaveManager(new PreferencesStorage(), content);
-  const loaded = await saves.load();
+  const storage = new PreferencesStorage();
+  const saves = new SaveManager(storage, content);
+  // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
+  const defaults = (uiData?.mvp as { settings?: { defaults?: Settings } } | undefined)?.settings?.defaults ?? { audio: true, music: 70, sfx: 80 };
+  const settings = new SettingsStore(storage, defaults);
+  const [loaded] = await Promise.all([saves.load(), settings.load()]);
+  // A newer app's save: nothing is written, settings included (GUI_MVP §10).
+  settings.persist = saves.mode !== 'readOnly';
   // Shared art, plus the costumes the map will show first: the Garden's spawn pool and
   // every type in the save (ROSTER-SCALE). Others load when a kid of that type appears.
   const textures = new TextureStore(kidRig);
@@ -108,14 +117,18 @@ async function boot(): Promise<void> {
     },
     loaded.state ?? undefined,
   );
-  const hud = new Hud(scene, content);
+  const hud = new Hud(scene, content, settings);
   back.closeSheet = () => hud.back();
+  // A debug override stays until replaced, so later saves don't clear it under a test.
+  let forcedStatus: SaveStatus | null = null;
   const saveStatus = () =>
-    hud.setSaveStatus({ unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' });
+    hud.setSaveStatus(
+      forcedStatus ?? { unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' },
+    );
   saveStatus();
 
-  // Reconcile the time since the save once, then save once (plan §4 steps 6-7). The
-  // return summary is drawn by the GUI-MVP sheets (next GUI slice).
+  // Reconcile the time since the save once, then save once (plan §4 steps 6-7). The HUD
+  // shows the return summary for each report (GUI_MVP §8).
   let lastOffline: OfflineReport | null = null;
   const save = () => saves.save(scene.game.persisted()).then(saveStatus);
   if (saves.mode === 'readOnly') {
@@ -166,6 +179,7 @@ async function boot(): Promise<void> {
     wallet: () => ({ materials: scene.game.state.materials, potatokens: scene.game.state.potatokens }),
     buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
+    settings: () => settings.value,
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
@@ -178,7 +192,10 @@ async function boot(): Promise<void> {
             lastOffline = scene.resume(scene.game.state.accountedUntil + awayMs);
             await save();
           },
-          debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
+          debugSaveStatus: (status: SaveStatus) => {
+            forcedStatus = status;
+            hud.setSaveStatus(status);
+          },
           debugKnown: () => hud.knownKids,
           debugLoadedCostumes: () => scene.loadedCostumes,
           debugGive: (amounts: { materials?: number; potatokens?: number }) => {
