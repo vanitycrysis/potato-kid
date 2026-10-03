@@ -16,33 +16,25 @@
   - **Naming** (D-057) and **personalities** (D-058): a description, likes, hates and hobbies per type.
   - **The wave becomes a fast stubby-arm wiggle** (D-059).
   - **Music loop bug.**
-- **The repo is public now** (D-060, PR #64: the decision record plus a read-only CI token; the Codex review is clean). Merge #64 once CI is green. Public repos don't use the owner's Actions minutes.
-- **At handoff, CI was still running on PRs #61, #63 (this file) and #64.** Each has a clean Codex review posted, so merge each one when its CI is green.
+- **The repo is public now** (D-060, PR #64, merged; CI's token is read-only). Public repos don't use the owner's Actions minutes.
 - **The owner has given full access and doesn't want permission questions** (see the memory file `no-permission-asks`). Still stop at the owner gates. Claude Code's auto-mode classifier blocked two actions anyway: turning on GitHub Pages, and stopping the stale Codex processes. Both are left to the owner.
 
 ## Open work at handoff (check each first)
 
-1. **PR #61, MUSIC-LOOP (Claude):** `claude/music-loop`.
-   - **What it does:** the music now loops on a decoded Web Audio buffer; the loop survives hide/show; a gesture wakes a context the system suspended; Off/On resumes from the same offset.
-   - **Tests:** `npm test` and all 113 e2e passed locally (first full run). The new test is mutation-checked.
-   - **Still to do:**
-     - **The Codex review is clean and posted on the PR.** Merge once CI is green (it was pending at handoff).
-     - Run the full local e2e suite two or three more times for flakes first.
+1. **PR #61, MUSIC-LOOP: merged.** The music loops on a decoded Web Audio buffer and survives hide/show and system interruptions; Off/On resumes from the same offset. It needs listening on the device at the next gate-4 build.
 2. **PR #62, WAVE-WIGGLE (Codex art):** `chatgpt/wave-wiggle`.
    - **Round 1:** Claude committed Codex's round 1 unchanged and merged `main` into the branch (TASKS.md conflict resolved to main's board).
    - **Claude's review, round 1 (posted on the PR):** the nubs are stubby now, but the wiggle is **invisible at 55 px** (about 2 CSS px of travel), and many costumes hide the left nub. The review asks for a bigger angular sweep and a costume-agnostic fix, perhaps both nubs.
-   - **Round 2:** **Codex round 2 was running** in `../potato-kid-chatgpt` when the session ended. Check that worktree: `git status`, and `.codex-out/wave-wiggle-notes.md` for a "Round 2" section.
-     - If round 2 finished: commit it unchanged as ChatGPT, push, and review it critically at 55 px (colour and grayscale; the all-64 sheets).
-     - If round 2 is incomplete: discard the partial edits (`git checkout -- .`; `.codex-out` is git-ignored) and rerun it.
-   - **The round-2 prompt:** the round-1 task (below) plus "round 2: address every blocking point of Claude's review" and the PR #62 review pasted verbatim. Round 1's task asked for:
-     - stubby nubs (stand's size, never a limb) and a really fast wiggle;
-     - the existing sidecar format, within the D-043 reserves, with all 64 costumes still fitting;
-     - a complete reduced-motion mapping and a short clip;
-     - D-045 and D-046 respected, `art:export` and `npm test` green, and 55 px checks in `.codex-out/`;
-     - no `src/` edits.
+   - **Round 2 is delivered and pushed** (1050909, committed unchanged as ChatGPT):
+     - both stubby nubs, constant length, sweep 106°, about 5.2 CSS px of tip travel at 55 px;
+     - right-hand props bob through the shared attachment;
+     - still 500 ms, reserves unchanged; all 64 costumes audited.
+     - Codex says Water's hood still partly masks a nub.
+   - **Next:** Claude's round-2 review at 55 px. Use the colour and grayscale sheets and `wave-wiggle-preview.html`, which compares old, round 1 and round 2, in `../potato-kid-chatgpt/.codex-out/`. Judge especially Water and the prop bob on Baker, Blacksmith, Pinwheel and Rescue Station. Then the engine check, and merge when it passes.
+   - **Never discard or rerun a Codex task's edits** while its task may still be running: one writer per worktree. Check the companion's job status first.
    - **Engine side, after the art passes:** `waveSeconds` derives from the clip (0.5 s now); Send home's farewell uses the same clip.
 3. **FUSE-DROP (Claude), next up.** Nothing written yet. The design worked out:
-   - **The target:** the kid whose drawn box overlaps the held kid's box at the *intended* position (`drag.x/y`, before `landingSpot` moves it to a free spot). If several, the one with the largest overlap area.
+   - **The target (D-051): the kid under the finger.** Hit-test the pointer's world point (`w` in `endDrag`, *before* `HOLD_LIFT`; the held kid is drawn 70 units above the finger) against the other kids' drawn boxes (`this.drawn` + their `box`). Not the lifted body's overlap, which can pick a neighbour (Codex review, PR #63).
    - **The scene** computes the target each frame in `resolveHeld()` (`src/render/scene.ts`), stores it on the `Drag`, and exposes it to tests (for example `__PK__.dropTarget()`).
    - **The command:** `endDrag` sends `{ type: 'drop', ..., target }`.
    - **The sim:** in `src/sim/game.ts`, `applyCommands` returns the targeted pair, and `resolveFusions` gives it priority (`d = -1`) ahead of the `seen` contacts. A non-recipe target just lands at the free spot (D-039). Kids in newborn grace stay ineligible.
