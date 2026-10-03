@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Codex's launcher background (art/exports/android, palette sage). -->
+    <color name="ic_launcher_background">#E2E8D4</color>
+    <!-- Codex's splash window (palette paper). -->
+    <color name="splash_background">#FFF1D5</color>
 </resources>
