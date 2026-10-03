@@ -4,7 +4,7 @@ import { pairKey } from '../content/validate';
 import type { MapScene } from '../render/scene';
 import type { BuildingSheets } from './buildings';
 import { el, icon, shortName } from './dom';
-import { homeSection, type HomeSection } from './dexHome';
+import { HomeFeed, homeSection, type HomeSection } from './dexHome';
 import { formatRate } from './format';
 import { LazyPortraits, portrait } from './portrait';
 import type { GameEvent } from '../sim/game';
@@ -71,13 +71,18 @@ export class Dex {
     private readonly content: Content,
     private readonly sheets: Sheets,
     private readonly buildings: BuildingSheets,
-    private readonly notes: SendHomeNotes,
+    notes: SendHomeNotes,
     private readonly readOnly: () => boolean = () => false,
-  ) {}
+  ) {
+    this.feed = new HomeFeed(scene, content, notes);
+  }
 
-  /** A step's events: the open detail answers its own sends (no world card for them). */
+  /** Sends made from the Dex and their messages, kept across details (Codex review, PR #54). */
+  private readonly feed: HomeFeed;
+
+  /** A step's events: the Dex answers its own sends, open or not (no world card for them). */
   onStep(events: GameEvent[]): GameEvent[] {
-    return this.shown?.kids?.home?.onStep(events) ?? [];
+    return this.feed.onStep(events);
   }
 
   get isOpen(): boolean {
@@ -214,6 +219,7 @@ export class Dex {
   }
 
   private closed(): void {
+    this.feed.clear();
     const s = this.shown;
     this.shown = null;
     s?.kids?.dispose();
@@ -390,7 +396,7 @@ export class Dex {
     };
     p.refreshFound();
     p.home?.dispose();
-    p.home = homeSection(type, this.content, this.scene, this.notes, this.readOnly);
+    p.home = homeSection(type, this.content, this.scene, this.feed, this.readOnly);
     p.home.update();
     const name = el('h3', 'dex-detail-name', k.name);
     p.detail.replaceChildren(
