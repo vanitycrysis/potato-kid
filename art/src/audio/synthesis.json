@@ -1,0 +1,17 @@
+{
+  "revision": "audio-mvp-1",
+  "sampleRate": 48000,
+  "bits": 16,
+  "seed": 104729,
+  "musicTargetLufs": -18,
+  "musicPeakCeilingDbfs": -3.2,
+  "delayTaps": [[0.137, 0.12], [0.291, 0.06], [0.463, 0.035]],
+  "voices": {
+    "wood": {"partials": [[1, 1], [2.01, 0.24], [3.97, 0.08]], "decay": 0.065, "attack": 0.004, "release": 0.025, "noise": 0.025},
+    "lift": {"partials": [[1, 1], [2, 0.30], [3, 0.10]], "decay": 0.075, "attack": 0.006, "release": 0.04, "noise": 0.006},
+    "pop": {"partials": [[1, 1], [2, 0.13], [3, 0.025]], "decay": 0.06, "attack": 0.005, "release": 0.03, "noise": 0.01},
+    "pluck": {"partials": [[1, 1], [2, 0.22], [3, 0.065], [4, 0.015]], "decay": 0.42, "attack": 0.007, "release": 0.13, "noise": 0.002},
+    "bass": {"partials": [[1, 1], [2, 0.28], [3, 0.10]], "decay": 0.80, "attack": 0.025, "release": 0.35, "noise": 0},
+    "felt": {"partials": [[1, 1], [2, 0.075], [3, 0.02]], "decay": 4.5, "attack": 0.8, "release": 1.8, "noise": 0}
+  }
+}
