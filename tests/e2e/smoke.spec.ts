@@ -1165,4 +1165,62 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(compendium(page)).toBeDisabled();
     await expect(compendium(page)).toHaveAttribute('aria-label', 'Compendium: Update the game to continue.');
   });
+  test('a short screen with a banner and a status keeps search and cards reachable (Codex review, PR #41)', async ({ page }) => {
+    await built(page);
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 1000, potatokens: 50 }));
+    await compendium(page).click({ force: true });
+    // Trigger the status row: a refusal for a purchase whose Materials vanish first.
+    await page.evaluate(() => {
+      (document.querySelector('.comp-buy') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ materials: -window.__PK__!.wallet().materials });
+    });
+    await expect(page.locator('.sheet-bar .sheet-status')).toContainText('Not enough Materials.');
+    await expect(page.locator('.banner')).toBeVisible();
+    await expect(page.locator('.sheet')).toHaveAttribute('data-tight', 'true');
+    // Each control can be brought into view and is the thing actually under its centre.
+    for (const target of [page.getByLabel('Find a discovered kid'), page.locator('.comp-buy').nth(1), page.locator('.comp-buy').last()]) {
+      await target.scrollIntoViewIfNeeded();
+      const hit = await target.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return r.height > 0 && !!at && el.contains(at);
+      });
+      expect(hit).toBe(true);
+    }
+  });
+
+  test('closing the Compendium ends every unseen portrait’s wait (Codex review, PR #41)', async ({ page }) => {
+    // Count observers still watching: created by observe(), ended by disconnect().
+    await page.addInitScript(() => {
+      const Native = window.IntersectionObserver;
+      const w = window as unknown as { __liveObservers: number };
+      w.__liveObservers = 0;
+      window.IntersectionObserver = class extends Native {
+        private live = false;
+        override observe(t: Element): void {
+          if (!this.live) w.__liveObservers++;
+          this.live = true;
+          super.observe(t);
+        }
+        override disconnect(): void {
+          if (this.live) w.__liveObservers--;
+          this.live = false;
+          super.disconnect();
+        }
+      };
+    });
+    await built(page);
+    await page.evaluate(() => {
+      const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+    });
+    await compendium(page).click();
+    await expect(page.locator('.comp-card')).toHaveCount(14);
+    // Most cards are far below the fold, so their portraits are still waiting.
+    expect(await page.evaluate(() => (window as unknown as { __liveObservers: number }).__liveObservers)).toBeGreaterThan(0);
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => (window as unknown as { __liveObservers: number }).__liveObservers)).toBe(0);
+  });
 });

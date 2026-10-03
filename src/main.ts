@@ -11,7 +11,7 @@ import { SaveManager, type SaveMode } from './save/manager';
 import { SettingsStore, type Settings } from './save/settings';
 import { PreferencesStorage } from './save/storage';
 import type { GameEvent, OfflineReport } from './sim/game';
-import { Hud } from './ui/hud';
+import { Hud, type SaveStatus } from './ui/hud';
 
 /** How often a running game saves (plan §4). */
 const SAVE_EVERY_MS = 10_000;
@@ -56,7 +56,7 @@ declare global {
       debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
-      /** Only with `?debug=1`: shows a save banner state (screenshots and tests). */
+      /** Only with `?debug=1`: shows a save banner state until replaced (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
   }
@@ -119,8 +119,12 @@ async function boot(): Promise<void> {
   );
   const hud = new Hud(scene, content, settings);
   back.closeSheet = () => hud.back();
+  // A debug override stays until replaced, so later saves don't clear it under a test.
+  let forcedStatus: SaveStatus | null = null;
   const saveStatus = () =>
-    hud.setSaveStatus({ unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' });
+    hud.setSaveStatus(
+      forcedStatus ?? { unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' },
+    );
   saveStatus();
 
   // Reconcile the time since the save once, then save once (plan §4 steps 6-7). The HUD
@@ -188,7 +192,10 @@ async function boot(): Promise<void> {
             lastOffline = scene.resume(scene.game.state.accountedUntil + awayMs);
             await save();
           },
-          debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
+          debugSaveStatus: (status: SaveStatus) => {
+            forcedStatus = status;
+            hud.setSaveStatus(status);
+          },
           debugKnown: () => hud.knownKids,
           debugLoadedCostumes: () => scene.loadedCostumes,
           debugGive: (amounts: { materials?: number; potatokens?: number }) => {

@@ -78,9 +78,11 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number): HTMLElement 
 
 /**
  * A portrait that is composed only when it scrolls near view (long lists, GUI_MVP §7): the
- * box reserves its size at once, so rows never jump. `root` is the scrolling container.
+ * box reserves its size at once, so rows never jump. `root` is the scrolling container;
+ * `until` ends the wait when the list goes away, so unseen portraits retain nothing
+ * (Codex review, PR #41).
  */
-export function lazyPortrait(rig: KidRig, type: KidId, sizePx: number, root: HTMLElement): HTMLElement {
+export function lazyPortrait(rig: KidRig, type: KidId, sizePx: number, root: HTMLElement, until: AbortSignal): HTMLElement {
   const box = document.createElement('div');
   box.className = 'portrait';
   box.style.width = `${sizePx}px`;
@@ -95,6 +97,8 @@ export function lazyPortrait(rig: KidRig, type: KidId, sizePx: number, root: HTM
     // About one row of overscan above and below (GUI_MVP §7).
     { root, rootMargin: `${sizePx + 80}px 0px` },
   );
+  if (until.aborted) return box;
   io.observe(box);
+  until.addEventListener('abort', () => io.disconnect(), { once: true });
   return box;
 }

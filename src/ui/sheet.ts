@@ -27,6 +27,8 @@ export interface OpenSheet {
   readonly body: HTMLElement;
   readonly footer: HTMLElement;
   setSubtitle(text: string): void;
+  /** Scrolls whatever scrolls (the body, or a tight sheet) to `top`. */
+  scrollTo(top: number): void;
 }
 
 /** Where an open sheet was, so it can come back after a summary interrupts it (GUI_MVP §8). */
@@ -35,6 +37,9 @@ export interface SheetSnapshot {
   scrollTop: number;
   launcher: HTMLElement | null;
 }
+
+/** Least body height beside a fixed bar: one 44 px control and its label (GUI_MVP §§2, 6). */
+const BODY_MIN = 22 + 4 + 44 + 16;
 
 const motion = () => (uiData?.mvp as { motion?: { openMs: number; closeMs: number; sheetTranslatePx: number } } | undefined)?.motion;
 
@@ -51,7 +56,17 @@ function safeInsets(): { top: number; bottom: number; left: number; right: numbe
 }
 
 export class Sheets {
-  private current: { spec: SheetSpec; scrim: HTMLElement; sheet: HTMLElement; subtitle: HTMLElement; body: HTMLElement; footer: HTMLElement; launcher: HTMLElement | null } | null = null;
+  private current: {
+    spec: SheetSpec;
+    scrim: HTMLElement;
+    sheet: HTMLElement;
+    subtitle: HTMLElement;
+    bar: HTMLElement;
+    body: HTMLElement;
+    footer: HTMLElement;
+    launcher: HTMLElement | null;
+    watch: ResizeObserver;
+  } | null = null;
   /** True while `open` replaces a sheet, so its onClose knows it wasn't dismissed. */
   private replacing = false;
   private readonly onKey = (e: KeyboardEvent) => this.key(e);
@@ -77,7 +92,12 @@ export class Sheets {
 
   snapshot(): SheetSnapshot | null {
     const c = this.current;
-    return c && { key: c.spec.key, scrollTop: c.body.scrollTop, launcher: c.launcher };
+    return c && { key: c.spec.key, scrollTop: this.scroller(c).scrollTop, launcher: c.launcher };
+  }
+
+  /** What scrolls: the body, or the whole sheet when it is tight (see `place`). */
+  private scroller(c: { sheet: HTMLElement; body: HTMLElement }): HTMLElement {
+    return c.sheet.dataset.tight === 'true' ? c.sheet : c.body;
   }
 
   /**
@@ -123,11 +143,25 @@ export class Sheets {
     for (const b of this.background()) b.inert = true;
     document.addEventListener('keydown', this.onKey, true);
 
-    this.current = { spec, scrim, sheet, subtitle, body, footer, launcher };
+    // The bar grows when a status appears: the fit is checked again (see `place`).
+    const watch = new ResizeObserver(() => this.place());
+    watch.observe(bar);
+    this.current = { spec, scrim, sheet, subtitle, bar, body, footer, launcher, watch };
     this.place();
     this.animate(true);
     title.focus({ preventScroll: true });
-    return { key: spec.key, bar, body, footer, setSubtitle: (t) => (subtitle.textContent = t) };
+    const current = this.current;
+    return {
+      key: spec.key,
+      bar,
+      body,
+      footer,
+      setSubtitle: (t) => (subtitle.textContent = t),
+      scrollTo: (top) => {
+        this.place();
+        this.scroller(current).scrollTop = top;
+      },
+    };
   }
 
   /** Closes the open sheet; focus returns to whatever opened it (GUI_MVP §2). */
@@ -135,6 +169,7 @@ export class Sheets {
     const c = this.current;
     if (!c) return;
     this.current = null;
+    c.watch.disconnect();
     delete document.documentElement.dataset.sheetOpen;
     document.removeEventListener('keydown', this.onKey, true);
     for (const b of this.background()) b.inert = false;
@@ -198,6 +233,22 @@ export class Sheets {
     c.sheet.style.left = `${ml + (w - ml - mr - width) / 2}px`;
     c.sheet.style.bottom = `${sb}px`;
     c.sheet.dataset.compact = String(compact);
+    this.fitBar(c);
+  }
+
+  /**
+   * A fixed bar (the Compendium's balances, message and status) may leave the body too
+   * little room on a short screen, hiding search and every card. Then the bar scrolls with
+   * the body under a sticky header and footer, so every control stays reachable (GUI_MVP
+   * §2 required-action visibility; Codex review, PR #41).
+   */
+  private fitBar(c: { sheet: HTMLElement; bar: HTMLElement; body: HTMLElement }): void {
+    const was = c.sheet.dataset.tight === 'true';
+    const scroll = was ? c.sheet.scrollTop : c.body.scrollTop;
+    c.sheet.dataset.tight = 'false';
+    const tight = c.bar.childElementCount > 0 && c.body.clientHeight < BODY_MIN;
+    c.sheet.dataset.tight = String(tight);
+    if (tight !== was) (tight ? c.sheet : c.body).scrollTop = scroll;
   }
 
   private animate(opening: boolean): void {

@@ -69,6 +69,28 @@
   top: 0;
 }
 
+/* A tight sheet (a fixed bar would crowd the body out): everything below the sticky header
+   scrolls as one, above a sticky footer (Codex review, PR #41). */
+.sheet[data-tight='true'] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sheet[data-tight='true'] .sheet-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ui-paper);
+}
+.sheet[data-tight='true'] .sheet-body {
+  flex: none;
+  overflow: visible;
+}
+.sheet[data-tight='true'] .sheet-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--ui-paper);
+}
+
 /* Fixed region above the body (Compendium toolbar and message, GUI_MVP §6). */
 .sheet-bar {
   flex: none;

@@ -46,6 +46,8 @@ export class BuildingSheets {
   private search = '';
   /** The kid a Compendium purchase just brought back: its card says so for 2 s (§6). */
   private arrived: { type: KidId; until: number } | null = null;
+  /** Ends the open sheet's lazy portraits when it closes or its list is rebuilt. */
+  private lifetime = new AbortController();
 
   constructor(
     private readonly scene: MapScene,
@@ -60,6 +62,8 @@ export class BuildingSheets {
     this.refusal = null;
     this.arrived = null;
     this.search = restore?.search ?? '';
+    this.lifetime.abort();
+    this.lifetime = new AbortController();
     const spec = building === 'bias' ? this.biasSheet() : building === 'compendium' ? this.compendiumSheet() : this.levelSheet(building);
     const sheet = this.sheets.open(
       {
@@ -70,6 +74,7 @@ export class BuildingSheets {
         update: () => this.controller?.update(),
         onClose: (replaced) => {
           this.controller = null;
+          this.lifetime.abort();
           onClose?.(replaced);
         },
       },
@@ -77,7 +82,7 @@ export class BuildingSheets {
     );
     this.controller = spec.mount(sheet.body, sheet.footer, (t) => sheet.setSubtitle(t), sheet.bar);
     this.controller.update();
-    if (restore) sheet.body.scrollTop = restore.scrollTop;
+    if (restore) sheet.scrollTo(restore.scrollTop);
   }
 
   /** The open sheet's search text, for a snapshot (GUI_MVP §8). */
@@ -552,7 +557,7 @@ export class BuildingSheets {
     const node = el(
       'article',
       'comp-card ui-surface',
-      lazyPortrait(kidRig!, type, 64, root),
+      lazyPortrait(kidRig!, type, 64, root, this.lifetime.signal),
       el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', icon(`badge_tier_${tier}`, '', 'ui-icon-24'), `Tier ${tier}`)),
       el('div', 'comp-buys', ...buttons.map((x) => x.b)),
       arrived,

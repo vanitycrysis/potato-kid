@@ -90,5 +90,5 @@ export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTM
   done.addEventListener('click', () => sheets.close());
   s.footer.append(done);
   render();
-  s.body.scrollTop = scrollTop;
+  s.scrollTo(scrollTop);
 }
