@@ -724,6 +724,12 @@
 :root[data-hud-fit='page'] .sheet-body {
   overflow: visible;
 }
+/* A closing sheet fades out of a fixed layer, but in page mode it is in the page's flow:
+   it leaves at once, or its removal after the fade would shrink the page and clamp the
+   scroll of whatever opened next (the offline summary's restore). */
+:root[data-hud-fit='page'] .sheet[aria-hidden='true'] {
+  display: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .sheet,
