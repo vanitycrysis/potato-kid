@@ -65,13 +65,26 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     status.scrollIntoView({ block: 'nearest' });
   };
 
-  /** Inside the visible part of the sheet (or the page): only then does reading time count. */
+  /**
+   * Inside the visible part of the sheet (or the page): only then does reading time count.
+   * The aperture is the viewport, cut by every clipping ancestor (the body, or a tight
+   * sheet that scrolls as one), then by the sheet's header, which stays put over a tight
+   * sheet's content (Codex review, PR #54). The Kids tab has no footer.
+   */
   const onScreen = () => {
     if (status.hidden) return false;
     const r = status.getBoundingClientRect();
-    const body = status.closest('.sheet-body')?.getBoundingClientRect();
-    const top = Math.max(body?.top ?? 0, 0);
-    const bottom = Math.min(body?.bottom ?? window.innerHeight, window.innerHeight);
+    let top = 0;
+    let bottom = window.innerHeight;
+    for (let a = status.parentElement; a && a !== document.body; a = a.parentElement) {
+      if (getComputedStyle(a).overflowY === 'visible') continue;
+      const b = a.getBoundingClientRect();
+      top = Math.max(top, b.top);
+      bottom = Math.min(bottom, b.bottom);
+    }
+    // Above the content in the flow, the header cuts nothing; pinned over it, it hides it.
+    const header = status.closest('.sheet')?.querySelector(':scope > .sheet-header')?.getBoundingClientRect();
+    if (header?.height) top = Math.max(top, header.bottom);
     return r.bottom > top && r.top < bottom;
   };
 
