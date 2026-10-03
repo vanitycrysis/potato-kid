@@ -26,7 +26,8 @@ interface Message {
   notBefore: number;
   /** Visible time still owed, ms. */
   ms: number;
-  shown?: boolean;
+  /** It has been on screen and readable (only then is a first explanation recorded). */
+  read?: boolean;
 }
 
 /** The outcome of a send, for the section that made it. */
@@ -38,6 +39,8 @@ export interface SendResult {
 export class HomeFeed {
   /** One send at a time, wherever it was confirmed, until its result arrives. */
   pending: { kidId: number; type: KidId } | null = null;
+  /** The Dex is open. A result arriving after it closed is consumed, with no message. */
+  active = false;
   private readonly queue: Message[] = [];
   private current: Message | null = null;
   private last = performance.now();
@@ -72,6 +75,10 @@ export class HomeFeed {
     for (const e of events) {
       if (e.type === 'sentHome' && e.kid.id === p.kidId) {
         this.pending = null;
+        handled.push(e);
+        // Closed meanwhile: answered (no world card) but nothing to show, and no
+        // explanation reserved for a view that's gone (Codex review, PR #54).
+        if (!this.active) continue;
         const first = this.notes.claimFirst();
         const name = this.name(p.type);
         this.queue.push({
@@ -84,12 +91,12 @@ export class HomeFeed {
           ms: this.notes.visibleMs(first),
         });
         this.listener?.({ kidId: p.kidId, ok: true });
-        handled.push(e);
       } else if (e.type === 'rejected' && e.command === 'sendHome') {
         this.pending = null;
+        handled.push(e);
+        if (!this.active) continue;
         this.warn(p.type);
         this.listener?.({ kidId: p.kidId, ok: false });
-        handled.push(e);
       }
     }
     return handled;
@@ -116,15 +123,19 @@ export class HomeFeed {
       this.current = null;
     }
     if (this.current) {
-      if (readable) this.current.ms -= dt;
+      if (readable) {
+        // A first explanation is recorded when it can first be read, not when queued or
+        // drawn off screen (Codex review, PR #54).
+        if (this.current.first && !this.current.read) this.notes.markShown();
+        this.current.read = true;
+        this.current.ms -= dt;
+      }
       if (this.current.ms > 0) return this.current;
       this.current = null;
     }
     const at = this.queue.findIndex((m) => m.type === type && m.notBefore <= now);
     if (at < 0) return null;
     this.current = this.queue.splice(at, 1)[0]!;
-    if (this.current.first && !this.current.shown) this.notes.markShown();
-    this.current.shown = true;
     return this.current;
   }
 
@@ -133,7 +144,7 @@ export class HomeFeed {
    * success. An outstanding send stays owned, so its result still makes no world card.
    */
   clear(): void {
-    if (this.queue.some((m) => m.first && !m.shown)) this.notes.release();
+    if ([...this.queue, ...(this.current ? [this.current] : [])].some((m) => m.first && !m.read)) this.notes.release();
     this.queue.length = 0;
     this.current = null;
   }
@@ -286,7 +297,10 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
 
   let shown = '';
   const update = () => {
-    draw(feed.tick(type, performance.now(), onScreen() && !hover && !status.contains(document.activeElement)));
+    const m = feed.tick(type, performance.now(), onScreen() && !hover && !status.contains(document.activeElement));
+    draw(m);
+    // Not read yet (e.g. drawn before the detail settled): keep bringing it into view.
+    if (m && !m.read && !onScreen()) status.scrollIntoView({ block: 'nearest' });
     const ids = live().map((k) => k.id);
     for (const id of ids) if (!ordinals.has(id)) ordinals.set(id, next++);
     // A chosen kid that left while unsent: the confirmation goes, with the reason.
@@ -298,6 +312,9 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     helper.textContent = ids.length ? 'Send a kid home to make room. No refund.' : 'None on your map.';
     for (const [id, r] of rowFor) {
       if (ids.includes(id)) continue;
+      // Focus on a row that leaves goes to the section heading, never the page (Codex
+      // review, PR #54).
+      if (r.wrap.contains(document.activeElement)) heading.focus({ preventScroll: true });
       r.wrap.remove();
       rowFor.delete(id);
     }

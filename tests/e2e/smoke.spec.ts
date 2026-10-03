@@ -1915,6 +1915,65 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await expect(status).toContainText('Still in your Potato-Dex.');
   });
 
+  test('a result waiting for a reopened detail is shown on screen before it counts as read (Codex review, PR #54)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
+    });
+    await page.locator('.dex-button').click();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(7);
+    // Back during the farewell; reopen once it is over, so the message is ready the moment
+    // the new detail is built (before it is mounted).
+    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    await page.waitForTimeout(800);
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    const status = dialog(page).locator('.dex-home-status');
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await expect
+      .poll(() =>
+        status.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const body = el.closest('.sheet-body')!.getBoundingClientRect();
+          return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
+        }),
+      )
+      .toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+  });
+
+  test('a result after the Dex closed keeps the explanation for the next send (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // In one task, before the sim's next step: confirm, then close the Dex.
+    await page.evaluate(() => {
+      [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Send this kid home')!.click();
+      document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
+    // A drag send now still gets the first, explaining card.
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 760, 1000));
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 8 });
+    await page.waitForTimeout(450);
+    await page.mouse.up();
+    await expect(page.locator('.feedback .toast-home')).toContainText('Still in your Potato-Dex.');
+  });
+
+  test('focus on a copy that fuses away moves to the section heading (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).focus();
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+  });
+
   test('Escape closes an open confirmation before the sheet', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();

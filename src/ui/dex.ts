@@ -94,6 +94,7 @@ export class Dex {
    * a discovery card asks for it (GUI_MVP §§7, 9).
    */
   open(launcher: HTMLElement | null, kid?: KidId): void {
+    this.feed.active = true;
     if (kid !== undefined) this.tab = 'kids';
     const tabs = new Map<Tab, HTMLButtonElement>();
     const strip = el('div', 'dex-tabs');
@@ -219,6 +220,7 @@ export class Dex {
   }
 
   private closed(): void {
+    this.feed.active = false;
     this.feed.clear();
     const s = this.shown;
     this.shown = null;
@@ -397,7 +399,6 @@ export class Dex {
     p.refreshFound();
     p.home?.dispose();
     p.home = homeSection(type, this.content, this.scene, this.feed, this.readOnly);
-    p.home.update();
     const name = el('h3', 'dex-detail-name', k.name);
     p.detail.replaceChildren(
       back,
@@ -413,6 +414,9 @@ export class Dex {
     p.detail.hidden = false;
     this.shown!.sheet.scrollTo(0);
     back.focus({ preventScroll: true });
+    // Only now, mounted and scrolled: a waiting message can be drawn and brought into view
+    // (Codex review, PR #54).
+    p.home.update();
   }
 
   private hideDetail(): void {
