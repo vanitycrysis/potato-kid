@@ -1,5 +1,16 @@
 # Art and audio plan
 
+## PERSONALITY addendum (2026-10-03; Claude review pending)
+
+| Item | Delivery / status |
+| --- | --- |
+| Writing source | `art/data/personality_v1.json`, revision `personality-1`; all 64 current types; Claude review pending |
+| Shared presentation | Same description and Likes/Hates/Hobbies in Dex and kid card under GUI_MVP §18.1; food names precede the non-food prose |
+| Assignment and length checks | 64 distinct favourite/hated pairs; each pinned food appears five or six times per role; maximum graphemes 137/62/69/80 against caps 180/80/80/100 |
+| Review and verification | Tier-ordered sheet, editorial notes and standalone script/report in `.codex-out/personality-*`; export and 189 tests pass |
+
+Character comes from costume details and harmless everyday habits. Preserve recipe secrecy and the approved face; assign food preferences individually rather than deriving them from recipes. Follow Claude's exact schema without adding types or editing `src/`. New content waves under D-046/D-058 need new writing and assignments; the present pair uniqueness rule applies to this 64-type handoff. No new raster, audio or texture allocation. Claude's editorial review and integration remain pending.
+
 ## GATE4-DESIGN addendum (2026-10-03; Claude review pending)
 
 Current additive delivery `gate4-design-2` (round 2, PR #67, B1–B3/N1) follows D-051–D-058. **GUI_MVP §§14–18 supersede Send home/§13 and its addendum below.** Keep the approved Garden target/dwell. Larger dark plots stay inside the same reserve; ready/check and waiting/pause signs contrast with the three growth drawings. Locked slots stay off the lawn. Rainbow is a prominent static six-band arch above the costume-inclusive lifetime box, with every costume colour exact. Mini.72/minimum44 px pickup and the external happy sun are unchanged. Twelve foods stay pinned; the feed page shares effects above compact purchase rows. Balance remains Claude's work.

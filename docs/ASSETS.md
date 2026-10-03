@@ -1,5 +1,15 @@
 # Asset list
 
+## PERSONALITY delivery (2026-10-03; Claude review pending)
+
+| Asset / contract | Delivery | Status |
+| --- | --- | --- |
+| `personality_v1.json` | 64 type records in Claude's schema; description, favourite food, Likes prose, hated food, Hates prose, Hobbies | written and exported; Claude review pending |
+| Food assignments | Pinned twelve IDs; 64 unique ordered pairs; each food used five or six times in each column | standalone validation passes |
+| Review handoff | `.codex-out/personality-review.md`, `personality-notes.md`, `personality-check.json` and reproducible checker | ready for Claude's editorial/data review |
+
+Source `art/data/personality_v1.json` exports to `assets/data/personality_v1.json`. Shared Dex/kid-card text follows GUI_MVP §18.1; no additional art, textures or `src/` edits. Revision `personality-1`; ChatGPT authors, Claude reviews and integrates. Export and 189 tests pass.
+
 ## GATE4-DESIGN delivery (2026-10-03; Claude review pending)
 
 Current additive delivery `gate4-design-2`, round 2 for PR #67 (B1–B3/N1); retained art and historical inventories below are unchanged. GUI_MVP §§14–18 supersede §13. Round-1 figures in the notes are historical.

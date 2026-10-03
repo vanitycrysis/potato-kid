@@ -1,0 +1,519 @@
+{
+  "schemaVersion": 1,
+  "revision": "personality-1",
+  "status": "Claude review pending",
+  "types": {
+    "plain": {
+      "description": "An unhurried little wanderer who can make an afternoon out of finding a particularly good pebble. Keeps it for a bit, then puts it back.",
+      "favouriteFood": "toast",
+      "likes": "warm doorsteps and pebbles that fit just right.",
+      "hatedFood": "pickle",
+      "hates": "being hurried when there is still plenty of afternoon.",
+      "hobbies": "Taking the long way around a very small patch of grass."
+    },
+    "fire": {
+      "description": "A tiny enthusiast with a flame-shaped cap and an urgent need to get the evening gathering started. Has already saved everyone a spot.",
+      "favouriteFood": "soup",
+      "likes": "cosy circles and stories with a good beginning.",
+      "hatedFood": "berries",
+      "hates": "cold snacks on chilly evenings and gatherings ending too soon.",
+      "hobbies": "Arranging seats in a circle, then squeezing in one more."
+    },
+    "water": {
+      "description": "Under that droplet hood is a dedicated puddle inspector. No puddle is too small for a second visit, especially after a bit of rain.",
+      "favouriteFood": "cheese",
+      "likes": "ripples and the hollow plink of a falling drop.",
+      "hatedFood": "toast",
+      "hates": "soggy sleeves and puddles that vanish before a visit.",
+      "hobbies": "Counting rings on puddles until the rings overlap."
+    },
+    "snow": {
+      "description": "Bundled up to the very last scarf end, this kid treats a chilly day as permission to take everything slowly. Even the snack breaks.",
+      "favouriteFood": "cocoa",
+      "likes": "thick scarves and the hush of a fresh snowfall.",
+      "hatedFood": "soup",
+      "hates": "slushy paths and a scarf tucked in too tightly.",
+      "hobbies": "Leaving a short trail of footprints, then admiring the spacing."
+    },
+    "wind": {
+      "description": "A scarf-wearing rambler who always takes the breeziest path. Stops often to check whether the scarf has discovered a new direction.",
+      "favouriteFood": "apple",
+      "likes": "billowing laundry and a clear stretch of path.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky knots and rooms with no open window.",
+      "hobbies": "Following drifting leaves without ever asking where they are going."
+    },
+    "stone": {
+      "description": "Steady as the slab perched overhead, this kid is an excellent keeper of places. Will wait beside a chosen spot all afternoon.",
+      "favouriteFood": "mushroom",
+      "likes": "cool shade and things that stay where they are put.",
+      "hatedFood": "cocoa",
+      "hates": "wobbly seats and unnecessary rearranging.",
+      "hobbies": "Sorting pebbles by how comfortably they sit on the ground."
+    },
+    "chef": {
+      "description": "The tall hat means snack time is being taken seriously. This kid sets out a tiny tasting spoon, then takes notes on the napkin.",
+      "favouriteFood": "berry_jam",
+      "likes": "little spoons and a neatly folded napkin.",
+      "hatedFood": "carrot",
+      "hates": "a missing spoon and crumbs in the notes.",
+      "hobbies": "Drawing a grand menu for one very small afternoon snack."
+    },
+    "firefighter": {
+      "description": "A helmeted helper with a fondness for being ready early. Packs for a short outing as though it might include three snack stops.",
+      "favouriteFood": "toast",
+      "likes": "tidy coils and knowing where everything is.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky handles and a bag that will not close.",
+      "hobbies": "Rolling up the hose neatly, then checking the loop one last time."
+    },
+    "snowman": {
+      "description": "Wears a top hat to even the smallest occasion. Once declared a quiet patch of shade an occasion and stayed there until teatime.",
+      "favouriteFood": "cracker",
+      "likes": "cool afternoons and invitations on thick paper.",
+      "hatedFood": "soup",
+      "hates": "dripping hat brims and puddles beneath the best seat.",
+      "hobbies": "Making up polite greetings for visitors who have not arrived yet."
+    },
+    "steam": {
+      "description": "A dreamy little drifter with a curling tuft overhead. Gets sidetracked watching wisps rise and calls this a very productive morning.",
+      "favouriteFood": "soup",
+      "likes": "warm windows and slowly curling wisps.",
+      "hatedFood": "cracker",
+      "hates": "dry crumbs and being asked to hurry up a daydream.",
+      "hobbies": "Tracing loose spirals in a notebook without lifting the pencil."
+    },
+    "sprout": {
+      "description": "Very proud of the little shoot overhead, but far too busy checking the ground to boast. Has noticed a new speck of green today.",
+      "favouriteFood": "carrot",
+      "likes": "soft soil and small beginnings.",
+      "hatedFood": "cheese",
+      "hates": "heavy lids and labels bigger than their pots.",
+      "hobbies": "Measuring tiny shoots with a twig and keeping very tiny records."
+    },
+    "sail": {
+      "description": "That little sail is always ready for an outing. This kid gives every puddle a grand name, even the one beside the doorstep.",
+      "favouriteFood": "pickle",
+      "likes": "striped cloth and the gentle bob of a floating leaf.",
+      "hatedFood": "mushroom",
+      "hates": "droopy fabric and outings with no snack stop.",
+      "hobbies": "Launching leaf boats and recording their extremely short voyages."
+    },
+    "blizzard": {
+      "description": "A brisk little stroller with a snowflake cap and a scarf that rarely stays tucked. Calls every lap around the garden an expedition.",
+      "favouriteFood": "cocoa",
+      "likes": "crisp mornings and a scarf end flapping behind.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky mittens and indoor afternoons that last too long.",
+      "hobbies": "Drawing maps of the best routes through fresh snow."
+    },
+    "builder": {
+      "description": "Measures twice, sets down the tool, then measures once more for luck. A small stack of blocks deserves a proper plan.",
+      "favouriteFood": "corn",
+      "likes": "straight edges and blocks that line up neatly.",
+      "hatedFood": "berries",
+      "hates": "rolling supplies and a ruler borrowed without asking.",
+      "hobbies": "Making tiny benches and checking each one for wobble."
+    },
+    "forge": {
+      "description": "With an anvil cap and a stout apron, this kid has a soft spot for solid things. Taps each finished trinket to hear its little note.",
+      "favouriteFood": "corn",
+      "likes": "sturdy shapes and a satisfying little clink.",
+      "hatedFood": "apple",
+      "hates": "rattly drawers and things that roll off the workbench.",
+      "hobbies": "Laying out a collection of tiny metal bells from low note to high."
+    },
+    "kite": {
+      "description": "A patient keeper of strings, with a little diamond kite perched overhead. Untangles a knot as though it were an interesting puzzle.",
+      "favouriteFood": "apple",
+      "likes": "long ribbons and just the right tug on a string.",
+      "hatedFood": "soup",
+      "hates": "wet paper and knots pulled tight in a hurry.",
+      "hobbies": "Drawing looping routes for a kite that prefers its own route."
+    },
+    "hero": {
+      "description": "A cape makes even a small errand feel grand. This kid proudly volunteers to fetch the forgotten napkin, then brings a spare.",
+      "favouriteFood": "cheese",
+      "likes": "helpful errands and a cape with a good swish.",
+      "hatedFood": "pickle",
+      "hates": "being left out of a task that needs one more helper.",
+      "hobbies": "Inventing important titles for ordinary acts of kindness."
+    },
+    "sundae": {
+      "description": "The scoop cap is fancy; the plans are simple. This kid knows the nicest shaded seats and is happy to spend all day trying them.",
+      "favouriteFood": "berries",
+      "likes": "little umbrellas and the shady end of a bench.",
+      "hatedFood": "mushroom",
+      "hates": "drips on the best seat and a missing snack spoon.",
+      "hobbies": "Rating shady spots on a scale from lovely to especially lovely."
+    },
+    "gardener": {
+      "description": "Carries a watering can and remembers every pot's usual spot. Says good morning to the seedlings before checking the day's list.",
+      "favouriteFood": "carrot",
+      "likes": "well-used tools and a row of neatly labelled pots.",
+      "hatedFood": "cracker",
+      "hates": "crunchy bits in soft soil and labels facing the wall.",
+      "hobbies": "Sketching new leaf shapes in the margins of the watering list."
+    },
+    "raincloud": {
+      "description": "A small cloud follows this kid's wandering pace. Always offers the driest place to a visitor, even if it is only half a doorstep.",
+      "favouriteFood": "cracker",
+      "likes": "window seats and the patter on a broad leaf.",
+      "hatedFood": "corn",
+      "hates": "splashy shortcuts and damp notebook corners.",
+      "hobbies": "Keeping a list of all the different sounds a drizzle can make."
+    },
+    "glassblower": {
+      "description": "Goggles pushed up, this kid pauses to inspect every little glass bubble. The slightly lopsided ones get the best shelf.",
+      "favouriteFood": "cheese",
+      "likes": "clear colours and a bubble with an interesting wobble.",
+      "hatedFood": "corn",
+      "hates": "cloudy glass and shelves too crowded for a new treasure.",
+      "hobbies": "Drawing possible shapes for a collection of tiny glass vases."
+    },
+    "baker": {
+      "description": "Carries a bread paddle like a very important tray. Leaves a little space in every basket in case someone arrives late.",
+      "favouriteFood": "toast",
+      "likes": "warm baskets and floury notes pinned up neatly.",
+      "hatedFood": "carrot",
+      "hates": "hard lumps and someone taking the last basket.",
+      "hobbies": "Drawing new bread shapes, including one shaped like a slipper."
+    },
+    "tea": {
+      "description": "A quiet host carrying a cup and a rather small tea bag. Thinks the nicest part of a visit is the comfortable pause between stories.",
+      "favouriteFood": "soup",
+      "likes": "slow afternoons and a cup on its own little saucer.",
+      "hatedFood": "corn",
+      "hates": "rushed visits and loud clattering during a quiet pause.",
+      "hobbies": "Choosing a different spot for the afternoon cup each day."
+    },
+    "cocoa": {
+      "description": "The mug apron makes this kid easy to spot at a cosy gathering. Carefully counts out enough cushions, then adds one just in case.",
+      "favouriteFood": "cocoa",
+      "likes": "soft cushions and sleeves pulled over the nubs.",
+      "hatedFood": "pickle",
+      "hates": "sharp tangs and a seat beside a draughty crack.",
+      "hobbies": "Designing the perfect snug corner on a scrap of paper."
+    },
+    "flower": {
+      "description": "Wears a little blossom as though every day were a special visit. Leaves pressed petals between pages, then forgets which pages.",
+      "favouriteFood": "berry_jam",
+      "likes": "pretty paper and unexpected splashes of colour.",
+      "hatedFood": "corn",
+      "hates": "bent page corners and petals swept up too soon.",
+      "hobbies": "Making bookmarks that are almost too small to find again."
+    },
+    "cactus": {
+      "description": "A little cactus crown, a snug pot band and a firm sense of personal space. Excellent company for a pleasantly quiet afternoon.",
+      "favouriteFood": "pickle",
+      "likes": "sunny corners and visitors who ask before borrowing.",
+      "hatedFood": "soup",
+      "hates": "soggy cushions and surprise rearrangements.",
+      "hobbies": "Moving one pebble at a time until the sunny corner feels just right."
+    },
+    "mushroom": {
+      "description": "A low cap suits this kid's preference for low-key outings. Finds the most interesting specks of moss just beside the main path.",
+      "favouriteFood": "mushroom",
+      "likes": "mossy edges and the underside of a broad leaf.",
+      "hatedFood": "corn",
+      "hates": "bright midday glare and paths with no shady detours.",
+      "hobbies": "Making a miniature map of the dampest, quietest garden corners."
+    },
+    "potter": {
+      "description": "Carries a little clay pot with great care. Every cup in this kid's collection leans a different way, and each has its own shelf spot.",
+      "favouriteFood": "mushroom",
+      "likes": "soft clay and useful things with uneven edges.",
+      "hatedFood": "cracker",
+      "hates": "dry crumbs in the clay and perfectly identical cups.",
+      "hobbies": "Pinching tiny bowls and finding a purpose for every wonky one."
+    },
+    "crystal": {
+      "description": "That jagged crown catches the light, which is reason enough to stop walking. This kid can spend ages finding the best angle.",
+      "favouriteFood": "cracker",
+      "likes": "crisp edges and a fleck of light on the wall.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky smudges and a good sparkle hidden by clutter.",
+      "hobbies": "Sorting shiny pebbles by which patch of daylight suits them."
+    },
+    "blacksmith": {
+      "description": "A small hammer and apron accompany a very particular craftsperson. Makes hooks for everyone, including a hook for spare hooks.",
+      "favouriteFood": "pickle",
+      "likes": "square tool handles and a tidy row of hooks.",
+      "hatedFood": "berries",
+      "hates": "stained work notes and tools returned to the wrong peg.",
+      "hobbies": "Sketching new handles for tools that already have perfectly good handles."
+    },
+    "lighthouse": {
+      "description": "With a little lamp cap and striped band, this kid has a knack for marking the way. Even a trip to the next bench gets directions.",
+      "favouriteFood": "apple",
+      "likes": "clear evening views and a well-marked turning.",
+      "hatedFood": "mushroom",
+      "hates": "murky windows and a sign facing the wrong way.",
+      "hobbies": "Drawing helpful arrows on maps of very familiar places."
+    },
+    "captain": {
+      "description": "The jaunty cap is ready, the little wheel is steady, and the day's route is planned. There is an impressive number of pauses on it.",
+      "favouriteFood": "toast",
+      "likes": "folded maps and a clear place to stop for a snack.",
+      "hatedFood": "cocoa",
+      "hates": "spilled drinks on maps and routes with no margin for a rest.",
+      "hobbies": "Naming imaginary bays after the shapes of nearby pebbles."
+    },
+    "whistle": {
+      "description": "A little whistle badge suits a kid who likes a clear cue. Rehearses the start of a parade even when the parade is just one lap.",
+      "favouriteFood": "cheese",
+      "likes": "short tunes and everyone starting together.",
+      "hatedFood": "cocoa",
+      "hates": "sticky whistles and a count-in nobody can hear.",
+      "hobbies": "Tapping out a marching rhythm for a row of wooden buttons."
+    },
+    "pinwheel": {
+      "description": "Carries a pinwheel and considers every pause a chance to test the breeze. Has a whole notebook devoted to almost-spins.",
+      "favouriteFood": "corn",
+      "likes": "bright paper and a breeze arriving at just the right moment.",
+      "hatedFood": "cheese",
+      "hates": "bent paper tips and sitting where the air never moves.",
+      "hobbies": "Counting turns, losing count, and cheerfully starting over."
+    },
+    "lantern": {
+      "description": "A little lamp cap and star badge belong to a careful evening host. Checks that every visitor has a lit path all the way home.",
+      "favouriteFood": "cheese",
+      "likes": "warm pools of light and unhurried goodbyes.",
+      "hatedFood": "carrot",
+      "hates": "long crunchy interruptions in the middle of a bedtime story.",
+      "hobbies": "Making a list of the cosiest reading spots after dusk."
+    },
+    "picnic": {
+      "description": "The paper cap is folded and the basket is packed. This kid spends more time choosing a blanket spot than anyone spends on lunch.",
+      "favouriteFood": "cracker",
+      "likes": "checked blankets and a patch of dry, level grass.",
+      "hatedFood": "cocoa",
+      "hates": "tipped mugs and a blanket corner that keeps folding under.",
+      "hobbies": "Packing a basket in different orders until everything fits snugly."
+    },
+    "greenhouse": {
+      "description": "Under a little glass roof, this kid keeps a careful pot diary. A new leaf earns a whole page, even when the leaf is barely a speck.",
+      "favouriteFood": "carrot",
+      "likes": "bright windows and a neat date at the top of a page.",
+      "hatedFood": "pickle",
+      "hates": "sour smells in a cosy nook and windows smeared with fingerprints.",
+      "hobbies": "Turning pots a little at a time so every side gets its afternoon light."
+    },
+    "bouquet": {
+      "description": "Carries a small bunch of blossoms and a large supply of gift ideas. Tucks a posy beside an ordinary note to make it feel special.",
+      "favouriteFood": "berries",
+      "likes": "ribbon scraps and presents with handwritten tags.",
+      "hatedFood": "cheese",
+      "hates": "squashed wrapping and a present with no room for a note.",
+      "hobbies": "Finding new ways to tie a bow, then giving the bow away."
+    },
+    "bonsai": {
+      "description": "A tiny tree canopy accompanies an expert in taking time. This kid can consider the position of one twig for an entire afternoon.",
+      "favouriteFood": "cracker",
+      "likes": "small trays and changes too tiny to notice at first.",
+      "hatedFood": "apple",
+      "hates": "bulky things on a small table and rushed decisions.",
+      "hobbies": "Drawing the same little branch each day to spot what has changed."
+    },
+    "terrarium": {
+      "description": "A miniature glass dome makes a fine hat for a collector of tiny worlds. Counts each patch of moss as an important landmark.",
+      "favouriteFood": "mushroom",
+      "likes": "little landscapes and beads of dew on glass.",
+      "hatedFood": "toast",
+      "hates": "crumbs spoiling a tiny path and lids left askew.",
+      "hobbies": "Arranging miniature paths that lead to equally miniature nowhere-in-particulars."
+    },
+    "teapot": {
+      "description": "The small spout band belongs to a generous host with a precise routine. Makes room for a visitor by moving everything one inch over.",
+      "favouriteFood": "cheese",
+      "likes": "matching saucers and one more place at the table.",
+      "hatedFood": "berries",
+      "hates": "stains on the tablecloth and a saucer put away still damp.",
+      "hobbies": "Practising an elegant pour with an empty cup."
+    },
+    "cookie": {
+      "description": "Wears a bitten biscuit cap without worrying about the missing bit. Believes every small achievement deserves a proper snack break.",
+      "favouriteFood": "berry_jam",
+      "likes": "little rewards and tins with a snug lid.",
+      "hatedFood": "pickle",
+      "hates": "sharp tangs and a snack break cancelled halfway through.",
+      "hobbies": "Keeping a tally of things finished, including finishing the tally."
+    },
+    "pretzel": {
+      "description": "A looping cap tops a kid with a talent for untangling. Will patiently work through a ribbon knot, then tie a much nicer bow.",
+      "favouriteFood": "pickle",
+      "likes": "a tangy crunch and loops with room to spare.",
+      "hatedFood": "cocoa",
+      "hates": "damp ribbons and tangles hidden at the bottom of a bag.",
+      "hobbies": "Making doodles that loop back to where they began."
+    },
+    "soup": {
+      "description": "Carries a little pot and ladle with the air of someone expecting company. Sets out an extra bowl even on a quiet day.",
+      "favouriteFood": "soup",
+      "likes": "round bowls and a table with space for everyone.",
+      "hatedFood": "apple",
+      "hates": "things rolling off the table and empty seats at snack time.",
+      "hobbies": "Counting bowls, then checking whether one more will fit."
+    },
+    "snowglobe": {
+      "description": "A little globe sits beside this kid's crown like a pocket-sized day out. Finds it soothing when every speck settles in its own time.",
+      "favouriteFood": "berries",
+      "likes": "tiny scenery and flakes drifting slowly downward.",
+      "hatedFood": "toast",
+      "hates": "dusty crumbs and being jostled before things have settled.",
+      "hobbies": "Drawing miniature scenes with more detail than the page can hold."
+    },
+    "ice_sculptor": {
+      "description": "A little block of ice is this kid's latest project. Pauses after every careful chip to decide whether the shape might already be done.",
+      "favouriteFood": "cocoa",
+      "likes": "cool shade and edges that catch a pale glint.",
+      "hatedFood": "cheese",
+      "hates": "squishy corners and projects hurried out into the sun.",
+      "hobbies": "Sketching shapes with only three lines, then trying with two."
+    },
+    "weather_vane": {
+      "description": "An arrow cap accompanies a keen observer of passing breezes. Announces each change of direction, including the very brief ones.",
+      "favouriteFood": "corn",
+      "likes": "rustling husks and clear views in every direction.",
+      "hatedFood": "mushroom",
+      "hates": "being stuck behind a tall fence with nothing to observe.",
+      "hobbies": "Drawing arrows in a notebook and adding the time beside each one."
+    },
+    "balloon": {
+      "description": "Keeps a little balloon close and plans very gentle outings. Stops beneath every low branch to make sure the route is roomy enough.",
+      "favouriteFood": "berries",
+      "likes": "light little snacks and open patches of sky.",
+      "hatedFood": "carrot",
+      "hates": "pointy clutter and a string snagged beneath a basket.",
+      "hobbies": "Drawing round shapes that never quite manage to be circles."
+    },
+    "steamboat": {
+      "description": "A funnel cap and a tiny model boat make this kid's interests quite clear. Every trip is scheduled, though departure is often after lunch.",
+      "favouriteFood": "corn",
+      "likes": "gentle chugging rhythms and a timetable with snack breaks.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky model parts and a departure announced too early.",
+      "hobbies": "Making paper tickets for leisurely imaginary trips."
+    },
+    "lifeguard": {
+      "description": "Carries a bright ring and keeps an orderly row of towels. Happiest when everyone has a dry spot to sit after a little paddle.",
+      "favouriteFood": "apple",
+      "likes": "striped towels and a shady place for a break.",
+      "hatedFood": "toast",
+      "hates": "crumbs on damp towels and a rest spot with nowhere to hang things.",
+      "hobbies": "Marking the nicest paddling spots on a very simple map."
+    },
+    "kiln": {
+      "description": "A little brick arch tops a collector of handmade tiles. Knows exactly which shelf holds each one, even the tile shaped like a sock.",
+      "favouriteFood": "toast",
+      "likes": "warm earthy colours and a row of finished tiles.",
+      "hatedFood": "mushroom",
+      "hates": "damp shelves and a carefully sorted stack getting muddled.",
+      "hobbies": "Testing new stamped patterns on small squares of clay."
+    },
+    "aurora": {
+      "description": "A soft fold of colour drapes behind this quiet stroller. Will take the long evening route just to see how the sky changes along it.",
+      "favouriteFood": "berries",
+      "likes": "dusky colours and long pauses beneath the open sky.",
+      "hatedFood": "cracker",
+      "hates": "crunching through a quiet moment and curtains closed too early.",
+      "hobbies": "Keeping little swatches of every evening colour the pencils can manage."
+    },
+    "festival": {
+      "description": "Bunting overhead and drum at the ready, this kid celebrates small occasions thoroughly. A newly sharpened pencil counts.",
+      "favouriteFood": "berries",
+      "likes": "bright pennants and a reason to gather round.",
+      "hatedFood": "soup",
+      "hates": "spills near the drum and decorations packed away too soon.",
+      "hobbies": "Writing tiny celebration songs for things that happened today."
+    },
+    "observatory": {
+      "description": "A little telescope helps this kid take a very big interest in the sky. The notebook has plenty of room for things not spotted yet.",
+      "favouriteFood": "cocoa",
+      "likes": "clear nights and a warm mug beside the notebook.",
+      "hatedFood": "corn",
+      "hates": "crumbs on the lens and a page too crowded for another dot.",
+      "hobbies": "Plotting patterns of bright dots, then inventing names for the patterns."
+    },
+    "botanical_garden": {
+      "description": "A little trellis and seed tray accompany a patient note-taker. Every leaf deserves a label, though some labels need smaller writing.",
+      "favouriteFood": "carrot",
+      "likes": "leaf shapes and labels written in a careful hand.",
+      "hatedFood": "toast",
+      "hates": "crumbs mixed into the seed tray and tags with missing dates.",
+      "hobbies": "Drawing leaf outlines and trying to fit them all on one page."
+    },
+    "moon_garden": {
+      "description": "A crescent cap and little shaded lamp suit this late stroller. Checks on the garden when the day's noisy visitors have gone home.",
+      "favouriteFood": "cracker",
+      "likes": "pale paths and the soft rustle of leaves after dusk.",
+      "hatedFood": "carrot",
+      "hates": "loud crunches on a quiet stroll and lights left much too bright.",
+      "hobbies": "Drawing the same garden corner by daylight and by lamplight."
+    },
+    "patisserie": {
+      "description": "A tiered cake cap gives this kid lofty ideas about decorating. Adds one delicate flourish, steps back, then adds a much tinier one.",
+      "favouriteFood": "berry_jam",
+      "likes": "little swirls and neatly spaced dots.",
+      "hatedFood": "mushroom",
+      "hates": "muddy colours and a flourish squashed beneath its wrapper.",
+      "hobbies": "Practising fancy borders around the plainest notes in the notebook."
+    },
+    "winter_market": {
+      "description": "A striped awning makes a snug roof for this tiny stallkeeper. Saves the driest corner for a visitor and remembers their usual spot.",
+      "favouriteFood": "soup",
+      "likes": "warm bowls and neatly stacked paper bags.",
+      "hatedFood": "cheese",
+      "hates": "sticky wrapping and a draught under the awning.",
+      "hobbies": "Making small signs, then deciding which one looks most welcoming."
+    },
+    "harbor": {
+      "description": "Carries a little anchor and takes settling in seriously. Once a bag is unpacked, this kid knows it is time to sit and watch the ripples.",
+      "favouriteFood": "pickle",
+      "likes": "coiled ropes and a firm place to set things down.",
+      "hatedFood": "apple",
+      "hates": "supplies rolling away and being asked to pack up just after arriving.",
+      "hobbies": "Practising tidy rope coils and giving each one a neat label."
+    },
+    "sky_fair": {
+      "description": "A tiny wheel peeks overhead and a ticket sash keeps things official. This kid plans outings with an excellent view and plenty of rests.",
+      "favouriteFood": "apple",
+      "likes": "paper tickets and a view above the bunting.",
+      "hatedFood": "cracker",
+      "hates": "crumbs in ticket pockets and queues with no shady patch.",
+      "hobbies": "Designing tickets for imaginary rides, including a very slow one."
+    },
+    "rescue_station": {
+      "description": "Folded canvas and a little torch are packed for helpful outings. This kid always brings somewhere to rest, plus a spare snack bag.",
+      "favouriteFood": "carrot",
+      "likes": "easy-to-pack snacks and a comfy place to pause.",
+      "hatedFood": "berries",
+      "hates": "squashed supplies and bags with no room left for a spare.",
+      "hobbies": "Packing a rest-stop kit and checking that the canvas folds neatly."
+    },
+    "sculpture_park": {
+      "description": "A curling sculpture sits overhead like a very grand doodle. This kid pauses beside every interesting shape and gives it a little title.",
+      "favouriteFood": "mushroom",
+      "likes": "curving shapes and a bench at just the right distance.",
+      "hatedFood": "apple",
+      "hates": "rolling display pieces and a title card that keeps falling over.",
+      "hobbies": "Giving pebbles elaborate titles and arranging them for a tiny exhibition."
+    },
+    "windmill": {
+      "description": "Broad little sails turn above a keeper of grain sacks and gentle rhythms. Thinks a slow, steady morning is a morning well spent.",
+      "favouriteFood": "toast",
+      "likes": "grainy crusts and the soft creak of wooden sails.",
+      "hatedFood": "berries",
+      "hates": "stained sacks and a steady rhythm interrupted halfway through.",
+      "hobbies": "Counting slow turns and drawing a small mark for each one."
+    },
+    "mosaic": {
+      "description": "A stepped tile cap tops a collector who keeps every little offcut. The odd-shaped piece is usually the one this kid reaches for first.",
+      "favouriteFood": "berry_jam",
+      "likes": "colourful patches and finding a spot for the odd little piece.",
+      "hatedFood": "cocoa",
+      "hates": "murky spills and the smallest pieces being swept away.",
+      "hobbies": "Laying out tiny patterns, then moving just one piece to see what changes."
+    }
+  }
+}

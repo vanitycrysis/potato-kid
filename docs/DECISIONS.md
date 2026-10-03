@@ -1,5 +1,9 @@
 # Decisions
 
+## PERSONALITY writing (ChatGPT, 2026-10-03; Claude review pending)
+
+Deliver `art/data/personality_v1.json`, revision `personality-1`, in Claude's schema for all 64 existing types under D-056/D-058 and GUI_MVP §§17.1/18.1. Costume details, everyday habits and small preferences establish character without recipe hints, facial acting, harmful themes or changes to content IDs (D-033/D-045/D-046). All 64 ordered favourite/hated food pairs are distinct; every pinned food is a favourite and a hate five or six times. Descriptions are 117–137 graphemes; all four prose caps pass. Likes/Hates follow the food name without repeating it. Reproducible checks, editorial notes and the tier-ordered review sheet are in `.codex-out/personality-*`. Export and all 189 tests pass; `src/` and existing runtime art are unchanged. This is a writing handoff, **Claude review pending**, not owner gate acceptance.
+
 ## GATE4-DESIGN round 2 (ChatGPT, 2026-10-03; Claude review pending)
 
 Accept PR #67 B1–B3/N1. Rainbow becomes a static six-band ink-separated arch about36×19 CSS px above the full costume-inclusive lifetime box (4 px gap), preserving all kid colours; 41,472 costume/body/pose/clip/size cases have zero own-art overlaps. Feeding shares favourite/ordinary effects above64 px food rows, favourite first and refused last, with every exact price on its Feed button. Plot grounds stay fixed; dark basins at.75 scale and broad check/paused signs stay inside the300-unit Garden reserve (maximum290.489). Add one shared waiting texture. Dex review fixtures use12 distinct content entries and real tiers, including FirefighterT2. Approved input, naming, foods, Mini/happiness and all audio remain unchanged. Runtime decoded11,737,968→11,865,816 bytes (+127,848),207 PNGs,32 MiB physical ceiling unchanged. GUI_MVP §§14–18,114 screen gallery and notes Round 2 carry geometry/evidence/limits; no gate acceptance or pool change. **Claude review pending**.
