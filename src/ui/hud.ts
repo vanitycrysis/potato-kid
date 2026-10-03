@@ -247,10 +247,12 @@ export class Hud {
   /**
    * The offline-return summary, once per report (GUI_MVP §8). A sheet that was open is put
    * away and comes back, where it was, when the summary is dismissed; a second report while
-   * the summary is up replaces it.
+   * the summary is up replaces it. A short absence (a quick app switch) shows nothing: the
+   * rewards are credited all the same (D-049).
    */
   private offlineSummary(report: OfflineReport): void {
     if (this.save.readOnly) return;
+    if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
       this.interrupted = open && { ...open, search: this.buildings.searchText };

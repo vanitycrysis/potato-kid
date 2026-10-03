@@ -1,96 +1,73 @@
-# Session handoff (2026-10-02, for the next Claude session)
+# Session handoff (2026-10-02 evening, for the next Claude session)
 
 Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` and `docs/TASKS.md`.
 
 ## Where we are
 
-- **Gate 3 approved** (D-047, 2026-10-02): the first playable passes on the S26 Ultra.
-  - The animations are "good enough for how early we are"; polish comes after gate 4 (ANIM-POLISH).
-  - The owner likes the font.
-  - **Now: M3 / BUILD-MVP** (Claude) and **ROSTER-PLAN** (Codex). See "Next" below.
-- **Gate 2 was approved this session** (D-044), with two owner directions:
-  - **D-045:** faces are only two dot eyes and the smirk. No brows, noses, chins or other anatomy; anything else comes from the costume.
-  - **D-046:** about 500 kid types long term. The MVP ships 50–80, and the pipeline must scale (ROSTER-PLAN and ROSTER-SCALE tasks; `ENGINEERING_PLAN.md` "Roster scale").
-- **Merged this session:**
-  - #20: the gate-2 decisions.
-  - #21: ASSET-PLAYABLE part A, final costumes and the face fix (3 Claude art rounds).
-  - #22: the engine owns no colours.
-  - #23: part B, poses, clips, FX and landmarks (2 rounds).
-  - #24: the integration, which plays them and bundles Patrick Hand (3 Codex rounds).
-- `main` is green.
-- **Tests:** unit 73, e2e 19.
-- **CI note:** once, the Android job failed fetching standard Maven artifacts. It was transient; the next run passed.
-- **The owner asked** whether Codex handles ALL art and audio. Yes: Claude makes no visual choices at all. PR #22 removed the last leftovers, accent colours Claude had picked.
+- **Gates 1–3 are approved.** We're in **M3 / BUILD-MVP**, heading to **gate 4**: the complete MVP on the owner's Galaxy S26 Ultra.
+- **The GUI-MVP is fully built** to Codex's `docs/GUI_MVP.md`:
+  - HUD, feedback and save banners (#33); short viewports (#37);
+  - the Garden, Capacity and Bias sheets (#39);
+  - Compendium, offline summary and Settings (#41);
+  - the Potato-Dex (#43).
+- **Content:** batches 1 and 2 are imported (#38, #42: 52 kids). Batch 3 (#44) is merged, and its import (#47) brings the game to the full **64-kid, 58-recipe** MVP roster.
+- **The balance simulator** (#45) found a soft-lock:
+  - 17 of 64 types are parents in no recipe, and nothing removed kids, so the map clogged after about 25 minutes.
+  - **The owner chose Send home (D-048):** drop a kid on the Garden and it leaves the map; no refund.
+  - The sim command is in #45. The interaction design is with Codex (brief: "Send home" below). The engine and UI side follow.
+- **D-049:** the offline summary shows only after 60 s away (#46, merged; Codex's recommendation).
+- **Tests:** about 160 unit and 80 e2e (Playwright), all mutation-checked as they were added.
+
+## Open PRs and jobs at handoff
+
+Check each with `gh pr list` and `gh pr checks`.
+
+- **#45** balance simulator plus the `sendHome` sim command: Codex round 1 is fixed; round 2 in progress.
+- **#47** batch-3 import, the full 64-kid roster: Codex review in progress.
+- **#48** docs (this file, TASKS, DECISIONS D-048/D-049): needs a Codex review like any PR.
+- **Codex's Send-home design task** is running on `chatgpt/send-home-design` in the ChatGPT worktree. The brief covers drop target, armed state, departure, copy, accessibility and reduced motion, with a §13 in GUI_MVP. When it lands: commit it as ChatGPT, open the PR, review critically, then implement the gesture and feedback in a `claude/` PR.
+- Merged 2026-10-02: #40–#44 and #46 (D-049).
+
+## Next, in order
+
+1. Merge #45, #47 and #48 once their reviews are clean and CI is green.
+2. Codex designs Send home; Claude implements the drag-to-Garden gesture, the target and the departure, with e2e tests. Then the simulator bot already uses `sendHome`.
+3. **Balance:**
+   - `npm run balance` reports pacing (8 seeds takes about 10 minutes).
+   - Today's bot finds all 52 kids in about 2 h of active play, and 75 % within 13–23 minutes. That's fast, but the bot is an idealised player.
+   - **How long the MVP should last is a product question for the owner at gate 4.** Bring the numbers; don't retune blindly.
+4. **Audio:** Codex delivers the 8 cues and the music loop as WAVs (ASSET-MVP; no music tool, D-010). Claude builds the runtime. Settings already stores On/Off and the volumes (`src/save/settings.ts`).
+5. **Codex still owes** icons and launcher/splash.
+6. **Gate 4:** an APK on the S26 Ultra, plus the D-034 performance pass (and 4× CPU throttle) and real texture allocations.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
 - The owner talks only to Claude. **Codex fills the ChatGPT role** and always runs on `gpt-6.1-sol` at high effort.
-- **Claude does no art at all** (D-036): no drawing, no placeholders, no visual design choices. Codex does all art; Claude reviews it and owns the export pipeline and the engine.
-- **Codex tasks:** write a prompt file, then run
+- **Claude does no art at all** (D-036): no drawing, no placeholders, no visual design choices. Codex does all art and interaction design; Claude reviews it and owns the export pipeline and the engine.
+- **Codex tasks:** write a prompt file (in the session scratchpad), then run
   `node "C:/Users/Adria/.claude/plugins/cache/openai-codex/codex/1.0.6/scripts/codex-companion.mjs" task --write --model gpt-6.1-sol --effort high --cwd "C:/Users/Adria/potato-kid-chatgpt" --prompt-file <file>`
-  - Include the task's `TASKS.md` entry. `/codex:rescue` can't target the worktree, so call the runtime directly as above.
-  - For review rounds, append Claude's PR review verbatim to the prompt.
-- **Codex's worktree** is `C:\Users\Adria\potato-kid-chatgpt` (identity `ChatGPT`, `chatgpt/` branches). Its sandbox **can't run git**, so Claude commits its files unchanged as `ChatGPT` and pushes.
-  - Check `git branch -vv` there before pushing. A branch's upstream once silently pointed at `main` and pushes went nowhere.
-  - Its sandbox has no network either, so it can't fetch third-party files (the font). Claude fetches those from the official source, pins them and records them in `assets/PROVENANCE.md`.
-- **Codex reviews** of every Claude PR, before merging, use a detached review worktree:
-  - `git worktree add --detach ../potato-kid-review-N origin/<branch>`, then `npm ci` in it, so Codex can run the tests;
-  - then `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`.
-  - Post the output to the PR verbatim, labelled as Codex's. Fix, re-review, and merge only after Codex reports no findings **and** CI is green.
-- **Codex reviews are rigorous.** Most rounds find real edge cases. **Verify that every regression test fails without its fix.**
-- **Art review:** `npm run art:export`, which validates and exports Codex's SVG sources and sidecars from `art/`, then `npm run art:preview`, which renders real-engine captures into `art/previews/ingame/`.
-  - Judge art at true game size, about 55 CSS px per kid, in colour and grayscale.
-  - Clips and FX only show in motion: capture real playback with a throwaway Playwright spec (small `clip` screenshots in a loop), and don't rely on Codex's composites alone.
-  - Codex's art PRs are gated by **Claude's** review (D-002), not by a Codex code review.
-  - The preview crowd test can time out at 30 s on the headless software renderer, which runs at about 10 fps with 40 kids. Rerun with `--timeout 180000`.
-- **Cancelling Codex jobs:** Git Bash mangles `taskkill`, so use PowerShell.
-- Disagreements go in the PR; if one round doesn't settle them, take both positions to the owner. So far none needed escalating.
+  with `run_in_background`. Include the task's `TASKS.md` entry. For review rounds, append Claude's PR review verbatim.
+- **Codex's worktree** is `C:\Users\Adria\potato-kid-chatgpt` (`chatgpt/` branches). Its sandbox has **no git and no network**: Claude commits its files unchanged with `git -c user.name=ChatGPT -c user.email=noreply@openai.com commit` and pushes.
+- **Codex reviews** of every Claude PR, before merging:
+  - `git worktree add --detach ../potato-kid-review-N <branch>`, then `npm ci` in it;
+  - `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`;
+  - post the output to the PR verbatim, labelled as Codex's, then a reply per finding;
+  - merge only after a clean Codex round **and** green CI.
+- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). The scratchpad has a small `mutate_c1.py` runner.
+- **Art review:** judge at true game size (about 55 CSS px) in colour and grayscale, and in-engine after import (`npm run art:preview`).
+  - Batch lessons so far: no shared torso mark as the main read; nothing on or under the mouth line; no kid-in-a-vessel; no faint cues; no stereotype-adjacent shapes; no medical or weapon reads; check against everyday objects too.
+  - Codex's art PRs are gated by Claude's review.
 
-## Architecture in one breath
+## Testing gotchas learned this session
 
-TypeScript + PixiJS 8 + Vite + Capacitor (Android).
-
-- **Sim:** a pure sim in `src/sim/`:
-  - 10 Hz steps;
-  - separate random streams for gameplay, spawn type and cosmetics;
-  - lifetime silhouette boxes, so kids never overlap (D-043);
-  - scenery obstacles;
-  - ambient rests (look, wave, sit, sleep).
-- **Art data:** Codex's sidecars (`assets/data/kid_rig_v2.json`, `map_garden_v2.json`, `ui_v2.json`) drive:
-  - the rig renderer (`src/render/rigView.ts`);
-  - the map (`mapView.ts`);
-  - the DOM GUI (`src/ui/hud.ts` + `hud.css`). Colours and font come from `ui_v2.json` tokens only.
-- **Presentation** (`src/render/presentation.ts`, pure and tested):
-  - `ClipPicker` chooses clips by the rig's `scheduler.priority`.
-  - Pick-up and drop are gesture-driven.
-  - `EffectTracks` runs spawn, fusion and discovery FX.
-  - The shadow and FX are not press targets.
-- **Boot:** refuses to start if art or GUI-token coverage is incomplete (`artRules.ts`).
-- **Camera:** scrolls a 2160 × 3840 world, respects the GUI insets, and edge-scrolls while dragging.
-- **Font:** Patrick Hand v1.003, from google/fonts `aeb9574`. A Vite plugin ships `OFL.txt` with every build.
-- **Plan:** `docs/ENGINEERING_PLAN.md` (rev. 4 + roster-scale note) has the offline, save and lifecycle contracts. Those aren't built yet.
-
-## Next (gate 3 is approved)
-
-1. **M3 / BUILD-MVP (Claude):**
-   - currencies and passive Materials;
-   - the four buildings, with the tray buttons wired up (now shown disabled);
-   - the Dex and compendium;
-   - offline catch-up, the lifecycle coordinator and save/recovery, per plan rev. 4;
-   - the balance simulator;
-   - audio runtime.
-   - **ROSTER-SCALE belongs here too:** per-type costume texture loading and unloading, Dex thumbnails, validation at scale, and a delivery/maturity convention for the rig (the root `status` is still `style_sample` while the components are final).
-2. **Codex:**
-   - **ROSTER-PLAN:** names, themes and the recipe graph toward about 500, plus the 50–80 for the MVP.
-   - **ASSET-MVP:** the roster art for those, icons, and audio (8 cues + music loop as WAVs; no music tool, D-010).
-3. **Device checks still open:**
-   - the D-034 performance pass on the S26 Ultra and at 4× CPU throttle;
-   - actual texture allocations (raw 29.16 MiB of a 32 MiB ceiling);
-   - font glyphs and reflow.
-
-If the owner asks for art changes, hand them to Codex. Don't draw anything.
+- **The e2e preview server** (port 4173) is reused if running: it serves **this worktree's `dist/`**. Rebuild before every run, and don't test another worktree's code against it.
+- A failing `tsc` makes `npm run build` fail and leaves a **stale `dist/`**. Read the build output before trusting test results.
+- **Retrying assertions** (`toBeHidden`, `toBeEmpty`) pass on transient UI by waiting it out. Use sampled checks for "never shown".
+- **Chrome makes a scrollable container with no focusable children a Tab stop.** Focus-trap tests must press Tab more than once.
+- `debugSaveStatus` now persists across saves (it used to be cleared by the next save).
+- **Watch for flakes under parallel load:** run the full suite two or three times before calling a fix done. Two real bugs (a lazy-portrait race, the page-mode scroll clamp) showed up only that way.
 
 ## Housekeeping
 
-- Review worktrees `../potato-kid-review-20` and `-22` may still be locked by finished Codex processes. Remove them with `git worktree prune` and then delete the folders. Keep `../potato-kid-chatgpt`.
+- The old review worktrees `../potato-kid-review-20` to `-39` could not be deleted from this session ("Permission denied"; probably locked by finished Codex processes or the sandbox). Remove them with `git worktree prune` and delete the folders when they unlock. Keep `../potato-kid-chatgpt`.
 - Gate captures live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `C:\Users\Adria\potato-kid-gate3\`.
