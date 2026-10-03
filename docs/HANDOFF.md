@@ -8,7 +8,7 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
 - **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** and **Android** icon and splash are done.
 - **Send home** (D-048) is done end to end: drag a kid onto the Garden and hold 400 ms, or use the Dex detail's per-kid path.
 - **Tests:** about 180 unit and 110 e2e (Playwright), mutation-checked as they were added.
-- **The gate-4 build** is CI's `potato-kid-debug-apk` artifact from the latest `main` run (Actions → the `check` workflow → Artifacts). There is also a GitHub Pages build.
+- **The gate-4 build** is CI's `potato-kid-debug-apk` artifact from the latest `main` run (Actions → the `check` workflow → Artifacts). CI also uploads the web build as `potato-kid-web`. GitHub Pages is not available for this private repo (ENGINEERING_PLAN.md).
 
 ## Next, in order
 
