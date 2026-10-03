@@ -6,6 +6,7 @@ import { STEP, type Kid, type Obstacle } from '../sim/world';
 import { intersects, rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
+import { kidUnder } from './dropTarget';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -84,6 +85,8 @@ interface Drag {
   spot: { x: number; y: number };
   /** No free spot is visible right now: edge scrolling pauses so the last spot stays on screen. */
   noRoom?: boolean;
+  /** The kid under the finger this frame (D-051): releasing tries the pair. */
+  target?: number | undefined;
 }
 
 /**
@@ -595,7 +598,9 @@ export class MapScene {
     this.drag.y = w.y - HOLD_LIFT;
     this.resolveHeld();
     // Drop exactly where the kid is shown: the resolved free spot. Kids it visibly touches
-    // there (their drawn boxes) travel with the command, so a seen touch can fuse.
+    // there (their drawn boxes) travel with the command, so a seen touch can fuse, and so
+    // does the kid under the finger at release (D-051).
+    const target = this.dropTargetAt(w);
     const { kidId, spot } = this.drag;
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     const slack = this.game.touchSlack;
@@ -605,7 +610,24 @@ export class MapScene {
           return id !== kidId && !!other && touching(rectAt(kid.box, spot.x, spot.y), rectAt(other.box, at.x, at.y), slack);
         })
       : [];
-    this.finishDrag({ type: 'drop', kidId, x: spot.x, y: spot.y, touching: seen.map(([id]) => id) });
+    this.finishDrag({ type: 'drop', kidId, x: spot.x, y: spot.y, touching: seen.map(([id]) => id), ...(target === undefined ? {} : { target }) });
+  }
+
+  /**
+   * The kid under the finger at world point `p` (D-051). None over a usable Garden target,
+   * where the drop goes home instead (§13.1). Only kids that are drawn: one still waiting
+   * for its costume is invisible, so it can't be a target (Codex review, PR #66).
+   */
+  private dropTargetAt(p: { x: number; y: number }): number | undefined {
+    if (!this.drag) return undefined;
+    if (this.home && this.homeEligible() && this.home.contains(p)) return undefined;
+    const boxes = new Map(this.game.state.world.kids.filter((k) => this.views.has(k.id)).map((k) => [k.id, k.box]));
+    return kidUnder(p, this.drawn, boxes, this.drag.kidId);
+  }
+
+  /** The kid a release would try the held kid with right now (D-051), for the highlight and tests. */
+  get dropTarget(): number | null {
+    return this.drag?.target ?? null;
   }
 
   /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
@@ -823,7 +845,10 @@ export class MapScene {
     const drawn = resolveDrawn(kids, interpolated, this.placing, this.art.obstacles);
     this.drawn.clear();
     for (const [id, pos] of drawn) this.drawn.set(id, pos);
-    if (this.drag) this.resolveHeld();
+    if (this.drag) {
+      this.resolveHeld();
+      this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
+    }
     this.updateHome();
     this.updateDepartures(dt);
     for (const k of kids) {
