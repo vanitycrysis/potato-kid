@@ -287,6 +287,12 @@ export class Sheets {
     c.sheet.dataset.tight = 'false';
     const tight = c.bar.childElementCount > 0 && c.body.clientHeight < BODY_MIN;
     c.sheet.dataset.tight = String(tight);
+    // Scrolling something into view (a message, a focused control) stops clear of the
+    // sticky header and footer, never under them (Codex review, PR #54).
+    const header = c.sheet.querySelector<HTMLElement>(':scope > .sheet-header');
+    const footer = c.sheet.querySelector<HTMLElement>(':scope > .sheet-footer');
+    c.sheet.style.scrollPaddingTop = tight && header ? `${header.offsetHeight}px` : '';
+    c.sheet.style.scrollPaddingBottom = tight && footer ? `${footer.offsetHeight}px` : '';
     if (tight !== was) (tight ? c.sheet : c.body).scrollTop = scroll;
   }
 

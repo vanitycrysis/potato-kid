@@ -1990,8 +1990,12 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     expect(await status.isVisible()).toBe(true);
   });
 
-  test('in a tight sheet, a message scrolled under the header or past the edge is not being read (Codex review, PR #54)', async ({ page }) => {
-    // A short screen with the save banner: the sheet scrolls as one below a sticky header.
+  /**
+   * A short screen with the save banner, so the sheet scrolls as one below a sticky header;
+   * a kid sent home, its first explanation read; a spacer for room to scroll it away (a
+   * longer detail, e.g. a type in many recipes).
+   */
+  async function tightMessage(page: Page) {
     await page.setViewportSize({ width: 568, height: 300 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => {
@@ -2007,39 +2011,69 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await expect(status).toContainText('Still in your Potato-Dex.');
     await page.mouse.move(5, 5);
     await page.waitForTimeout(200);
-    // Room to scroll it out of view either way (a longer detail, e.g. a type in many recipes).
     await page.evaluate(() => {
       const spacer = document.createElement('div');
       spacer.style.height = '400px';
       document.querySelector('.sheet-body')!.append(spacer);
     });
-    // Where the message is, and the visible aperture (between the pinned header and the
-    // sheet's bottom edge, or its footer).
-    const place = (where: 'under header' | 'below sheet') =>
-      page.evaluate((where) => {
-        const sheet = document.querySelector('.sheet') as HTMLElement;
-        const status = () => document.querySelector('.dex-home-status')!.getBoundingClientRect();
-        const header = sheet.querySelector('.sheet-header')!.getBoundingClientRect();
-        const footer = sheet.querySelector('.sheet-footer')!.getBoundingClientRect();
-        const floor = footer.height ? footer.top : sheet.getBoundingClientRect().bottom;
-        sheet.scrollTop += where === 'under header' ? status().bottom - header.bottom + 1 : status().top - floor - 1;
-        return { top: status().top, bottom: status().bottom, header: header.bottom, floor, view: window.innerHeight };
-      }, where);
+    return status;
+  }
+
+  /** Scrolls the tight sheet to put the message somewhere; returns where things are. */
+  function place(page: Page, where: 'under header' | 'text under header' | 'below sheet') {
+    return page.evaluate((where) => {
+      const sheet = document.querySelector('.sheet') as HTMLElement;
+      const status = () => document.querySelector('.dex-home-status')!.getBoundingClientRect();
+      const text = () => document.querySelector('.dex-home-status .card-text')!.getBoundingClientRect();
+      const header = sheet.querySelector('.sheet-header')!.getBoundingClientRect().bottom;
+      const floor = sheet.getBoundingClientRect().bottom;
+      if (where === 'under header') sheet.scrollTop += status().bottom - header + 1;
+      else if (where === 'text under header') sheet.scrollTop += text().bottom - header + 1;
+      else sheet.scrollTop += status().top - floor - 1;
+      return { top: status().top, bottom: status().bottom, textBottom: text().bottom, header, floor, view: window.innerHeight, scrollTop: sheet.scrollTop };
+    }, where);
+  }
+
+  test('in a tight sheet, a message scrolled under the header or past the edge is not being read (Codex review, PR #54)', async ({ page }) => {
+    const status = await tightMessage(page);
     // Its 6 s never run while hidden, whichever way: back in view, it is still there.
-    const under = await place('under header');
+    const under = await place(page, 'under header');
     // In the viewport, inside the sheet body's (unclipped) box, yet covered or clipped.
     expect(under.bottom).toBeGreaterThan(0);
     expect(under.bottom).toBeLessThanOrEqual(under.header);
     await page.waitForTimeout(6500);
     await status.scrollIntoViewIfNeeded();
     expect(await status.isVisible()).toBe(true);
-    const below = await place('below sheet');
+    const below = await place(page, 'below sheet');
     expect(below.top).toBeGreaterThanOrEqual(below.floor);
     expect(below.top).toBeLessThan(below.view);
     await page.waitForTimeout(6500);
     await status.scrollIntoViewIfNeeded();
     expect(await status.isVisible()).toBe(true);
     await expect(status).toBeHidden({ timeout: 9000 });
+  });
+
+  test('a sliver of the message box with its words hidden is not being read (Codex review, PR #54)', async ({ page }) => {
+    const status = await tightMessage(page);
+    const at = await place(page, 'text under header');
+    // Its blank margin shows below the header; every word is under it.
+    expect(at.bottom).toBeGreaterThan(at.header);
+    expect(at.textBottom).toBeLessThanOrEqual(at.header);
+    await page.waitForTimeout(6500);
+    await status.scrollIntoViewIfNeeded();
+    expect(await status.isVisible()).toBe(true);
+  });
+
+  test('a change on the map never scrolls back to a message already read (Codex review, PR #54)', async ({ page }) => {
+    const status = await tightMessage(page);
+    const away = await place(page, 'below sheet');
+    expect(away.top).toBeGreaterThanOrEqual(away.floor);
+    // Another Fire Kid arrives: the section updates, the scroll stays where the player put it.
+    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 1');
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (document.querySelector('.sheet') as HTMLElement).scrollTop)).toBe(away.scrollTop);
+    expect(await status.isVisible()).toBe(true);
   });
 
   test('Escape closes an open confirmation before the sheet', async ({ page }) => {

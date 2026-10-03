@@ -66,14 +66,15 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
   };
 
   /**
-   * Inside the visible part of the sheet (or the page): only then does reading time count.
+   * All its words inside the visible part of the sheet (or the page): only then does reading
+   * time count. The words, not the box: a sliver of blank margin isn't reading.
    * The aperture is the viewport, cut by every clipping ancestor (the body, or a tight
    * sheet that scrolls as one), then by the sheet's header, which stays put over a tight
    * sheet's content (Codex review, PR #54). The Kids tab has no footer.
    */
   const onScreen = () => {
     if (status.hidden) return false;
-    const r = status.getBoundingClientRect();
+    const r = (status.querySelector('.card-text') ?? status).getBoundingClientRect();
     let top = 0;
     let bottom = window.innerHeight;
     for (let a = status.parentElement; a && a !== document.body; a = a.parentElement) {
@@ -85,7 +86,8 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     // Above the content in the flow, the header cuts nothing; pinned over it, it hides it.
     const header = status.closest('.sheet')?.querySelector(':scope > .sheet-header')?.getBoundingClientRect();
     if (header?.height) top = Math.max(top, header.bottom);
-    return r.bottom > top && r.top < bottom;
+    // A pixel of slack for rounding; words taller than the view count while they fill it.
+    return (r.top >= top - 1 && r.bottom <= bottom + 1) || (r.top <= top && r.bottom >= bottom);
   };
 
   /** Focus back on the section heading, without scrolling the message out of view. */
@@ -209,7 +211,8 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
       r.row.setAttribute('aria-disabled', String(readOnly()));
       r.row.classList.toggle('is-disabled', readOnly());
     }
-    if (!status.hidden) status.scrollIntoView({ block: 'nearest' });
+    // No scroll here: a routine change on the map never pulls the player back to a message
+    // already read (Codex review, PR #54). One not yet read is kept in view above.
   };
 
   return {
