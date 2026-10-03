@@ -1,4 +1,8 @@
 [
+  "art/exports/android/android_launcher_background.png",
+  "art/exports/android/android_launcher_foreground.png",
+  "art/exports/android/android_launcher_foreground_monochrome.png",
+  "art/exports/android/android_splash_logo.png",
   "assets/data/kid_rig_v2.json",
   "assets/data/map_garden_v2.json",
   "assets/data/trim.json",

@@ -52,6 +52,6 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | PLANTING | Claude | D-054: the sim, save, engine and UI for planting, plots and sprouts (offline too), replacing Send home | todo (after GATE4-DESIGN) | Unit, save-migration and e2e tests; the balance simulator includes planting |
 | VARIANTS | Claude | D-055: Rainbow and Mini variants: odds, income, Dex marks, rendering from Codex's design | todo (after GATE4-DESIGN) | Tests for odds, income and saves; the Dex shows found variants |
 | FEED-NAME | Claude | D-056, D-057: buying and feeding food, happiness, naming, the kid card | todo (after GATE4-DESIGN and PERSONALITY) | Tests for prices, refusals, boosts and names in saves; e2e for the kid card |
-| WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | doing | Claude's review passes; the owner sees it on device at the next gate-4 build |
+| WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | **review** (round 1 delivered; Claude's review on the PR) | Claude's review passes; the owner sees it on device at the next gate-4 build |
 | GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: icon approved; D-050..D-059 to do first) | Explicit approval before polish |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |

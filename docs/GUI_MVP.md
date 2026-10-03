@@ -202,10 +202,14 @@ After authoritative `sentHome`, free population/space/income immediately as the 
 
 | Foreground time from event | Existing drawing / opacity |
 | --- | --- |
-| 0–125ms | wave frame0: stand, opacity1 |
-| 125–250ms | wave frame1: wave_low, opacity1 |
-| 250–375ms | wave frame2: wave_high, opacity1 |
-| 375–500ms | wave frame3: stand, opacity1 |
+| 0–62.5ms | wave frame0: stand, opacity1 |
+| 62.5–125ms | wave frame1: wave_high, opacity1 |
+| 125–187.5ms | wave frame2: wave_low, opacity1 |
+| 187.5–250ms | wave frame3: wave_high, opacity1 |
+| 250–312.5ms | wave frame4: wave_low, opacity1 |
+| 312.5–375ms | wave frame5: wave_high, opacity1 |
+| 375–437.5ms | wave frame6: wave_low, opacity1 |
+| 437.5–500ms | wave frame7: stand, opacity1 |
 | 500–650ms | hold stand; all kid layers fade linearly 1→0 together |
 | ≥650ms | dispose view and texture reference; no lingering shadow |
 
