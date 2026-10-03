@@ -4,6 +4,10 @@ Author: ChatGPT. **Current delivery: ASSET-MVP batch 3, 2026-10-02: 12 tier-5 co
 
 Authority: PROJECT_BRIEF.md, design-doc.md, `.codex-out/owner-gate2-feedback.md`, D-036..D-043 and the owner's 2026-10-02 D-044..D-046 task handoff. New owner direction supersedes the single body/face, procedural-only animation, fixed map plate and ten-type production limits. D-045 restricts faces to two dot eyes and a small smirk, replaced by two ticks/arcs for blink/asleep: no additional facial or body anatomy marks. Approved outline nubs/feet remain. D-046 targets about 500 types long term, roughly 50-80 in the MVP; the accepted MVP plan has 64 types, with art coverage now at all 64 after batch 3. ChatGPT authors all visual work. Claude validates, integrates and implements layout/simulation. Audio/platform scope remains as agreed.
 
+## Send home interaction/art addendum (2026-10-03; Claude review pending)
+
+Under owner-approved D-048, GUI_MVP §13 adds a static authored target inside the Garden's silhouette, a 400ms dwell/release guard and a specific-instance non-drag path in Dex detail. Departure reuses the unchanged four-entry wave at8fps for500ms, then stand fades150ms; reduced motion uses stand/fade150ms only. The presentation view never reserves sim space and is disposed immediately if a live silhouette enters its vacated position. No walk through scenery, new effect, sound, rig clip or raster art is needed. Target/tether geometry is specified by ChatGPT under D-033/D-036 and recorded in `ui_v2.json.mvp.sendHome`; Claude implements it. Additional decoded/Pixi bytes **0**; existing198-PNG storage inventory remains11,480,824 bytes. Exact states, geometry, copy, first-use explanation and acceptance checks: `docs/GUI_MVP.md` §13. Review evidence/limits: `.codex-out/send-home-notes.md`. This is MVP interaction work, not the post-gate-4 animation polish deferred by D-047.
+
 
 
 
