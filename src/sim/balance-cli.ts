@@ -32,6 +32,12 @@ export const scenarios: Scenario[] = [
   { name: 'daily 30 min, 14 days', sessions: Array.from({ length: 14 }, () => ({ play: 1800, away: DAY - 1800 })), actionSeconds: 4 },
 ];
 
+/** The days whose income the report shows: only days the scenario reaches (Codex review, PR #68). */
+export function incomeDays(sc: Scenario): number[] {
+  const span = sc.sessions.reduce((t, s) => t + s.play + s.away, 0);
+  return [1, 3, 7, 14].filter((d) => d * DAY <= span);
+}
+
 /** One scenario on one seed (a child process of scripts/balance.mjs). */
 export function runOne(scenario: number, seed: number): Report {
   return simulate(content, options, scenarios[scenario]!, seed);
@@ -66,7 +72,7 @@ export function summarize(reports: Report[][], seeds: number): string {
       const at = (lv: number, k: 'play' | 'clock') => m((r) => r.levelAt[b][lv]?.[k] ?? null);
       lines.push(`${b} level reached (play / wall clock): ${[2, 3, 5, 10].map((lv) => `L${lv} ${at(lv, 'play')} / ${at(lv, 'clock')}`).join(', ')}`);
     }
-    const days = [1, 3, 7, 14].filter((d) => d * DAY <= rs[0]!.income.at(-1)!.clock + DAY);
+    const days = incomeDays(sc);
     const incomeAt = (t: number) => median(rs.map((r) => [...r.income].reverse().find((x) => x.clock <= t)?.perSecond ?? null));
     const rate = (v: number | null) => (v === null ? '?' : v < 10 ? v.toFixed(2) : String(Math.round(v)));
     lines.push(`income, Materials/s: end of first session ${rate(median(rs.map((r) => r.income[0]?.perSecond ?? null)))}${days.map((d) => `, day ${d} ${rate(incomeAt(d * DAY))}`).join('')}`);

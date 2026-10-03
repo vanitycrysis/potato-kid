@@ -24,6 +24,23 @@ describe('balance simulator', () => {
   });
 });
 
+describe('the report (Codex review, PR #68)', () => {
+  it('a tutorial that ends while away is dated by its last spawn, not the return', () => {
+    const c = structuredClone(content);
+    c.balance.spawn.startingKids = 0;
+    // 1 s of play, then an hour away: spawns at 60, 120, ... 600 s.
+    const r = simulate(c, options, { name: 'away', sessions: [{ play: 1, away: 3600 }], actionSeconds: 3 }, 1);
+    expect(r.tutorialDone).toBeCloseTo(c.balance.spawn.tutorialSpawns * c.balance.spawn.tutorialIntervalSeconds, 6);
+  });
+
+  it('shows income only for days the scenario reaches', async () => {
+    const { incomeDays } = await import('./balance-cli');
+    const day = 86_400;
+    expect(incomeDays({ name: 'hour', sessions: [{ play: 3600, away: 0 }], actionSeconds: 3 })).toEqual([]);
+    expect(incomeDays({ name: 'week', sessions: [{ play: 600, away: 7 * day - 600 }], actionSeconds: 3 })).toEqual([1, 3, 7]);
+  });
+});
+
 describe('the bot drags like a player (Codex review, PR #45)', () => {
   /**
    * Water and Potato, each ringed by kids that make no recipe with either, so neither can

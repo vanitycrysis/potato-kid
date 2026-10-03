@@ -122,8 +122,16 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     }
     income.push({ clock, perSecond: game.income });
     if (session.away > 0) {
+      const left = clock;
+      const before = { spawns: game.state.gardenSpawns, progress: game.state.spawnProgress, interval: game.interval };
       clock += session.away;
       game.reconcile(clock * 1000);
+      // A tutorial that ends while away ends at its last spawn's arrival, not at the
+      // return (Codex review, PR #68). Tutorial spawns are evenly spaced from the first due.
+      const need = content.balance.spawn.tutorialSpawns - before.spawns;
+      if (tutorialDone === null && need > 0 && game.state.gardenSpawns - before.spawns >= need) {
+        tutorialDone = left + Math.max(0, before.interval - before.progress) + (need - 1) * content.balance.spawn.tutorialIntervalSeconds;
+      }
       note();
     }
   }
