@@ -54,6 +54,37 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
     status.scrollIntoView({ block: 'nearest' });
   };
 
+  // Inline messages keep the world card's timing (§13.3; Codex review, PR #54): a success
+  // waits for its farewell, then stays 6 s (the first, explaining) or 2.5 s, in order; a
+  // refusal shows at once, ahead of them.
+  interface Message {
+    lines: () => string[];
+    warn: boolean;
+    first: boolean;
+    notBefore: number;
+    ms: number;
+  }
+  const queue: Message[] = [];
+  let current: { until: number } | null = null;
+  const tick = (now: number) => {
+    if (current && now >= current.until) {
+      current = null;
+      status.hidden = true;
+    }
+    if (current) return;
+    const at = queue.findIndex((m) => m.notBefore <= now);
+    if (at < 0) return;
+    const m = queue.splice(at, 1)[0]!;
+    say(m.lines(), m.warn);
+    if (m.first) notes.markShown();
+    current = { until: now + m.ms };
+  };
+  /** Focus back on the section heading, without scrolling the message out of view. */
+  const focusHeading = () => {
+    heading.focus({ preventScroll: true });
+    if (!status.hidden) status.scrollIntoView({ block: 'nearest' });
+  };
+
   const close = (focusRow: boolean) => {
     if (!panel) return;
     panel.node.remove();
@@ -70,8 +101,10 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
   /** The chosen kid left before it was sent (fused, or gone): say so, choose no other. */
   const stale = () => {
     close(false);
-    say([refusalText('gone')], true);
-    heading.focus();
+    current = null;
+    queue.unshift({ lines: () => [refusalText('gone')], warn: true, first: false, notBefore: 0, ms: notes.visibleMs(false) });
+    tick(performance.now());
+    focusHeading();
   };
 
   const open = (kidId: number) => {
@@ -87,8 +120,11 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
     keep.addEventListener('click', () => close(true));
     const confirm = el('button', 'ui-button ui-primary dex-home-action', nonDrag()?.confirm ?? 'Send this kid home');
     confirm.type = 'button';
+    // One send at a time across every confirmation: until its result arrives, no other
+    // (Codex review, PR #54).
+    if (pending !== null) confirm.setAttribute('aria-disabled', 'true');
     confirm.addEventListener('click', () => {
-      if (confirm.getAttribute('aria-disabled') === 'true' || readOnly()) return;
+      if (pending !== null || confirm.getAttribute('aria-disabled') === 'true' || readOnly()) return;
       // Revalidated right before sending: never any other copy (§13.4).
       if (!live().some((k) => k.id === kidId)) {
         stale();
@@ -130,6 +166,7 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
 
   let shown = '';
   const update = () => {
+    tick(performance.now());
     const ids = live().map((k) => k.id);
     for (const id of ids) if (!ordinals.has(id)) ordinals.set(id, next++);
     // A chosen kid that left while unsent: the confirmation goes, with the reason.
@@ -168,10 +205,15 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
           pending = null;
           close(false);
           const first = notes.claimFirst();
-          const lines = [notes.heading(kidName), ...(first ? notes.firstLines() : [notes.later()])];
-          say(lines);
-          if (first) notes.markShown();
-          heading.focus();
+          queue.push({
+            // The first explanation's copy follows the Compendium as it is when shown.
+            lines: () => [notes.heading(kidName), ...(first ? notes.firstLines() : [notes.later()])],
+            warn: false,
+            first,
+            notBefore: performance.now() + scene.departureMs,
+            ms: notes.visibleMs(first),
+          });
+          focusHeading();
           handled.push(e);
         } else if (e.type === 'rejected' && e.command === 'sendHome') {
           pending = null;
@@ -180,6 +222,7 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
         }
       }
       update();
+      if (!status.hidden) status.scrollIntoView({ block: 'nearest' });
       return handled;
     },
     collapse: () => {
