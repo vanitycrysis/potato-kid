@@ -1560,6 +1560,34 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(dialog(page).getByLabel('Find a discovered kid')).toBeFocused();
   });
 
+  test('an open detail comes back after the offline summary (Codex review, PR #43)', async ({ page }) => {
+    await twoKnown(page);
+    await dexButton(page).click();
+    await dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' }).click();
+    await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Water Kid');
+    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Water Kid');
+    // Back still returns to the grid, at its tile.
+    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    await expect(dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' })).toBeFocused();
+  });
+
+  test('closing a Dex opened from a discovery card returns focus to the card (Codex review, PR #43)', async ({ page }) => {
+    await twoKnown(page);
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 540, 2600);
+      window.__PK__!.debugAdd!('water', 540, 2600);
+    });
+    const card = page.locator('.feedback .toast-button');
+    await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
+    await card.focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(card).toBeFocused();
+  });
+
   test('read-only disables the Dex with its reason', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));

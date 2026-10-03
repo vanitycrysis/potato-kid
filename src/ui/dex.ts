@@ -56,6 +56,8 @@ export class Dex {
   private filter = '';
   private readonly scroll: Record<Tab, number> = { kids: 0, recipes: 0, compendium: 0 };
   private shown: Shown | null = null;
+  /** The kid detail that was open, and its scroll: reopening returns to it (§§7-8). */
+  private detail: { kid: KidId; scroll: number } | null = null;
   /** Inconsistent saves are reported once, never shown (GUI_MVP §7). */
   private warned = new Set<string>();
 
@@ -134,8 +136,10 @@ export class Dex {
   /** Records the current list's scroll, for when its tab (or the Dex) comes back. */
   private remember(): void {
     const s = this.shown;
-    if (!s || (this.tab === 'kids' && s.kids?.showing)) return;
-    this.scroll[this.tab] = this.sheets.snapshot()?.scrollTop ?? 0;
+    if (!s) return;
+    const at = this.sheets.snapshot()?.scrollTop ?? 0;
+    if (this.tab === 'kids' && s.kids?.showing) this.detail = { kid: s.kids.showing, scroll: at };
+    else this.scroll[this.tab] = at;
   }
 
   private render(kid?: KidId): void {
@@ -158,8 +162,15 @@ export class Dex {
       s.kids = this.kidsPanel();
       s.panel.append(s.kids.root);
       s.kids.update();
-      if (kid !== undefined && this.discovered(kid)) this.showDetail(kid);
-      else s.sheet.scrollTo(this.scroll.kids);
+      // The grid's place first, so a detail opened over it returns there.
+      s.sheet.scrollTo(this.scroll.kids);
+      // A discovery card's kid, else the detail that was open (e.g. before the offline
+      // summary interrupted it; Codex review, PR #43).
+      const back = kid !== undefined ? { kid, scroll: 0 } : this.detail;
+      if (back && this.discovered(back.kid)) {
+        this.showDetail(back.kid);
+        s.sheet.scrollTo(back.scroll);
+      }
     } else if (this.tab === 'recipes') {
       s.recipes = this.recipesPanel();
       s.panel.append(s.recipes.root);
@@ -383,6 +394,7 @@ export class Dex {
     if (!p?.showing) return;
     const type = p.showing;
     p.showing = null;
+    this.detail = null;
     p.refreshFound = null;
     p.detailPortraits?.dispose();
     p.detailPortraits = null;

@@ -520,7 +520,8 @@ export class Hud {
         // The whole card opens this kid in the Potato-Dex (GUI_MVP §9).
         const card = el('button', 'toast toast-reward toast-button', portrait(kidRig!, item.childType, 56), el('div', 'card-text', ...lines));
         card.type = 'button';
-        card.addEventListener('click', () => this.dex.open(null, item.childType));
+        // The card is the launcher: closing the Dex returns focus to it (Codex review, PR #43).
+        card.addEventListener('click', () => this.dex.open(card, item.childType));
         return card;
       }
       case 'milestone':
