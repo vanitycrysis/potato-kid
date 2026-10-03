@@ -3,6 +3,7 @@ import { content } from './content';
 import { kidRig, mapData, uiData } from './content/artData';
 import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
+import { handleBack } from './platform/back';
 import { Lifecycle } from './platform/lifecycle';
 import { exportedNames, TextureStore } from './render/art';
 import { MapScene } from './render/scene';
@@ -30,6 +31,8 @@ declare global {
       }[];
       discoveredRecipes: () => string[];
       wallet: () => { materials: number; potatokens: number };
+      /** Building levels and the bias target. */
+      buildings: () => { levels: Record<string, number>; biasTarget: string | null };
       save: () => { mode: SaveMode; failing: boolean; olderSaveLoaded: boolean };
       /** The last offline catch-up, if any. */
       lastOffline: () => OfflineReport | null;
@@ -44,6 +47,8 @@ declare global {
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
+      /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
+      debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
       debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
@@ -53,6 +58,9 @@ declare global {
     };
   }
 }
+
+// Before any asynchronous boot work: Back must work while loading and on a boot error.
+const back = handleBack();
 
 async function boot(): Promise<void> {
   // D-036: the engine never draws art of its own. If ChatGPT/Codex's art doesn't cover
@@ -101,6 +109,7 @@ async function boot(): Promise<void> {
     loaded.state ?? undefined,
   );
   const hud = new Hud(scene, content);
+  back.closeSheet = () => hud.back();
   const saveStatus = () =>
     hud.setSaveStatus({ unsaved: saves.mode === 'unsaved' || saves.failing, recovery: loaded.olderSaveLoaded, readOnly: saves.mode === 'readOnly' });
   saveStatus();
@@ -155,6 +164,7 @@ async function boot(): Promise<void> {
       })),
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     wallet: () => ({ materials: scene.game.state.materials, potatokens: scene.game.state.potatokens }),
+    buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
@@ -171,6 +181,10 @@ async function boot(): Promise<void> {
           debugSaveStatus: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => hud.setSaveStatus(status),
           debugKnown: () => hud.knownKids,
           debugLoadedCostumes: () => scene.loadedCostumes,
+          debugGive: (amounts: { materials?: number; potatokens?: number }) => {
+            scene.game.state.materials += amounts.materials ?? 0;
+            scene.game.state.potatokens += amounts.potatokens ?? 0;
+          },
           debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => scene.command(cmd),
         }
       : {}),

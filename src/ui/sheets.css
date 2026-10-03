@@ -1,0 +1,280 @@
+/*
+ * Modal sheets: Codex's GUI-MVP contract (docs/GUI_MVP.md §§1-2, 4-5). Every measurement is
+ * Codex's; colours and surfaces are its tokens and SVGs (set as --ui-* by hud.ts).
+ */
+/* `hidden` must win over any display rule below. */
+.sheet [hidden] {
+  display: none !important;
+}
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--ui-ink) 24%, transparent);
+}
+.sheet {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+/* Header: 80 px (64 compact) from the outer top, border included. */
+.sheet-header {
+  position: relative;
+  flex: none;
+  min-height: 64px; /* 80 − 8 border − 8 top padding of the body measured from border */
+  padding: 0 52px 0 0;
+}
+.sheet-icon {
+  position: absolute;
+  left: 8px;
+  top: 16px;
+}
+.sheet-title {
+  margin: 0;
+  padding: 12px 0 0 44px;
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 400;
+}
+.sheet-title:focus {
+  outline: none;
+}
+.sheet-subtitle {
+  margin: 2px 0 0 8px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.sheet-close {
+  position: absolute;
+  right: 0;
+  top: 8px;
+}
+.sheet[data-compact='true'] .sheet-header {
+  min-height: 48px;
+}
+.sheet[data-compact='true'] .sheet-icon {
+  top: 0;
+  width: 24px;
+  height: 24px;
+}
+.sheet[data-compact='true'] .sheet-title {
+  padding: 0 0 0 40px;
+}
+.sheet[data-compact='true'] .sheet-close {
+  top: 0;
+}
+
+/* Body: the only scrolling part; 8 px gaps, 16 px bottom padding, 6 px scrollbar. */
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-sceneryInk) var(--ui-sage);
+}
+.sheet-body::-webkit-scrollbar {
+  width: 6px;
+}
+.sheet-body::-webkit-scrollbar-track {
+  background: var(--ui-sage);
+}
+.sheet-body::-webkit-scrollbar-thumb {
+  background: var(--ui-sceneryInk);
+  border-radius: 3px;
+}
+/* Body rows keep their natural height; only the body itself scrolls. */
+.sheet-body > * {
+  flex: none;
+}
+.sheet-intro {
+  margin: 0 0 8px;
+}
+.sheet-body-text,
+.sheet-helper {
+  margin: 0;
+  min-height: 22px;
+}
+.sheet-section {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+
+/* Comparison card: 112 px (Bias 96), rows at local 16 / 64 (Bias 16 / 56). */
+.compare {
+  box-sizing: border-box;
+  min-height: 112px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.compare-short {
+  min-height: 96px;
+}
+.compare-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.compare-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.compare-value {
+  font-size: 22px;
+  line-height: 28px;
+  text-align: right;
+}
+.sheet-cost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+/* Inline status (success 2 s, or the latest refusal): 44 px minimum. */
+.sheet-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.sheet-status[hidden] {
+  display: none;
+}
+
+/* Footer: 80 px with border; one 48 px action, two lines. */
+.sheet-footer {
+  flex: none;
+  padding: 8px 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sheet-footer:empty {
+  display: none;
+}
+.ui-button.sheet-action {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.action-label {
+  font-size: 18px;
+  line-height: 20px;
+}
+.action-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 18px;
+}
+.action-price[hidden],
+.footer-helper[hidden] {
+  display: none;
+}
+
+/* Bias seed picker: 104 px cards, three columns (two below 300 px). */
+.seed-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@container (max-width: 299px) {
+  .seed-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.sheet-body {
+  container-type: inline-size;
+}
+.ui-button.seed-card {
+  position: relative;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 8px;
+}
+.seed-name {
+  font-size: 16px;
+  line-height: 22px;
+  min-height: 44px;
+  text-align: center;
+}
+.seed-check {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+}
+.ui-button.seed-card.is-selected,
+.ui-button.seed-none.is-selected,
+.tray-cell.is-selected {
+  border-image-source: var(--ui-button-selected);
+}
+.seed-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ui-button.seed-none {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+}
+.ui-icon-48 {
+  width: 48px;
+  height: 48px;
+}
+
+/* Page mode with a sheet open (GUI_MVP §3.1): the sheet replaces the hint, HUD and
+   navigation below the banner, at its natural height, in the scrolling page. */
+:root[data-hud-fit='page'][data-sheet-open] .sheet-scrim,
+:root[data-hud-fit='page'][data-sheet-open] .top-stack,
+:root[data-hud-fit='page'][data-sheet-open] .tray,
+:root[data-hud-fit='page'][data-sheet-open] .dex-button {
+  display: none;
+}
+:root[data-hud-fit='page'] .sheet {
+  /* Over the fixed-sheet geometry place() writes inline (Codex review, PR #39). */
+  position: static;
+  order: 1;
+  margin: 8px var(--ui-mr) 8px var(--ui-ml);
+  width: auto !important;
+  height: auto !important;
+}
+:root[data-hud-fit='page'] .sheet-body {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet-scrim {
+    transition: none !important;
+  }
+}
