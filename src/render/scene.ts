@@ -47,6 +47,8 @@ export interface HomeView {
 /** A kid going home: its view plays the farewell, apart from the sim (GUI_MVP §13.2). */
 interface Departure {
   view: KidRigView;
+  /** Its costume stays loaded until the view is gone (§13.2). */
+  type: KidId;
   x: number;
   y: number;
   box: Kid['box'];
@@ -317,6 +319,9 @@ export class MapScene {
    */
   private releaseUnused(now: number): void {
     const present = new Set(this.game.state.world.kids.map((k) => k.type));
+    // A farewell still draws its costume: keep it loaded until the view is disposed (Codex
+    // review, PR #50).
+    for (const d of this.departures) present.add(d.type);
     for (const type of this.art.textures.loadedTypes) {
       if (present.has(type) || this.resident.has(type)) {
         this.absentSince.delete(type);
@@ -563,6 +568,9 @@ export class MapScene {
       return;
     }
     const w = this.toWorld(e);
+    // A view change since the last frame (camera, viewport, insets) also restarts the dwell,
+    // checked here too: no frame may have run in between (Codex review, PR #50).
+    if (this.viewKey() !== this.lastView) this.home?.restartDwell();
     // Released over the armed target, rechecked now: the kid goes home instead of landing
     // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
     if (this.home?.releases(this.clock, this.homeEligible(), w)) {
@@ -683,10 +691,15 @@ export class MapScene {
     return onScreen && r.right - r.left >= min && r.bottom - r.top >= min && this.homeFits(r, this.heldScreenRect());
   }
 
+  /** Everything about the view that moves the target on screen. */
+  private viewKey(): string {
+    const { width, height } = this.app.screen;
+    return `${this.cam.x},${this.cam.y},${this.cam.zoom},${width},${height},${this.insets.top},${this.insets.bottom}`;
+  }
+
   private updateHome(): void {
     if (!this.home) return;
-    const { width, height } = this.app.screen;
-    const view = `${this.cam.x},${this.cam.y},${this.cam.zoom},${width},${height},${this.insets.top},${this.insets.bottom}`;
+    const view = this.viewKey();
     const moved = view !== this.lastView;
     this.lastView = view;
     const point = this.drag ? this.camera.toLocal(this.dragScreen) : null;
@@ -744,7 +757,7 @@ export class MapScene {
     this.drawn.delete(kid.id);
     this.pendingViews.delete(kid.id);
     view.root.eventMode = 'none';
-    this.departures.push({ view, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
+    this.departures.push({ view, type: kid.type, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
   }
 
   /**
