@@ -1701,3 +1701,97 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
   });
 });
+
+test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)', () => {
+  const dialog = (page: Page) => page.getByRole('dialog', { name: 'Potato-Dex' });
+
+  /** Two Fire Kids on the map, the Dex open on Fire's detail. */
+  async function fireDetail(page: Page): Promise<number[]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 300, 1500), window.__PK__!.debugAdd!('fire', 800, 1500)]);
+    await page.locator('.dex-button').click();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    return ids;
+  }
+
+  test('choose a particular kid, keep it, then send it home from the Dex', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 2');
+    const kid1 = dialog(page).getByRole('button', { name: 'Choose Fire Kid, kid 1 on your map, to send home' });
+    await kid1.click();
+    await expect(dialog(page).getByText('Send kid 1 home?')).toBeFocused();
+    // Choosing never sends: still two on the map.
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(2);
+    await dialog(page).getByRole('button', { name: 'Keep on map' }).click();
+    await expect(kid1).toBeFocused();
+    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
+
+    await kid1.click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    // Kid 1 is the lower id: exactly that one left.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 1');
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+    // The one left keeps its number.
+    await expect(dialog(page).getByRole('button', { name: /kid 2 on your map/ })).toBeVisible();
+    const status = dialog(page).locator('.dex-home-status');
+    await expect(status).toContainText('Fire Kid went home.');
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await expect(status).toContainText('Build Compendium to bring one back for a fee.');
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    // The Dex answered it: no world card afterwards. Sampled, not retried.
+    await page.keyboard.press('Escape');
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(200);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+  });
+
+  test('Escape closes an open confirmation before the sheet', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
+    await expect(dialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toBeHidden();
+  });
+
+  test('a chosen kid that leaves before it is sent is never swapped for another', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    // Kid 1 fuses away (Fire + Water make Steam) while its confirmation is open.
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('This kid has already left the map.');
+    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
+    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toContain(ids[1]);
+  });
+
+  test('a drag send gets a world card: the first explains, later ones are short', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const send = async (x: number) => {
+      const id = await page.evaluate((px) => window.__PK__!.debugAdd!('fire', px, 1000), x);
+      await page.waitForTimeout(200);
+      const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+      const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+      await page.mouse.move(k.x, k.y - 20);
+      await page.mouse.down();
+      await page.mouse.move(t.x, t.y, { steps: 8 });
+      await page.waitForTimeout(450);
+      await page.mouse.up();
+    };
+    await send(760);
+    const card = page.locator('.feedback .toast-home');
+    await expect(card).toContainText('Fire Kid went home.');
+    await expect(card).toContainText('Still in your Potato-Dex.');
+    await expect(card).toContainText('Build Compendium to bring one back for a fee.');
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    await card.getByRole('button', { name: 'Dismiss' }).click();
+    await expect(card).toHaveCount(0);
+    await send(1400);
+    await expect(card).toContainText('Kept in your Potato-Dex. No refund.');
+    await expect(card.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
+  });
+});
