@@ -1,11 +1,9 @@
 import { kidRig, uiData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
-import type { GameEvent } from '../sim/game';
 import { el, icon } from './dom';
-import { refusalText } from './feedback';
 import { portrait } from './portrait';
-import type { SendHomeNotes } from './sendHome';
+import type { HomeFeed, Message } from './homeFeed';
 
 // Send home from a kid's Dex detail (D-048, docs/GUI_MVP.md §13.4, Codex's design): the
 // path for anyone who can't drag. Each live copy of the type is a row; choosing one opens
@@ -16,139 +14,6 @@ import type { SendHomeNotes } from './sendHome';
 // (Codex review, PR #54). A detail's section only draws the feed for its kid type.
 
 const nonDrag = () => (uiData?.mvp as { sendHome?: { nonDrag: { confirm: string; cancel: string } } } | undefined)?.sendHome?.nonDrag;
-
-interface Message {
-  type: KidId;
-  lines: () => string[];
-  warn: boolean;
-  first: boolean;
-  /** Not shown before this time (a success waits for its farewell). */
-  notBefore: number;
-  /** Visible time still owed, ms. */
-  ms: number;
-  /** It has been on screen and readable (only then is a first explanation recorded). */
-  read?: boolean;
-}
-
-/** The outcome of a send, for the section that made it. */
-export interface SendResult {
-  kidId: number;
-  ok: boolean;
-}
-
-export class HomeFeed {
-  /** One send at a time, wherever it was confirmed, until its result arrives. */
-  pending: { kidId: number; type: KidId } | null = null;
-  /** The Dex is open. A result arriving after it closed is consumed, with no message. */
-  active = false;
-  private readonly queue: Message[] = [];
-  private current: Message | null = null;
-  private last = performance.now();
-  private listener: ((r: SendResult) => void) | null = null;
-
-  constructor(
-    private readonly scene: MapScene,
-    private readonly content: Content,
-    private readonly notes: SendHomeNotes,
-  ) {}
-
-  private name(type: KidId): string {
-    return this.content.kids.find((k) => k.id === type)?.name ?? type;
-  }
-
-  /** The open section's hook for results (one at a time). */
-  listen(fn: ((r: SendResult) => void) | null): void {
-    this.listener = fn;
-  }
-
-  send(kidId: number, type: KidId): void {
-    if (this.pending) return;
-    this.pending = { kidId, type };
-    this.scene.command({ type: 'sendHome', kidId });
-  }
-
-  /** A step's events: the Dex answers its own sends, open detail or not (no world card). */
-  onStep(events: GameEvent[]): GameEvent[] {
-    const p = this.pending;
-    if (!p) return [];
-    const handled: GameEvent[] = [];
-    for (const e of events) {
-      if (e.type === 'sentHome' && e.kid.id === p.kidId) {
-        this.pending = null;
-        handled.push(e);
-        // Closed meanwhile: answered (no world card) but nothing to show, and no
-        // explanation reserved for a view that's gone (Codex review, PR #54).
-        if (!this.active) continue;
-        const first = this.notes.claimFirst();
-        const name = this.name(p.type);
-        this.queue.push({
-          type: p.type,
-          // The first explanation's copy follows the Compendium as it is when shown.
-          lines: () => [this.notes.heading(name), ...(first ? this.notes.firstLines() : [this.notes.later()])],
-          warn: false,
-          first,
-          notBefore: performance.now() + this.scene.departureMs,
-          ms: this.notes.visibleMs(first),
-        });
-        this.listener?.({ kidId: p.kidId, ok: true });
-      } else if (e.type === 'rejected' && e.command === 'sendHome') {
-        this.pending = null;
-        handled.push(e);
-        if (!this.active) continue;
-        this.warn(p.type);
-        this.listener?.({ kidId: p.kidId, ok: false });
-      }
-    }
-    return handled;
-  }
-
-  /** A refusal shows first; what it interrupted resumes after it, time intact. */
-  warn(type: KidId): void {
-    if (this.current) this.queue.unshift(this.current);
-    this.current = null;
-    this.queue.unshift({ type, lines: () => [refusalText('gone')], warn: true, first: false, notBefore: 0, ms: this.notes.visibleMs(false) });
-  }
-
-  /**
-   * One frame for the section showing `type`: the message to draw, or null. Time counts
-   * only while it can be read: frames stop when the app hides (a long gap counts at most
-   * 250 ms), and `readable` is false while it is scrolled out of view, hovered or focused.
-   */
-  tick(type: KidId, now: number, readable: boolean): Message | null {
-    const dt = Math.min(250, Math.max(0, now - this.last));
-    this.last = now;
-    // Another kid's message waits for its own detail.
-    if (this.current && this.current.type !== type) {
-      this.queue.unshift(this.current);
-      this.current = null;
-    }
-    if (this.current) {
-      if (readable) {
-        // A first explanation is recorded when it can first be read, not when queued or
-        // drawn off screen (Codex review, PR #54).
-        if (this.current.first && !this.current.read) this.notes.markShown();
-        this.current.read = true;
-        this.current.ms -= dt;
-      }
-      if (this.current.ms > 0) return this.current;
-      this.current = null;
-    }
-    const at = this.queue.findIndex((m) => m.type === type && m.notBefore <= now);
-    if (at < 0) return null;
-    this.current = this.queue.splice(at, 1)[0]!;
-    return this.current;
-  }
-
-  /**
-   * The Dex closed: messages go, and an explanation never shown is freed for a later
-   * success. An outstanding send stays owned, so its result still makes no world card.
-   */
-  clear(): void {
-    if ([...this.queue, ...(this.current ? [this.current] : [])].some((m) => m.first && !m.read)) this.notes.release();
-    this.queue.length = 0;
-    this.current = null;
-  }
-}
 
 export interface HomeSection {
   root: HTMLElement;
@@ -168,6 +33,8 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
   const status = el('div', 'dex-home-status');
   status.setAttribute('role', 'status');
   status.hidden = true;
+  // Focusable, so a keyboard user can hold a message to read it (focus pauses it).
+  status.tabIndex = 0;
   const root = el('section', 'dex-home', heading, helper, rows, status);
   let hover = false;
   status.addEventListener('pointerenter', () => (hover = true));
@@ -297,7 +164,7 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
 
   let shown = '';
   const update = () => {
-    const m = feed.tick(type, performance.now(), onScreen() && !hover && !status.contains(document.activeElement));
+    const m = feed.tick(type, performance.now(), onScreen(), hover || status.contains(document.activeElement));
     draw(m);
     // Not read yet (e.g. drawn before the detail settled): keep bringing it into view.
     if (m && !m.read && !onScreen()) status.scrollIntoView({ block: 'nearest' });

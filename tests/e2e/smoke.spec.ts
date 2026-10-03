@@ -1974,6 +1974,22 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
   });
 
+  test('keyboard focus holds a message; a hovered explanation still counts as seen (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    const status = dialog(page).locator('.dex-home-status');
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    // Under a resting pointer it is paused, but it was seen: recorded at once.
+    await status.hover();
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(true);
+    // A keyboard user can focus it to hold it past its 6 s.
+    await page.mouse.move(5, 5);
+    await status.focus();
+    await page.waitForTimeout(7000);
+    expect(await status.isVisible()).toBe(true);
+  });
+
   test('Escape closes an open confirmation before the sheet', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
