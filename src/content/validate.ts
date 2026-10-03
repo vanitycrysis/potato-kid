@@ -154,6 +154,7 @@ function validateEconomy(balance: unknown, kidCount: number): string[] {
   num('respawnPotatokensPerTier', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
   num('discoveryPotatokens', whole, 'an integer >= 0');
   num('offlineCapHours', (v) => v > 0, 'a finite number > 0');
+  num('offlineSummaryMinSeconds', (v) => v >= 0, 'a finite number >= 0');
   const ms = e.dexMilestones;
   if (!Array.isArray(ms)) {
     errors.push('balance.economy.dexMilestones must be a list');
