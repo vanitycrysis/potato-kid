@@ -1803,6 +1803,42 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     expect(await page.evaluate((i) => window.__PK__!.kids().some((c) => c.id === i), id)).toBe(true);
   });
 
+  test('world cards keep their order when a later farewell ends first (Codex review, PR #54)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 760, 1000), window.__PK__!.debugAdd!('fire', 1300, 1000)]);
+    await page.waitForTimeout(200);
+    // Both sent in one step; the second's farewell is cut short by a kid on its spot.
+    await page.evaluate(([a, b]) => {
+      window.__PK__!.debugCommand!({ type: 'sendHome', kidId: a! });
+      window.__PK__!.debugCommand!({ type: 'sendHome', kidId: b! });
+    }, ids);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.home().departing)).toBe(2);
+    // Per frame, until a card shows: how many farewells play, and the card's words.
+    const log = await page.evaluate(
+      () =>
+        new Promise<[number, string][]>((done) => {
+          const at = window.__PK__!.home().departingAt[1]!;
+          window.__PK__!.debugAdd!('fire', at.x, at.y); // its costume is loaded: drawn at once
+          const log: [number, string][] = [];
+          const end = performance.now() + 3000;
+          const frame = () => {
+            const card = document.querySelector('.toast-home');
+            log.push([window.__PK__!.home().departing, card?.textContent ?? '']);
+            if (card || performance.now() > end) done(log);
+            else requestAnimationFrame(frame);
+          };
+          requestAnimationFrame(frame);
+        }),
+    );
+    // Staged: the second farewell ended while the first still played.
+    expect(log.some(([d]) => d === 1)).toBe(true);
+    // The first card shown is the first send's, the explanation, after its own farewell.
+    const [departing, words] = log[log.length - 1]!;
+    expect(departing).toBe(0);
+    expect(words).toContain('Still in your Potato-Dex.');
+  });
+
   test('a farewell ends at once rather than overlap a kid that arrives on its spot', async ({ page }) => {
     const { id } = await setup(page);
     await holdOverHome(page, id, 450);

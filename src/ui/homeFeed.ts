@@ -131,8 +131,13 @@ export class HomeFeed {
       if (this.current.ms > 0) return this.current;
       this.current = null;
     }
-    const at = this.queue.findIndex((m) => m.type === type && (m.waitFor === undefined || !this.scene.isDeparting(m.waitFor)));
+    // In order (FIFO): the earliest message for this kid type, once its farewell has ended;
+    // a later success never passes an earlier one still waving (Codex review, PR #54).
+    // Refusals go in at the front, so they show at once.
+    const at = this.queue.findIndex((m) => m.type === type);
     if (at < 0) return null;
+    const next = this.queue[at]!;
+    if (next.waitFor !== undefined && this.scene.isDeparting(next.waitFor)) return null;
     this.current = this.queue.splice(at, 1)[0]!;
     return this.current;
   }

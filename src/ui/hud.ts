@@ -476,12 +476,16 @@ export class Hud {
     }
     // A card still waiting for its kid never holds up the ones behind it; one whose kid
     // was consumed before it appeared is shown anyway (the discovery did happen).
+    // A farewell's card waits until the farewell has played, and behind any earlier one
+    // still waiting: successes keep their order (GUI_MVP §13.3; Codex review, PR #54).
+    let homeWaiting = false;
     for (const c of this.queue) {
-      if (c.notBefore !== Infinity || !('kidId' in c.item) || c.item.kidId === undefined) continue;
-      // A farewell's card waits until the farewell has played (Codex review, PR #54).
       if (c.item.kind === 'sentHome') {
-        if (!this.scene.isDeparting(c.item.kidId)) c.notBefore = now;
-      } else if (this.scene.viewState(c.item.kidId) === 'gone') c.notBefore = now;
+        if (c.notBefore === Infinity && !homeWaiting && !this.scene.isDeparting(c.item.kidId)) c.notBefore = now;
+        if (c.notBefore === Infinity) homeWaiting = true;
+        continue;
+      }
+      if (c.notBefore === Infinity && 'kidId' in c.item && c.item.kidId !== undefined && this.scene.viewState(c.item.kidId) === 'gone') c.notBefore = now;
     }
     const at = this.queue.findIndex((c) => c.notBefore <= now);
     const next = this.queue[at];
