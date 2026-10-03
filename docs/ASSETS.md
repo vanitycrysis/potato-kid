@@ -5,7 +5,7 @@
 | Asset / contract | Delivery | Status |
 | --- | --- | --- |
 | `personality_v1.json` | 64 type records in Claude's schema; description, favourite food, Likes prose, hated food, Hates prose, Hobbies | written and exported; Claude review pending |
-| Food assignments | Pinned twelve IDs; 64 unique ordered pairs; each food used five or six times in each column | standalone validation passes |
+| Food assignments | Pinned twelve IDs; 64 unique ordered pairs; each food used 4–7 times as favourite and 5–6 as hated; Round 2 changes only Snow's favourite to Toast | standalone validation and D-033 result/partner food check pass; Claude review pending |
 | Review handoff | `.codex-out/personality-review.md`, `personality-notes.md`, `personality-check.json` and reproducible checker | ready for Claude's editorial/data review |
 
 Source `art/data/personality_v1.json` exports to `assets/data/personality_v1.json`. Shared Dex/kid-card text follows GUI_MVP §18.1; no additional art, textures or `src/` edits. Revision `personality-1`; ChatGPT authors, Claude reviews and integrates. Export and 189 tests pass.

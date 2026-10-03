@@ -1,8 +1,10 @@
 # Decisions
 
-## PERSONALITY writing (ChatGPT, 2026-10-03; Claude review pending)
+## PERSONALITY writing (ChatGPT, 2026-10-03; Round 2; Claude review pending)
 
-Deliver `art/data/personality_v1.json`, revision `personality-1`, in Claude's schema for all 64 existing types under D-056/D-058 and GUI_MVP §§17.1/18.1. Costume details, everyday habits and small preferences establish character without recipe hints, facial acting, harmful themes or changes to content IDs (D-033/D-045/D-046). All 64 ordered favourite/hated food pairs are distinct; every pinned food is a favourite and a hate five or six times. Descriptions are 117–137 graphemes; all four prose caps pass. Likes/Hates follow the food name without repeating it. Reproducible checks, editorial notes and the tier-ordered review sheet are in `.codex-out/personality-*`. Export and all 189 tests pass; `src/` and existing runtime art are unchanged. This is a writing handoff, **Claude review pending**, not owner gate acceptance.
+Deliver `art/data/personality_v1.json`, revision `personality-1`, in Claude's schema for all 64 existing types under D-056/D-058 and GUI_MVP §§17.1/18.1. Costume details, everyday habits and small preferences establish character without recipe hints, facial acting, harmful themes or changes to content IDs (D-033/D-045/D-046). All 64 ordered favourite/hated food pairs are distinct; every pinned food is a favourite four to seven times and a hate five or six times. Descriptions are 117–137 graphemes; all four prose caps pass. Likes/Hates follow the food name without repeating it. Reproducible checks, editorial notes and the tier-ordered review sheet are in `.codex-out/personality-*`. Export and all 189 tests pass; `src/` and existing runtime art are unchanged. This is a writing handoff, **Claude review pending**, not owner gate acceptance.
+
+Round 2 accepts PR #69 B1: change only Snow Kid's favourite from Cocoa to Toast, a warm snack unrelated to its recipes. No other assignment or prose changes; Toast/Soup is unused, Toast favourites become seven and Cocoa four. The standalone checker now rejects favourite or hated foods naming any result or partner in a recipe where that kid is a parent, with its own namesake food allowed. All 128 food roles against 58 recipes pass, as do regression probes for the reviewed leak, hated role, both parent positions and own namesakes. Export and all 189 tests pass again. **Claude review pending**.
 
 ## GATE4-DESIGN round 2 (ChatGPT, 2026-10-03; Claude review pending)
 
