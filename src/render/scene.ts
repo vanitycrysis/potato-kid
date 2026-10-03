@@ -670,6 +670,12 @@ export class MapScene {
       case 'spawned':
         this.addView(e.kid).play('spawn');
         break;
+      case 'sentHome': {
+        // Gone from the map (D-048); the departure's look is Codex's to design.
+        if (this.drag?.kidId === e.kid.id) this.drag = undefined;
+        this.removeView(e.kid.id);
+        break;
+      }
       case 'fused': {
         // Parents are consumed at once, never fading or converging (rig: fusion onStart);
         // the child is born where the sim resolved it, with the fusion effect behind it.

@@ -36,7 +36,12 @@ export type Command =
   /** Spawn a Garden kid now for Potatokens (D-019). */
   | { type: 'instantSpawn' }
   /** Compendium: spawn an already-discovered type, paid in Materials or Potatokens. */
-  | { type: 'respawn'; kidType: KidId; pay: 'materials' | 'potatokens' };
+  | { type: 'respawn'; kidType: KidId; pay: 'materials' | 'potatokens' }
+  /**
+   * A kid dropped on the Garden goes home (D-048): it leaves the map for good, stays in the
+   * Dex, and can come back through the Compendium. No refund: Garden kids are free.
+   */
+  | { type: 'sendHome'; kidId: number };
 
 /** Why a purchase or setting was refused; the UI explains it, and nothing changes. */
 export type RejectReason = 'cost' | 'maxLevel' | 'full' | 'noRoom' | 'locked' | 'undiscovered' | 'notSpawnable';
@@ -63,6 +68,7 @@ export type GameEvent =
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
   | { type: 'pickedUp'; kidId: number }
   | { type: 'dropped'; kidId: number }
+  | { type: 'sentHome'; kid: Kid }
   | { type: 'upgraded'; building: BuildingId; level: number }
   | { type: 'biasSet'; kidType: KidId | null }
   | { type: 'rejected'; command: Command['type']; reason: RejectReason }
@@ -395,6 +401,11 @@ export class Game {
       }
       const kid = world.kids.find((k) => k.id === c.kidId);
       if (!kid) continue; // e.g. consumed before the command arrived
+      if (c.type === 'sendHome') {
+        world.kids.splice(world.kids.indexOf(kid), 1);
+        events.push({ type: 'sentHome', kid });
+        continue;
+      }
       if (c.type === 'pickUp') {
         kid.held = true;
         kid.activity = { kind: 'walk' };
