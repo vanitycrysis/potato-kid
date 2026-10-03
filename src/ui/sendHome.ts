@@ -44,6 +44,11 @@ export class SendHomeNotes {
     return (built ? t?.firstBuilt : t?.firstUnbuilt) ?? ['', ''];
   }
 
+  /** A claimed first explanation will never be shown (its view went away): free it. */
+  release(): void {
+    this.firstQueued = false;
+  }
+
   /**
    * The first explanation is actually visible: record the preference (never earlier).
    * Without storage it lasts the session, which is all the store can do.

@@ -337,6 +337,7 @@ export class Dex {
       dispose: () => {
         portraits.dispose();
         panel.detailPortraits?.dispose();
+        panel.home?.dispose();
       },
     };
     return panel;
@@ -388,6 +389,7 @@ export class Dex {
       portraits.watch(this.sheets.scrollRoot);
     };
     p.refreshFound();
+    p.home?.dispose();
     p.home = homeSection(type, this.content, this.scene, this.notes, this.readOnly);
     p.home.update();
     const name = el('h3', 'dex-detail-name', k.name);
@@ -414,6 +416,7 @@ export class Dex {
     p.showing = null;
     this.detail = null;
     p.refreshFound = null;
+    p.home?.dispose();
     p.home = null;
     p.detailPortraits?.dispose();
     p.detailPortraits = null;

@@ -1823,6 +1823,43 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
     await expect(status).toBeHidden({ timeout: 5000 });
   });
 
+  test('leaving before the farewell ends keeps the explanation for the next send (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
+    // Back before the 650 ms farewell is over: that explanation was never seen.
+    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    expect(await page.evaluate(() => window.__PK__!.settings().sendHomeExplained)).toBe(false);
+    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
+    await dialog(page).getByRole('button', { name: /on your map, to send home/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(dialog(page).locator('.dex-home-status')).toContainText('Still in your Potato-Dex.');
+  });
+
+  test('hovering the message pauses it; a refusal hands it back afterwards (Codex review, PR #54)', async ({ page }) => {
+    await fireDetail(page);
+    const status = dialog(page).locator('.dex-home-status');
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await dialog(page).getByRole('button', { name: 'Send this kid home' }).click();
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    // A refusal interrupts: kid 2 is chosen, then fuses away.
+    await dialog(page).getByRole('button', { name: /kid 2 on your map/ }).click();
+    await page.mouse.move(5, 5); // not resting over the message, which would pause it
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
+    await expect(status).toContainText('This kid has already left the map.');
+    // After the refusal, the explanation returns with the time it had left.
+    await expect(status).toContainText('Still in your Potato-Dex.', { timeout: 5000 });
+    // Held under the pointer, it outlasts its 6 s.
+    await status.hover();
+    await page.waitForTimeout(7000);
+    // Sampled, not retried: an expired message keeps its text but is hidden.
+    expect(await status.isVisible()).toBe(true);
+    await expect(status).toContainText('Still in your Potato-Dex.');
+    await page.mouse.move(5, 5);
+    await expect(status).toBeHidden({ timeout: 8000 });
+  });
+
   test('Escape closes an open confirmation before the sheet', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();

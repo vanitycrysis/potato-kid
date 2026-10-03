@@ -18,6 +18,8 @@ export interface HomeSection {
   onStep(events: GameEvent[]): GameEvent[];
   /** Escape: closes an open confirmation first. True if it did. */
   collapse(): boolean;
+  /** The detail is going away: an unseen explanation is released for a later success. */
+  dispose(): void;
 }
 
 const nonDrag = () => (uiData?.mvp as { sendHome?: { nonDrag: { confirm: string; cancel: string } } } | undefined)?.sendHome?.nonDrag;
@@ -56,28 +58,41 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
 
   // Inline messages keep the world card's timing (§13.3; Codex review, PR #54): a success
   // waits for its farewell, then stays 6 s (the first, explaining) or 2.5 s, in order; a
-  // refusal shows at once, ahead of them.
+  // refusal shows at once, ahead of them, and what it interrupted comes back after it with
+  // the time it had left. Time counts only while visible: frames stop when the app hides,
+  // and hovering or focusing the message pauses it.
   interface Message {
     lines: () => string[];
     warn: boolean;
     first: boolean;
     notBefore: number;
+    /** Visible time still owed, ms. */
     ms: number;
+    shown?: boolean;
   }
   const queue: Message[] = [];
-  let current: { until: number } | null = null;
+  let current: Message | null = null;
+  let last = performance.now();
+  let hover = false;
+  status.addEventListener('pointerenter', () => (hover = true));
+  status.addEventListener('pointerleave', () => (hover = false));
   const tick = (now: number) => {
-    if (current && now >= current.until) {
+    // Frame time, capped: a long gap (hidden, stalled) isn't time the message was read.
+    const dt = Math.min(250, Math.max(0, now - last));
+    last = now;
+    if (current) {
+      if (!hover && !status.contains(document.activeElement)) current.ms -= dt;
+      if (current.ms > 0) return;
       current = null;
       status.hidden = true;
     }
-    if (current) return;
     const at = queue.findIndex((m) => m.notBefore <= now);
     if (at < 0) return;
     const m = queue.splice(at, 1)[0]!;
     say(m.lines(), m.warn);
-    if (m.first) notes.markShown();
-    current = { until: now + m.ms };
+    if (m.first && !m.shown) notes.markShown();
+    m.shown = true;
+    current = m;
   };
   /** Focus back on the section heading, without scrolling the message out of view. */
   const focusHeading = () => {
@@ -101,6 +116,8 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
   /** The chosen kid left before it was sent (fused, or gone): say so, choose no other. */
   const stale = () => {
     close(false);
+    // The refusal goes first; an interrupted message resumes after it, time intact.
+    if (current) queue.unshift(current);
     current = null;
     queue.unshift({ lines: () => [refusalText('gone')], warn: true, first: false, notBefore: 0, ms: notes.visibleMs(false) });
     tick(performance.now());
@@ -229,6 +246,13 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, note
       if (!panel) return false;
       close(true);
       return true;
+    },
+    dispose: () => {
+      // An explanation claimed but never shown is freed, so a later success gives it
+      // (Codex review, PR #54). One already shown has recorded the preference.
+      if (queue.some((m) => m.first && !m.shown)) notes.release();
+      queue.length = 0;
+      current = null;
     },
   };
 }
