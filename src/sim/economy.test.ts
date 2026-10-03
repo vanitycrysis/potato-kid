@@ -295,3 +295,29 @@ describe('waiting for room (GUI_MVP §3)', () => {
     expect(g.waitingForRoom).toBe(false);
   });
 });
+
+describe('send home (D-048)', () => {
+  it('removes the kid for good, keeps it in the Dex, refunds nothing, and frees a Garden slot', () => {
+    const g = game((c) => {
+      c.balance.spawn.capacity = 2;
+      c.balance.spawn.intervalSeconds = 1;
+    });
+    const a = place(g, 'hero', 300, 1500);
+    place(g, 'plain', 900, 1500);
+    g.state.discoveredKids = ['hero', 'plain'];
+    g.state.spawnProgress = 1; // a spawn is banked, waiting for room
+    const before = { materials: g.state.materials, potatokens: g.state.potatokens };
+    const events = g.step([{ type: 'sendHome', kidId: a.id }], 0);
+    expect(events).toContainEqual({ type: 'sentHome', kid: expect.objectContaining({ id: a.id, type: 'hero' }) });
+    expect(g.state.world.kids.some((k) => k.id === a.id)).toBe(false);
+    expect(g.state.discoveredKids).toContain('hero');
+    expect({ materials: g.state.materials, potatokens: g.state.potatokens }).toEqual(before);
+    // The freed slot takes the banked Garden spawn at once.
+    expect(events.some((x) => x.type === 'spawned' && x.source === 'garden')).toBe(true);
+  });
+
+  it('ignores a kid that is already gone', () => {
+    const g = game();
+    expect(g.step([{ type: 'sendHome', kidId: 999 }], 0)).toEqual([]);
+  });
+});
