@@ -11,6 +11,7 @@ import { SaveManager, type SaveMode } from './save/manager';
 import { SettingsStore, type Settings } from './save/settings';
 import { PreferencesStorage } from './save/storage';
 import type { GameEvent, OfflineReport } from './sim/game';
+import { AudioPlayer } from './audio/player';
 import { Hud, type SaveStatus } from './ui/hud';
 
 /** How often a running game saves (plan §4). */
@@ -50,6 +51,8 @@ declare global {
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' }) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
+      /** The audio runtime's state (tests). */
+      audio: () => { unlocked: boolean; musicPlaying: boolean; lastCue: string | null };
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -118,6 +121,9 @@ async function boot(): Promise<void> {
     loaded.state ?? undefined,
   );
   const hud = new Hud(scene, content, settings);
+  // Codex's cues and music (ART_AUDIO_PLAN): one cue per sim step, volumes from Settings.
+  const audio = new AudioPlayer(settings);
+  scene.listenSteps((events) => audio.onStep(events));
   back.closeSheet = () => hud.back();
   // A debug override stays until replaced, so later saves don't clear it under a test.
   let forcedStatus: SaveStatus | null = null;
@@ -143,10 +149,12 @@ async function boot(): Promise<void> {
   const lifecycle = new Lifecycle({
     suspend: () => {
       scene.suspend();
+      audio.suspend();
       void save();
     },
     resume: (now) => {
       lastOffline = scene.resume(now);
+      audio.resume();
       void save();
     },
   });
@@ -180,6 +188,7 @@ async function boot(): Promise<void> {
     buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
+    audio: () => audio.state,
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),

@@ -1607,3 +1607,31 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(dexButton(page)).toHaveAttribute('aria-label', 'Potato-Dex: Update the game to continue.');
   });
 });
+
+test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
+  test('silent until a gesture; then music follows Settings, and a discovery plays its cue', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    expect(await page.evaluate(() => window.__PK__!.audio())).toEqual({ unlocked: false, musicPlaying: false, lastCue: null });
+    // The first gesture unlocks audio and starts the music.
+    await page.mouse.click(200, 1300);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().unlocked)).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(true);
+    // Audio Off pauses it; On brings it back. Music at 0 % stays quiet.
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('radio', { name: 'Off' }).click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(false);
+    await page.getByRole('radio', { name: 'On' }).click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(true);
+    await page.getByLabel('Music').fill('0');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().musicPlaying)).toBe(false);
+    await page.keyboard.press('Escape');
+    // A first discovery plays the discovery cue (it replaces the fusion cue).
+    await page.waitForTimeout(500); // cue buffers decode after the unlock
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('plain', 540, 2600);
+      window.__PK__!.debugAdd!('water', 540, 2600);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.audio().lastCue)).toBe('sfx_discovery');
+    expect(errors).toEqual([]);
+  });
+});
