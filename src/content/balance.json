@@ -72,7 +72,8 @@
         "potatokens": 12
       }
     ],
-    "offlineCapHours": 8
+    "offlineCapHours": 8,
+    "offlineSummaryMinSeconds": 60
   },
   "buildings": {
     "garden": {
