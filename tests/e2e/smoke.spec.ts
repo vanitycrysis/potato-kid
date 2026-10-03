@@ -467,6 +467,10 @@ test('a save from a newer app freezes the game and asks for an update (GUI_MVP Â
   await expect(page.locator('.banner')).toContainText('Please update the game.');
   await expect(page.locator('.readonly-notice')).toContainText('Your save is kept safe.');
   await expect(page.locator('.hud-spawn')).toHaveAttribute('aria-disabled', 'true');
+  // Building launchers are disabled too, with the reason (Codex review, PR #39).
+  for (const name of ['Garden', 'Capacity', 'Bias']) {
+    await expect(page.getByRole('button', { name: `${name}: Update the game to continue.` })).toBeDisabled();
+  }
   const before = await page.evaluate(() => window.__PK__!.wallet());
   await page.waitForTimeout(1500);
   expect(await page.evaluate(() => window.__PK__!.wallet())).toEqual(before);

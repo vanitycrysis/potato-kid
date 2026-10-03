@@ -229,10 +229,7 @@ export class Hud {
       return b;
     }
     b.setAttribute('aria-label', label);
-    b.addEventListener('click', () => {
-      if (this.save.readOnly) return;
-      this.buildings.open(key, b);
-    });
+    b.addEventListener('click', () => this.buildings.open(key, b));
     return b;
   }
 
@@ -511,6 +508,14 @@ export class Hud {
   // --- save banners (GUI_MVP §10) -----------------------------------------------------
 
   private renderBanners(): void {
+    // Read-only: the building launchers are visibly unavailable, with the reason announced
+    // (GUI_MVP §10; Codex review, PR #39).
+    for (const [key, cell] of this.trayCells) {
+      if (key === 'compendium') continue;
+      const label = cell.querySelector('.tray-label')?.textContent ?? key;
+      cell.disabled = this.save.readOnly;
+      cell.setAttribute('aria-label', this.save.readOnly ? `${label}: Update the game to continue.` : label);
+    }
     this.banners.replaceChildren();
     document.documentElement.dataset.readonly = String(this.save.readOnly);
     this.shield.replaceChildren();

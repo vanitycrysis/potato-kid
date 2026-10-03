@@ -6,8 +6,13 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   // WebView debugging is left at Capacitor's default: on for debug APKs (used for
   // device frame-time and memory checks, plan §7), off for release builds.
-  // Android Back is handled explicitly (src/platform/back.ts): it closes an open sheet,
-  // otherwise it backgrounds the app like the system Back (GUI_MVP §2; Codex review, PR #31).
+  // Android Back: the App plugin's handler starts disabled, so Back keeps Android's own
+  // behaviour until JavaScript is listening; src/platform/back.ts enables it once its
+  // listener is registered (closes an open sheet, else backgrounds the app). Codex
+  // reviews, PRs #31 and #39.
+  plugins: {
+    App: { disableBackButtonHandler: true },
+  },
 };
 
 export default config;
