@@ -1998,6 +1998,151 @@
       "locked": "Build the Compendium first.",
       "undiscovered": "Discover this kid first.",
       "notSpawnable": "This kid can’t be favoured by the Garden."
+    },
+    "sendHome": {
+      "revision": "send-home-1",
+      "spec": "docs/GUI_MVP.md#13-send-home",
+      "authority": "owner-approved D-048 task handoff",
+      "target": {
+        "gardenInstanceId": "garden",
+        "rectRelativeWorld": [
+          -128,
+          -320,
+          128,
+          -64
+        ],
+        "inclusive": true,
+        "hitPoint": "raw captured pointer, current camera toWorld; before lift/clamp/free-spot resolution",
+        "minimumProjectedSidePx": 44,
+        "requireEntireTargetUnoccluded": true,
+        "dwellMs": 400,
+        "resetOn": [
+          "exit",
+          "camera-motion",
+          "viewport-or-inset-change",
+          "lost-eligibility",
+          "cancel",
+          "hidden"
+        ],
+        "suppressEdgeScrollWhileInside": true,
+        "strokePx": 2,
+        "cornerRadiusPx": 8,
+        "dashPx": [
+          6,
+          4
+        ],
+        "readyInsetStrokePx": 4,
+        "readyFill": "sage",
+        "readyFillOpacity": 0.35,
+        "readyIcon": "icon_check",
+        "waitingIcon": "icon_timer",
+        "stateIconPx": 20,
+        "stateIconInsetPx": 6,
+        "tether": {
+          "strokePx": 2,
+          "dashPx": [
+            3,
+            4
+          ],
+          "stopBeforeKidBoxPx": 4
+        },
+        "pointerDiamondPx": 10,
+        "pointerDiamondStrokePx": 1.5,
+        "label": {
+          "surface": "ui_toast",
+          "minimumSizePx": [
+            232,
+            80
+          ],
+          "gapPx": 8,
+          "placementOrder": [
+            "above",
+            "below",
+            "left",
+            "right"
+          ],
+          "interceptsPointer": false,
+          "changesCameraInsets": false,
+          "icon": "icon_garden",
+          "iconPx": 24,
+          "headingPx": [
+            18,
+            24
+          ],
+          "helperPx": [
+            16,
+            22
+          ]
+        },
+        "states": {
+          "shown": [
+            "Send home",
+            "Hold here, then release.",
+            "No refund. Kept in your Dex."
+          ],
+          "waiting": [
+            "Keep holding…",
+            "Release early to place normally.",
+            "No refund. Kept in your Dex."
+          ],
+          "ready": [
+            "Release to send home",
+            "This kid will leave the map.",
+            "No refund. Kept in your Dex."
+          ]
+        }
+      },
+      "departure": {
+        "totalMs": 650,
+        "clip": "wave",
+        "clipMs": 500,
+        "fadeMs": 150,
+        "root": "last collision-free rendered ground",
+        "blocksSim": false,
+        "interactive": false,
+        "retainTexturesUntilDisposed": true,
+        "disposeOnSilhouetteOverlap": true,
+        "fx": "none",
+        "reducedMotion": {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "fadeMs": 150,
+          "translation": false
+        }
+      },
+      "feedback": {
+        "surface": "ui_toast",
+        "minimumHeightPx": 96,
+        "heading": "{full kid name} went home.",
+        "firstBuilt": [
+          "Still in your Potato-Dex.",
+          "Bring one back in Compendium for a fee."
+        ],
+        "firstUnbuilt": [
+          "Still in your Potato-Dex.",
+          "Build Compendium to bring one back for a fee."
+        ],
+        "later": "Kept in your Potato-Dex. No refund.",
+        "firstVisibleMs": 6000,
+        "laterVisibleMs": 2500,
+        "firstClosePx": 44,
+        "preference": "sendHomeExplained",
+        "recordPreferenceWhen": "first visible mounting",
+        "dexOrigin": "same inline status, no duplicate world card",
+        "stale": "This kid has already left the map."
+      },
+      "nonDrag": {
+        "requiredForMvp": true,
+        "location": "discovered Dex kid detail, before Found recipes",
+        "copyRowMinHeightPx": 72,
+        "copyPortraitPx": 48,
+        "confirmationButtonHeightPx": 48,
+        "stableInstanceSelection": true,
+        "confirm": "Send this kid home",
+        "cancel": "Keep on map"
+      },
+      "newDecodedRasterBytes": 0,
+      "newPixiTextureBytes": 0
     }
   },
   "stateBorderImageRepeat": {
