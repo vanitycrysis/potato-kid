@@ -83,13 +83,13 @@ Nine of the 48 new costumes place compact caps on head_top. ASSET-MVP must compa
 | Kid / ID | Outline target and separation |
 | --- | --- |
 | Stone / `stone` | Thinnest cap: a skewed slab with blunt uneven ends, almost no rise, no projecting brim and no regular cutout. Lower and less symmetric than Mushroom. |
-| Mushroom / `mushroom` | A symmetric shallow dome, visibly higher than Stone, with wide rounded overhangs on both sides and a lifted underside. One continuous convex top, unlike Pretzel's two humps. |
+| Mushroom / `mushroom` | A symmetric shallow dome, visibly higher than Stone, with wide rounded overhangs on both sides and a lifted underside. One continuous convex top, unlike Pretzel's tilted crossed rope and unequal lobes. |
 | Cookie / `cookie` | A tilted near-circle, higher relative to its width than Mushroom, with one large bite cut from the upper-right outer edge. The missing arc must survive reduction; no reliance on chocolate dots. |
-| Pretzel / `pretzel` | Two rounded upper humps separated by a deep top saddle, plus two broad open loop holes. The saddle distinguishes its outer contour from Cookie even if the holes lose contrast. |
+| Pretzel / `pretzel` | Tilted crossed dough rope: one large upper-left opening, a lower smaller right lobe and a rising diagonal twist crossing the middle. Unequal heights and crossing ends must survive at game size; never two equal side-by-side lens loops. The single dominant open lobe differs from Cookie's bitten solid disk. |
 | Kiln / `kiln` | Square shoulders and a flat top ledge over a broad semicircular cutout open at the bottom. Thick arch legs flank the opening; no mushroom-like continuous dome or merely painted firing door. |
 | Forge / `forge` | A nearly horizontal top with a long tapered right horn, short squared left heel and a pinched waist below. Strong one-sided overhang and underside steps, unlike Kiln's centered arch. |
 | Mosaic / `mosaic` | An angular L: one taller left block drops through a single broad rectangular top step into a lower right arm. Square ends, no curves, tapered horn or narrow anvil waist. |
-| Moon Garden / `moon_garden` | A tilted crescent with two unequal pointed tips and a deep side-open concavity. A single curved spine, unlike Pretzel's paired loops or Cookie's small bite. |
+| Moon Garden / `moon_garden` | A tilted crescent with two unequal pointed tips and a deep side-open concavity. A single curved spine, unlike Pretzel's crossed knot or Cookie's small bite. |
 | Winter Market / `winter_market` | A very shallow straight-topped awning with square overhangs at both ends and three broad scallops along the lower edge. Repeated lower lobes distinguish it from Mushroom's smooth underside and Kiln's single opening. |
 
 Also compare this cluster with existing Firefighter, Gardener, Snowman and Picnic headwear and the other proposed caps, especially Greenhouse, Captain and Observatory. These are targets for drawing and review, not evidence that the finished silhouettes pass.
@@ -141,19 +141,19 @@ The 16 current types retain names and IDs. New IDs are lowercase snake_case prop
 | `greenhouse` | 4 | Greenhouse Kid | Garden & Growing | Low pitched glass roof with square frame; sage; head_top roof + torso seed-tray bib (2). | R31: `gardener + glassblower` |
 | `bouquet` | 4 | Bouquet Kid | Garden & Growing | Broad hand-held fan of three flower heads; dusty rose; hand_right bouquet + torso tied paper wrap (2). | R32: `flower + gardener` |
 | `bonsai` | 4 | Bonsai Kid | Garden & Growing | Two flat offset foliage shelves on a bent trunk; leaf green; head_top tree + torso shallow tray (2). | R33: `gardener + sprout` |
-| `terrarium` | 4 | Terrarium Kid | Garden & Growing | Tall bell-jar cap with small top knob; moss green; head_top open jar frame + torso mushroom bib (2). | R34: `mushroom + glassblower` |
-| `teapot` | 4 | Teapot Kid | Kitchen & Table | Low lid cap and single projecting teapot spout; tea green; head_top lid + torso spout wrap + back loop handle (3). | R35: `tea + potter` |
+| `terrarium` | 4 | Terrarium Kid | Garden & Growing | Tall filled bell-jar cap offset to the left crown, with rounded shoulder, flat lifting tab and visible moss/mushroom; moss green; head_top glass garden + torso mushroom label (2). | R34: `mushroom + glassblower` |
+| `teapot` | 4 | Teapot Kid | Kitchen & Table | Low lid cap and short upright hollow-ended left spout, bare belly; tea green; head_top lid + torso side spout + back loop handle (3). | R35: `tea + potter` |
 | `cookie` | 4 | Cookie Kid | Kitchen & Table | Tilted near-round cookie cap with one large upper-right bite notch; cocoa brown; head_top cookie + torso crumb-pocket bib (2). | R36: `baker + cocoa` |
-| `pretzel` | 4 | Pretzel Kid | Kitchen & Table | Broad crossed-loop pretzel cap with two rounded humps, a deep top saddle and two open loops; wheat gold; head_top pretzel + torso baker ribbon (2). | R37: `baker + blacksmith` |
-| `soup` | 4 | Soup Kid | Kitchen & Table | Deep handled soup pot and upright ladle; ochre; torso pot wrap + hand_right ladle (2). | R38: `mushroom + chef` |
+| `pretzel` | 4 | Pretzel Kid | Kitchen & Table | Tilted crossed-rope pretzel cap with one dominant upper-left dough loop, smaller lower-right loop and a diagonal rising twist; wheat gold; head_top pretzel + torso baker ribbon (2). | R37: `baker + blacksmith` |
+| `soup` | 4 | Soup Kid | Kitchen & Table | Deep twin-handled side pot with a hooked ladle ending in a low open scoop; ochre; torso pot + hand_right ladle (2). | R38: `mushroom + chef` |
 | `snowglobe` | 4 | Snowglobe Kid | Cozy & Seasons | Round open globe frame on a stepped pedestal; ice blue; back globe + torso pedestal/snow scene (2). | R39: `blizzard + glassblower` |
-| `ice_sculptor` | 4 | Ice Sculptor Kid | Craft & Workshop | Large triangular ice wedge on a short carving board; ice blue; hand_right ice/board + torso chisel apron (2). | R40: `snowman + potter` |
+| `ice_sculptor` | 4 | Ice Sculptor Kid | Craft & Workshop | Solid beveled ice block with a scooped carving notch and diagonal steel chisel, no board; ice blue; hand_right carved ice/chisel + torso chisel holster (2). | R40: `snowman + potter` |
 | `weather_vane` | 4 | Weather Vane Kid | Weather & Sky | Single horizontal arrow above a short post; brass; head_top arrow/post + torso compass badge (2). | R41: `pinwheel + blacksmith` |
 | `balloon` | 4 | Balloon Kid | Play & Festival | Small pear-shaped balloon on two short tethers; coral; back balloon + torso basket wrap (2). | R42: `captain + fire` |
-| `steamboat` | 4 | Steamboat Kid | Waterside & Voyages | Short paddle-wheel hull belt with one flat funnel; navy; torso hull/wheel + head_top funnel (2). | R43: `captain + whistle` |
+| `steamboat` | 4 | Steamboat Kid | Waterside & Voyages | Small cabin boat with a paddle wheel carried at the right hip, plus one flat funnel cap; navy; torso side boat/wheel + head_top funnel (2). | R43: `captain + whistle` |
 | `lifeguard` | 4 | Lifeguard Kid | Rescue & Care | Large open lifebuoy belt; rescue red; torso buoy + hand_right rescue float (2). | R44: `hero + captain` |
 | `kiln` | 4 | Kiln Kid | Craft & Workshop | Low brick arch cap with square shoulders, a flat top ledge and a broad bottom-open arch cutout; clay orange; head_top kiln arch + hand_right tile (2). | R45: `potter + forge` |
-| `aurora` | 4 | Aurora Kid | Weather & Sky | Short zigzag-edged light curtain rising to one side; lilac; back curtain + torso small ice pendant (2). | R46: `blizzard + crystal` |
+| `aurora` | 4 | Aurora Kid | Weather & Sky | Smooth folded light ribbon rising along the left side, pale flowing bands and a flat hem tab; lilac; back light ribbon + torso light-pattern tab (2). | R46: `blizzard + crystal` |
 | `festival` | 5 | Festival Kid | Play & Festival | Short crown of three triangular pennants; coral; head_top bunting + hand_right little drum (2). | R47: `picnic + lantern` |
 | `observatory` | 5 | Observatory Kid | Curiosity & Science | Large tilted short telescope tube on a compact stand; navy; hand_right telescope + head_top low slit-dome cap (2). | R48: `greenhouse + crystal` |
 | `botanical_garden` | 5 | Botanical Garden Kid | Garden & Growing | Squared trellis arch with two large leaf tabs; leaf green; back trellis + hand_right seed tray (2). | R49: `bonsai + greenhouse` |
