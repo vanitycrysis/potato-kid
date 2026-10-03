@@ -56,6 +56,9 @@ export function wanderOffline(
   for (const kid of world.kids) {
     const t = away(kid);
     const spread = wanderSpread(w, t);
+    // Never farther than it could walk in the time: the spread formula holds for long
+    // absences, not a brief app switch (Codex review, PR #70).
+    const reach = Math.max(0, w.speed * t);
     const ib = innerBounds(world.bounds, kid.box);
     let spot: { x: number; y: number } | null = null;
     if (spread > 0) {
@@ -66,6 +69,8 @@ export function wanderOffline(
           const a = rng.next() * Math.PI * 2;
           [dx, dy] = [Math.cos(a) * spread, Math.sin(a) * spread];
         } else [dx, dy] = [gauss() * spread, gauss() * spread];
+        const len = Math.hypot(dx, dy);
+        if (len > reach) [dx, dy] = [(dx / len) * reach, (dy / len) * reach];
         const p = findFreeSpot(world, kid.box, reflect(kid.x + dx, ib.minX, ib.maxX), reflect(kid.y + dy, ib.minY, ib.maxY), kid.id);
         if (p && clear(kid, p.x, p.y)) spot = p;
       }

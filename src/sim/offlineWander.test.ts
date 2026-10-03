@@ -105,6 +105,15 @@ describe('a long absence (D-053)', () => {
     expect(moved.reduce((s, d) => s + d, 0) / moved.length).toBeLessThan(3 * sigma);
   });
 
+  it('a brief app switch moves a kid no farther than it could walk (Codex review, PR #70)', () => {
+    for (const seed of [1, 2, 3, 11, 42]) {
+      const g = game(undefined, seed);
+      const kid = place(g, 'plain', 1500, 2000);
+      g.reconcile(T0 + 100);
+      expect(dist(kid, { x: 1500, y: 2000 })).toBeLessThanOrEqual(w.speed * 0.1 + 1e-9);
+    }
+  });
+
   it('offline spawns walk out from the Garden for the time since they arrived', () => {
     const g = game((c) => (c.balance.spawn.intervalSeconds = 600));
     const r = g.reconcile(T0 + 2 * HOUR * S);
