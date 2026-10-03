@@ -103,6 +103,8 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const bot = createBot(game, content, sendHome);
   const decide = bot.decide;
 
+  /** Where the sessions put the clock: summed exactly, so no step drift builds up (Codex review, PR #68). */
+  let planned = 0;
   for (const session of scenario.sessions) {
     const steps = Math.round(session.play / STEP);
     for (let i = 0; i < steps; i++) {
@@ -123,11 +125,14 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       if (game.state.world.kids.length < 0.3 * game.capacity) starvedTime += STEP;
       note();
     }
+    planned += session.play;
+    clock = planned;
     income.push({ clock, perSecond: game.income });
     if (session.away > 0) {
       const left = clock;
       const before = { spawns: game.state.gardenSpawns, progress: game.state.spawnProgress, interval: game.interval };
-      clock += session.away;
+      planned += session.away;
+      clock = planned;
       game.reconcile(clock * 1000);
       // A tutorial that ends while away ends at its last spawn's arrival, not at the
       // return (Codex review, PR #68). Tutorial spawns are evenly spaced from the first due.

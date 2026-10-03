@@ -43,6 +43,13 @@ describe('the report (Codex review, PR #68)', () => {
     expect(r.income.at(-1)!.perSecond - r.income[0]!.perSecond).toBeGreaterThanOrEqual(10 * c.balance.economy.materialsPerSecond - 1e-9);
   });
 
+  it('session clocks land exactly on their boundaries, however many steps they took', () => {
+    const day = 86_400;
+    const r = simulate(content, options, { name: 'days', sessions: Array.from({ length: 3 }, () => ({ play: 1800, away: day - 1800 })), actionSeconds: 4 }, 1);
+    // Each session's end and return, with no drift from summing 0.1 s steps.
+    expect(r.income.map((x) => x.clock)).toEqual([1800, day, day + 1800, 2 * day, 2 * day + 1800, 3 * day]);
+  });
+
   it('shows income only for days the scenario reaches', async () => {
     const { incomeDays } = await import('./balance-cli');
     const day = 86_400;
