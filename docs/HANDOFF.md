@@ -16,6 +16,9 @@
   - **Naming** (D-057) and **personalities** (D-058): a description, likes, hates and hobbies per type.
   - **The wave becomes a fast stubby-arm wiggle** (D-059).
   - **Music loop bug.**
+- **The repo is public now** (D-060, PR #64: the decision record plus a read-only CI token; the Codex review is clean). Merge #64 once CI is green. Public repos don't use the owner's Actions minutes.
+- **At handoff, CI was still running on PRs #61, #63 (this file) and #64.** Each has a clean Codex review posted, so merge each one when its CI is green.
+- **The owner has given full access and doesn't want permission questions** (see the memory file `no-permission-asks`). Still stop at the owner gates. Claude Code's auto-mode classifier blocked two actions anyway: turning on GitHub Pages, and stopping the stale Codex processes. Both are left to the owner.
 - The owner said this session needed no permission prompts. That was **for that session only**; don't assume it carries over.
 
 ## Open work at handoff (check each first)
@@ -93,7 +96,7 @@
   - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/wave-wiggle`.
   - `potato-kid-review-50`: the Codex review worktree, with `node_modules`.
   - `potato-kid-docs`: docs branches.
-- **Finished worktrees removed:** the old `potato-kid-import3` and `-review-41..57` worktrees were removed from git this session. Their **empty folders** remain, locked by about 26 stale Codex processes (and their `node` helpers) from 2026-10-02. The owner hasn't said whether to stop those processes; ask before killing them, then delete the folders.
+- **Finished worktrees removed:** the old `potato-kid-import3` and `-review-41..57` worktrees were removed from git this session. Their **empty folders** remain, locked by about 26 stale Codex processes (and their `node` helpers) from 2026-10-02. The owner hasn't said whether to stop those processes; the owner was told how to end them in Task Manager; once they're gone, delete the folders.
 - **Merged remote branches** (`claude/*`, `chatgpt/*`) were never deleted. That's harmless.
 - **Gate captures** live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `-gate3\`.
 - **GitHub:** `gh` (authenticated) is used for PRs and comments.
