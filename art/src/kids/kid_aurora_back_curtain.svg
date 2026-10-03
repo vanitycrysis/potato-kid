@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>aurora costume: curtain</title>
-  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-2. D-044/D-045. Costume equipment only; no baked text or anatomy.</desc>
-  <path d="M30 33 L65 47 L88 33 L114 57 L82 74 L67 121 L58 160 L42 173 L22 155 L36 135 L23 114 L38 96 L24 78 L37 59 L29 57 Z" fill="#bbb2cc" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" /><path d="M37 42 L64 55 L86 42 L103 56 M32 82 L46 98 L34 115 L46 135 L32 155" fill="none" stroke="#d3e4e8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-2 round 2. D-044/D-045. Costume equipment only; no baked text or anatomy.</desc>
+  <g transform="translate(3 0)"><path d="M30 29 C46 43 58 17 73 26 C86 35 95 22 109 28 L102 53 C85 47 83 62 70 56 C48 49 53 79 42 99 C34 113 43 140 32 163 L20 165 C26 137 17 119 27 98 C40 73 23 52 30 29 Z" fill="#bbb2cc" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M39 37 C55 48 60 28 72 36 C84 44 94 31 103 37 M34 57 C43 69 39 84 33 98 C23 120 35 139 26 156" fill="none" stroke="#d3e4e8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>
 </svg>

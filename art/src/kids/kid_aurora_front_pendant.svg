@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>aurora costume: pendant</title>
-  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-2. D-044/D-045. Costume equipment only; no baked text or anatomy.</desc>
-  <path d="M117 181 L127 188 L140 179" fill="none" stroke="#809ba9" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" /><path d="M127 188 L135 199 L127 207 L119 199 Z" fill="#d3e4e8" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  <desc>Original Potato Kid vector costume by ChatGPT. Status: final. Revision: asset-mvp-2 round 2. D-044/D-045. Costume equipment only; no baked text or anatomy.</desc>
+  <path d="M112 198 L143 198 L143 210 L112 210 Z" fill="#bbb2cc" stroke="#1a1a1a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M117 206 Q124 198 129 204 Q134 209 139 201" fill="none" stroke="#d3e4e8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
