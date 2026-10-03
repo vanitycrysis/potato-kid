@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { lookTable, obstaclesFrom } from '../content/artRules';
+import { ambientFrom, lookTable, obstaclesFrom } from '../content/artRules';
 import type { KidRig, MapData } from '../content/artData';
 import { content } from '../content';
 import { median, simulate, type Report, type Scenario } from './balance';
@@ -16,6 +16,8 @@ const options: GameOptions = {
   spawnAt: { x: map.garden.spawnOutlet[0], y: map.garden.spawnOutlet[1] },
   obstacles: obstaclesFrom(map),
   looks: lookTable(rig),
+  // The shipped rests (look, wave, sit, sleep), as main.ts sets up (Codex review, PR #45).
+  ambient: ambientFrom(rig, content.balance.wander.ambientChance),
 };
 
 const HOUR = 3600;

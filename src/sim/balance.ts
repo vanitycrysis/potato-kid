@@ -1,6 +1,7 @@
 import type { BuildingId, Content } from '../content/types';
 import { pairKey } from '../content/validate';
 import { Game, type Command, type GameOptions } from './game';
+import { rectAt, touching } from './space';
 import { STEP } from './world';
 
 // The balance simulator (ENGINEERING_PLAN §3): the real sim, played by a scripted bot, to
@@ -93,7 +94,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
         const key = pairKey(free[i]!.type, free[j]!.type);
         if (tried.has(key)) continue;
         tried.add(key);
-        return drag(free[i]!.id, free[j]!);
+        return drag(game, free[i]!.id, free[j]!);
       }
     }
     // 3. Fuse a known recipe whose result isn't on the map: a new type opens new pairs.
@@ -101,7 +102,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     for (let i = 0; i < free.length; i++) {
       for (let j = i + 1; j < free.length; j++) {
         const result = recipes.get(pairKey(free[i]!.type, free[j]!.type));
-        if (result && s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type)) && !onMap.has(result)) return drag(free[i]!.id, free[j]!);
+        if (result && s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type)) && !onMap.has(result)) return drag(game, free[i]!.id, free[j]!);
       }
     }
     // 3b. A full map with nothing new to try: fuse any known recipe to make room.
@@ -109,7 +110,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     if (full) {
       for (let i = 0; i < free.length; i++) {
         for (let j = i + 1; j < free.length; j++) {
-          if (s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type))) return drag(free[i]!.id, free[j]!);
+          if (s.discoveredRecipes.includes(pairKey(free[i]!.type, free[j]!.type))) return drag(game, free[i]!.id, free[j]!);
         }
       }
     }
@@ -194,11 +195,20 @@ function deadlocked(game: Game, recipes: Map<string, string>): boolean {
   return purchase(game) === null;
 }
 
-/** Pick up `kidId` and drop it against `partner`, as a player's drag does. */
-function drag(kidId: number, partner: { id: number; x: number; y: number }): Command[] {
+/**
+ * Pick up `kidId` and drop it against `partner`, as a player's drag does: it lands on the
+ * nearest free spot, and only kids that spot really touches count as contacts, exactly as
+ * the scene's drop (Codex review, PR #45). A crowded partner may not be reached.
+ */
+export function drag(game: Game, kidId: number, partner: { id: number; x: number; y: number }): Command[] {
+  const kids = game.state.world.kids;
+  const kid = kids.find((k) => k.id === kidId)!;
+  const spot = game.landingSpot(kidId, partner.x, partner.y) ?? { x: kid.x, y: kid.y };
+  const at = rectAt(kid.box, spot.x, spot.y);
+  const contacts = kids.filter((k) => k.id !== kidId && touching(at, rectAt(k.box, k.x, k.y), game.touchSlack)).map((k) => k.id);
   return [
     { type: 'pickUp', kidId },
-    { type: 'drop', kidId, x: partner.x, y: partner.y, touching: [partner.id] },
+    { type: 'drop', kidId, x: spot.x, y: spot.y, touching: contacts },
   ];
 }
 
