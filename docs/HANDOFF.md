@@ -1,28 +1,35 @@
-# Session handoff (2026-10-03, for the next Claude session)
+# Session handoff (2026-10-03, end of session, for the next Claude session)
 
-Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` and `docs/TASKS.md`.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` and `docs/TASKS.md`.
 
 ## Where we are
 
-- **Gates 1–3 are approved. The MVP is built; gate 4 is next.** See TASKS.md "Where things stand" for what's in it and what to bring the owner.
-- **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** and **Android** icon and splash are done.
+- **Gates 1–3 are approved. The MVP is built, and gate 4 has been put to the owner** (2026-10-03). **We are waiting on the owner's verdict.** Don't start new feature work before it, except the items under "When the owner answers" once the owner has asked for them.
+- **`main` is at 9edf86c and there are no open PRs.** Everything is merged: Send home's Dex path (#54, after 11 Codex rounds), the gate-4 docs (#57) and the web-build fix (#58).
+- **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** (8 cues and a music loop) and the **Android** icon and splash are done.
 - **Send home** (D-048) is done end to end: drag a kid onto the Garden and hold 400 ms, or use the Dex detail's per-kid path.
-- **Tests:** about 180 unit and 110 e2e (Playwright), mutation-checked as they were added.
-- **The gate-4 build** is CI's `potato-kid-debug-apk` artifact from the latest `main` run (Actions → the `check` workflow → Artifacts). CI also uploads the web build as `potato-kid-web`. GitHub Pages is not available for this private repo (ENGINEERING_PLAN.md).
+- **Tests:** 179 unit and 112 e2e (Playwright), mutation-checked as they were added. CI is green on `main`.
+- **The gate-4 build** is CI's `potato-kid-debug-apk` artifact. The run given to the owner is https://github.com/vanitycrysis/potato-kid/actions/runs/37114541688 (`main` at e141907). Later `main` runs (#57, #58) are docs-only and build the same app. CI also uploads the web build as `potato-kid-web`. GitHub Pages is not available for this private repo (ENGINEERING_PLAN.md).
 
-## Next, in order
+## What the owner was asked (gate 4)
 
-1. **Gate 4:** the owner plays the APK on the S26 Ultra. Collect feedback on feel, performance, audio by ear, and the launcher icon.
-2. **Pacing:** ask the owner how long the MVP should last. `npm run balance` (4 seeds, about 15 min) on 64 kids: half the roster in about 10 min of idealized play, 75 % in about 1 h, 63 of 64 in 3 h. Then retune seed weights, prices and milestones in `balance.json` and rerun the simulator.
-3. **After gate 4:** ANIM-POLISH (D-047) and content waves toward about 500 kids (D-046).
+1. **Play the APK** on the S26 Ultra: feel and performance (dragging, fusing, scrolling), audio by ear (does sound start after the first tap; are volumes right; does the music loop without a click), and the icon on the home screen.
+2. **Pacing:** how long should the MVP last? In the simulator, an idealized player finds half the 64 kids in about 10 min of play, 75 % in about 1 h, and 63 of 64 in 3 h. A casual player (10 min every 3 h) finds 62 in 3 days. Real players are slower.
+3. **A Send-home sound:** may Claude ask Codex for one? (Claude does no audio design, D-036.)
+4. **Approve gate 4,** or send feedback.
 
-**Known gaps** (not testable in headless CI; check on the device):
+## When the owner answers
+
+- **Gate 4 approved:** record it in `DECISIONS.md` (the next number after D-049) and mark GATE-4 done in `TASKS.md`, in a docs PR. Then **ANIM-POLISH** (D-047) and content waves toward about 500 kids (D-046), starting from the ROSTER-SCALE plan.
+- **Feedback from the device:** turn each item into a task on the board. Bugs are Claude's; anything visual or audible goes to Codex (D-036).
+- **Pacing target:** BALANCE-SIM. Retune seed weights, prices and milestones in `src/content/balance.json` until `npm run balance` matches the target (4 seeds, about 15 min a run). Then a PR with the before and after numbers, and a Codex review.
+- **Send-home sound, yes:** a Codex task (ASSET-MVP audio follow-up) for one cue in the existing style (`art/audio`, `npm run audio:build`). Review it by ear against the other eight. Claude then maps `sentHome` in `src/audio/cues.ts`, choosing its priority alongside the existing cues, and plays it for both paths. The Dex confirm button then needs `data-cue="success"` so its tap doesn't play first.
+
+**Known gaps** (not testable in headless CI; only the device shows them):
 - the audio unlock on a real touch screen;
 - the `<audio loop>` seam once encoded;
 - the icon under the S26's own launcher mask;
 - the D-034 performance pass (and 4× CPU throttle) and real texture allocations.
-
-**Open for Codex:** sending a kid home has no sound. The eight MVP cues don't include one, so the drag path is silent and the Dex path plays only the button tap. Whether it needs its own cue, or should reuse one, is Codex's call (D-036); the runtime would map `sentHome` in `src/audio/cues.ts`.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -33,7 +40,7 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
   with `run_in_background`. Include the task's `TASKS.md` entry. For review rounds, append Claude's PR review verbatim.
 - **Codex's worktree** is `C:\Users\Adria\potato-kid-chatgpt` (`chatgpt/` branches). Its sandbox has **no git and no network**: Claude commits its files unchanged with `git -c user.name=ChatGPT -c user.email=noreply@openai.com commit` and pushes.
 - **Codex reviews** of every Claude PR, before merging:
-  - `git worktree add --detach ../potato-kid-review-N <branch>`, then `npm ci` in it;
+  - in the review worktree `../potato-kid-review-50` (it has `node_modules`): `git fetch origin && git checkout --detach origin/<branch>`; or, if it is gone, `git worktree add --detach ../potato-kid-review-N <branch>`, then `npm ci` in it;
   - `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`;
   - post the output to the PR verbatim, labelled as Codex's, then a reply per finding;
   - merge only after a clean Codex round **and** green CI.
@@ -58,5 +65,11 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
 
 ## Housekeeping
 
-- The old review worktrees `../potato-kid-review-20` to `-39` could not be deleted from this session ("Permission denied"; probably locked by finished Codex processes or the sandbox). Remove them with `git worktree prune` and delete the folders when they unlock. Keep `../potato-kid-chatgpt`. `../potato-kid-fix51` (a temporary worktree with a copied `node_modules`) failed to delete with "Filename too long"; remove it with a long-path-aware tool.
+- **Worktrees:**
+  - `potato-kid-claude`: Claude's main checkout; it was left on the merged `claude/send-home-dex`, so check out `main` and pull first.
+  - `potato-kid-chatgpt`: Codex's worktree; keep it.
+  - `potato-kid-review-50`: the Codex review worktree; keep it.
+  - `potato-kid-docs`: docs branches.
+  - The rest (`potato-kid-import3`, `potato-kid-review-41` to `-57` except `-50`, `potato-kid-fix51`) are finished and can be removed with `git worktree remove --force <dir>`. If that fails with "Permission denied" (locked by finished Codex processes) or "Filename too long", delete the folder by hand later and run `git worktree prune`.
+- Merged remote branches (`claude/*` and `chatgpt/*`) were never deleted. That's harmless; prune them only if the owner wants a tidy branch list.
 - Gate captures live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `C:\Users\Adria\potato-kid-gate3\`.
