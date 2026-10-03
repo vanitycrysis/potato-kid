@@ -7,7 +7,7 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
 - **Gates 1–3 are approved. The MVP is built; gate 4 is next.** See TASKS.md "Where things stand" for what's in it and what to bring the owner.
 - **Content:** 64 kids, 58 recipes. **GUI:** every GUI-MVP screen. **Audio** and **Android** icon and splash are done.
 - **Send home** (D-048) is done end to end: drag a kid onto the Garden and hold 400 ms, or use the Dex detail's per-kid path.
-- **Tests:** about 170 unit and 100 e2e (Playwright), mutation-checked as they were added.
+- **Tests:** about 180 unit and 110 e2e (Playwright), mutation-checked as they were added.
 - **The gate-4 build** is CI's `potato-kid-debug-apk` artifact from the latest `main` run (Actions → the `check` workflow → Artifacts). There is also a GitHub Pages build.
 
 ## Next, in order
@@ -21,6 +21,8 @@ Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement
 - the `<audio loop>` seam once encoded;
 - the icon under the S26's own launcher mask;
 - the D-034 performance pass (and 4× CPU throttle) and real texture allocations.
+
+**Open for Codex:** sending a kid home has no sound. The eight MVP cues don't include one, so the drag path is silent and the Dex path plays only the button tap. Whether it needs its own cue, or should reuse one, is Codex's call (D-036); the runtime would map `sentHome` in `src/audio/cues.ts`.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
