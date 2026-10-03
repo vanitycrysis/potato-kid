@@ -472,3 +472,61 @@ describe('Codex review, PR #14 round 4', () => {
     expect(game.state.world.kids.map((k) => k.type).sort()).toEqual(['plain', 'water']);
   });
 });
+
+describe('forgiving drop (D-051)', () => {
+  const types = (game: Game) => game.state.world.kids.map((k) => k.type).sort();
+
+  it('a drop onto a recipe partner fuses even when the bodies never touch', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    const water = place(game, 'water', 700, 500);
+    const plain = place(game, 'plain', 200, 800);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    // Lands 400 units from water, far outside touchSlack.
+    game.step([{ type: 'drop', kidId: plain.id, x: 300, y: 500, target: water.id }]);
+    expect(types(game)).toEqual(['firefighter']);
+  });
+
+  it('a drop onto a non-partner just lands where it was shown (D-039)', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    const other = place(game, 'plain', 700, 500);
+    const plain = place(game, 'plain', 200, 800);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    game.step([{ type: 'drop', kidId: plain.id, x: 300, y: 500, target: other.id }]);
+    expect(types(game)).toEqual(['plain', 'plain']);
+    expect(game.state.world.kids.find((k) => k.id === plain.id)).toMatchObject({ x: 300, y: 500, held: false });
+  });
+
+  it('the kid under the finger wins over a partner the drop touches', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    // Snow has the lower id, so on an equal footing the touching snow pair would sort first.
+    const snow = place(game, 'snow', 420, 500);
+    const water = place(game, 'water', 800, 500);
+    const plain = place(game, 'plain', 200, 800);
+    expect(snow.id).toBeLessThan(water.id);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    expect(game.landingSpot(plain.id, 300, 500, new Map())).toEqual({ x: 300, y: 500 });
+    // Flush against snow (gap 0), far from water.
+    game.step([{ type: 'drop', kidId: plain.id, x: 300, y: 500, touching: [snow.id], target: water.id }]);
+    expect(types(game)).toEqual(['firefighter', 'snow']);
+  });
+
+  it('a target that also touches still beats a closer contact', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    const snow = place(game, 'snow', 420, 500); // gap 0, right of the drop
+    const water = place(game, 'water', 174, 500); // gap 6, left of it: touching, but farther
+    const plain = place(game, 'plain', 200, 800);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    expect(game.landingSpot(plain.id, 300, 500, new Map())).toEqual({ x: 300, y: 500 });
+    game.step([{ type: 'drop', kidId: plain.id, x: 300, y: 500, touching: [snow.id, water.id], target: water.id }]);
+    expect(types(game)).toEqual(['firefighter', 'snow']);
+  });
+
+  it('a target still in newborn grace does not fuse', () => {
+    const game = new Game(testContent({ intervalSeconds: 1e9 }), { bounds, spawnAt: garden }, 1);
+    const water = addKid(game.state.world, 'water', 700, 500, createRng(0), 5, defaultBox(content.balance.body.radius));
+    const plain = place(game, 'plain', 200, 800);
+    game.step([{ type: 'pickUp', kidId: plain.id }]);
+    game.step([{ type: 'drop', kidId: plain.id, x: 300, y: 500, target: water.id }]);
+    expect(types(game)).toEqual(['plain', 'water']);
+  });
+});
