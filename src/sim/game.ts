@@ -1,3 +1,4 @@
+import { checkName } from './names';
 import { pairKey } from '../content/validate';
 import { BUILDING_IDS, type BuildingId, type Content, type KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
@@ -49,7 +50,11 @@ export type Command =
   /** Start a plot growing (D-061): it needs `minKids` kids; never automatic. */
   | { type: 'startGrowing'; plot: number }
   /** Unlock the next plot with Materials (GUI_MVP §15.4). */
-  | { type: 'unlockPlot' };
+  | { type: 'unlockPlot' }
+  /** Feed a kid one bite for Materials (D-056): happy for a while. A hated food is refused, free. */
+  | { type: 'feed'; kidId: number; food: string }
+  /** Name a kid for Materials (D-057), or clear its name (`null`), which is free. */
+  | { type: 'name'; kidId: number; name: string | null };
 
 /** Why a purchase or setting was refused; the UI explains it, and nothing changes. */
 export type RejectReason =
@@ -63,7 +68,13 @@ export type RejectReason =
   | 'gone'
   | 'plotsBusy'
   | 'plotFull'
-  | 'tooFewKids';
+  | 'tooFewKids'
+  /** The kid won't eat that food (D-056). Nothing is spent. */
+  | 'hated'
+  /** Not a food, or not an allowed name (GUI_MVP §18.2). */
+  | 'invalid'
+  /** The kid already has that name, or has none to clear. */
+  | 'unchanged';
 
 export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline' | 'sprout';
 
@@ -79,6 +90,8 @@ export interface PlantedKid {
   type: KidId;
   look: Look;
   variant?: string;
+  /** Happy when added (D-056): it counts one tier higher in the odds, for good (GUI_MVP §15.3). */
+  happy?: boolean;
 }
 
 /** A plot's seed (D-061): the kids planted in it, then, once started, its sprout. */
@@ -128,6 +141,10 @@ export type GameEvent =
   | { type: 'dropped'; kidId: number }
   /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
   | { type: 'planted'; kid: Kid; plot: number; count: number }
+  /** A bite accepted (D-056): the kid is happy from now, replacing any earlier happiness. */
+  | { type: 'fed'; kid: Kid; food: string; favourite: boolean }
+  /** A name given, or cleared (`null`) (D-057). */
+  | { type: 'named'; kid: Kid; name: string | null }
   /** A plot started growing; its sprout is decided (not revealed until it comes up). */
   | { type: 'growing'; plot: number }
   | { type: 'plotUnlocked'; plots: number }
@@ -337,9 +354,21 @@ export class Game {
     return sum;
   }
 
-  /** What one kid earns per second: its type's rate, more if it is a rare (D-062). */
-  incomeOfKid(kid: Pick<Kid, 'type' | 'variant'>): number {
+  /** What one kid earns per second: its type's rate, more if it is a rare (D-062) or happy (D-056). */
+  incomeOfKid(kid: Pick<Kid, 'type' | 'variant' | 'happy'>): number {
+    return this.baseIncomeOfKid(kid) * this.happyMultiplier(kid);
+  }
+
+  /** What a kid earns when not happy: its type's rate, more if it is a rare. */
+  private baseIncomeOfKid(kid: Pick<Kid, 'type' | 'variant'>): number {
     return this.incomeOf(kid.type) * (kid.variant ? this.content.balance.planting.rareIncomeMultiplier : 1);
+  }
+
+  /** How many times as much a kid earns while happy (D-056): 1 when it isn't. */
+  happyMultiplier(kid: Pick<Kid, 'happy'>): number {
+    if (!kid.happy || kid.happy.left <= 0) return 1;
+    const f = this.content.balance.feeding;
+    return kid.happy.favourite ? f.favouriteMultiplier : f.happyMultiplier;
   }
 
   incomeOf(type: KidId): number {
@@ -417,6 +446,12 @@ export class Game {
     for (const kid of world.kids) kid.grace = Math.max(0, kid.grace - dt);
     // Income for the step, from the kids present after commands (plan §3).
     this.state.materials += this.income * dt;
+    // Happiness wears off (D-056), after this step's income.
+    for (const kid of world.kids) {
+      if (!kid.happy) continue;
+      kid.happy.left -= dt;
+      if (kid.happy.left <= 0) delete kid.happy;
+    }
     stepWander(
       world,
       this.rng,
@@ -456,7 +491,17 @@ export class Game {
     const sprouted: Kid[] = [];
     /** Offline arrivals, seconds into the absence. */
     const arrived = new Map<number, number>();
-    let materials = this.income * away;
+    // Each kid earns its base rate for the whole absence, and its happy extra only until the
+    // happiness wears off (D-056), which it does offline too.
+    let materials = 0;
+    for (const kid of s.world.kids) {
+      const base = this.baseIncomeOfKid(kid);
+      materials += base * away + base * (this.happyMultiplier(kid) - 1) * Math.min(away, kid.happy?.left ?? 0);
+      if (kid.happy) {
+        kid.happy.left -= away;
+        if (kid.happy.left <= 0) delete kid.happy;
+      }
+    }
     const admit = (kid: Kid, at: number, into: Kid[]) => {
       kid.grace = 0; // it has been around for a while
       into.push(kid);
@@ -535,6 +580,14 @@ export class Game {
         this.applyPurchase(c, events);
         continue;
       }
+      if (c.type === 'feed') {
+        this.feed(c, events);
+        continue;
+      }
+      if (c.type === 'name') {
+        this.name(c, events);
+        continue;
+      }
       if (c.type === 'startGrowing') {
         const seed = this.state.plots[c.plot]?.seed;
         const reason: RejectReason | null = !seed || seed.sprout ? 'plotsBusy' : seed.planted.length < this.content.balance.planting.minKids ? 'tooFewKids' : null;
@@ -542,7 +595,7 @@ export class Game {
           events.push({ type: 'rejected', command: 'startGrowing', reason: reason ?? 'plotsBusy' });
           continue;
         }
-        seed.sprout = this.rollSprout(seed.planted.map((k) => k.type));
+        seed.sprout = this.rollSprout(seed.planted);
         events.push({ type: 'growing', plot: c.plot });
         continue;
       }
@@ -798,10 +851,12 @@ export class Game {
    * from the floor (minKids kids, all below tier 3) to the ceiling (maxKids kids of tier 5
    * or above), at x = the average of a count factor and a tier factor, each clamped to 0..1.
    */
-  oddsFor(planted: readonly KidId[]): { special: number; rare: number } {
+  oddsFor(planted: readonly (KidId | Pick<PlantedKid, 'type' | 'happy'>)[]): { special: number; rare: number } {
     const p = this.content.balance.planting;
     const n = planted.length;
-    const meanTier = n ? planted.reduce((t, k) => t + (this.tiers.get(k) ?? 1), 0) / n : 1;
+    // A kid happy when added counts one tier higher; the curve's caps still hold (D-056, §15.3).
+    const tierOf = (k: KidId | Pick<PlantedKid, 'type' | 'happy'>) => (typeof k === 'string' ? (this.tiers.get(k) ?? 1) : (this.tiers.get(k.type) ?? 1) + (k.happy ? 1 : 0));
+    const meanTier = n ? planted.reduce((t, k) => t + tierOf(k), 0) / n : 1;
     const clamp = (v: number) => Math.min(1, Math.max(0, v));
     const x = (clamp((n - p.minKids) / Math.max(1, p.maxKids - p.minKids)) + clamp((meanTier - 2) / 3)) / 2;
     const at = ([lo, hi]: readonly [number, number]) => lo + (hi - lo) * x;
@@ -813,8 +868,9 @@ export class Game {
    * independently, a rare variant, which is of a kid planted (picked weighted by how many of
    * each went in) unless it is a special. Rolled on the spawn stream, so saves replay it.
    */
-  private rollSprout(planted: readonly KidId[]): Sprout {
-    const odds = this.oddsFor(planted);
+  private rollSprout(kids: readonly PlantedKid[]): Sprout {
+    const odds = this.oddsFor(kids);
+    const planted = kids.map((k) => k.type);
     const specials = this.content.kids.filter((k) => k.special);
     const special = this.spawnRng.next() < odds.special && specials.length > 0;
     const rare = this.spawnRng.next() < odds.rare;
@@ -865,11 +921,61 @@ export class Game {
     }
     for (const kid of kids as Kid[]) {
       world.kids.splice(world.kids.indexOf(kid), 1);
-      const snapshot: PlantedKid = { type: kid.type, look: { ...kid.look }, ...(kid.variant ? { variant: kid.variant } : {}) };
+      // Its name and happiness end here; whether it was happy stays with the seed (D-056).
+      const snapshot: PlantedKid = { type: kid.type, look: { ...kid.look }, ...(kid.variant ? { variant: kid.variant } : {}), ...(kid.happy ? { happy: true } : {}) };
       if (target.seed) target.seed.planted.push(snapshot);
       else target.seed = { planted: [snapshot], sprout: null, grown: 0 };
       events.push({ type: 'planted', kid, plot, count: target.seed.planted.length });
     }
+  }
+
+  /**
+   * One bite (D-056). Refused if the kid is gone, the food unknown (`invalid`), hated
+   * (`hated`, nothing spent) or unaffordable. Accepted, the kid is happy from now: a
+   * favourite for longer and more, and a new bite replaces the old happiness, never adds.
+   */
+  private feed(c: Extract<Command, { type: 'feed' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: 'feed', reason });
+    };
+    const kid = this.state.world.kids.find((k) => k.id === c.kidId);
+    if (!kid) return reject('gone');
+    const f = this.content.balance.feeding;
+    const food = f.foods.find((x) => x.id === c.food);
+    if (!food) return reject('invalid');
+    const likes = this.content.personality[kid.type];
+    if (likes?.hatedFood === food.id) return reject('hated');
+    if (this.state.materials < food.price) return reject('cost');
+    this.state.materials -= food.price;
+    const favourite = likes?.favouriteFood === food.id;
+    kid.happy = { left: favourite ? f.favouriteSeconds : f.happySeconds, favourite };
+    events.push({ type: 'fed', kid, food: food.id, favourite });
+  }
+
+  /**
+   * A name (D-057): normalized and checked (GUI_MVP §18.2), then charged; the same name is
+   * refused, never charged. `null` clears a name for free.
+   */
+  private name(c: Extract<Command, { type: 'name' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: 'name', reason });
+    };
+    const kid = this.state.world.kids.find((k) => k.id === c.kidId);
+    if (!kid) return reject('gone');
+    if (c.name === null) {
+      if (kid.name === undefined) return reject('unchanged');
+      delete kid.name;
+      events.push({ type: 'named', kid, name: null });
+      return;
+    }
+    const n = this.content.balance.naming;
+    const check = checkName(c.name, n.maxLength);
+    if (!check.ok) return reject('invalid');
+    if (check.name === kid.name) return reject('unchanged');
+    if (this.state.materials < n.price) return reject('cost');
+    this.state.materials -= n.price;
+    kid.name = check.name;
+    events.push({ type: 'named', kid, name: check.name });
   }
 
   /** The plot a dragged kid goes into: the one still filling with room, else the lowest empty; null if none. */

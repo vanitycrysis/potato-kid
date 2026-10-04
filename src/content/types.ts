@@ -113,6 +113,42 @@ export interface PlantingBalance {
   miniScale: number;
 }
 
+/** One food (D-056, GUI_MVP §17.1): a pinned id, its name, and its price in Materials. */
+export interface FoodDef {
+  id: string;
+  name: string;
+  price: number;
+}
+
+/** Feeding (D-056): what a bite costs and how long, and how much, it makes a kid happy. */
+export interface FeedingBalance {
+  /** All twelve foods, in the pinned table order. */
+  foods: FoodDef[];
+  /** Any other food than its favourite: happy for this long, earning this many times as much. */
+  happySeconds: number;
+  happyMultiplier: number;
+  /** Its favourite food: at least as long and as much as any other. */
+  favouriteSeconds: number;
+  favouriteMultiplier: number;
+}
+
+/** Naming (D-057): what a name costs and how long it may be. */
+export interface NamingBalance {
+  price: number;
+  /** Extended grapheme clusters, after normalizing (GUI_MVP §18.2). */
+  maxLength: number;
+}
+
+/** A type's personality (D-058, GUI_MVP §18.1): Codex's writing and its two foods. */
+export interface Personality {
+  description: string;
+  favouriteFood: string;
+  likes: string;
+  hatedFood: string;
+  hates: string;
+  hobbies: string;
+}
+
 export interface Balance {
   spawnWeights: Record<KidId, number>;
   spawn: SpawnBalance;
@@ -122,10 +158,14 @@ export interface Balance {
   economy: EconomyBalance;
   buildings: Record<BuildingId, BuildingBalance>;
   planting: PlantingBalance;
+  feeding: FeedingBalance;
+  naming: NamingBalance;
 }
 
 export interface Content {
   kids: KidDef[];
   recipes: RecipeDef[];
   balance: Balance;
+  /** Every type's personality and foods, by type. */
+  personality: Record<KidId, Personality>;
 }

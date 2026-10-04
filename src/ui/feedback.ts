@@ -149,5 +149,12 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'All plots are full. Start growing a filled plot first.';
     case 'tooFewKids':
       return 'Add at least 3 kids to Start growing.';
+    // GUI_MVP §17.2, §18.2: the sheets say these with the kid's name and the food.
+    case 'hated':
+      return 'This kid won’t eat that. Nothing was spent.';
+    case 'invalid':
+      return 'Use letters, numbers, spaces, apostrophes or hyphens.';
+    case 'unchanged':
+      return 'Name unchanged.';
   }
 }

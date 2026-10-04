@@ -4,12 +4,39 @@ import type { Content } from './types';
 import { pairKey, validateContent } from './validate';
 
 function withChanges(patch: Partial<Content>): Content {
-  return { ...structuredClone(content), ...patch };
+  const c = { ...structuredClone(content), ...patch };
+  // A test kid gets a personality, as every shipped one has.
+  for (const k of c.kids) c.personality[k.id] ??= { ...content.personality.plain! };
+  return c;
 }
 
 describe('shipped content', () => {
   it('passes the content contract', () => {
     expect(validateContent(content)).toEqual([]);
+  });
+});
+
+describe('feeding, naming and personality (D-056, D-057, D-058)', () => {
+  it('every type has a personality with two known, different foods', () => {
+    const missing = structuredClone(content);
+    delete missing.personality.fire;
+    expect(validateContent(missing)).toContain('kid "fire" has no personality');
+    const same = structuredClone(content);
+    same.personality.fire!.hatedFood = same.personality.fire!.favouriteFood;
+    expect(validateContent(same)).toContain(`kid "fire" can't like and hate the same food`);
+    const unknown = structuredClone(content);
+    unknown.personality.fire!.favouriteFood = 'cake';
+    expect(validateContent(unknown)).toContain('kid "fire" has an unknown food');
+  });
+
+  it('a favourite is never worse than another food', () => {
+    const c = structuredClone(content);
+    c.balance.feeding.favouriteSeconds = c.balance.feeding.happySeconds - 1;
+    expect(validateContent(c)).toContain('balance.feeding: a favourite must last and pay at least as much as other foods');
+  });
+
+  it('ships the twelve pinned foods (GUI_MVP §17.1)', () => {
+    expect(content.balance.feeding.foods.map((f) => f.id)).toEqual(['toast', 'berry_jam', 'berries', 'apple', 'carrot', 'corn', 'mushroom', 'pickle', 'cheese', 'soup', 'cocoa', 'cracker']);
   });
 });
 
