@@ -15,6 +15,8 @@ const FACE = 'classic';
 function layer(name: string, src: string, at: Attachment | undefined, pivot: [number, number], fit: [number, number] = [1, 1]): HTMLElement {
   const holder = document.createElement('div');
   holder.className = 'portrait-layer';
+  // Which asset, by name: a small one may be inlined, so its URL won't say (tests, debugging).
+  holder.dataset.asset = name;
   const p = at?.position ?? [0, 0];
   const s = at?.scale ?? [1, 1];
   holder.style.transform = `translate(${p[0]}px, ${p[1]}px) rotate(${at?.rotationDeg ?? 0}deg) scale(${s[0]}, ${s[1]})`;
@@ -40,9 +42,11 @@ function layer(name: string, src: string, at: Attachment | undefined, pivot: [nu
 
 /**
  * A portrait of `type` at `sizePx` CSS px. Throws if any layer is missing: a discovered
- * kid without art is a validation error, never a seed packet (GUI_MVP §7).
+ * kid without art is a validation error, never a seed packet (GUI_MVP §7). `mini`: a Mini
+ * rare at its saved scale about the ground point, its pebbles at their normal placement
+ * (GUI_MVP §16.1-16.2; small portraits omit the sleeve).
  */
-export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }): HTMLElement {
+export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }, mini?: { scale: number }): HTMLElement {
   const url = (name: string) => {
     const u = assetUrl(name);
     if (!u) throw new Error(`Missing art "${name}" for the ${type} portrait`);
@@ -68,6 +72,15 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body
   canvas.append(layer(frame.asset, url(frame.asset), undefined, [0, 0]));
   canvas.append(layer(face.states.open!, url(face.states.open!), frame.attachments.face_centre, face.sourcePivot));
   for (const c of costume?.components ?? []) if (c.layer === 'front') canvas.append(part(c));
+  if (mini) {
+    // The kid's own layers shrink about the ground point; the pebbles keep their place.
+    const kid = document.createElement('div');
+    kid.className = 'portrait-layer';
+    const [gx, gy] = rig.groundAnchor;
+    kid.style.transform = `translate(${gx}px, ${gy}px) scale(${mini.scale}) translate(${-gx}px, ${-gy}px)`;
+    kid.append(...canvas.childNodes);
+    canvas.append(kid, layer('fx_variant_mini', url('fx_variant_mini'), undefined, [0, 0]));
+  }
 
   const box = document.createElement('div');
   box.className = 'portrait';

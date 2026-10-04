@@ -2971,6 +2971,21 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     await expect(rows.nth(8)).toHaveAttribute('aria-label', `Echo: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
   });
 
+  test("a Mini's list portrait is Mini too: smaller about its ground, pebbles at its foot (§16.2)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      window.__PK__!.debugAdd!('fire', 600, 1400, undefined, 'mini');
+      window.__PK__!.debugAdd!('fire', 900, 1400);
+    });
+    await page.locator('.tray-cell').nth(0).click();
+    await page.getByRole('button', { name: 'Add kids' }).first().click();
+    const rows = page.getByRole('dialog').locator('.picker-row');
+    await expect(rows.nth(0)).toContainText('Rare: Mini');
+    await expect(rows.nth(0).locator('[data-asset="fx_variant_mini"]')).toHaveCount(1);
+    expect(await rows.nth(0).locator('.portrait-canvas > .portrait-layer').first().evaluate((e) => (e as HTMLElement).style.transform)).toContain(`scale(${0.72})`);
+    await expect(rows.nth(1).locator('[data-asset="fx_variant_mini"]')).toHaveCount(0);
+  });
+
   test('a first Comet sprout reads as found; the next Comet just sprouts (§15.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     // An ordinary Fire Kid sprouts first: the Dex (and the HUD) now know the type.
