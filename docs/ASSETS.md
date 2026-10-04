@@ -1,5 +1,23 @@
 # Asset list
 
+## PLANT-V2-DESIGN delivery (2026-10-04; Claude review pending)
+
+`plant-v2-design-2` follows D-061–D-063 and replaces the planting/two-variant portions of the historical gate-4 delivery below. GUI_MVP §§15–16, with §§7/17/18 amendments, is the current interaction contract. Round 2 addresses B1/B2; Claude approved the flow, ten rare identities, Dex and concepts in round 1. Owner concept approval remains pending.
+
+| Asset / contract | Delivery | Status |
+| --- | --- | --- |
+| Eight rare looks | `fx_variant_{orbit,prism,ribbon,ripple,comet,petal,echo,zigzag}`: eight original 256 SVG sources and shared cropped PNGs; external symbols above the full costume envelope | exported; Claude review pending |
+| Rare icons | Eight matching 128 native SVGs, `icon_variant_{id}` | exported; 0 Pixi bytes |
+| Universal rare sparkle / birth | `fx_rare_sparkle`: six external ink/paper glints in one 240×204 cropped PNG; 2400 ms .8–1 idle, static reduced motion; same sprite expands/fades for480 ms at rare/special birth. Approved Start two-star DOM icon unchanged | B1 round 2 exported; Claude review pending |
+| Mini mark | Existing .72 rig scale and foot placement; `fx_variant_mini` two unequal pebbles /45×33 cropped PNG; matching128 DOM icon, zero bracket/square contours | B2 round 2 exported; Claude review pending |
+| Filling plots | `fx_plant_filling` five empty slots and `fx_plant_slot_filled` shared stamp, 256 SVG/cropped PNG; unchanged Garden grounds/reserve | exported; Claude review pending |
+| Flow, rare profile and Dex | Five-slot filling, full-map multi-picker/current→projected odds, explicit Start review, four reveal outcomes, ten-rare detail and Specials collection | GUI_MVP and `gate4_v2.json` revised; review/integration pending |
+| Special concepts | `.codex-out/special-concepts.md`: 20 ideas, 12 T5 / 8 T6, prize reasons and roster distinctions | **owner approval pending; no costumes produced** |
+| Native review gallery | `.codex-out/plant-v2-index.html`: 204 SVG/PNG screens; forty one-rare-among-twelve comparisons, all-ten crowded colour/gray, Mini vs target, burst/static births, happy/special-parent picker; motion review | B1/B2 round 2; special art still pending |
+| Runtime decode | 218 PNGs / **12,815,892 bytes (12.22219 MiB)**; round 2 +151,756 bytes, no new textures; only sparkle and Mini PNG change | 32 MiB physical ceiling retained; device allocation check pending |
+
+Sources: `art/src/plant-v2/`, Mini in `art/src/gate4/`; unchanged `npm run art:export` passed287 sources/five sidecars. Round-2 preservation permits only those three SVGs and `gate4_v2.json`; all216 other runtime PNGs, kid/face/costume/rig/map/reference sources, personalities, concepts and `src/` are unchanged. `npm test`:25 files /215 tests pass. The source-alpha clear-window audit and69,120 geometry cases pass;204 native screens have zero visible text issues. Happy+1 effective tier and special-parent eligibility are settled; snapshot choice/open balance numbers: [Round 2 notes](../.codex-out/plant-v2-notes.md). Claude reviews and integrates; the owner reviews concepts before the separate SPECIALS costume task.
+
 ## PERSONALITY delivery (2026-10-03; Claude review pending)
 
 | Asset / contract | Delivery | Status |
