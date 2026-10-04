@@ -487,6 +487,7 @@ export class GardenPlots {
         parts.push(
           el('div', 'plot-odds', ...this.rolls(p.planted).map((l) => el('p', 'sheet-body-text', l))),
           el('p', 'sheet-helper', 'Two separate rolls. A sprout can be both special and rare.'),
+          el('p', 'sheet-helper', "A rare sprout can also take a planted special's type."),
           el('p', 'sheet-helper', `One kid sprouts after ${formatDuration(this.game.growSeconds)}.`),
         );
         if (p.count < max) parts.push(this.button('Add kids', 'plot-action-full', () => this.show({ kind: 'picker', plot: i })));
@@ -632,6 +633,8 @@ export class GardenPlots {
       el('p', 'sheet-helper', 'Added kids leave the map right away. They cannot be taken back.'),
       el('p', 'sheet-helper', 'Their names, income and happy effects end when you press Add.'),
       el('p', 'sheet-helper', 'Selections stay on the map until Add.'),
+      el('p', 'sheet-helper', 'Two separate rolls. A sprout can be both special and rare.'),
+      el('p', 'sheet-helper', "A rare sprout can also take a planted special's type."),
     );
     const searchLabel = el('label', 'picker-search-label', 'Find a kid on your map');
     const search = el('input', 'picker-search');

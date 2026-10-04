@@ -2463,6 +2463,8 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(footer).toContainText('Special roll: Need 3 more → 10%');
     await expect(footer).toContainText('Rare roll: Need 3 more → 5%');
     await expect(footer).toContainText('Added kids leave now. No refund.');
+    await expect(sheet(page).locator('.picker-helpers')).toContainText('Two separate rolls. A sprout can be both special and rare.');
+    await expect(sheet(page).locator('.picker-helpers')).toContainText("A rare sprout can also take a planted special's type.");
     await add.click();
     // One step: the three are planted together, and the detail shows what happened.
     await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[3]]);
