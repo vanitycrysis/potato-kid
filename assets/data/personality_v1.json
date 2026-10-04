@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "personality-1",
+  "revision": "personality-2-specials",
   "status": "Claude review pending",
   "types": {
     "plain": {
@@ -514,6 +514,166 @@
       "hatedFood": "cocoa",
       "hates": "murky spills and the smallest pieces being swept away.",
       "hobbies": "Laying out tiny patterns, then moving just one piece to see what changes."
+    },
+    "gift": {
+      "description": "Carries a parcel as though every afternoon were a birthday. Saves the best wrapping paper, even when the gift inside was only a pebble.",
+      "favouriteFood": "berries",
+      "likes": "little servings arranged like presents and birthdays remembered early.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky fingertips on fresh wrapping paper.",
+      "hobbies": "Wrapping tiny surprises and leaving them beside a familiar doorstep."
+    },
+    "origami": {
+      "description": "A careful folder with one enormous paper crane. Checks every crease before setting it down, then makes a much smaller crane for company.",
+      "favouriteFood": "cracker",
+      "likes": "crisp edges and a sheet of paper with no wrinkles.",
+      "hatedFood": "pickle",
+      "hates": "damp patches that soften a perfectly good fold.",
+      "hobbies": "Folding birds from saved paper and comparing their shadows."
+    },
+    "puzzle": {
+      "description": "Keeps a chunky jigsaw piece close by and enjoys the moment when something finally fits. A tidy drawer is nearly as satisfying as a puzzle.",
+      "favouriteFood": "cheese",
+      "likes": "neat little cubes and drawers that close on the first try.",
+      "hatedFood": "apple",
+      "hates": "round snacks rolling away before the break is over.",
+      "hobbies": "Sorting puzzle pieces by their tabs, with a separate pile for maybes."
+    },
+    "rubber_duck": {
+      "description": "Brings a rubber duck to every puddle, including the ones too small for floating. Those puddles still deserve a very short duck visit.",
+      "favouriteFood": "corn",
+      "likes": "small golden morsels and puddles with room for a visitor.",
+      "hatedFood": "cracker",
+      "hates": "dry crumbs scattered over a freshly cleaned duck.",
+      "hobbies": "Testing puddles with the duck, then drying its little flat bottom."
+    },
+    "handbell": {
+      "description": "Keeps a polished handbell ready for visitors. Plans to ring it just once, but sometimes gives it a quiet second ring to check the first.",
+      "favouriteFood": "cocoa",
+      "likes": "a warm cup after visitors leave and one clear ringing note.",
+      "hatedFood": "toast",
+      "hates": "crunching that interrupts a very quiet listening break.",
+      "hobbies": "Polishing the bell and comparing the sound in different corners."
+    },
+    "fossil": {
+      "description": "Protects a spiral fossil and wonders what its very slow afternoon was like. Takes the stone on outings so it can enjoy a change of view.",
+      "favouriteFood": "mushroom",
+      "likes": "earthy snacks and stones with a long story to tell.",
+      "hatedFood": "carrot",
+      "hates": "hard bites when an afternoon was supposed to be unhurried.",
+      "hobbies": "Sorting stones by texture and inventing peaceful prehistoric afternoons."
+    },
+    "pocket_watch": {
+      "description": "Carries a pocket watch but always leaves spare time for wandering. Finishing a walk a little late usually means there was something to see.",
+      "favouriteFood": "apple",
+      "likes": "a snack that travels well and a little time left over.",
+      "hatedFood": "carrot",
+      "hates": "snack preparation that takes longer than the whole break.",
+      "hobbies": "Timing very short walks, then taking them again without the watch."
+    },
+    "accordion": {
+      "description": "Squeezes a little accordion and suspects every tune needs another chorus. Packs a small snack for the pause between the last two choruses.",
+      "favouriteFood": "corn",
+      "likes": "bite-sized breaks and tunes that are easy to remember.",
+      "hatedFood": "toast",
+      "hates": "dry crumbs slipping into the folds of the bellows.",
+      "hobbies": "Trying familiar tunes slowly, then adding one more gentle chorus."
+    },
+    "storybook": {
+      "description": "Keeps a fat storybook open at the part where everyone gets home. The bookmark stays there until a visitor is ready to hear the ending.",
+      "favouriteFood": "cocoa",
+      "likes": "warm mugs and stories with a comfortable place to stop.",
+      "hatedFood": "apple",
+      "hates": "juicy fingerprints on a favourite page.",
+      "hobbies": "Choosing a bedtime story, with a shorter backup for sleepy visitors."
+    },
+    "yo_yo": {
+      "description": "Practices one gentle yo-yo trick and celebrates whenever the toy comes back. A tangled string only means there is a new little job to do.",
+      "favouriteFood": "pickle",
+      "likes": "a sharp little snack break and a string that unwinds easily.",
+      "hatedFood": "cracker",
+      "hates": "crumbs caught in the string while it is being wound.",
+      "hobbies": "Practising one slow return and winding the string neatly afterward."
+    },
+    "acorn": {
+      "description": "Wears an oversized acorn cap and keeps the matching nut nearby. Checks that both are still together before choosing a shady place to rest.",
+      "favouriteFood": "carrot",
+      "likes": "earthy snacks packed snugly and a cool patch of shade.",
+      "hatedFood": "soup",
+      "hates": "spills inside the bag where the little nut is kept.",
+      "hobbies": "Comparing acorn caps and finding a comfortable resting spot for each."
+    },
+    "postcard": {
+      "description": "Collects broad postcards and thinks a nice afternoon is always worth writing about. Even a familiar path gets a card if the light is good.",
+      "favouriteFood": "berry_jam",
+      "likes": "a sweet break after writing and a card arriving just because.",
+      "hatedFood": "berries",
+      "hates": "juicy stains across a freshly cleared writing space.",
+      "hobbies": "Drawing tiny landscapes and choosing who might enjoy the view."
+    },
+    "music_box": {
+      "description": "Turns a music box handle slowly so the tune lasts longer. Keeps a little quiet time after the last note before deciding to wind it again.",
+      "favouriteFood": "cocoa",
+      "likes": "a warm cup beside a quiet tune and handles that turn smoothly.",
+      "hatedFood": "mushroom",
+      "hates": "soft snack bits lodging beside the winding grip.",
+      "hobbies": "Winding the box slowly and listening for the very last note."
+    },
+    "magic_slate": {
+      "description": "Carries a drawing slate with room for one favourite doodle. Almost slides it clean, then decides the doodle deserves one more afternoon.",
+      "favouriteFood": "soup",
+      "likes": "slow spoonfuls and a drawing with plenty of empty space.",
+      "hatedFood": "pickle",
+      "hates": "wet fingertips smudging a drawing before it is finished.",
+      "hobbies": "Drawing the same little house with a different door each time."
+    },
+    "marble_run": {
+      "description": "Waits beside a marble track for the final landing. The marble takes only a moment to arrive, but choosing its next trip is a serious job.",
+      "favouriteFood": "apple",
+      "likes": "little rounded snack pieces and a clean landing in the tray.",
+      "hatedFood": "cheese",
+      "hates": "sticky bits left on a track that had been running smoothly.",
+      "hobbies": "Sending one marble down the track and checking where it comes to rest."
+    },
+    "toy_train": {
+      "description": "Rolls a toy locomotive along the ground and stops when someone wants to wave. There is always time for an extra station on the way home.",
+      "favouriteFood": "soup",
+      "likes": "warm station breaks and a route with time for visitors.",
+      "hatedFood": "berry_jam",
+      "hates": "sticky fingerprints on wheels that were turning freely.",
+      "hobbies": "Planning tiny stations and parking the engine neatly beside each."
+    },
+    "puppet_theatre": {
+      "description": "Carries a curtain stage and prepares a very short cloth-puppet show. Saves a place for late visitors, even if the show has already finished.",
+      "favouriteFood": "carrot",
+      "likes": "tidy snack sticks and an audience with time for one more scene.",
+      "hatedFood": "cocoa",
+      "hates": "dark drink stains on a freshly washed cloth puppet.",
+      "hobbies": "Rehearsing a small hello and a bow, with a long pause for applause."
+    },
+    "toy_castle": {
+      "description": "Keeps the gate of a wooden toy castle open for imaginary guests. There is room inside for a grand visit, provided everyone travels lightly.",
+      "favouriteFood": "mushroom",
+      "likes": "earthy picnic bites and little guests who remember to knock.",
+      "hatedFood": "soup",
+      "hates": "drips along the wooden gateway after snack time.",
+      "hobbies": "Arranging pebble guests and finding a place for every one to stay."
+    },
+    "paper_town": {
+      "description": "Unfolds a pocket paper town and checks that every house has a front path. Folds it away carefully so the whole place can travel together.",
+      "favouriteFood": "pickle",
+      "likes": "a crisp snack pause and paths leading right up to the door.",
+      "hatedFood": "corn",
+      "hates": "small loose morsels rolling into the folds between houses.",
+      "hobbies": "Unfolding the town and tracing a different short walk through it."
+    },
+    "treasure_chest": {
+      "description": "Carries an open treasure chest with smooth pebbles inside. Every pebble has a story, although some stories are simply where it was found.",
+      "favouriteFood": "berry_jam",
+      "likes": "a sweet treat after sorting and treasures that fit in one small box.",
+      "hatedFood": "cheese",
+      "hates": "greasy marks on a freshly polished pebble collection.",
+      "hobbies": "Sorting smooth pebbles and changing which one gets the best corner."
     }
   }
 }

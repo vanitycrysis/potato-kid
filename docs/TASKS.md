@@ -8,7 +8,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 
 **Order of work**
 - **Done:** MUSIC-LOOP (#61), WAVE-WIGGLE (#62), FUSE-DROP's engine side (#66), GATE4-DESIGN (#67), PACING (#68), PERSONALITY (#69) and OFFLINE-WANDER (#70); they go to the owner's device at the next gate-4 build.
-- **Now:** planting was reworked with the owner (D-061..D-065, 2026-10-04). PLANT-V2-DESIGN (Codex) comes first; then PLANTING and VARIANTS (Claude), then SPECIALS (Codex, once the owner approves the concepts). FEED-NAME (Claude) can go ahead in parallel.
+- **Now:** planting was reworked with the owner (D-061..D-065, 2026-10-04). PLANT-V2-DESIGN (Codex) comes first; then PLANTING and VARIANTS (Claude), then SPECIALS (Codex; concepts approved in D-066, four readability holds remain). FEED-NAME (Claude) can go ahead in parallel.
 - **Parked:** expeditions (D-065), an owner idea for later; nothing is built for it.
 
 **Built for the MVP so far**
@@ -53,7 +53,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | VARIANTS | Claude | D-062 (supersedes D-055): ten rare variants: rolls, income, Dex marks, sparkle and profile rendering from Codex's design; never sold by the Compendium | todo (after PLANT-V2-DESIGN) | Tests for odds, income and saves; the Dex shows found variants |
 | FEED-NAME | Claude | D-056, D-057: buying and feeding food, happiness, naming, the kid card | todo (after GATE4-DESIGN and PERSONALITY) | Tests for prices, refusals, boosts and names in saves; e2e for the kid card |
 | PLANT-V2-DESIGN | ChatGPT | D-061..D-063: the planting flow for 3 to 5 kids (a plot filling up, picking kids by tapping a plot, Start growing sparkling at 5, showing the odds); eight more rare looks plus the sparkle and the special profile; concepts for about 20 special kids (names, one-line ideas, tiers) for the owner to approve; the Dex for specials and ten rares | **done** (#73; Claude's review passed in round 2) | Claude's review passes; the owner approves the special-kid concepts |
-| SPECIALS | ChatGPT (art, writing) / Claude (content, rules) | D-063: about 20 apex special kids (tier 5 or above): costumes, names, personalities and foods; content entries that no recipe uses, outside the spawn pool and the Compendium | **next for Codex** (the owner approved all 20 concepts, D-066) | Every special passes content and art checks; Claude's review passes |
+| SPECIALS | ChatGPT (art, writing) / Claude (content, rules) | D-063: about 20 apex special kids (tier 5 or above): costumes, names, personalities and foods; content entries that no recipe uses, outside the spawn pool and the Compendium | **doing** (art/writing delivered; four D-066 readability holds; Claude review pending) | Every special passes content and art checks; Claude's review passes |
 | TROPHY-MAP | Both | D-064: a map to display special kids, bought for an absurd price | later (after SPECIALS) | — |
 | WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | **done** (#62, Claude's review passed in round 2; Water's hood is the weakest case, for the owner's device check) | Claude's review passes; the owner sees it on device at the next gate-4 build |
 | GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: icon approved; D-050..D-059 to do first) | Explicit approval before polish |

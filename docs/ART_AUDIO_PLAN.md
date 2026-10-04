@@ -1,5 +1,21 @@
 # Art and audio plan
 
+## SPECIALS delivery (2026-10-04; Claude review pending)
+
+Under D-063/D-066, retain the approved keepsake identities, exact IDs and 12 T5 /8 T6 split. Twenty new costumes share 21 original 256px front components, existing attachment slots and explicit fits on all four bodies. Acorn alone needs a second component. No new body/face/pose/clip, rare art, filter, portrait cache or lifetime reserve.
+
+| Item | Delivery / status |
+| --- | --- |
+| Costume art | `specials-1` sources/rig/trimmed PNGs delivered; sixteen pass ChatGPT's native 55 px colour/gray art review; Claude review pending |
+| Readability holds | **Music Box, Marble Run, Puppet Theatre and Paper Town fail ChatGPT's recognition gate**; simpler proposals/sheets in the notes go to the owner under D-066; do not mark complete |
+| Writing | `personality-2-specials`: 84 records; original 64 unchanged; unique pairs; exactly seven uses per food in each column; caps/no-recipe-food checks pass |
+| Existing alignment fix | Raincloud source +2 y, same shape/PNG bytes, trim offset only; full 84 alpha sweep passes without enlarging Tall's reserve |
+| Verification | New 20: 671,040 combinations; full 84: 2,818,368 combinations; zero bounds/face failures. Vector 213,095 checks, rare lane 21,600 placements; zero failures. Export/check and 215 tests pass |
+| Budget | Complete runtime **218/12,815,892 → 239/13,230,852 PNGs/decoded bytes**, +414,960 bytes; 12.61792 MiB; measured GPU allocation remains Claude's work |
+
+[Handoff and gates](../.codex-out/specials-notes.md) include all-body colour/gray/pose/size sheets, a 40-kid mixed map, full-roster comparisons, inventories and reproduction. Sources are original code-authored vectors. Review-only alternatives live outside `art/src/`/the export manifest and have no approved runtime status. `src/` remains unchanged; T6 presentation, content validation, live rare combinations and phone recognition remain integration/review checks. SPECIALS is doing, **Claude review pending**.
+
+
 ## PLANT-V2-DESIGN addendum (2026-10-04; Claude review pending)
 
 D-061–D-063 replace the historical one-kid planting and two-variant contract below. The current design is GUI_MVP §§15–16 with collection/profile/feeding amendments in §§7/17/18 and `art/data/gate4_v2.json`, revision `plant-v2-design-2`. Round 2 changes only B1/B2 and settled-rule copy; the approved flow, ten variant identities, Dex and concepts remain.
@@ -11,7 +27,7 @@ D-061–D-063 replace the historical one-kid planting and two-variant contract b
 | Common sparkle / reveal | One shared six-glint paper/ink sleeve outside lifetime silhouette, below all kid layers; slow2400 ms opacity .8…1/static1;480 ms birth expansion/fade for rare or special then calm rare idle. Special-only reduced-motion sleeve static1200 ms; approved two-star Start icon unchanged |
 | Mini mark | Two unequal pebbles replace square/corner arms; .72 scale and existing foot placement remain; B2 Claude review pending |
 | Collection/profile | Compact `Rare n / 10` grid summary, ten labelled detail rows, special section/type completion, planting-only rare profile and multiplier placeholder |
-| Special concepts | 20 pitches, 12 T5 / 8 T6; **owner approval pending before costume work**; no per-type final art this round |
+| Special concepts | 20 pitches, 12 T5 / 8 T6; owner concepts approved (D-066); SPECIALS delivery above; four readability gates held |
 | Source/export | 20 new SVGs = 11 shared trimmed runtime PNGs and nine native SVG icons; exporter unchanged, 287 sources/five sidecars pass |
 | Decode budget | 218 PNGs / **12,815,892 bytes (12.22219 MiB)**; round2 +151,756 bytes /no extra textures;32 MiB actual allocation ceiling unchanged |
 | Verification | Only sparkle/Mini PNGs change; approved art/content/source hashes preserved. Clear-window alpha and69,120 placements pass; Garden reserve290.489 <300;25 files/215 tests;204 SVG/PNG screens, forty single-rare crowd cases, native burst/static and motion evidence |

@@ -1,8 +1,24 @@
 # Asset list
 
+## SPECIALS delivery (2026-10-04; Claude review pending)
+
+D-066 approves all twenty concepts (12 T5 /8 T6). Revision `specials-1` delivers drawings and writing; **SPECIALS remains doing** because four readability gates need owner review and Claude's content/art review is outstanding.
+
+| Asset / contract | Delivery | Status |
+| --- | --- | --- |
+| Twenty special costumes | 21 original SVG components in `art/src/kids/`, exact supplied IDs in `kid_rig_v2.json`, 21 trimmed PNGs; same four bodies, poses, clips and reserves | 16 pass ChatGPT's 55 px colour/gray review; Claude review pending |
+| Four held reads | Music Box, Marble Run, Puppet Theatre, Paper Town | **not accepted**; simpler comparison sheets +review-only SVGs for owner selection under D-066 |
+| Personality /foods | `personality-2-specials`: all 84 records, original 64 preserved; 84 unique ordered pairs; every food seven favourites/seven hates | schema/caps/secrecy checks pass; Claude review pending |
+| Raincloud alignment | Existing back-cloud drawing moves +2 source y to fix pre-existing Tall top overflow; identical PNG bytes, trim y +2; rig unchanged | full-roster audit passes; Claude review pending |
+| Mechanical audits | 20 new and full 84 alpha sweeps, vector/rare-lane/crowd/preservation checks | zero failures; no engine/device acceptance |
+| Runtime decode | 218 → 239 PNGs; **12,815,892 → 13,230,852 bytes** (+414,960) | 12.61792 MiB storage-wide; 32 MiB physical ceiling unchanged |
+
+Sources, pivots, crops, hashes, per-type risks, writing review, candidate alternatives and reproduction: [.codex-out/specials-notes.md](../.codex-out/specials-notes.md). `npm run art:export`, `art:check` and all 215 tests pass. No `src/` or content edits; Claude's separate PR adds/excludes specials from recipes, Garden and Compendium. No T6 badge was commissioned. The current exported `final` flags identify authored drawings for review; they do not release the four held gates. Review/proposal images add zero runtime textures.
+
+
 ## PLANT-V2-DESIGN delivery (2026-10-04; Claude review pending)
 
-`plant-v2-design-2` follows D-061–D-063 and replaces the planting/two-variant portions of the historical gate-4 delivery below. GUI_MVP §§15–16, with §§7/17/18 amendments, is the current interaction contract. Round 2 addresses B1/B2; Claude approved the flow, ten rare identities, Dex and concepts in round 1. Owner concept approval remains pending.
+`plant-v2-design-2` follows D-061–D-063 and replaces the planting/two-variant portions of the historical gate-4 delivery below. GUI_MVP §§15–16, with §§7/17/18 amendments, is the current interaction contract. Round 2 addresses B1/B2; Claude approved the flow, ten rare identities, Dex and concepts in round 1. D-066 now approves the twenty concepts; the current SPECIALS delivery and held readability gates are above.
 
 | Asset / contract | Delivery | Status |
 | --- | --- | --- |
@@ -12,7 +28,7 @@
 | Mini mark | Existing .72 rig scale and foot placement; `fx_variant_mini` two unequal pebbles /45×33 cropped PNG; matching128 DOM icon, zero bracket/square contours | B2 round 2 exported; Claude review pending |
 | Filling plots | `fx_plant_filling` five empty slots and `fx_plant_slot_filled` shared stamp, 256 SVG/cropped PNG; unchanged Garden grounds/reserve | exported; Claude review pending |
 | Flow, rare profile and Dex | Five-slot filling, full-map multi-picker/current→projected odds, explicit Start review, four reveal outcomes, ten-rare detail and Specials collection | GUI_MVP and `gate4_v2.json` revised; review/integration pending |
-| Special concepts | `.codex-out/special-concepts.md`: 20 ideas, 12 T5 / 8 T6, prize reasons and roster distinctions | **owner approval pending; no costumes produced** |
+| Special concepts | `.codex-out/special-concepts.md`: 20 ideas, 12 T5 / 8 T6, prize reasons and roster distinctions | owner concepts approved (D-066); costume/writing delivery above; four readability gates held |
 | Native review gallery | `.codex-out/plant-v2-index.html`: 204 SVG/PNG screens; forty one-rare-among-twelve comparisons, all-ten crowded colour/gray, Mini vs target, burst/static births, happy/special-parent picker; motion review | B1/B2 round 2; special art still pending |
 | Runtime decode | 218 PNGs / **12,815,892 bytes (12.22219 MiB)**; round 2 +151,756 bytes, no new textures; only sparkle and Mini PNG change | 32 MiB physical ceiling retained; device allocation check pending |
 

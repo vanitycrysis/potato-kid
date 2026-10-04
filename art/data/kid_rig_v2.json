@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "wave-wiggle-2",
+  "revision": "specials-1",
   "status": "final",
   "delivery": {
     "scope": "first_playable_art",
@@ -6562,6 +6562,694 @@
             "squat": [
               1.08,
               0.9
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "gift": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_gift_front_parcel",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "origami": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_origami_front_crane",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "puzzle": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_puzzle_front_piece",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "rubber_duck": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_rubber_duck_front_duck",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "handbell": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_handbell_front_bell",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "fossil": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_fossil_front_tablet",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "pocket_watch": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_pocket_watch_front_watch",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "accordion": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_accordion_front_bellows",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "storybook": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_storybook_front_book",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "yo_yo": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_yo_yo_front_toy",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "acorn": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_acorn_front_cap",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_acorn_front_nut",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "postcard": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_postcard_front_card",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "music_box": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_music_box_front_box",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "magic_slate": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_magic_slate_front_slate",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "marble_run": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_marble_run_front_track",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "toy_train": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_toy_train_front_engine",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "puppet_theatre": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_puppet_theatre_front_stage",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "toy_castle": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_toy_castle_front_castle",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "paper_town": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_paper_town_front_town",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "treasure_chest": {
+      "status": "final",
+      "components": [
+        {
+          "asset": "kid_treasure_chest_front_chest",
+          "status": "final",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            202,
+            168
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.82,
+              0.94
             ],
             "bean": [
               1,
