@@ -16,7 +16,7 @@ async function boot(page: Page, query: string): Promise<string[]> {
 const balance = JSON.parse(readFileSync('src/content/balance.json', 'utf8')) as {
   buildings: Record<string, { costBase: number; costGrowth: number }>;
   economy: { respawnMaterials: number; materialsPerSecond: number };
-  planting: { growSeconds: number; unlockCostBase: number; unlockCostGrowth: number; startPlots: number };
+  planting: { growSeconds: number; unlockCostBase: number; unlockCostGrowth: number; startPlots: number; rareIncomeMultiplier: number };
 };
 /** Materials to unlock the plot after the `unlocked` ones. */
 const plotPrice = (unlocked: number) => Math.ceil(balance.planting.unlockCostBase * balance.planting.unlockCostGrowth ** (unlocked - balance.planting.startPlots));
@@ -1386,8 +1386,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(cells).toHaveCount(totals.kids);
     // Discovered first, in roster order, then packets: a packet's position says nothing.
     await expect(cells.nth(0)).toHaveAttribute('role', 'listitem');
-    await expect(cells.nth(0).locator('.dex-tile')).toHaveAttribute('aria-label', 'Potato Kid, Tier 1');
-    await expect(cells.nth(1).locator('.dex-tile')).toHaveAttribute('aria-label', 'Water Kid, Tier 1');
+    await expect(cells.nth(0).locator('.dex-tile')).toHaveAttribute('aria-label', 'Potato Kid, Tier 1, 0 of 10 rare variants found');
+    await expect(cells.nth(1).locator('.dex-tile')).toHaveAttribute('aria-label', 'Water Kid, Tier 1, 0 of 10 rare variants found');
     await expect(cells.nth(1).locator('.dex-tile-name')).toHaveText('Water');
     const packets = dialog(page).locator('.dex-unknown');
     await expect(packets).toHaveCount(totals.kids - 2);
@@ -2144,7 +2144,7 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
       };
       add();
       byText('Back to kids').click();
-      document.querySelector<HTMLButtonElement>('[aria-label="Fire Kid, Tier 1"]')!.click();
+      document.querySelector<HTMLButtonElement>('[aria-label^="Fire Kid, Tier 1,"]')!.click();
       document.querySelector<HTMLButtonElement>('[aria-label*="kid 2 on your map"]')!.click();
       add();
     });
@@ -2937,6 +2937,34 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     expect(Math.max(...faded.map(([, s]) => s))).toBeGreaterThan(settled[1] * 1.05);
     // ...then settled into the idle pulse, at idle size.
     expect(settled[0]).toBeGreaterThanOrEqual(0.8 - 1e-9);
+  });
+
+  test("the Dex counts each type's rares and lists all ten, found or not, live (§16.4)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugAdd!('fire', 600, 1400, undefined, 'comet');
+      pk.debugAdd!('fire', 900, 1400, undefined, 'mini');
+      pk.debugAdd!('water', 1200, 1400);
+    });
+    await page.locator('.dex-button').click();
+    const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+    await expect(dex.locator('[data-kid="fire"] .dex-tile-rare')).toHaveText('Rare 2 / 10');
+    await expect(dex.locator('[data-kid="water"] .dex-tile-rare')).toHaveText('Rare 0 / 10');
+    await expect(dex.locator('[data-kid="fire"]')).toHaveAttribute('aria-label', 'Fire Kid, Tier 1, 2 of 10 rare variants found');
+    await dex.locator('[data-kid="fire"]').click();
+    const rows = dex.locator('.dex-rare-row');
+    await expect(rows).toHaveCount(10);
+    // In the Dex's order, whatever order they were found in.
+    await expect(rows.locator('.dex-rare-label')).toHaveText(['Rainbow', 'Mini', 'Orbit', 'Prism', 'Ribbon', 'Ripple', 'Comet', 'Petal', 'Echo', 'Zigzag']);
+    await expect(rows.nth(1)).toHaveAttribute('aria-label', `Mini: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
+    await expect(rows.nth(6)).toContainText('Found');
+    await expect(rows.nth(0)).toHaveAttribute('aria-label', 'Rainbow: not found');
+    // An unfound row shows a plain square, not the variant's icon.
+    await expect(rows.nth(0).locator('img')).toHaveCount(0);
+    // Found while the detail is open: it follows.
+    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 600, 1800, undefined, 'echo'));
+    await expect(rows.nth(8)).toHaveAttribute('aria-label', `Echo: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
   });
 
   test('reduced motion: the sleeve holds still at full opacity, and a newborn rare never bursts', async ({ page }) => {
