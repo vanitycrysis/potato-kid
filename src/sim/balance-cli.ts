@@ -105,7 +105,7 @@ export function summarize(reports: Report[][], seeds: number): string {
       `at the end: ${median(end.map((e) => e.kidsDiscovered))} kids, ${median(end.map((e) => e.recipesFound))} recipes; ` +
         `garden L${median(end.map((e) => e.levels.garden))}, capacity L${median(end.map((e) => e.levels.capacity))}, compendium L${median(end.map((e) => e.levels.compendium))}; ` +
         `${Math.round(median(end.map((e) => e.materials))!)} Materials, ${median(end.map((e) => e.potatokens))} Potatokens; ` +
-        `${median(end.map((e) => e.specialsOnMap))} specials on the map`,
+        `${median(end.map((e) => e.specialsOnMap))} specials on the map (of ${median(end.map((e) => e.kidsDiscovered + e.specialsOnMap)) !== null ? 'capacity ' + (12 + 4 * ((median(end.map((e) => e.levels.capacity)) ?? 1) - 1)) : '?'}), ${median(end.map((e) => e.specialsFound))} special types found`,
     );
   });
   return lines.join('\n');

@@ -105,8 +105,18 @@ export interface PlantingBalance {
   kidsPerSeed?: number;
   /** Experiment: chance a sprout is a special kid. */
   specialChance?: number;
-  /** Experiment: what an ordinary sprout is: a random Garden kid, or one of the kids planted. */
-  sproutFrom?: 'garden' | 'planted';
+  /** Experiment: what an ordinary sprout is: a random Garden kid, any recipe kid, or one of the kids planted. */
+  sproutFrom?: 'garden' | 'any' | 'planted';
+  /** Experiment v2 (owner, 2026-10-04): a plot takes minKids..maxKids and grows once started. */
+  minKids?: number;
+  maxKids?: number;
+  /** Experiment v2: [floor, ceiling] chance of a special and of a rare, by kids planted and their tiers. */
+  specialOdds?: [number, number];
+  rareOdds?: [number, number];
+  /** Experiment v2: a special roll gives only a special not yet found (none once all are). */
+  specialsOnlyUnfound?: boolean;
+  /** Experiment v2, for the simulator's bot: start a plot once it holds this many kids. */
+  botStartAt?: number;
 }
 
 export interface Balance {

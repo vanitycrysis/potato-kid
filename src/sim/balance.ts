@@ -57,8 +57,9 @@ export interface Report {
   end: {
     playSeconds: number;
     kidsDiscovered: number;
-    /** Special kids on the map at the end (the bot never plants them). */
+    /** Special kids on the map at the end, and special types found. */
     specialsOnMap: number;
+    specialsFound: number;
     recipesFound: number;
     levels: Record<BuildingId, number>;
     materials: number;
@@ -186,6 +187,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       playSeconds: play,
       kidsDiscovered: s.discoveredKids.filter((t) => !specials.has(t)).length,
       specialsOnMap: s.world.kids.filter((k) => specials.has(k.type)).length,
+      specialsFound: s.discoveredKids.filter((t) => specials.has(t)).length,
       recipesFound: s.discoveredRecipes.length,
       levels: { ...s.buildings },
       materials: s.materials,
@@ -262,12 +264,17 @@ export function createBot(
         }
       }
     }
+    // 3b'. Experiment v2: start a plot once it holds enough kids.
+    const startAt = content.balance.planting.botStartAt;
+    if (plant && startAt !== undefined && game.fillingKids >= startAt) return [{ type: 'startGrowing' }];
     // 3c. Still full: plant (D-054) the kid with the fewest untried pairings on the map (a
     //     dead end, or a spare copy), if a plot is free; it grows back as someone new.
     if (full && plant && free.length && game.canPlant) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
-      // A player keeps a special kid; any other dead end is planted first.
-      const plantable = free.filter((k) => !specials.has(k.type));
+      // A player keeps a special kid while any other dead end can go first (a found
+      // special stays in the Dex, so it's planted only as a last resort).
+      const ordinary = free.filter((k) => !specials.has(k.type));
+      const plantable = ordinary.length ? ordinary : free;
       const pick = plantable.reduce<(typeof free)[number] | undefined>((best, k) => (!best || untried(k.type) < untried(best.type) ? k : best), undefined);
       if (pick) return [{ type: 'plant', kidId: pick.id }];
     }
@@ -275,7 +282,7 @@ export function createBot(
     //    the map (Compendium), else an instant spawn.
     if (s.world.kids.length < game.capacity) {
       if (s.buildings.compendium > 0) {
-        const pick = s.discoveredKids.find((t) => free.some((k) => !tried.has(pairKey(t, k.type))));
+        const pick = s.discoveredKids.find((t) => !specials.has(t) && free.some((k) => !tried.has(pairKey(t, k.type))));
         if (pick) {
           const cost = game.respawnCost(pick);
           if (s.materials >= cost.materials) return [{ type: 'respawn', kidType: pick, pay: 'materials' }];
