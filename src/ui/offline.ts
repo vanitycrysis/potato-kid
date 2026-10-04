@@ -29,6 +29,10 @@ export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHou
       stat('icon_materials', 'Materials earned', `+${materials}`, materials === exact ? undefined : `(${exact} Materials)`),
       stat('icon_kids', 'Kids arrived', formatExact(report.spawned.length)),
       stat('icon_potatokens', 'Milestone Potatokens', `+${formatExact(report.potatokens)}`),
+      // Planting (GUI_MVP §15.5): only when a plot grew while away.
+      ...(report.sprouted.length || report.plotsWaiting
+        ? [stat('icon_garden', 'Kids sprouted', formatExact(report.sprouted.length)), stat('icon_timer', 'Plots ready', formatExact(report.plotsWaiting))]
+        : []),
     ),
     el('p', 'sheet-body-text', 'Kids wandered in. Recipes wait for you.'),
   );

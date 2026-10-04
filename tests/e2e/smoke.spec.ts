@@ -2590,6 +2590,25 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(sheet(page).locator('.plot-start .plot-sparkle')).toBeVisible();
     await expect(sheet(page).getByRole('button', { name: 'Add kids' })).toHaveCount(0);
   });
+
+  test('a plot that sprouts while away shows in the return summary; one with no planting has no such rows (§15.5)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toBeVisible();
+    await expect(summary).not.toContainText('Kids sprouted');
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await plantPlain(page, 3);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    await page.evaluate((s) => window.__PK__!.debugAway!((s + 60) * 1000), balance.planting.growSeconds);
+    await expect(summary).toBeVisible();
+    const report = (await page.evaluate(() => window.__PK__!.lastOffline()))!;
+    expect(report.sprouted).toHaveLength(1);
+    await expect(summary.locator('.stat-row', { hasText: 'Kids sprouted' })).toContainText('Kids sprouted1');
+    await expect(summary.locator('.stat-row', { hasText: 'Plots ready' })).toContainText('Plots ready0');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+  });
 });
 
 test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
