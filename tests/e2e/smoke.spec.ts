@@ -2181,18 +2181,22 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
     await page.locator('.dex-button').click();
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    // Back in the frame the result lands; reopen a little later, so the message is ready
+    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
+    await dialog(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    // Back in the very step the result lands, before any frame could draw it (racing frames
+    // from the test is flaky under load); reopen a little later, so the message is ready
     // the moment the new detail is built (before it is mounted).
     await page.evaluate(
       () =>
         new Promise<void>((done) => {
-          const wait = () => {
-            if (window.__PK__!.kids().length > 7) return requestAnimationFrame(wait);
+          let left = false;
+          window.__PK__!.debugListenSteps!((types) => {
+            if (left || !types.includes('planted')) return;
+            left = true;
             (document.querySelector('.dex-back') as HTMLButtonElement).click();
             done();
-          };
-          wait();
+          });
+          [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Add this kid')!.click();
         }),
     );
     expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(false);
