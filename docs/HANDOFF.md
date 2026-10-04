@@ -38,11 +38,11 @@
      - The happy-kid rule (+1 tier) arrives with FEED-NAME.
      - The UI still shows Send home's copy and farewell until then.
      - The refusal copy for `plotFull` / `tooFewKids` is a placeholder in `ui/feedback.ts`.
-2. **PR #73, PLANT-V2-DESIGN (Codex): approved in round 2.** Claude merged `main` into it (the board conflict was resolved to done). **Merge it when CI is green** (CI was running at handoff).
+2. **PR #73, PLANT-V2-DESIGN (Codex): merged** (approved in round 2). GUI_MVP §15/§16 are the planting UI contract.
 3. **PR #74 (D-066): merged.**
 4. **Then, in order:**
    - PLANTING's engine and UI (above).
-   - **SPECIALS (Codex), next for Codex** once #73 merges (start `chatgpt/specials` from `main`); the brief is in `docs/briefs/codex-specials.md`: the costume round for the 20 approved kids, plus names, personalities and foods in the existing format. The four riskiest (Music Box, Puppet Theatre, Paper Town, Marble Run) come back with simpler alternatives if they fail at 55 px.
+   - **SPECIALS (Codex): running at handoff** in `../potato-kid-chatgpt` on `chatgpt/specials` (brief: `docs/briefs/codex-specials.md`). When it's done, commit it unchanged as ChatGPT, add the 20 `kids.json` entries (`"special": true`) as Claude's own commit on that branch (the art checks need costumes and entries together), and review: the costume round for the 20 approved kids, plus names, personalities and foods in the existing format. The four riskiest (Music Box, Puppet Theatre, Paper Town, Marble Run) come back with simpler alternatives if they fail at 55 px.
    - **VARIANTS (Claude):** rendering the ten rares and their Dex rows.
    - **FEED-NAME (Claude):** loading `personality_v1.json`, feeding, happiness (+1 tier in planting odds), naming, the kid card.
    - Then the gate-4 build for the owner.
@@ -100,7 +100,7 @@
 
 - **Worktrees:**
   - `potato-kid-claude`: Claude's main checkout, on `claude/planting` (PR #72).
-  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/plant-v2-design` (PR #73).
+  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials`.
   - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached; check it out per review).
   - `potato-kid-docs`: docs branches.
 - **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
