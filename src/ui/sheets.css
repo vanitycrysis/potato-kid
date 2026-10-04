@@ -90,6 +90,10 @@
   bottom: 0;
   background: var(--ui-paper);
 }
+/* Too short even for that: the footer follows the content (GUI_MVP §15.3, "all in flow"). */
+.sheet[data-flow='true'] .sheet-footer {
+  position: static;
+}
 
 /* Fixed region above the body (Compendium toolbar and message, GUI_MVP §6). */
 .sheet-bar {

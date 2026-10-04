@@ -2583,6 +2583,45 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
+  test('on a short screen with a banner, every kid and Add can still be reached (Codex review, PR #72)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 300 });
+    await garden(page, ['fire', 'plain', 'water']);
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).scrollIntoViewIfNeeded();
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    const rows = sheet(page).locator('.picker-row');
+    await rows.nth(0).scrollIntoViewIfNeeded();
+    await rows.nth(0).click();
+    // Each row, then Add, scrolls fully into the visible sheet: nothing is out of reach.
+    const visible = (sel: string, n = 0) =>
+      page.evaluate(
+        ([sel, n]) => {
+          const el = document.querySelectorAll(sel)[n]!;
+          el.scrollIntoView({ block: 'nearest' });
+          const r = el.getBoundingClientRect();
+          const s = document.querySelector('.sheet')!.getBoundingClientRect();
+          return r.height > 0 && r.top >= s.top - 1 && r.bottom <= Math.min(s.bottom, window.innerHeight) + 1;
+        },
+        [sel, n] as const,
+      );
+    for (const n of [0, 1, 2]) expect(await visible('.picker-row', n)).toBe(true);
+    expect(await visible('.picker-add')).toBe(true);
+    await sheet(page).locator('.picker-add').click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(1);
+  });
+
+  test('a focused checkbox keeps its focus when another kid arrives (Codex review, PR #72)', async ({ page }) => {
+    await garden(page, ['fire', 'plain']);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    const box = sheet(page).locator('.picker-row').nth(1).locator('input');
+    await box.focus();
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1400, 2400));
+    await expect(sheet(page).locator('.picker-row')).toHaveCount(3);
+    await expect(box).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(box).toBeChecked();
+  });
+
   test('a full plot sparkles beside Start growing and takes no more kids (§15.4)', async ({ page }) => {
     await garden(page);
     await plantPlain(page, 5);
@@ -2628,11 +2667,31 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     return page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1));
   }
 
+  /**
+   * Pointer events on the canvas, all in one task, so a busy test machine can't stretch a
+   * tap past its 220 ms. Returns the map's screen point for plot 1 after the last move.
+   */
+  function press(page: Page, steps: ['pointerdown' | 'pointermove' | 'pointerup', number, number][]) {
+    return page.evaluate(
+      ([steps, plot]) => {
+        const canvas = document.querySelector('canvas')!;
+        let held: { x: number; y: number } | null = null;
+        for (const [type, x, y] of steps) {
+          canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: x, clientY: y, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
+          if (type === 'pointermove') held = window.__PK__!.worldToScreen(plot.x, plot.y);
+        }
+        return held;
+      },
+      [steps, soil(1)] as const,
+    );
+  }
+  const tap = (page: Page, p: { x: number; y: number }) => press(page, [['pointerdown', p.x, p.y], ['pointerup', p.x, p.y]]);
+
   test('a tap on an empty plot opens its picker; on a growing plot, its detail', async ({ page }) => {
     const at = await setup(page);
-    await page.mouse.click(at.x, at.y);
+    await tap(page, at);
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -2642,9 +2701,9 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
       pk.debugCommand!({ type: 'startGrowing', plot: 0 });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
-    await page.mouse.click(at.x, at.y);
-    await expect(page.locator('.sheet-title')).toHaveText('Plot 1');
-    await expect(page.locator('.sheet-subtitle')).toHaveText('3 / 5 kids · Growing');
+    await tap(page, at);
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Plot 1');
+    await expect(page.getByRole('dialog').locator('.sheet-subtitle')).toHaveText('3 / 5 kids · Growing');
   });
 
   test('a long press or a pan opens nothing; a jitter within 8 px is still a tap, and the map holds', async ({ page }) => {
@@ -2679,24 +2738,56 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     const moved = await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1));
     expect(moved.x).toBeGreaterThan(at.x + 10);
     // Within 8 px the map holds still, and the tap opens the plot.
-    await page.mouse.move(moved.x, moved.y);
-    await page.mouse.down();
-    await page.mouse.move(moved.x + 5, moved.y + 3, { steps: 2 });
-    expect(await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1))).toEqual(moved);
-    await page.mouse.up();
-    await expect(page.locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+    const during = await press(page, [
+      ['pointerdown', moved.x, moved.y],
+      ['pointermove', moved.x + 3, moved.y + 1],
+      ['pointermove', moved.x + 5, moved.y + 3],
+      ['pointerup', moved.x + 5, moved.y + 3],
+    ]);
+    expect(during).toEqual(moved);
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
   });
 
   test('a locked plot is no target, and a tap on bare ground opens nothing', async ({ page }) => {
     await setup(page);
     const locked = await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(2));
-    await page.mouse.click(locked.x, locked.y);
+    await tap(page, locked);
     await page.waitForTimeout(300);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     const bare = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1000));
-    await page.mouse.click(bare.x, bare.y);
+    await tap(page, bare);
     await page.waitForTimeout(300);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('a second finger on a kid cancels a tap on a plot (Codex review, PR #72)', async ({ page }) => {
+    const at = await setup(page);
+    const kid = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 1000));
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, kid);
+    // Touch 1 on the plot, touch 2 on the kid, touch 1 lifts at once: no tap.
+    await page.evaluate(
+      ([at, k]) => {
+        const canvas = document.querySelector('canvas')!;
+        const fire = (type: string, id: number, p: { x: number; y: number }) =>
+          canvas.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', isPrimary: id === 1, clientX: p.x, clientY: p.y, bubbles: true }));
+        fire('pointerdown', 1, at);
+        fire('pointerdown', 2, { x: k.x, y: k.y - 20 });
+        fire('pointerup', 1, at);
+        fire('pointerup', 2, { x: k.x, y: k.y - 20 });
+      },
+      [at, k] as const,
+    );
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // The same touch alone is a tap.
+    await page.evaluate((at) => {
+      const canvas = document.querySelector('canvas')!;
+      const fire = (type: string) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: at.x, clientY: at.y, bubbles: true }));
+      fire('pointerdown');
+      fire('pointerup');
+    }, at);
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
   });
 });
 

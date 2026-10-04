@@ -104,6 +104,28 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(gap).toBeGreaterThan(2 * content.balance.body.radius + content.balance.body.touchSlack);
   });
 
+  it('a refused kid is safe for the rest of the step: a partner walking up never fuses it (Codex review, PR #72)', () => {
+    // Kids walk 300 px/s straight on: the water kid reaches the plain kid within this step.
+    const g = game((c) => {
+      c.balance.wander = { ...c.balance.wander, speed: 300 };
+      c.balance.spawn.newbornGraceSeconds = content.balance.spawn.newbornGraceSeconds;
+    });
+    g.state.plots = [{ seed: started('snow', 5) }]; // the only plot is growing
+    const plain = place(g, 'plain', 600, 1500);
+    g.step([{ type: 'pickUp', kidId: plain.id }], 0);
+    // Just clear of touching, heading straight for it.
+    const water = place(g, 'water', 600 + 2 * content.balance.body.radius + content.balance.body.touchSlack + 20, 1500);
+    water.heading = Math.PI;
+    water.activity = { kind: 'walk' };
+    plain.activity = { kind: 'pause', left: 10 };
+    const events = g.step([{ type: 'plant', kidIds: [plain.id] }], 0.5);
+    expect(events).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotsBusy' });
+    expect(events.some((e) => e.type === 'fused')).toBe(false);
+    expect(g.state.world.kids.some((k) => k.id === plain.id)).toBe(true);
+    // Protected for a newborn's grace, as the label promised: then ordinary rules again.
+    expect(run(g, 1).some((e) => e.type === 'fused')).toBe(false);
+  });
+
   it('a drag fills the plot already filling, then the lowest empty one; picking chooses the plot', () => {
     const g = game();
     g.state.plots = [{ seed: started('plain', 5) }, { seed: null }, { seed: { planted: P('fire'), sprout: null, grown: 0 } }];
