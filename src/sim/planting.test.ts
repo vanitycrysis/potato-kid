@@ -85,6 +85,22 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(g.state.world.kids).toEqual([expect.objectContaining({ id: extra.id, held: false })]);
   });
 
+  it('a refused kid is put down clear of partners: a refusal never fuses (Codex review, PR #72)', () => {
+    const g = game();
+    g.state.plots = [{ seed: started('snow', 5) }]; // the only plot is growing
+    const plain = place(g, 'plain', 600, 1500);
+    g.step([{ type: 'pickUp', kidId: plain.id }], 0);
+    // While it's held, a partner (plain + water) walks onto the spot it was picked up from.
+    const water = place(g, 'water', 600, 1500);
+    const events = g.step([{ type: 'plant', kidId: plain.id }], 0);
+    expect(events).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotsBusy' });
+    expect(events.some((e) => e.type === 'fused')).toBe(false);
+    expect(run(g, 3).some((e) => e.type === 'fused')).toBe(false);
+    expect(g.state.world.kids.map((k) => k.id).sort()).toEqual([plain.id, water.id].sort());
+    const gap = Math.max(Math.abs(plain.x - water.x), Math.abs(plain.y - water.y));
+    expect(gap).toBeGreaterThan(2 * content.balance.body.radius + content.balance.body.touchSlack);
+  });
+
   it('a drag fills the plot already filling, then the lowest empty one; picking chooses the plot', () => {
     const g = game();
     g.state.plots = [{ seed: started('plain', 5) }, { seed: null }, { seed: { planted: ['fire'], sprout: null, grown: 0 } }];

@@ -2561,3 +2561,25 @@ test('a sprout that comes up while away is drawn like any arrival (Codex review,
   expect(sprouted[0]!.drawn).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('starting a plot growing is saved at once, with its decided sprout (Codex review, PR #72)', async ({ page }) => {
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  /** The newest save's plot 0, as stored. */
+  const savedPlot = () =>
+    page.evaluate(() => {
+      const recs = ['slotA', 'slotB'].map((s) => localStorage.getItem(`CapacitorStorage.potato-kid/${s}`)).flatMap((r) => (r ? [JSON.parse(r)] : []));
+      const newest = recs.sort((a, b) => b.revision - a.revision)[0];
+      return newest?.state?.plots?.[0]?.seed ?? null;
+    });
+  await page.evaluate(() => {
+    const pk = window.__PK__!;
+    for (const [t, x] of [['plain', 250], ['fire', 600], ['snow', 950]] as const) pk.debugCommand!({ type: 'plant', kidId: pk.debugAdd!(t, x, 1500) });
+  });
+  // Planting saves at once too, with the sprout still undecided.
+  await expect.poll(async () => (await savedPlot())?.planted?.length, { timeout: 3000 }).toBe(3);
+  expect((await savedPlot()).sprout).toBeNull();
+  await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+  // Well inside the 10 s periodic save: only the immediate save can have stored it.
+  await expect.poll(async () => (await savedPlot())?.sprout?.type ?? null, { timeout: 1500 }).not.toBeNull();
+  expect(errors).toEqual([]);
+});

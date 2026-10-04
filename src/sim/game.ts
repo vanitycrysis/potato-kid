@@ -1,7 +1,7 @@
 import { pairKey } from '../content/validate';
 import { BUILDING_IDS, type BuildingId, type Content, type KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
-import { wanderOffline } from './offlineWander';
+import { clearSpotFor, wanderOffline } from './offlineWander';
 import { blockedByScenery, findFreeSpot, gaps, kidRect, separate, touching } from './space';
 import {
   addKid,
@@ -546,8 +546,12 @@ export class Game {
         const reason: RejectReason | null =
           plot === null || !target ? 'plotsBusy' : target.seed?.sprout ? 'plotsBusy' : (target.seed?.planted.length ?? 0) >= this.content.balance.planting.maxKids ? 'plotFull' : null;
         if (reason || plot === null || !target) {
-          // Refused: the kid is kept, put back down where it was (GUI_MVP §15.1).
+          // Refused: the kid is kept, put down where it was, or the nearest spot clear of
+          // partners. A refusal never fuses (GUI_MVP §15.1; Codex review, PR #72).
           kid.held = false;
+          const recipes = this.recipes;
+          const spot = clearSpotFor(this.state.world, kid, this.content.balance.body.touchSlack, (a, b) => recipes.has(pairKey(a.type, b.type)));
+          if (spot) [kid.x, kid.y] = [spot.x, spot.y];
           events.push({ type: 'rejected', command: 'plant', reason: reason ?? 'plotsBusy' });
           continue;
         }
