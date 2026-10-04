@@ -29,6 +29,15 @@ interface PlotInfo {
   left: number;
 }
 
+/**
+ * Where the plots were, for coming back after an interruption (the return summary, GUI_MVP
+ * §8): the open plot's detail or picker, and the picker's unsent draft.
+ */
+export interface PlotsSnapshot {
+  view: { kind: 'detail' | 'picker'; plot: number };
+  picker?: { draft: number[]; filter: 'all' | 'rares' | 'specials'; query: string };
+}
+
 /** A message shown in a view: accepted results, refusals, and why something changed. */
 interface Note {
   lines: string[];
@@ -44,7 +53,7 @@ export class GardenPlots {
   private view: { kind: 'overview' } | { kind: 'detail'; plot: number } | { kind: 'picker'; plot: number } = { kind: 'overview' };
   private pending: Pending | null = null;
   private overview: { nodes: HTMLElement[]; update(): void };
-  private current: { update(): void; escape(): boolean } | null = null;
+  private current: { update(): void; escape(): boolean; snapshot?(): PlotsSnapshot['picker']; restore?(s: NonNullable<PlotsSnapshot['picker']>): void } | null = null;
   /** A note for a plot's detail, carried across a view change (an accepted Add, a refusal). */
   private note: { plot: number; note: Note } | null = null;
   private readonly tierOf: Map<KidId, number>;
@@ -113,6 +122,20 @@ export class GardenPlots {
     return true;
   }
 
+  /** Where the plots are now, unless on the overview (which the sheet's scroll restores). */
+  snapshot(): PlotsSnapshot | null {
+    if (this.view.kind === 'overview') return null;
+    const picker = this.current?.snapshot?.();
+    return { view: { kind: this.view.kind, plot: this.view.plot }, ...(picker ? { picker } : {}) };
+  }
+
+  /** Back where a snapshot was: the same plot's view, and the picker's draft (kids still on the map). */
+  restore(s: PlotsSnapshot): void {
+    if (this.info(s.view.plot).state === 'locked') return;
+    this.show({ kind: s.view.kind, plot: s.view.plot });
+    if (s.picker) this.current?.restore?.(s.picker);
+  }
+
   /** Opens a plot from outside (a tap on the map): the picker while it takes kids, else its detail (§15.2). */
   openPlot(i: number): void {
     const p = this.info(i);
@@ -165,15 +188,17 @@ export class GardenPlots {
         // All of an atomic Add lands in one step: answered once the last one is in.
         if (handled.filter((h) => h.type === 'planted').length < p.kidIds.length) continue;
         this.pending = null;
+        // Shown only where the player still is: the picker gives way to the plot's detail.
+        // Left meanwhile (Back, Escape), the overview's count says it; no explanation is
+        // spent unseen (Codex review, PR #72).
+        if (this.view.kind !== 'picker' || this.view.plot !== p.plot) continue;
         const first = this.notes.claimFirst();
         const heading = this.notes.heading(this.name(e.kid.type), p.plot, p.kidIds.length);
         this.note = { plot: p.plot, note: { lines: [heading, ...(first ? this.notes.firstLines() : [this.notes.later(e.count)])], warn: false } };
-        // Seen at once: the detail replaces the picker in the open sheet.
+        this.show({ kind: 'detail', plot: p.plot });
+        this.sheet.body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus();
+        // Drawn now, in the open sheet: seen.
         if (first) this.notes.markShown();
-        if (this.view.kind === 'picker' && this.view.plot === p.plot) {
-          this.show({ kind: 'detail', plot: p.plot });
-          this.sheet.body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus();
-        }
       } else if (e.type === 'rejected' && e.command === p.type) {
         this.pending = null;
         this.refused(p, e.reason);
@@ -600,7 +625,7 @@ export class GardenPlots {
 
   // --- the picker ------------------------------------------------------------------------
 
-  private picker(i: number): { update(): void; escape(): boolean } {
+  private picker(i: number): NonNullable<GardenPlots['current']> {
     const body = this.sheet.body;
     const footer = this.sheet.footer;
     const p = this.planting;
@@ -822,6 +847,15 @@ export class GardenPlots {
     return {
       update: refresh,
       escape: () => false,
+      snapshot: () => ({ draft: [...draft], filter, query: search.value }),
+      restore: (s) => {
+        const live = new Set(this.game.state.world.kids.map((k) => k.id));
+        draft.splice(0, draft.length, ...s.draft.filter((id) => live.has(id)));
+        filter = s.filter;
+        search.value = s.query;
+        query = s.query.trim().toLowerCase();
+        refresh();
+      },
     };
   }
 }
