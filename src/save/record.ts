@@ -84,8 +84,26 @@ export function validateState(state: unknown, content: Content): string[] {
       const seed = plot.seed as Record<string, unknown> | null;
       if (seed === null) return;
       if (typeof seed !== 'object') return void p.push(`plot ${i} seed is invalid`);
+      // Each kid as planted: a known type, a look, and maybe a known rare variant.
+      const plantedOk = (k: unknown) => {
+        const o = k as Record<string, unknown> | null;
+        const look = o?.look as Record<string, unknown> | undefined;
+        return (
+          typeof o === 'object' &&
+          o !== null &&
+          typeof o.type === 'string' &&
+          kidIds.has(o.type) &&
+          typeof look === 'object' &&
+          look !== null &&
+          typeof look.body === 'string' &&
+          typeof look.face === 'string' &&
+          finite(look.scale) &&
+          (look.scale as number) > 0 &&
+          (!('variant' in o) || (typeof o.variant === 'string' && plan.rareVariants.includes(o.variant)))
+        );
+      };
       const planted = seed.planted;
-      if (!Array.isArray(planted) || planted.length < 1 || planted.length > plan.maxKids || !planted.every((k) => typeof k === 'string' && kidIds.has(k))) {
+      if (!Array.isArray(planted) || planted.length < 1 || planted.length > plan.maxKids || !planted.every(plantedOk)) {
         p.push(`plot ${i} planted kids are invalid`);
       }
       if (!finite(seed.grown) || (seed.grown as number) < 0 || (seed.grown as number) > plan.growSeconds) p.push(`plot ${i} seed grown is invalid`);

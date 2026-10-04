@@ -3,7 +3,7 @@ import { content } from '../content';
 import type { Content } from '../content/types';
 import { Game, type GameEvent, type Seed } from './game';
 import { createRng } from './rng';
-import { addKid, defaultBox } from './world';
+import { addKid, DEFAULT_LOOK, defaultBox } from './world';
 
 // Planting (D-061, GUI_MVP §15): 3 to 5 kids become a seed; started, it grows into one kid.
 const bounds = { minX: 0, minY: 0, maxX: 2000, maxY: 2000 };
@@ -12,6 +12,8 @@ const T0 = 1_700_000_000_000;
 const S = 1000;
 const p = content.balance.planting;
 const pool = new Set(Object.keys(content.balance.spawnWeights));
+/** Kids as planted (snapshots), in the default look. */
+const P = (...types: string[]) => types.map((type) => ({ type, look: DEFAULT_LOOK }));
 
 /** Frozen wander, no starting kids, no Garden spawns unless asked, a 100 s grow. */
 function testContent(edit: (c: Content) => void = () => {}): Content {
@@ -34,11 +36,11 @@ function place(g: Game, type: string, x: number, y: number) {
 /** Plants these types (placed far from the Garden) into the plot drags go to. */
 function plantAll(g: Game, types: string[], plot?: number): GameEvent[] {
   const kids = types.map((t, i) => place(g, t, 200 + (i % 8) * 200, 1600 + Math.floor(i / 8) * 200));
-  return g.step(kids.map((k) => ({ type: 'plant' as const, kidId: k.id, ...(plot === undefined ? {} : { plot }) })), 0);
+  return g.step(kids.map((k) => ({ type: 'plant' as const, kidIds: [k.id], ...(plot === undefined ? {} : { plot }) })), 0);
 }
 
 /** A started seed that sprouts `type`, `grown` seconds in. */
-const started = (type: string, grown: number, variant: string | null = null): Seed => ({ planted: ['plain', 'plain', 'plain'], sprout: { type, variant }, grown });
+const started = (type: string, grown: number, variant: string | null = null): Seed => ({ planted: P('plain', 'plain', 'plain'), sprout: { type, variant }, grown });
 
 /** Steps `seconds` in 1 s steps, collecting events. */
 function run(g: Game, seconds: number): GameEvent[] {
@@ -59,12 +61,12 @@ describe('planting 3 to 5 kids (D-061)', () => {
     const hero = place(g, 'hero', 300, 1500);
     g.state.discoveredKids = ['hero'];
     const before = { materials: g.state.materials, potatokens: g.state.potatokens };
-    const events = g.step([{ type: 'plant', kidId: hero.id }], 0);
+    const events = g.step([{ type: 'plant', kidIds: [hero.id] }], 0);
     expect(events).toContainEqual({ type: 'planted', kid: expect.objectContaining({ id: hero.id, type: 'hero' }), plot: 0 });
     expect(g.state.world.kids).toEqual([]);
     expect(g.state.discoveredKids).toContain('hero');
     expect({ materials: g.state.materials, potatokens: g.state.potatokens }).toEqual(before);
-    expect(g.state.plots[0]!.seed).toEqual({ planted: ['hero'], sprout: null, grown: 0 });
+    expect(g.state.plots[0]!.seed).toEqual({ planted: P('hero'), sprout: null, grown: 0 });
   });
 
   it('a filling plot never grows on its own, not even when full', () => {
@@ -80,8 +82,9 @@ describe('planting 3 to 5 kids (D-061)', () => {
     plantAll(g, ['plain', 'fire', 'water', 'snow', 'wind']);
     const extra = place(g, 'stone', 300, 1200);
     g.step([{ type: 'pickUp', kidId: extra.id }], 0);
-    expect(g.step([{ type: 'plant', kidId: extra.id }], 0)).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotsBusy' });
-    expect(g.step([{ type: 'plant', kidId: extra.id, plot: 0 }], 0)).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotFull' });
+    // Only filled plots that wait to be started: "All plots are full" (GUI_MVP §15.1).
+    expect(g.step([{ type: 'plant', kidIds: [extra.id] }], 0)).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotFull' });
+    expect(g.step([{ type: 'plant', kidIds: [extra.id], plot: 0 }], 0)).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotFull' });
     expect(g.state.world.kids).toEqual([expect.objectContaining({ id: extra.id, held: false })]);
   });
 
@@ -92,7 +95,7 @@ describe('planting 3 to 5 kids (D-061)', () => {
     g.step([{ type: 'pickUp', kidId: plain.id }], 0);
     // While it's held, a partner (plain + water) walks onto the spot it was picked up from.
     const water = place(g, 'water', 600, 1500);
-    const events = g.step([{ type: 'plant', kidId: plain.id }], 0);
+    const events = g.step([{ type: 'plant', kidIds: [plain.id] }], 0);
     expect(events).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotsBusy' });
     expect(events.some((e) => e.type === 'fused')).toBe(false);
     expect(run(g, 3).some((e) => e.type === 'fused')).toBe(false);
@@ -103,19 +106,48 @@ describe('planting 3 to 5 kids (D-061)', () => {
 
   it('a drag fills the plot already filling, then the lowest empty one; picking chooses the plot', () => {
     const g = game();
-    g.state.plots = [{ seed: started('plain', 5) }, { seed: null }, { seed: { planted: ['fire'], sprout: null, grown: 0 } }];
+    g.state.plots = [{ seed: started('plain', 5) }, { seed: null }, { seed: { planted: P('fire'), sprout: null, grown: 0 } }];
     plantAll(g, ['water']);
-    expect(g.state.plots[2]!.seed!.planted).toEqual(['fire', 'water']);
+    expect(g.state.plots[2]!.seed!.planted.map((k) => k.type)).toEqual(['fire', 'water']);
     plantAll(g, ['snow'], 1);
-    expect(g.state.plots[1]!.seed!.planted).toEqual(['snow']);
+    expect(g.state.plots[1]!.seed!.planted.map((k) => k.type)).toEqual(['snow']);
     // A growing plot takes no more.
     const k = place(g, 'wind', 300, 1200);
-    expect(g.step([{ type: 'plant', kidId: k.id, plot: 0 }], 0)).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotsBusy' });
+    expect(g.step([{ type: 'plant', kidIds: [k.id], plot: 0 }], 0)).toContainEqual({ type: 'rejected', command: 'plant', reason: 'plotsBusy' });
+  });
+
+  it('the picker adds several kids at once, all or none (GUI_MVP §15.3)', () => {
+    const g = game();
+    const [a, b, c] = [place(g, 'plain', 300, 1500), place(g, 'fire', 600, 1500), place(g, 'water', 900, 1500)];
+    // One gone: nothing is planted, the others stay.
+    expect(g.step([{ type: 'plant', kidIds: [a.id, 999], plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'plant', reason: 'gone' }]);
+    // The same kid twice is refused too.
+    expect(g.step([{ type: 'plant', kidIds: [a.id, a.id], plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'plant', reason: 'gone' }]);
+    expect(g.state.world.kids).toHaveLength(3);
+    expect(g.state.plots[0]!.seed).toBeNull();
+    // More than the free spaces: refused, nothing planted.
+    g.state.plots[0]!.seed = { planted: P('snow', 'snow', 'snow'), sprout: null, grown: 0 };
+    expect(g.step([{ type: 'plant', kidIds: [a.id, b.id, c.id], plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'plant', reason: 'plotFull' }]);
+    expect(g.state.world.kids).toHaveLength(3);
+    // Exactly the spaces: all planted, in order, one event each.
+    const events = g.step([{ type: 'plant', kidIds: [b.id, c.id], plot: 0 }], 0);
+    expect(events.filter((e) => e.type === 'planted').map((e) => e.type === 'planted' && e.kid.id)).toEqual([b.id, c.id]);
+    expect(g.state.plots[0]!.seed!.planted.map((k) => k.type)).toEqual(['snow', 'snow', 'snow', 'fire', 'water']);
+    expect(g.state.world.kids.map((k) => k.id)).toEqual([a.id]);
+  });
+
+  it('a plot keeps a snapshot of each kid planted: type, look, and rare variant', () => {
+    const g = game();
+    const k = place(g, 'hero', 300, 1500);
+    k.look = { body: 'tall', face: 'sleepy', scale: 0.9 };
+    k.variant = 'rainbow';
+    g.step([{ type: 'plant', kidIds: [k.id] }], 0);
+    expect(g.state.plots[0]!.seed!.planted).toEqual([{ type: 'hero', look: { body: 'tall', face: 'sleepy', scale: 0.9 }, variant: 'rainbow' }]);
   });
 
   it('a kid already gone is answered with a refusal, changing nothing', () => {
     const g = game();
-    expect(g.step([{ type: 'plant', kidId: 999 }], 0)).toEqual([{ type: 'rejected', command: 'plant', reason: 'gone' }]);
+    expect(g.step([{ type: 'plant', kidIds: [999] }], 0)).toEqual([{ type: 'rejected', command: 'plant', reason: 'gone' }]);
     expect(g.state.plots).toEqual([{ seed: null }]);
   });
 
@@ -234,7 +266,7 @@ describe('the odds (D-061)', () => {
     let rareOfPlanted = true;
     const N = 4000;
     for (let i = 0; i < N; i++) {
-      h.state.plots = [{ seed: { planted: ['hero', 'hero', 'chef'], sprout: null, grown: 0 } }];
+      h.state.plots = [{ seed: { planted: P('hero', 'hero', 'chef'), sprout: null, grown: 0 } }];
       h.step([{ type: 'startGrowing', plot: 0 }], 0);
       const s = h.state.plots[0]!.seed!.sprout!;
       const special = s.type.startsWith('special_');
@@ -306,9 +338,9 @@ describe('planting while away (D-053, D-061)', () => {
 
   it('a filling plot does not grow offline', () => {
     const g = game();
-    g.state.plots = [{ seed: { planted: ['plain', 'fire', 'water'], sprout: null, grown: 0 } }];
+    g.state.plots = [{ seed: { planted: P('plain', 'fire', 'water'), sprout: null, grown: 0 } }];
     expect(g.reconcile(T0 + 3600 * S).sprouted).toEqual([]);
-    expect(g.state.plots[0]!.seed).toEqual({ planted: ['plain', 'fire', 'water'], sprout: null, grown: 0 });
+    expect(g.state.plots[0]!.seed).toEqual({ planted: P('plain', 'fire', 'water'), sprout: null, grown: 0 });
   });
 
   it('with the map full, ripe seeds wait and the report counts them', () => {

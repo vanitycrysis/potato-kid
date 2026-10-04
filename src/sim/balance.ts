@@ -278,7 +278,7 @@ export function createBot(
       const ordinary = free.filter((k) => !specials.has(k.type));
       const plantable = ordinary.length ? ordinary : free;
       const pick = plantable.reduce<(typeof free)[number] | undefined>((best, k) => (!best || untried(k.type) < untried(best.type) ? k : best), undefined);
-      if (pick) return [{ type: 'plant', kidId: pick.id }];
+      if (pick) return [{ type: 'plant', kidIds: [pick.id] }];
     }
     // 4. Out of ideas with room to spare: bring back a known type that pairs untried with
     //    the map (Compendium), else an instant spawn.

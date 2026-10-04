@@ -41,11 +41,11 @@ export type Command =
   /** Compendium: spawn an already-discovered type, paid in Materials or Potatokens. */
   | { type: 'respawn'; kidType: KidId; pay: 'materials' | 'potatokens' }
   /**
-   * Plant a kid (D-061, replacing Send home): it leaves the map into `plot` (tapping a plot
-   * and picking), or, by drag, into the plot still filling, else the lowest empty one. It
-   * stays in the Dex. Refused if that plot is full or growing, or every plot is.
+   * Plant kids (D-061, replacing Send home): they leave the map into `plot` (the picker), or,
+   * by drag, into the plot still filling, else the lowest empty one. All or none: a kid gone,
+   * or more than the plot's free spaces, refuses the lot (GUI_MVP §15.3). They stay in the Dex.
    */
-  | { type: 'plant'; kidId: number; plot?: number }
+  | { type: 'plant'; kidIds: number[]; plot?: number }
   /** Start a plot growing (D-061): it needs `minKids` kids; never automatic. */
   | { type: 'startGrowing'; plot: number }
   /** Unlock the next plot with Materials (GUI_MVP §15.4). */
@@ -74,10 +74,17 @@ export interface Sprout {
   variant: string | null;
 }
 
+/** A kid as it was planted (GUI_MVP §15.4: the plot detail still shows it). */
+export interface PlantedKid {
+  type: KidId;
+  look: Look;
+  variant?: string;
+}
+
 /** A plot's seed (D-061): the kids planted in it, then, once started, its sprout. */
 export interface Seed {
-  /** Types of the kids planted, in order: `minKids` to `maxKids` before it can start. */
-  planted: KidId[];
+  /** The kids planted, in order: `minKids` to `maxKids` before it can start. */
+  planted: PlantedKid[];
   /** Null while the plot is still filling; set when the player starts it growing. */
   sprout: Sprout | null;
   /** Seconds grown since it started, online and offline; ready at `balance.planting.growSeconds`. */
@@ -529,36 +536,17 @@ export class Game {
           events.push({ type: 'rejected', command: 'startGrowing', reason: reason ?? 'plotsBusy' });
           continue;
         }
-        seed.sprout = this.rollSprout(seed.planted);
+        seed.sprout = this.rollSprout(seed.planted.map((k) => k.type));
         events.push({ type: 'growing', plot: c.plot });
+        continue;
+      }
+      if (c.type === 'plant') {
+        this.plant(c, events);
         continue;
       }
       const kid = world.kids.find((k) => k.id === c.kidId);
       if (!kid) {
-        // Consumed before the command arrived. A drag just ends; planting is answered, so
-        // the player hears why nothing happened (GUI_MVP §15.1).
-        if (c.type === 'plant') events.push({ type: 'rejected', command: 'plant', reason: 'gone' });
-        continue;
-      }
-      if (c.type === 'plant') {
-        const plot = c.plot ?? this.plotForDrop();
-        const target = plot === null ? undefined : this.state.plots[plot];
-        const reason: RejectReason | null =
-          plot === null || !target ? 'plotsBusy' : target.seed?.sprout ? 'plotsBusy' : (target.seed?.planted.length ?? 0) >= this.content.balance.planting.maxKids ? 'plotFull' : null;
-        if (reason || plot === null || !target) {
-          // Refused: the kid is kept, put down where it was, or the nearest spot clear of
-          // partners. A refusal never fuses (GUI_MVP §15.1; Codex review, PR #72).
-          kid.held = false;
-          const recipes = this.recipes;
-          const spot = clearSpotFor(this.state.world, kid, this.content.balance.body.touchSlack, (a, b) => recipes.has(pairKey(a.type, b.type)));
-          if (spot) [kid.x, kid.y] = [spot.x, spot.y];
-          events.push({ type: 'rejected', command: 'plant', reason: reason ?? 'plotsBusy' });
-          continue;
-        }
-        world.kids.splice(world.kids.indexOf(kid), 1);
-        if (target.seed) target.seed.planted.push(kid.type);
-        else target.seed = { planted: [kid.type], sprout: null, grown: 0 };
-        events.push({ type: 'planted', kid, plot });
+        // Consumed before the command arrived: a drag just ends.
         continue;
       }
       if (c.type === 'pickUp') {
@@ -808,6 +796,50 @@ export class Game {
     const pick = <T>(list: readonly T[]) => list[Math.floor(this.spawnRng.next() * list.length)]!;
     const type = special ? pick(specials).id : rare && planted.length ? pick(planted) : this.rollSpawnType();
     return { type, variant: rare && variants.length ? pick(variants) : null };
+  }
+
+  /**
+   * Planting (D-061), all or none. Refused if a kid is gone (`gone`), if no plot takes kids
+   * (`plotFull` when filled plots only wait to be started, else `plotsBusy`), or if the plot is
+   * growing (`plotsBusy`) or lacks the spaces (`plotFull`). Refused kids are put down clear of
+   * recipe partners: a refusal never fuses (GUI_MVP §15.1; Codex review, PR #72).
+   */
+  private plant(c: Extract<Command, { type: 'plant' }>, events: GameEvent[]): void {
+    const world = this.state.world;
+    const max = this.content.balance.planting.maxKids;
+    const kids = c.kidIds.map((id) => world.kids.find((k) => k.id === id));
+    const plot = c.plot ?? this.plotForDrop();
+    const target = plot === null ? undefined : this.state.plots[plot];
+    const filled = target?.seed?.planted.length ?? 0;
+    const reason: RejectReason | null = kids.some((k) => !k)
+      ? 'gone'
+      : new Set(c.kidIds).size !== c.kidIds.length || c.kidIds.length === 0
+        ? 'gone'
+        : plot === null || !target
+          ? this.state.plots.some((p) => p.seed && !p.seed.sprout) ? 'plotFull' : 'plotsBusy'
+          : target.seed?.sprout
+            ? 'plotsBusy'
+            : filled + c.kidIds.length > max
+              ? 'plotFull'
+              : null;
+    if (reason || plot === null || !target) {
+      const recipes = this.recipes;
+      for (const kid of kids) {
+        if (!kid) continue;
+        kid.held = false;
+        const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => recipes.has(pairKey(a.type, b.type)));
+        if (spot) [kid.x, kid.y] = [spot.x, spot.y];
+      }
+      events.push({ type: 'rejected', command: 'plant', reason: reason ?? 'plotsBusy' });
+      return;
+    }
+    for (const kid of kids as Kid[]) {
+      world.kids.splice(world.kids.indexOf(kid), 1);
+      const snapshot: PlantedKid = { type: kid.type, look: { ...kid.look }, ...(kid.variant ? { variant: kid.variant } : {}) };
+      if (target.seed) target.seed.planted.push(snapshot);
+      else target.seed = { planted: [snapshot], sprout: null, grown: 0 };
+      events.push({ type: 'planted', kid, plot });
+    }
   }
 
   /** The plot a dragged kid goes into: the one still filling with room, else the lowest empty; null if none. */

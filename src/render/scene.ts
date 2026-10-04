@@ -591,7 +591,7 @@ export class MapScene {
     // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
     if (this.home?.releases(this.clock, this.homeEligible(), w)) {
       const { kidId, spot } = this.drag;
-      this.pending.push({ type: 'plant', kidId });
+      this.pending.push({ type: 'plant', kidIds: [kidId] });
       this.placing.set(kidId, spot);
       this.views.get(kidId)?.dropped();
       this.drag = undefined;

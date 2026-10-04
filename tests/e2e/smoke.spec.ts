@@ -1878,8 +1878,8 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     await expect.poll(() => page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThan(1e6);
     // Both planted in one step; the second's farewell is cut short by a kid on its spot.
     await page.evaluate(([a, b]) => {
-      window.__PK__!.debugCommand!({ type: 'plant', kidId: a! });
-      window.__PK__!.debugCommand!({ type: 'plant', kidId: b! });
+      window.__PK__!.debugCommand!({ type: 'plant', kidIds: [a!] });
+      window.__PK__!.debugCommand!({ type: 'plant', kidIds: [b!] });
     }, ids);
     await expect.poll(() => page.evaluate(() => window.__PK__!.home().departing)).toBe(2);
     // Per frame, until a card shows: how many farewells play, and the card's words.
@@ -2549,7 +2549,7 @@ test('a sprout that comes up while away is drawn like any arrival (Codex review,
   const sprouted = await page.evaluate(async () => {
     const pk = window.__PK__!;
     const ids = [pk.debugAdd!('plain', 250, 1500), pk.debugAdd!('fire', 600, 1500), pk.debugAdd!('snow', 950, 1500)];
-    for (const id of ids) pk.debugCommand!({ type: 'plant', kidId: id });
+    for (const id of ids) pk.debugCommand!({ type: 'plant', kidIds: [id] });
     await pk.debugAway!(0); // a step: the three are planted
     pk.debugCommand!({ type: 'startGrowing', plot: 0 });
     await pk.debugAway!(0); // a step: it starts growing
@@ -2573,7 +2573,7 @@ test('starting a plot growing is saved at once, with its decided sprout (Codex r
     });
   await page.evaluate(() => {
     const pk = window.__PK__!;
-    for (const [t, x] of [['plain', 250], ['fire', 600], ['snow', 950]] as const) pk.debugCommand!({ type: 'plant', kidId: pk.debugAdd!(t, x, 1500) });
+    for (const [t, x] of [['plain', 250], ['fire', 600], ['snow', 950]] as const) pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!(t, x, 1500)] });
   });
   // Planting saves at once too, with the sprout still undecided.
   await expect.poll(async () => (await savedPlot())?.planted?.length, { timeout: 3000 }).toBe(3);

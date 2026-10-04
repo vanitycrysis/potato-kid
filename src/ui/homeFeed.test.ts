@@ -33,7 +33,7 @@ describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
     const { feed, commands, sent } = setup();
     feed.send(1, 'fire');
     feed.send(2, 'fire');
-    expect(commands).toEqual([{ type: 'plant', kidId: 1 }]);
+    expect(commands).toEqual([{ type: 'plant', kidIds: [1] }]);
     expect(feed.onStep([sent(1)])).toHaveLength(1);
     feed.send(2, 'fire');
     expect(commands).toHaveLength(2);

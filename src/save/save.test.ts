@@ -392,17 +392,21 @@ describe('schema 3: plots (D-061)', () => {
   it('a schema-3 save must carry valid plots (D-061)', () => {
     const state = newGame().persisted() as unknown as Record<string, unknown>;
     const plan = content.balance.planting;
-    const three = ['plain', 'fire', 'water'];
+    const kid = (type: string, extra: Record<string, unknown> = {}) => ({ type, look: { body: 'default', face: 'default', scale: 1 }, ...extra });
+    const three = [kid('plain'), kid('fire'), kid('water')];
     const bad: unknown[] = [
       undefined,
       [],
       Array.from({ length: plan.maxPlots + 1 }, () => ({ seed: null })),
       [{}],
       [{ seed: { planted: [], sprout: null, grown: 0 } }],
-      [{ seed: { planted: ['nobody'], sprout: null, grown: 0 } }],
-      [{ seed: { planted: Array.from({ length: plan.maxKids + 1 }, () => 'plain'), sprout: null, grown: 0 } }],
+      [{ seed: { planted: ['plain'], sprout: null, grown: 0 } }], // a bare type, not a snapshot
+      [{ seed: { planted: [kid('nobody')], sprout: null, grown: 0 } }],
+      [{ seed: { planted: [{ type: 'plain' }], sprout: null, grown: 0 } }], // no look
+      [{ seed: { planted: [kid('plain', { variant: 'sparkly' })], sprout: null, grown: 0 } }],
+      [{ seed: { planted: Array.from({ length: plan.maxKids + 1 }, () => kid('plain')), sprout: null, grown: 0 } }],
       [{ seed: { planted: three, sprout: null, grown: 5 } }], // grew before it started
-      [{ seed: { planted: ['plain'], sprout: { type: 'plain', variant: null }, grown: 0 } }], // started with too few
+      [{ seed: { planted: [kid('plain')], sprout: { type: 'plain', variant: null }, grown: 0 } }], // started with too few
       [{ seed: { planted: three, sprout: { type: 'nobody', variant: null }, grown: 0 } }],
       [{ seed: { planted: three, sprout: { type: 'plain', variant: 'sparkly' }, grown: 0 } }],
       [{ seed: { planted: three, sprout: { type: 'plain', variant: null }, grown: plan.growSeconds + 1 } }],
@@ -411,10 +415,25 @@ describe('schema 3: plots (D-061)', () => {
     for (const plots of bad) expect(validateState({ ...state, plots }, content), JSON.stringify(plots)).not.toEqual([]);
     const good = [
       { seed: null },
-      { seed: { planted: ['plain'], sprout: null, grown: 0 } },
+      { seed: { planted: [kid('plain', { variant: plan.rareVariants[0] })], sprout: null, grown: 0 } },
       { seed: { planted: three, sprout: { type: 'hero', variant: plan.rareVariants[0] }, grown: plan.growSeconds } },
     ];
     expect(validateState({ ...state, plots: good }, content)).toEqual([]);
+  });
+
+  it('a game with planted and growing plots saves and loads back exactly (D-061)', async () => {
+    const g = newGame();
+    const kids = g.state.world.kids.slice(0, 3);
+    g.step([{ type: 'plant', kidIds: kids.map((k) => k.id) }], 0);
+    g.step([{ type: 'startGrowing', plot: 0 }], 0);
+    g.step([], 7);
+    expect(g.state.plots[0]!.seed!.sprout).not.toBeNull();
+    const storage = new TestStorage();
+    const m = new SaveManager(storage, content);
+    await m.load(); // a manager saves only after it has loaded
+    await m.save(g.persisted());
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual(g.persisted());
   });
 
   it('a kid may carry a known rare variant, nothing else (D-062)', () => {

@@ -9,7 +9,7 @@ import type { SendHomeNotes } from './sendHome';
 
 /** What the feed needs from the scene. */
 export interface FeedScene {
-  command(cmd: { type: 'plant'; kidId: number }): void;
+  command(cmd: { type: 'plant'; kidIds: number[] }): void;
   /** The kid's farewell is still playing. */
   isDeparting(kidId: number): boolean;
 }
@@ -61,7 +61,7 @@ export class HomeFeed {
   send(kidId: number, type: KidId): void {
     if (this.pending) return;
     this.pending = { kidId, type };
-    this.scene.command({ type: 'plant', kidId });
+    this.scene.command({ type: 'plant', kidIds: [kidId] });
   }
 
   /** A step's events: the Dex answers its own sends, open detail or not (no world card). */
