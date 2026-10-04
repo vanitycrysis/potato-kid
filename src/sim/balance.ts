@@ -57,6 +57,8 @@ export interface Report {
   end: {
     playSeconds: number;
     kidsDiscovered: number;
+    /** Special kids on the map at the end (the bot never plants them). */
+    specialsOnMap: number;
     recipesFound: number;
     levels: Record<BuildingId, number>;
     materials: number;
@@ -70,7 +72,9 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const plant = scenario.plant ?? true;
   const tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
-  const roster = content.kids.length;
+  // The roster: the recipe kids; planting-only specials are counted apart.
+  const specials = new Set(content.kids.filter((k) => k.special).map((k) => k.id));
+  const roster = content.kids.length - specials.size;
   const firstOfTier: Record<number, number | null> = {};
   for (const k of content.kids) firstOfTier[k.tier] = null;
   const discovered: Report['discovered'] = { '25': null, '50': null, '75': null, '100': null };
@@ -93,12 +97,14 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const note = () => {
     const s = game.state;
     if (firstRecipe === null && s.discoveredRecipes.length > 0) firstRecipe = play;
+    const found = s.discoveredKids.filter((t) => !specials.has(t)).length;
     for (const t of s.discoveredKids) {
+      if (specials.has(t)) continue;
       const tier = tiers.get(t)!;
       if (firstOfTier[tier] === null) firstOfTier[tier] = play;
     }
     for (const q of ['25', '50', '75', '100'] as const) {
-      if (discovered[q] === null && s.discoveredKids.length >= (roster * Number(q)) / 100) {
+      if (discovered[q] === null && found >= (roster * Number(q)) / 100) {
         discovered[q] = play;
         discoveredClock[q] = clock;
       }
@@ -178,7 +184,8 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     deadlocked: turns ? deadTurns / turns : 0,
     end: {
       playSeconds: play,
-      kidsDiscovered: s.discoveredKids.length,
+      kidsDiscovered: s.discoveredKids.filter((t) => !specials.has(t)).length,
+      specialsOnMap: s.world.kids.filter((k) => specials.has(k.type)).length,
       recipesFound: s.discoveredRecipes.length,
       levels: { ...s.buildings },
       materials: s.materials,
@@ -198,6 +205,7 @@ export function createBot(
 ): { decide: () => Command[] | null; learn: (events: GameEvent[]) => void; tried: Set<string> } {
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const tried = new Set<string>();
+  const specials = new Set(content.kids.filter((k) => k.special).map((k) => k.id));
   let pending: Drop | null = null;
   /** The bot's one action this turn, or null when it has nothing useful to do. */
   const decide = (): Command[] | null => {
@@ -258,8 +266,10 @@ export function createBot(
     //     dead end, or a spare copy), if a plot is free; it grows back as someone new.
     if (full && plant && free.length && game.canPlant) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
-      const pick = free.reduce((best, k) => (untried(k.type) < untried(best.type) ? k : best));
-      return [{ type: 'plant', kidId: pick.id }];
+      // A player keeps a special kid; any other dead end is planted first.
+      const plantable = free.filter((k) => !specials.has(k.type));
+      const pick = plantable.reduce<(typeof free)[number] | undefined>((best, k) => (!best || untried(k.type) < untried(best.type) ? k : best), undefined);
+      if (pick) return [{ type: 'plant', kidId: pick.id }];
     }
     // 4. Out of ideas with room to spare: bring back a known type that pairs untried with
     //    the map (Compendium), else an instant spawn.

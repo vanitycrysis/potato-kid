@@ -46,6 +46,9 @@ function tuned(): typeof content {
   const raw = process.env.PK_BALANCE;
   if (!raw) return content;
   const c = structuredClone(content);
+  // PK_SPECIALS=n adds n stand-in special kids (tier 5, in no recipe) for planting to sprout.
+  const n = Number(process.env.PK_SPECIALS ?? 0);
+  for (let i = 1; i <= n; i++) c.kids.push({ id: `special_${i}`, tier: 5, name: `Special ${i}`, special: true });
   const patch = JSON.parse(raw) as Record<string, Record<string, unknown>>;
   const b = c.balance as unknown as Record<string, Record<string, unknown>>;
   for (const [k, v] of Object.entries(patch)) b[k] = { ...b[k], ...v };
@@ -101,7 +104,8 @@ export function summarize(reports: Report[][], seeds: number): string {
     lines.push(
       `at the end: ${median(end.map((e) => e.kidsDiscovered))} kids, ${median(end.map((e) => e.recipesFound))} recipes; ` +
         `garden L${median(end.map((e) => e.levels.garden))}, capacity L${median(end.map((e) => e.levels.capacity))}, compendium L${median(end.map((e) => e.levels.compendium))}; ` +
-        `${Math.round(median(end.map((e) => e.materials))!)} Materials, ${median(end.map((e) => e.potatokens))} Potatokens`,
+        `${Math.round(median(end.map((e) => e.materials))!)} Materials, ${median(end.map((e) => e.potatokens))} Potatokens; ` +
+        `${median(end.map((e) => e.specialsOnMap))} specials on the map`,
     );
   });
   return lines.join('\n');

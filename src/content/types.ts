@@ -5,6 +5,8 @@ export interface KidDef {
   tier: number;
   /** Display name; placeholder until ChatGPT names the roster. */
   name: string;
+  /** A planting-only special kid (owner, 2026-10-04): in no recipe, not in the roster count. */
+  special?: boolean;
 }
 
 export interface RecipeDef {
@@ -101,6 +103,10 @@ export interface PlantingBalance {
   seedsHoldPlace?: boolean;
   /** Experiment (owner, 2026-10-04): kids a plot takes before its seed starts growing; 1 if absent. */
   kidsPerSeed?: number;
+  /** Experiment: chance a sprout is a special kid. */
+  specialChance?: number;
+  /** Experiment: what an ordinary sprout is: a random Garden kid, or one of the kids planted. */
+  sproutFrom?: 'garden' | 'planted';
 }
 
 export interface Balance {

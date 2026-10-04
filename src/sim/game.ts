@@ -61,6 +61,8 @@ export interface Seed {
   grown: number;
   /** Kids planted in it so far (experiment: it grows once it has `kidsPerSeed`); 1 if absent. */
   kids?: number;
+  /** Experiment: the types planted in it, for `sproutFrom: 'planted'`. */
+  planted?: KidId[];
 }
 
 /** One unlocked plot: empty, or growing a seed. */
@@ -516,8 +518,12 @@ export class Game {
         world.kids.splice(world.kids.indexOf(kid), 1);
         // The sprout is chosen now, so saves, resumes and waiting never change it.
         const into = this.state.plots[plot]!;
-        if (into.seed) into.seed.kids = (into.seed.kids ?? 1) + 1;
-        else into.seed = { type: this.rollSpawnType(), grown: 0 };
+        if (into.seed) {
+          into.seed.kids = (into.seed.kids ?? 1) + 1;
+          into.seed.planted = [...(into.seed.planted ?? []), kid.type];
+        } else into.seed = { type: this.rollSpawnType(), grown: 0, planted: [kid.type] };
+        // Experiment: once full, the sprout is decided from what went in.
+        if (this.seedFull(into.seed) && this.content.balance.planting.specialChance !== undefined) into.seed.type = this.rollSprout(into.seed);
         events.push({ type: 'planted', kid, plot });
         continue;
       }
@@ -740,6 +746,18 @@ export class Game {
   private hasRoomForSprout(): boolean {
     if (this.content.balance.planting.seedsHoldPlace) return this.population - 1 < this.capacity;
     return this.state.world.kids.length < this.capacity;
+  }
+
+  /** Experiment: a special kid at `specialChance`, else per `sproutFrom`. */
+  private rollSprout(seed: Seed): KidId {
+    const p = this.content.balance.planting;
+    if (this.spawnRng.next() < (p.specialChance ?? 0)) {
+      const specials = this.content.kids.filter((k) => k.special);
+      if (specials.length) return specials[Math.floor(this.spawnRng.next() * specials.length)]!.id;
+    }
+    const planted = seed.planted ?? [];
+    if (p.sproutFrom === 'planted' && planted.length) return planted[Math.floor(this.spawnRng.next() * planted.length)]!;
+    return this.rollSpawnType();
   }
 
   /** Whether a seed has all the kids it needs to grow (experiment: `kidsPerSeed`). */
