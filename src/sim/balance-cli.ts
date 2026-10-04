@@ -44,12 +44,12 @@ export function incomeDays(sc: Scenario): number[] {
  */
 function tuned(): typeof content {
   const raw = process.env.PK_BALANCE;
-  if (!raw) return content;
+  if (!raw && !process.env.PK_SPECIALS) return content;
   const c = structuredClone(content);
   // PK_SPECIALS=n adds n stand-in special kids (tier 5, in no recipe) for planting to sprout.
   const n = Number(process.env.PK_SPECIALS ?? 0);
   for (let i = 1; i <= n; i++) c.kids.push({ id: `special_${i}`, tier: 5, name: `Special ${i}`, special: true });
-  const patch = JSON.parse(raw) as Record<string, Record<string, unknown>>;
+  const patch = JSON.parse(raw ?? '{}') as Record<string, Record<string, unknown>>;
   const b = c.balance as unknown as Record<string, Record<string, unknown>>;
   for (const [k, v] of Object.entries(patch)) b[k] = { ...b[k], ...v };
   return c;
@@ -76,6 +76,7 @@ export function summarize(reports: Report[][], seeds: number): string {
   const sp = content.balance.spawn;
   lines.push(`Roster ${content.kids.length} kids, ${content.recipes.length} recipes; ${seeds} seeds per scenario.`);
   if (process.env.PK_BALANCE) lines.push(`Balance overrides: ${process.env.PK_BALANCE}`);
+  if (process.env.PK_SPECIALS) lines.push(`Stand-in special kids: ${process.env.PK_SPECIALS}`);
   lines.push(`Garden: ${sp.tutorialSpawns} tutorial spawns every ${fmt(sp.tutorialIntervalSeconds)}, then ${fmt(sp.intervalSeconds)} at L1.`);
   scenarios.forEach((sc, i) => {
     const rs = reports[i]!;
