@@ -90,3 +90,32 @@ describe('feedback cards (GUI_MVP §9)', () => {
     ]);
   });
 });
+
+describe('planting cards (GUI_MVP §15.5, §15.6)', () => {
+  const k = (id: number, type: string, variant?: string) => ({ id, type, ...(variant ? { variant } : {}) }) as never;
+
+  it('kids added to a plot in one step make one card, with the plot and its count', () => {
+    const events: GameEvent[] = [
+      { type: 'planted', kid: k(1, 'plain'), plot: 1, count: 1 },
+      { type: 'planted', kid: k(2, 'fire'), plot: 1, count: 2 },
+      { type: 'planted', kid: k(3, 'snow'), plot: 1, count: 3 },
+    ];
+    expect(feedbackFor(events, new Set(), 0)).toEqual([{ kind: 'planted', kidType: 'plain', kidId: 3, plot: 1, count: 3, added: 3 }]);
+  });
+
+  it('a plot starting to grow gets its card', () => {
+    expect(feedbackFor([{ type: 'growing', plot: 2 }], new Set(), 0)).toEqual([{ kind: 'growing', plot: 2 }]);
+  });
+
+  it('a known type sprouting is revealed with its plot and variant; a new type gets the discovery card', () => {
+    const known = new Set(['fire']);
+    expect(feedbackFor([{ type: 'spawned', kid: k(9, 'fire', 'comet'), source: 'sprout', plot: 0 }], known, 1)).toEqual([
+      { kind: 'sprouted', kidType: 'fire', kidId: 9, plot: 0, variant: 'comet' },
+    ]);
+    expect(feedbackFor([{ type: 'spawned', kid: k(10, 'hero'), source: 'sprout', plot: 0 }], known, 2)).toEqual([
+      { kind: 'newKid', childType: 'hero', kidId: 10, milestone: 0 },
+    ]);
+    // Garden spawns of known types stay silent, as before.
+    expect(feedbackFor([{ type: 'spawned', kid: k(11, 'fire'), source: 'garden' }], known, 2)).toEqual([]);
+  });
+});

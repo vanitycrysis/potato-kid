@@ -1,17 +1,23 @@
 import type { Content, KidId } from '../content/types';
-import type { GameEvent } from '../sim/game';
+import type { GameEvent, RejectReason } from '../sim/game';
 import { refusalText } from './feedback';
-import type { SendHomeNotes } from './sendHome';
+import type { PlantingNotes } from './plantingNotes';
 
-// The Dex's Send home feed (D-048, GUI_MVP §13.3-13.4): the outstanding send and the inline
+// The Dex's planting feed (D-061, GUI_MVP §15.6; it began as Send home's, §13.3-13.4): the
+// outstanding add and the inline
 // messages, owned by the Dex so they outlive any one detail (Codex review, PR #54). Pure:
 // no DOM, so its timing rules are unit-tested.
 
 /** What the feed needs from the scene. */
 export interface FeedScene {
-  command(cmd: { type: 'plant'; kidIds: number[] }): void;
-  /** The kid's farewell is still playing. */
-  isDeparting(kidId: number): boolean;
+  command(cmd: { type: 'plant'; kidIds: number[]; plot: number }): void;
+}
+
+/** A refusal of an add to the plot the player chose (GUI_MVP §15.3): about that plot, not all of them. */
+export function chosenPlotRefusal(reason: RejectReason): string {
+  if (reason === 'plotsBusy') return 'This plot is already growing. Choose another plot.';
+  if (reason === 'plotFull') return 'This plot is full. Review it to Start growing.';
+  return refusalText(reason);
 }
 
 export interface Message {
@@ -19,8 +25,6 @@ export interface Message {
   lines: () => string[];
   warn: boolean;
   first: boolean;
-  /** A success waits for this kid's farewell to end. */
-  waitFor?: number;
   /** Visible time still owed, ms. */
   ms: number;
   /** It has been on screen and readable (only then is a first explanation recorded). */
@@ -46,7 +50,7 @@ export class HomeFeed {
   constructor(
     private readonly scene: FeedScene,
     private readonly content: Content,
-    private readonly notes: SendHomeNotes,
+    private readonly notes: PlantingNotes,
   ) {}
 
   private name(type: KidId): string {
@@ -58,10 +62,11 @@ export class HomeFeed {
     this.listener = fn;
   }
 
-  send(kidId: number, type: KidId): void {
+  /** Adds one kid to the plot the player chose: never another plot (§15.6). */
+  send(kidId: number, type: KidId, plot: number): void {
     if (this.pending) return;
     this.pending = { kidId, type };
-    this.scene.command({ type: 'plant', kidIds: [kidId] });
+    this.scene.command({ type: 'plant', kidIds: [kidId], plot });
   }
 
   /** A step's events: the Dex answers its own sends, open detail or not (no world card). */
@@ -78,13 +83,12 @@ export class HomeFeed {
         if (!this.active) continue;
         const first = this.notes.claimFirst();
         const name = this.name(p.type);
+        const { plot, count } = e;
         this.queue.push({
           type: p.type,
-          // The first explanation's copy follows the Compendium as it is when shown.
-          lines: () => [this.notes.heading(name), ...(first ? this.notes.firstLines() : [this.notes.later()])],
+          lines: () => [this.notes.heading(name, plot), ...(first ? this.notes.firstLines() : [this.notes.later(count)])],
           warn: false,
           first,
-          waitFor: p.kidId,
           ms: this.notes.visibleMs(first),
         });
         this.listener?.({ kidId: p.kidId, ok: true });
@@ -92,7 +96,7 @@ export class HomeFeed {
         this.pending = null;
         handled.push(e);
         if (!this.active) continue;
-        this.warn(p.type);
+        this.warn(p.type, e.reason);
         this.listener?.({ kidId: p.kidId, ok: false });
       }
     }
@@ -100,10 +104,10 @@ export class HomeFeed {
   }
 
   /** A refusal shows first; what it interrupted resumes after it, time intact. */
-  warn(type: KidId): void {
+  warn(type: KidId, reason: RejectReason = 'gone'): void {
     if (this.current) this.queue.unshift(this.current);
     this.current = null;
-    this.queue.unshift({ type, lines: () => [refusalText('gone')], warn: true, first: false, ms: this.notes.visibleMs(false) });
+    this.queue.unshift({ type, lines: () => [chosenPlotRefusal(reason)], warn: true, first: false, ms: this.notes.visibleMs(false) });
   }
 
   /**
@@ -131,13 +135,10 @@ export class HomeFeed {
       if (this.current.ms > 0) return this.current;
       this.current = null;
     }
-    // In order (FIFO): the earliest message for this kid type, once its farewell has ended;
-    // a later success never passes an earlier one still waving (Codex review, PR #54).
-    // Refusals go in at the front, so they show at once.
+    // In order (FIFO): the earliest message for this kid type. Refusals go in at the
+    // front, so they show at once.
     const at = this.queue.findIndex((m) => m.type === type);
     if (at < 0) return null;
-    const next = this.queue[at]!;
-    if (next.waitFor !== undefined && this.scene.isDeparting(next.waitFor)) return null;
     this.current = this.queue.splice(at, 1)[0]!;
     return this.current;
   }

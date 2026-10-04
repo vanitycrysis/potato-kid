@@ -119,12 +119,13 @@ type PurchaseCommand = Extract<Command, { type: 'upgrade' | 'setBias' | 'instant
 
 /** What happened during a step; rendering and audio react only to these. */
 export type GameEvent =
-  | { type: 'spawned'; kid: Kid; source: SpawnSource }
+  /** `plot`: the plot a sprout came up from (0-based). */
+  | { type: 'spawned'; kid: Kid; source: SpawnSource; plot?: number }
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
   | { type: 'pickedUp'; kidId: number }
   | { type: 'dropped'; kidId: number }
-  /** A kid was planted in `plot` (0-based). */
-  | { type: 'planted'; kid: Kid; plot: number }
+  /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
+  | { type: 'planted'; kid: Kid; plot: number; count: number }
   /** A plot started growing; its sprout is decided (not revealed until it comes up). */
   | { type: 'growing'; plot: number }
   | { type: 'plotUnlocked'; plots: number }
@@ -477,7 +478,7 @@ export class Game {
       const gardenDue = t <= away + 1e-6;
       if (s.world.kids.length >= this.capacity) break;
       if (seed && (!gardenDue || seed.at <= t + 1e-9)) {
-        const kid = this.sproutFrom(s.plots[seed.i]!, events);
+        const kid = this.sproutFrom(seed.i, events);
         if (!kid) break;
         ripening.shift();
         admit(kid, seed.at, sprouted);
@@ -742,15 +743,18 @@ export class Game {
       seed.grown = Math.min(grow, seed.grown + dt);
       if (seed.grown < grow) return;
       if (this.state.world.kids.length >= this.capacity) return void this.plotWaits.set(i, 'full');
-      if (!this.sproutFrom(plot, events)) return void this.plotWaits.set(i, 'noRoom');
+      if (!this.sproutFrom(i, events)) return void this.plotWaits.set(i, 'noRoom');
     });
   }
 
   /** A ready plot's kid comes up at the outlet, with its variant; the plot empties. Null if no spot. */
-  private sproutFrom(plot: Plot, events: GameEvent[]): Kid | null {
+  private sproutFrom(index: number, events: GameEvent[]): Kid | null {
+    const plot = this.state.plots[index]!;
     const sprout = plot.seed!.sprout!;
     const kid = this.spawnAtOutlet(() => sprout.type, 'sprout', events, sprout.variant);
-    if (kid) plot.seed = null;
+    if (!kid) return null;
+    plot.seed = null;
+    for (const e of events) if (e.type === 'spawned' && e.kid === kid) e.plot = index;
     return kid;
   }
 
@@ -838,7 +842,7 @@ export class Game {
       const snapshot: PlantedKid = { type: kid.type, look: { ...kid.look }, ...(kid.variant ? { variant: kid.variant } : {}) };
       if (target.seed) target.seed.planted.push(snapshot);
       else target.seed = { planted: [snapshot], sprout: null, grown: 0 };
-      events.push({ type: 'planted', kid, plot });
+      events.push({ type: 'planted', kid, plot, count: target.seed.planted.length });
     }
   }
 

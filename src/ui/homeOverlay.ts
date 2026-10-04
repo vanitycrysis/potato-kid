@@ -2,9 +2,10 @@ import { uiData } from '../content/artData';
 import type { HomeView } from '../render/scene';
 import { el, icon } from './dom';
 
-// The Send home overlay (D-048, docs/GUI_MVP.md §13.1, Codex's design): the target over
-// the Garden, the pointer mark, and the label that explains each state. It never takes
-// input and never moves the camera; the scene draws the tether beneath the kids.
+// The planting overlay (D-061, docs/GUI_MVP.md §15.1, Codex's design; it began as Send
+// home's, §13.1): the target over the Garden, the pointer mark, and the label that explains
+// each state. It never takes input and never moves the camera; the scene draws the tether
+// beneath the kids.
 
 type Box = { left: number; top: number; right: number; bottom: number };
 
@@ -16,6 +17,26 @@ interface LabelTokens {
 const tokens = () =>
   (uiData?.mvp as { sendHome?: { target: { states: Record<'shown' | 'waiting' | 'ready', [string, string, string]>; label: LabelTokens; cornerRadiusPx: number } } } | undefined)
     ?.sendHome?.target;
+
+const MAX_KIDS = 5;
+
+/** The label's three lines for each state (GUI_MVP §15.1); `n` is the 1-based plot, `c` its kids. */
+export function plantLabel(v: Pick<HomeView, 'state' | 'plot' | 'busy'>): [string, string, string] {
+  if (v.busy === 'full') return ['All plots are full.', 'Release to keep this kid.', 'Tap a full plot to Start growing.'];
+  if (v.busy === 'growing') return ['All plots are growing.', 'Release to keep this kid.', 'Check the Garden for time left.'];
+  const n = (v.plot?.index ?? 0) + 1;
+  const c = v.plot?.count ?? 0;
+  if (v.state === 'ready') return ['Release to add this kid', `Plot ${n}: ${c} → ${c + 1} / ${MAX_KIDS}.`, 'Start growing separately at 3–5.'];
+  if (v.state === 'waiting') return ['Keep holding…', 'Release early to place normally.', `Plot ${n}: ${c} / ${MAX_KIDS} kids.`];
+  return [`Add to Plot ${n}`, 'Hold here, then release.', 'Leaves the map. No refund.'];
+}
+
+/** Every label the target can show, worst cases included, for sizing it once. */
+const ALL_LABELS: [string, string, string][] = [
+  ...(['shown', 'waiting', 'ready'] as const).map((state) => plantLabel({ state, plot: { index: 3, count: 4 }, busy: null })),
+  plantLabel({ state: 'shown', plot: null, busy: 'full' }),
+  plantLabel({ state: 'shown', plot: null, busy: 'growing' }),
+];
 
 const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
@@ -69,7 +90,7 @@ export class HomeOverlay {
     let w = 0;
     let h = 0;
     const text = this.probe.querySelector('.home-text') as HTMLElement;
-    for (const lines of Object.values(tokens()?.states ?? {})) {
+    for (const lines of ALL_LABELS) {
       text.replaceChildren(el('span', 'home-heading', lines[0]), el('span', 'home-helper', lines[1]), el('span', 'home-helper', lines[2]));
       w = Math.max(w, this.probe.offsetWidth);
       h = Math.max(h, this.probe.offsetHeight);
@@ -113,14 +134,12 @@ export class HomeOverlay {
       this.stateIcon.replaceChildren(...(want ? [icon(want, '', 'ui-icon-20')] : []));
     }
     if (v.point) Object.assign(this.mark.style, { left: `${v.point.x}px`, top: `${v.point.y}px` });
-    this.setText(v.state);
+    this.setText(plantLabel(v));
     const at = this.place(t, v.held);
     if (at) Object.assign(this.label.style, { left: `${at.x}px`, top: `${at.y}px` });
   }
 
-  private setText(state: 'shown' | 'waiting' | 'ready'): void {
-    const lines = tokens()?.states[state];
-    if (!lines) return;
+  private setText(lines: [string, string, string]): void {
     const key = lines.join('\n');
     if (key === this.shownText) return;
     this.shownText = key;

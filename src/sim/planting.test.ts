@@ -62,7 +62,7 @@ describe('planting 3 to 5 kids (D-061)', () => {
     g.state.discoveredKids = ['hero'];
     const before = { materials: g.state.materials, potatokens: g.state.potatokens };
     const events = g.step([{ type: 'plant', kidIds: [hero.id] }], 0);
-    expect(events).toContainEqual({ type: 'planted', kid: expect.objectContaining({ id: hero.id, type: 'hero' }), plot: 0 });
+    expect(events).toContainEqual({ type: 'planted', kid: expect.objectContaining({ id: hero.id, type: 'hero' }), plot: 0, count: 1 });
     expect(g.state.world.kids).toEqual([]);
     expect(g.state.discoveredKids).toContain('hero');
     expect({ materials: g.state.materials, potatokens: g.state.potatokens }).toEqual(before);

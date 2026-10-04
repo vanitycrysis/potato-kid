@@ -63,7 +63,7 @@ declare global {
       /** Only with `?debug=1`: the system suspends audio while the game is in front. */
       debugAudioInterrupt?: () => void;
       /** Send home (D-048): the Garden target's state, and kids still waving goodbye. */
-      home: () => { state: string; departing: number; departingAt: { x: number; y: number }[] };
+      home: () => { state: string };
       /** Forgiving drop (D-051): the kid under the finger while one is held, else null. */
       dropTarget: () => number | null;
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
@@ -110,8 +110,8 @@ async function boot(): Promise<void> {
   const storage = new PreferencesStorage();
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
-  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'sendHomeExplained'> } } | undefined)?.settings?.defaults;
-  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), sendHomeExplained: false };
+  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained'> } } | undefined)?.settings?.defaults;
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -211,7 +211,7 @@ async function boot(): Promise<void> {
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
     audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
-    home: () => ({ state: scene.homeState, departing: scene.departing.length, departingAt: scene.departing }),
+    home: () => ({ state: scene.homeState }),
     dropTarget: () => scene.dropTarget,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
@@ -258,7 +258,6 @@ function homeArt(): SceneArt['home'] {
   if (!sh || !ink) return undefined;
   return {
     target: sh.target,
-    departure: { clipMs: sh.departure.clipMs, fadeMs: sh.departure.fadeMs, reducedFadeMs: sh.departure.reducedMotion.fadeMs },
     tether: sh.target.tether,
     ink,
   };
@@ -268,7 +267,6 @@ type HomeArt = NonNullable<SceneArt['home']>;
 
 interface SendHomeTokens {
   target: HomeArt['target'] & { tether: HomeArt['tether'] };
-  departure: { clipMs: number; fadeMs: number; reducedMotion: { fadeMs: number } };
 }
 
 function calmed(c: Content): Content {

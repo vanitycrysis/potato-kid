@@ -763,6 +763,28 @@
 .dex-home-confirm .sheet-body-text {
   margin: 0;
 }
+/* Planting from the Dex (GUI_MVP §15.6): the plot chooser and one plot's confirmation. */
+.dex-home-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-home-step .sheet-body-text,
+.dex-home-step .sheet-helper {
+  margin: 0;
+}
+.ui-button.dex-home-row.dex-plot-row {
+  min-height: 44px;
+}
+.dex-home-who {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dex-home-planting {
+  font-size: 22px;
+  line-height: 28px;
+}
 .ui-button.dex-home-action {
   width: 100%;
   min-height: 48px;

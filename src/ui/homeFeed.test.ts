@@ -2,12 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { content } from '../content';
 import type { GameEvent } from '../sim/game';
 import { HomeFeed } from './homeFeed';
-import type { SendHomeNotes } from './sendHome';
+import type { PlantingNotes } from './plantingNotes';
 
 function setup() {
   const commands: unknown[] = [];
-  const departing = new Set<number>();
-  const scene = { command: (c: unknown) => void commands.push(c), isDeparting: (id: number) => departing.has(id) };
+  const scene = { command: (c: unknown) => void commands.push(c) };
   let explained = false;
   let queued = false;
   const notes = {
@@ -21,53 +20,49 @@ function setup() {
     release: vi.fn(() => (queued = false)),
     later: () => 'Kept in your Potato-Dex. No refund.',
     visibleMs: (first: boolean) => (first ? 6000 : 2500),
-  } as unknown as SendHomeNotes & { markShown: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
+  } as unknown as PlantingNotes & { markShown: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
   const feed = new HomeFeed(scene, content, notes);
   feed.active = true;
-  const sent = (id: number): GameEvent => ({ type: 'planted', kid: { id, type: 'fire' } as never, plot: 0 });
-  return { feed, notes, commands, sent, departing };
+  const sent = (id: number): GameEvent => ({ type: 'planted', kid: { id, type: 'fire' } as never, plot: 0, count: 1 });
+  return { feed, notes, commands, sent };
 }
 
 describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
   it('one send at a time until its result', () => {
     const { feed, commands, sent } = setup();
-    feed.send(1, 'fire');
-    feed.send(2, 'fire');
-    expect(commands).toEqual([{ type: 'plant', kidIds: [1] }]);
+    feed.send(1, 'fire', 0);
+    feed.send(2, 'fire', 0);
+    expect(commands).toEqual([{ type: 'plant', kidIds: [1], plot: 0 }]);
     expect(feed.onStep([sent(1)])).toHaveLength(1);
-    feed.send(2, 'fire');
+    feed.send(2, 'fire', 0);
     expect(commands).toHaveLength(2);
   });
 
-  it('a success waits for the farewell itself, however long it plays (Codex review, PR #54)', () => {
-    const { feed, sent, departing } = setup();
-    feed.send(1, 'fire');
-    departing.add(1);
+  it('a success shows at once, with no farewell to wait for (GUI_MVP §15.1)', () => {
+    const { feed, sent } = setup();
+    feed.send(1, 'fire', 0);
     feed.onStep([sent(1)]);
-    const now = performance.now();
-    expect(feed.tick('fire', now + 5000, true, false)).toBeNull();
-    departing.delete(1);
-    expect(feed.tick('fire', now + 5100, true, false)?.first).toBe(true);
+    expect(feed.tick('fire', performance.now(), true, false)?.first).toBe(true);
   });
 
-  it('successes keep their order when a later farewell ends first (Codex review, PR #54)', () => {
-    const { feed, sent, departing } = setup();
-    feed.send(1, 'fire');
-    departing.add(1);
+  it('successes keep their order', () => {
+    const { feed, sent } = setup();
+    feed.send(1, 'fire', 0);
     feed.onStep([sent(1)]);
-    feed.send(2, 'fire');
-    departing.add(2);
+    feed.send(2, 'fire', 0);
     feed.onStep([sent(2)]);
-    departing.delete(2);
-    const now = performance.now();
-    expect(feed.tick('fire', now + 100, true, false)).toBeNull();
-    departing.delete(1);
-    expect(feed.tick('fire', now + 200, true, false)?.first).toBe(true);
+    // The tick counts at most 250 ms a frame: run frames until the first gives way.
+    let now = performance.now();
+    const a = feed.tick('fire', now, true, false)!;
+    expect(a.first).toBe(true);
+    let m = a;
+    while (m === a) m = feed.tick('fire', (now += 100), true, false)!;
+    expect(m.first).toBe(false);
   });
 
   it('an explanation seen while paused (hovered) is recorded, and its time holds (Codex review, PR #54)', () => {
     const { feed, notes, sent } = setup();
-    feed.send(1, 'fire');
+    feed.send(1, 'fire', 0);
     feed.onStep([sent(1)]);
     const now = performance.now() + 10;
     // Picked, then drawn by the section; measured on screen from the next frame.
@@ -84,7 +79,7 @@ describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
 
   it('off screen, a first explanation is not recorded, and closing frees it', () => {
     const { feed, notes, sent } = setup();
-    feed.send(1, 'fire');
+    feed.send(1, 'fire', 0);
     feed.onStep([sent(1)]);
     feed.tick('fire', performance.now() + 10, false, false);
     expect(notes.markShown).not.toHaveBeenCalled();
@@ -92,9 +87,25 @@ describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
     expect(notes.release).toHaveBeenCalledTimes(1);
   });
 
+  it('a refusal names the chosen plot, not every plot, and the gone kid stays the default (GUI_MVP §15.3)', () => {
+    const { feed } = setup();
+    const refuse = (reason: 'plotsBusy' | 'plotFull'): GameEvent => ({ type: 'rejected', command: 'plant', reason });
+    const now = performance.now() + 10;
+    feed.send(1, 'fire', 0);
+    feed.onStep([refuse('plotsBusy')]);
+    expect(feed.tick('fire', now, true, false)?.lines()).toEqual(['This plot is already growing. Choose another plot.']);
+    feed.clear();
+    feed.send(1, 'fire', 0);
+    feed.onStep([refuse('plotFull')]);
+    expect(feed.tick('fire', now, true, false)?.lines()).toEqual(['This plot is full. Review it to Start growing.']);
+    feed.clear();
+    feed.warn('fire');
+    expect(feed.tick('fire', now, true, false)?.lines()).toEqual(['This kid has already left the map.']);
+  });
+
   it('a result after the Dex closed is answered but queues nothing', () => {
     const { feed, notes, sent } = setup();
-    feed.send(1, 'fire');
+    feed.send(1, 'fire', 0);
     feed.active = false;
     expect(feed.onStep([sent(1)])).toHaveLength(1);
     feed.active = true;

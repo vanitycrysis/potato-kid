@@ -16,11 +16,11 @@ describe('audio cues (ART_AUDIO_PLAN priorities)', () => {
   });
 
   it('planting plays its own cue; a sprout arrives with the spawn cue; a plot unlock is an upgrade (GUI_MVP §15.3)', () => {
-    expect(cueFor([{ type: 'planted', kid, plot: 0 }])).toBe('sfx_plant');
+    expect(cueFor([{ type: 'planted', kid, plot: 0, count: 1 }])).toBe('sfx_plant');
     expect(cueFor([{ type: 'spawned', kid, source: 'sprout' }])).toBe('sfx_spawn');
     expect(cueFor([{ type: 'plotUnlocked', plots: 2 }])).toBe('sfx_upgrade');
     // Planting frees a slot; a Garden kid arriving in the same step doesn't drown it out.
-    expect(cueFor([{ type: 'planted', kid, plot: 0 }, { type: 'spawned', kid, source: 'garden' }])).toBe('sfx_plant');
+    expect(cueFor([{ type: 'planted', kid, plot: 0, count: 1 }, { type: 'spawned', kid, source: 'garden' }])).toBe('sfx_plant');
   });
 
   it('is silent for offline arrivals, income and refusals', () => {
