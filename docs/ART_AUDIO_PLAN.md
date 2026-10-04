@@ -2,20 +2,21 @@
 
 ## PLANT-V2-DESIGN addendum (2026-10-04; Claude review pending)
 
-D-061–D-063 replace the historical one-kid planting and two-variant contract below. The current design is GUI_MVP §§15–16 with collection/profile/feeding amendments in §§7/17/18 and `art/data/gate4_v2.json`, revision `plant-v2-design-1`.
+D-061–D-063 replace the historical one-kid planting and two-variant contract below. The current design is GUI_MVP §§15–16 with collection/profile/feeding amendments in §§7/17/18 and `art/data/gate4_v2.json`, revision `plant-v2-design-2`. Round 2 changes only B1/B2 and settled-rule copy; the approved flow, ten variant identities, Dex and concepts remain.
 
 | Item | Delivery / status |
 | --- | --- |
 | Filling and Start | Five visible slots; full-map instance picker; projected independent odds; explicit Start at 3–5 with separate review, sparkle at five; Claude review pending |
 | Ten rare looks | Retain Rainbow/Mini; add Orbit, Prism, Ribbon, Ripple, Comet, Petal, Echo, Zigzag; eight shared external glyphs preserve every costume/body/face; Claude review pending |
-| Common sparkle | One shared pair of paper/ink stars, below kid layers/right of lifetime AABB; slow 2400 ms opacity .65…1, reduced motion static 1; native icon reused at Start |
+| Common sparkle / reveal | One shared six-glint paper/ink sleeve outside lifetime silhouette, below all kid layers; slow2400 ms opacity .8…1/static1;480 ms birth expansion/fade for rare or special then calm rare idle. Special-only reduced-motion sleeve static1200 ms; approved two-star Start icon unchanged |
+| Mini mark | Two unequal pebbles replace square/corner arms; .72 scale and existing foot placement remain; B2 Claude review pending |
 | Collection/profile | Compact `Rare n / 10` grid summary, ten labelled detail rows, special section/type completion, planting-only rare profile and multiplier placeholder |
 | Special concepts | 20 pitches, 12 T5 / 8 T6; **owner approval pending before costume work**; no per-type final art this round |
 | Source/export | 20 new SVGs = 11 shared trimmed runtime PNGs and nine native SVG icons; exporter unchanged, 287 sources/five sidecars pass |
-| Decode budget | 218 PNGs / **12,664,136 bytes (12.07746 MiB)**; +798,320 bytes; 32 MiB actual allocation ceiling unchanged |
-| Verification | Prior runtime/source preservation; 25,344 external-AABB geometry cases and unchanged Garden reserve 290.489 < 300; 25 files / 215 tests pass; native SVG/PNG review gallery |
+| Decode budget | 218 PNGs / **12,815,892 bytes (12.22219 MiB)**; round2 +151,756 bytes /no extra textures;32 MiB actual allocation ceiling unchanged |
+| Verification | Only sparkle/Mini PNGs change; approved art/content/source hashes preserved. Clear-window alpha and69,120 placements pass; Garden reserve290.489 <300;25 files/215 tests;204 SVG/PNG screens, forty single-rare crowd cases, native burst/static and motion evidence |
 
-No per-kid filters, masks, render targets, new face features, costume recolouring, per-type variant rasters or portrait texture caches. One rare uses its shared look plus a sparkle; four filling plots use up to 28 sprites/three shared filling textures. Existing growing stage art and spawn/discovery sounds remain; no new audio master. Materials multipliers and conditional rare/special weights belong to Claude. D-056's happiness odds versus D-061's fixed endpoints need explicit resolution before final feeding copy. Physical GPU/frame-time, input/focus and device perception remain integration review work. [Notes and evidence](../.codex-out/plant-v2-notes.md); [review gallery](../.codex-out/plant-v2-index.html); [owner concepts](../.codex-out/special-concepts.md).
+No per-kid filters, masks, render targets, new face features, costume recolouring, per-type variant rasters or portrait texture caches. One rare uses its shared look plus one six-glint sprite; birth reuses that sprite. Four filling plots still use up to28 sprites/three shared filling textures. Existing growing art and spawn/discovery sounds remain; no new audio master. Happy parents count+1 tier within existing odds ceilings; special parents count by tier and can provide the rare sprout's type. GUI_MVP§15.3 snapshots effective tier at Add to preserve the approved happy-effects-end-at-Add flow. Materials multipliers/conditional weights remain Claude's numbers. Physical GPU/frame-time, input/focus and device perception remain integration review work. [Round 2 notes](../.codex-out/plant-v2-notes.md); [review gallery](../.codex-out/plant-v2-index.html); [owner concepts unchanged](../.codex-out/special-concepts.md).
 
 ## PERSONALITY addendum (2026-10-03; Claude review pending)
 

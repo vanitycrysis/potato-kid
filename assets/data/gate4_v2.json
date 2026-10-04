@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "plant-v2-design-1",
+  "revision": "plant-v2-design-2",
   "status": "Claude review pending",
   "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract",
   "assets": {
@@ -427,7 +427,7 @@
       ],
       "sourcePivot": [
         128,
-        224
+        128
       ],
       "status": "Claude review pending"
     },
@@ -590,7 +590,8 @@
       "x": "(countFactor + tierFactor) / 2",
       "specialPercent": "10 + 10 * x",
       "rarePercent": "5 + 5 * x",
-      "independent": true
+      "independent": true,
+      "meanTier": "mean of each submitted tier plus 1 if that kid was happy at authoritative Add acceptance; same D-061 clamp"
     },
     "picker": {
       "requestedHeight": 624,
@@ -609,14 +610,34 @@
       "roster": "all live main-map IDs including offscreen/special/rare; excludes already planted"
     },
     "fillingRunsOffline": false,
-    "happinessPolicy": "D-056 bonus with D-061 limits unresolved; Claude supplies authoritative combined probabilities; no invented boost",
+    "happinessPolicy": "Happy counts one tier higher. Snapshot happy eligibility at authoritative Add acceptance; saved effective tier persists while Filling, no further timer/income/feeding. Current and projected use the same helper; clamp ceilings unchanged.",
     "startSparkle": "icon_rare_sparkle",
     "startSparklePeriodMs": 2400,
     "oddsLabels": {
       "special": "Special roll",
       "rare": "Rare roll"
     },
-    "outcomeRule": "Special-roll success selects special pool type. Otherwise rare-roll success selects any planted type weighted by copies, including planted special types. A rare look is applied if rare roll succeeds. Classify reveal by final type and variant; do not infer both flags from a rare special."
+    "outcomeRule": "Special-roll success selects special pool type. Otherwise rare-roll success selects any planted type weighted by copies, including planted special types. A rare look is applied if rare roll succeeds. Classify reveal by final type and variant; do not infer both flags from a rare special.",
+    "revealBurst": {
+      "asset": "fx_rare_sparkle",
+      "eligible": "actual newborn rare or special; one burst even for rare special; only after map admission",
+      "durationMs": 480,
+      "scale": [
+        1,
+        1.28
+      ],
+      "opacity": [
+        1,
+        0
+      ],
+      "placement": "same lifetime-centred six-star sleeve as rare idle",
+      "after": "rare switches to calm idle sparkle; ordinary special removes sleeve",
+      "reducedMotion": "rare has static idle immediately; special-only has static full-opacity sleeve for 1200 ms then removes; no expansion, fade or replay",
+      "cue": "existing spawn/discovery priority unchanged; no extra audio"
+    },
+    "happyOddsCopy": "Happy kids count as one tier higher.",
+    "specialParentCopy": "Special parents count by tier. A rare sprout can take a planted special's type.",
+    "openPolicy": "Add snapshot implements the already-reviewed happy-effects-end-at-Add flow; Claude validates atomic snapshot against sim integration."
   },
   "variants": {
     "rainbow": {
@@ -637,10 +658,11 @@
       "mapAsset": "fx_variant_mini",
       "icon": "icon_variant_mini",
       "scale": 0.72,
-      "hitMinimumCssPx": 44
+      "hitMinimumCssPx": 44,
+      "mark": "two unequal pebbles on a common baseline; no square or corner brackets; prior ground placement unchanged"
     },
     "mutuallyExclusive": true,
-    "reducedMotion": "static full-opacity sparkle and unchanged static variants; Mini remains .72",
+    "reducedMotion": "static full-opacity six-star map sparkle; static variants; Mini remains .72; Start keeps its approved two-star icon",
     "order": [
       "rainbow",
       "mini",
@@ -658,20 +680,74 @@
     "sparkle": {
       "mapAsset": "fx_rare_sparkle",
       "icon": "icon_rare_sparkle",
-      "placement": "right of projected costume-inclusive lifetime AABB; visible left at right + 4 CSS px; visible centre y at AABB centre y",
-      "maximumCssPx": [
-        9,
-        16
+      "sourceCentre": [
+        128,
+        128
       ],
-      "fit": "uniform contain by visible trim bounds",
+      "sourceClearWindowX": [
+        58,
+        198
+      ],
+      "stars": [
+        {
+          "centre": [
+            32,
+            48
+          ],
+          "radius": 20,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            32,
+            128
+          ],
+          "radius": 12,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            32,
+            208
+          ],
+          "radius": 18,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            224,
+            48
+          ],
+          "radius": 14,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            224,
+            128
+          ],
+          "radius": 22,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            224,
+            208
+          ],
+          "radius": 16,
+          "stroke": 4
+        }
+      ],
+      "placement": "centre on projected costume-inclusive lifetime AABB; uniform source-pixel scale max(.24, (AABB.width + 8) / 140); use trim offset around full-source centre, never stretch the trimmed image",
       "periodMs": 2400,
       "opacityRange": [
-        0.65,
+        0.8,
         1
       ],
       "phase": "stable live instance ID, no RNG",
       "reducedMotion": "static opacity 1",
-      "layer": "below every live kid layer, above ground/shadows; no filters, hit area or collision reserve"
+      "layer": "below every live kid layer, above ground/shadows; no filters, hit area or collision reserve",
+      "listPortraits": "Small <=48 CSS px list thumbnails keep glyph/Mini scale and Rare text, omit sleeve to preserve row geometry. Every map kid sparkles at all camera scales; live96 card reserves full sleeve."
     },
     "orbit": {
       "mapAsset": "fx_variant_orbit",
@@ -893,10 +969,8 @@
     "happyDurationFavourite",
     "happyIncomeOrdinary",
     "happyIncomeFavourite",
-    "happyOddsCombinedPolicy",
     "namePrice",
-    "specialRosterAndTierApproval",
-    "rareSpecialTypePrecedenceConfirmation"
+    "specialRosterAndTierApproval"
   ],
   "rareProfiles": {
     "rainbow": {
