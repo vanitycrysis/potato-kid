@@ -345,11 +345,12 @@ describe("Codex's round-3 trace (plan §4)", () => {
 });
 
 describe('schema 2: the tutorial counter (D-052)', () => {
-  /** A schema-1 state: today's state without the field schema 2 added. */
-  function schema1(): Omit<PersistedState, 'gardenSpawns'> {
+  /** A schema-1 state: today's state without the fields schemas 2 and 3 added. */
+  function schema1(): Omit<PersistedState, 'gardenSpawns' | 'plots'> {
     const rest: Partial<PersistedState> = newGame().persisted();
     delete rest.gardenSpawns;
-    return rest as Omit<PersistedState, 'gardenSpawns'>;
+    delete rest.plots;
+    return rest as Omit<PersistedState, 'gardenSpawns' | 'plots'>;
   }
 
   it('a new game starts at the beginning of the tutorial', () => {
@@ -357,12 +358,12 @@ describe('schema 2: the tutorial counter (D-052)', () => {
   });
 
   it('a schema-1 save loads past the tutorial: it was played on the old fast schedule', async () => {
-    expect(SAVE_SCHEMA).toBe(2);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(2);
     const storage = new TestStorage();
     const old = schema1();
     storage.data.set('slotA', encode(1, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual({ ...old, gardenSpawns: content.balance.spawn.tutorialSpawns });
+    expect(r.state).toMatchObject({ ...old, gardenSpawns: content.balance.spawn.tutorialSpawns });
     // It plays on the slow schedule at once.
     const game = new Game(structuredClone(content), options, 5, r.state!);
     expect(game.interval).toBe(content.balance.spawn.intervalSeconds * content.balance.economy.gardenIntervalFactor ** (game.state.buildings.garden - 1));
@@ -374,5 +375,34 @@ describe('schema 2: the tutorial counter (D-052)', () => {
       expect(validateState({ ...state, gardenSpawns: bad }, content)).toContain('gardenSpawns is invalid');
     }
     expect(validateState({ ...state, gardenSpawns: 7 }, content)).toEqual([]);
+  });
+});
+
+describe('schema 3: plots (D-054)', () => {
+  it('a schema-2 save loads with its first plots, empty', async () => {
+    expect(SAVE_SCHEMA).toBe(3);
+    const storage = new TestStorage();
+    const old: Partial<PersistedState> = newGame().persisted();
+    delete old.plots;
+    storage.data.set('slotA', encode(2, 4, 1, old as PersistedState));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
+  });
+
+  it('a schema-3 save must carry valid plots', () => {
+    const state = newGame().persisted() as unknown as Record<string, unknown>;
+    const grow = content.balance.planting.growSeconds;
+    const bad: unknown[] = [
+      undefined,
+      [],
+      Array.from({ length: content.balance.planting.maxPlots + 1 }, () => ({ seed: null })),
+      [{}],
+      [{ seed: { type: 'nobody', grown: 0 } }],
+      [{ seed: { type: 'plain', grown: -1 } }],
+      [{ seed: { type: 'plain', grown: grow + 1 } }],
+      [{ seed: { type: 'plain', grown: Number.NaN } }],
+    ];
+    for (const plots of bad) expect(validateState({ ...state, plots }, content), JSON.stringify(plots)).not.toEqual([]);
+    expect(validateState({ ...state, plots: [{ seed: null }, { seed: { type: 'plain', grown: grow } }] }, content)).toEqual([]);
   });
 });

@@ -11,8 +11,8 @@ import { STEP } from './world';
 
 export interface Scenario {
   name: string;
-  /** Whether the bot may send kids home (D-048); off measures the map clogging. */
-  sendHome?: boolean;
+  /** Whether the bot may plant kids (D-054); off measures the map clogging. */
+  plant?: boolean;
   /** Play sessions: each is `play` seconds of active play, then `away` seconds offline. */
   sessions: { play: number; away: number }[];
   /** Seconds between the bot's actions (one drag or one purchase). */
@@ -32,6 +32,11 @@ export interface Report {
   discoveredClock: Record<'25' | '50' | '75' | '100', number | null>;
   /** When each building first reached each level: active play and wall-clock seconds. */
   levelAt: Record<BuildingId, Record<number, { play: number; clock: number }>>;
+  /** When the player had each number of plots (D-054): active play and wall-clock seconds. */
+  plotsAt: Record<number, { play: number; clock: number }>;
+  /** Kids planted, and kids that sprouted. */
+  planted: number;
+  sprouted: number;
   /** Wall-clock seconds at which the tutorial's last spawn arrived (null: not reached). */
   tutorialDone: number | null;
   /**
@@ -62,7 +67,7 @@ export interface Report {
 /** Plays `scenario` from a new game with `seed`; deterministic for a given seed. */
 export function simulate(content: Content, options: GameOptions, scenario: Scenario, seed: number): Report {
   const game = new Game(content, { ...options, now: 0 }, seed);
-  const sendHome = scenario.sendHome ?? true;
+  const plant = scenario.plant ?? true;
   const tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const roster = content.kids.length;
@@ -72,6 +77,9 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const discoveredClock: Report['discoveredClock'] = { '25': null, '50': null, '75': null, '100': null };
   const levelAt = Object.fromEntries(Object.keys(game.state.buildings).map((b) => [b, {}])) as Report['levelAt'];
   let tutorialDone: number | null = null;
+  const plotsAt: Report['plotsAt'] = {};
+  let planted = 0;
+  let sprouted = 0;
   const income: Report['income'] = [];
   let firstRecipe: number | null = null;
   let play = 0;
@@ -97,10 +105,11 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     }
     for (const [b, level] of Object.entries(s.buildings) as [BuildingId, number][]) levelAt[b][level] ??= { play, clock };
     if (tutorialDone === null && s.gardenSpawns >= content.balance.spawn.tutorialSpawns) tutorialDone = clock;
+    plotsAt[s.plots.length] ??= { play, clock };
   };
   note();
 
-  const bot = createBot(game, content, sendHome);
+  const bot = createBot(game, content, plant);
   const decide = bot.decide;
 
   /** Where the sessions put the clock: summed exactly, so no step drift builds up (Codex review, PR #68). */
@@ -119,7 +128,12 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
           if (deadlocked(game, recipes)) deadTurns++;
         }
       }
-      bot.learn(game.step(commands));
+      const events = game.step(commands);
+      for (const e of events) {
+        if (e.type === 'planted') planted++;
+        else if (e.type === 'spawned' && e.source === 'sprout') sprouted++;
+      }
+      bot.learn(events);
       play += STEP;
       clock += STEP;
       if (game.state.world.kids.length < 0.3 * game.capacity) starvedTime += STEP;
@@ -133,7 +147,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       const before = { spawns: game.state.gardenSpawns, progress: game.state.spawnProgress, interval: game.interval };
       planned += session.away;
       clock = planned;
-      game.reconcile(clock * 1000);
+      sprouted += game.reconcile(clock * 1000).sprouted.length;
       // A tutorial that ends while away ends at its last spawn's arrival, not at the
       // return (Codex review, PR #68). Tutorial spawns are evenly spaced from the first due.
       const need = content.balance.spawn.tutorialSpawns - before.spawns;
@@ -155,6 +169,9 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     discoveredClock,
     levelAt,
     tutorialDone,
+    plotsAt,
+    planted,
+    sprouted,
     income,
     starvation: play ? starvedTime / play : 0,
     stuck: turns ? stuckTurns / turns : 0,
@@ -177,7 +194,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
 export function createBot(
   game: Game,
   content: Content,
-  sendHome = true,
+  plant = true,
 ): { decide: () => Command[] | null; learn: (events: GameEvent[]) => void; tried: Set<string> } {
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const tried = new Set<string>();
@@ -237,12 +254,12 @@ export function createBot(
         }
       }
     }
-    // 3c. Still full: send home (D-048) the kid with the fewest untried pairings on the
-    //     map (a dead end, or a spare copy), so the Garden can bring someone new.
-    if (full && sendHome && free.length) {
+    // 3c. Still full: plant (D-054) the kid with the fewest untried pairings on the map (a
+    //     dead end, or a spare copy), if a plot is free; it grows back as someone new.
+    if (full && plant && free.length && game.canPlant) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
       const pick = free.reduce((best, k) => (untried(k.type) < untried(best.type) ? k : best));
-      return [{ type: 'sendHome', kidId: pick.id }];
+      return [{ type: 'plant', kidId: pick.id }];
     }
     // 4. Out of ideas with room to spare: bring back a known type that pairs untried with
     //    the map (Compendium), else an instant spawn.
@@ -335,9 +352,15 @@ function purchase(game: Game): Command | null {
     return c !== null && s.materials >= c ? c : null;
   };
   if (s.buildings.compendium === 0 && s.discoveredKids.length >= 6 && afford('compendium') !== null) return { type: 'upgrade', building: 'compendium' };
-  const options = (['garden', 'capacity'] as const).map((b) => ({ b, c: afford(b) })).filter((o) => o.c !== null);
-  options.sort((x, y) => x.c! - y.c!);
-  return options[0] ? { type: 'upgrade', building: options[0].b } : null;
+  // The cheapest affordable of Garden, Capacity and the next plot.
+  const plot = game.plotUnlockCost;
+  const options: { c: number; cmd: Command }[] = (['garden', 'capacity'] as const).flatMap((b) => {
+    const c = afford(b);
+    return c === null ? [] : [{ c, cmd: { type: 'upgrade', building: b } as Command }];
+  });
+  if (plot !== null && s.materials >= plot) options.push({ c: plot, cmd: { type: 'unlockPlot' } });
+  options.sort((x, y) => x.c - y.c);
+  return options[0]?.cmd ?? null;
 }
 
 /** Median of the non-null values, or null if most runs never got there. */

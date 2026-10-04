@@ -1870,10 +1870,16 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
     await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
     const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 760, 1000), window.__PK__!.debugAdd!('fire', 1300, 1000)]);
     await page.waitForTimeout(200);
-    // Both sent in one step; the second's farewell is cut short by a kid on its spot.
+    // A second plot, so both can be planted (D-054).
+    await page.evaluate(() => {
+      window.__PK__!.debugGive!({ materials: 1e6 });
+      window.__PK__!.debugCommand!({ type: 'unlockPlot' });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThan(1e6);
+    // Both planted in one step; the second's farewell is cut short by a kid on its spot.
     await page.evaluate(([a, b]) => {
-      window.__PK__!.debugCommand!({ type: 'sendHome', kidId: a! });
-      window.__PK__!.debugCommand!({ type: 'sendHome', kidId: b! });
+      window.__PK__!.debugCommand!({ type: 'plant', kidId: a! });
+      window.__PK__!.debugCommand!({ type: 'plant', kidId: b! });
     }, ids);
     await expect.poll(() => page.evaluate(() => window.__PK__!.home().departing)).toBe(2);
     // Per frame, until a card shows: how many farewells play, and the card's words.
@@ -1933,9 +1939,19 @@ test.describe('Send home, drag path (D-048, GUI_MVP §13)', () => {
 test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)', () => {
   const dialog = (page: Page) => page.getByRole('dialog', { name: 'Potato-Dex' });
 
-  /** Two Fire Kids on the map, the Dex open on Fire's detail. */
+  /** Every plot unlocked, so several kids can be planted in a row (D-054). */
+  async function allPlots(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      window.__PK__!.debugGive!({ materials: 1e7 });
+      for (let i = 0; i < 3; i++) window.__PK__!.debugCommand!({ type: 'unlockPlot' });
+    });
+    await page.evaluate(() => window.__PK__!.debugAway!(0)); // one step: the unlocks apply
+  }
+
+  /** Two Fire Kids on the map, every plot unlocked, the Dex open on Fire's detail. */
   async function fireDetail(page: Page): Promise<number[]> {
     await boot(page, '?seed=3&debug=1&calm=1');
+    await allPlots(page);
     const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 300, 1500), window.__PK__!.debugAdd!('fire', 800, 1500)]);
     await page.locator('.dex-button').click();
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
@@ -2342,6 +2358,7 @@ test.describe('Send home, feedback and the Dex path (D-048, GUI_MVP §13.3-13.4)
 
   test('a drag send gets a world card: the first explains, later ones are short', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
+    await allPlots(page);
     await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
     const send = async (x: number) => {
       const id = await page.evaluate((px) => window.__PK__!.debugAdd!('fire', px, 1000), x);

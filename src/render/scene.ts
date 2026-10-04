@@ -291,7 +291,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'sendHome' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'unlockPlot' }>): void {
     this.pending.push(cmd);
   }
 
@@ -590,7 +590,7 @@ export class MapScene {
     // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
     if (this.home?.releases(this.clock, this.homeEligible(), w)) {
       const { kidId, spot } = this.drag;
-      this.pending.push({ type: 'sendHome', kidId });
+      this.pending.push({ type: 'plant', kidId });
       this.placing.set(kidId, spot);
       this.views.get(kidId)?.dropped();
       this.drag = undefined;
@@ -929,8 +929,9 @@ export class MapScene {
       case 'spawned':
         this.addView(e.kid).play('spawn');
         break;
-      case 'sentHome': {
-        // Gone from the sim at once (D-048); its view stays briefly to wave goodbye.
+      case 'planted': {
+        // Gone from the sim at once (D-054); for now its view still waves goodbye, until the
+        // seed and plots are drawn (GUI_MVP §15.3).
         if (this.drag?.kidId === e.kid.id) this.drag = undefined;
         this.startDeparture(e.kid);
         break;

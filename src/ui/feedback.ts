@@ -17,7 +17,7 @@ export type FeedbackItem =
   | { kind: 'arrival'; count: number }
   | { kind: 'refusal'; command: string; reason: RejectReason }
   /** A kid sent home (D-048, GUI_MVP §13.3). */
-  | { kind: 'sentHome'; kidType: KidId; kidId: number };
+  | { kind: 'planted'; kidType: KidId; kidId: number; plot: number };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -68,8 +68,8 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
           else out.push({ kind: 'milestone', potatokens: e.potatokens, kids: discovered });
         }
         break;
-      case 'sentHome':
-        out.push({ kind: 'sentHome', kidType: e.kid.type, kidId: e.kid.id });
+      case 'planted':
+        out.push({ kind: 'planted', kidType: e.kid.type, kidId: e.kid.id, plot: e.plot });
         break;
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });
@@ -104,5 +104,7 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'This kid can’t be favoured by the Garden.';
     case 'gone':
       return 'This kid has already left the map.';
+    case 'plotsBusy':
+      return 'All plots are growing. Try again when one is empty.';
   }
 }

@@ -86,6 +86,23 @@ export interface EconomyBalance {
   offlineSummaryMinSeconds: number;
 }
 
+/** Planting (D-054): a kid becomes a seed in a plot and grows into a random Garden kid. */
+export interface PlantingBalance {
+  /** Seconds a seed takes to grow, online and offline. */
+  growSeconds: number;
+  /** Plots unlocked on a new game. */
+  startPlots: number;
+  /** Plots there can ever be (GUI_MVP §15.2). */
+  maxPlots: number;
+  /** Materials to unlock plot n (n > startPlots): `unlockCostBase · unlockCostGrowth^(n − startPlots − 1)`. */
+  unlockCostBase: number;
+  unlockCostGrowth: number;
+  /** A growing seed keeps its kid's place on the map, so its sprout always has room. */
+  seedsHoldPlace?: boolean;
+  /** Experiment (owner, 2026-10-04): kids a plot takes before its seed starts growing; 1 if absent. */
+  kidsPerSeed?: number;
+}
+
 export interface Balance {
   spawnWeights: Record<KidId, number>;
   spawn: SpawnBalance;
@@ -94,6 +111,7 @@ export interface Balance {
   wander: WanderBalance;
   economy: EconomyBalance;
   buildings: Record<BuildingId, BuildingBalance>;
+  planting: PlantingBalance;
 }
 
 export interface Content {

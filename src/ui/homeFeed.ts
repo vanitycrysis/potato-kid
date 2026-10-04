@@ -9,7 +9,7 @@ import type { SendHomeNotes } from './sendHome';
 
 /** What the feed needs from the scene. */
 export interface FeedScene {
-  command(cmd: { type: 'sendHome'; kidId: number }): void;
+  command(cmd: { type: 'plant'; kidId: number }): void;
   /** The kid's farewell is still playing. */
   isDeparting(kidId: number): boolean;
 }
@@ -61,7 +61,7 @@ export class HomeFeed {
   send(kidId: number, type: KidId): void {
     if (this.pending) return;
     this.pending = { kidId, type };
-    this.scene.command({ type: 'sendHome', kidId });
+    this.scene.command({ type: 'plant', kidId });
   }
 
   /** A step's events: the Dex answers its own sends, open detail or not (no world card). */
@@ -70,7 +70,7 @@ export class HomeFeed {
     if (!p) return [];
     const handled: GameEvent[] = [];
     for (const e of events) {
-      if (e.type === 'sentHome' && e.kid.id === p.kidId) {
+      if (e.type === 'planted' && e.kid.id === p.kidId) {
         this.pending = null;
         handled.push(e);
         // Closed meanwhile: answered (no world card) but nothing to show, and no
@@ -88,7 +88,7 @@ export class HomeFeed {
           ms: this.notes.visibleMs(first),
         });
         this.listener?.({ kidId: p.kidId, ok: true });
-      } else if (e.type === 'rejected' && e.command === 'sendHome') {
+      } else if (e.type === 'rejected' && e.command === 'plant') {
         this.pending = null;
         handled.push(e);
         if (!this.active) continue;

@@ -51,6 +51,7 @@ export function validateContent(content: Content): string[] {
   errors.push(...validateWander(content.balance.wander));
   errors.push(...validateSpawn(content.balance));
   errors.push(...validateEconomy(content.balance, content.kids.length));
+  errors.push(...validatePlanting(content.balance));
 
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));
@@ -135,6 +136,26 @@ function validateSpawn(balance: unknown): string[] {
 }
 
 /** Economy and building tracks (plan §3): every value finite and in range, so no NaN reaches a save. */
+/** Planting (D-054): every value finite and in range, so no NaN reaches a save. */
+function validatePlanting(balance: unknown): string[] {
+  const p = (balance as Record<string, unknown>).planting as Record<string, unknown> | undefined;
+  if (typeof p !== 'object' || p === null) return ['balance.planting is missing'];
+  const errors: string[] = [];
+  const num = (key: string, ok: (v: number) => boolean, rule: string) => {
+    const v = p[key];
+    if (typeof v !== 'number' || !Number.isFinite(v) || !ok(v)) errors.push(`balance.planting.${key} must be ${rule}`);
+  };
+  num('growSeconds', (v) => v > 0, 'a finite number > 0');
+  num('startPlots', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('maxPlots', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('unlockCostBase', (v) => v >= 0, 'a finite number >= 0');
+  num('unlockCostGrowth', (v) => v >= 1, 'a finite number >= 1');
+  if (typeof p.startPlots === 'number' && typeof p.maxPlots === 'number' && p.startPlots > p.maxPlots) {
+    errors.push('balance.planting.startPlots must not exceed maxPlots');
+  }
+  return errors;
+}
+
 function validateEconomy(balance: unknown, kidCount: number): string[] {
   const errors: string[] = [];
   const b = balance as Record<string, unknown>;

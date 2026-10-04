@@ -423,7 +423,7 @@ export class Hud {
       const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
       const text = item.kind === 'refusal' ? refusalText(item.reason, item.command, currency) : undefined;
       const card: Card =
-        item.kind === 'sentHome' ? this.sentHomeCard(item) : { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
+        item.kind === 'planted' ? this.sentHomeCard(item) : { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
       // Refusals are never dropped: they wait like any card, but ahead of rewards.
       const firstReward = this.queue.findIndex((c) => c.item.kind !== 'refusal');
       if (item.kind === 'refusal' && firstReward >= 0) this.queue.splice(firstReward, 0, card);
@@ -480,7 +480,7 @@ export class Hud {
     // still waiting: successes keep their order (GUI_MVP §13.3; Codex review, PR #54).
     let homeWaiting = false;
     for (const c of this.queue) {
-      if (c.item.kind === 'sentHome') {
+      if (c.item.kind === 'planted') {
         if (c.notBefore === Infinity && !homeWaiting && !this.scene.isDeparting(c.item.kidId)) c.notBefore = now;
         if (c.notBefore === Infinity) homeWaiting = true;
         continue;
@@ -578,7 +578,7 @@ export class Hud {
         return el('div', 'toast toast-short', icon('icon_spawn', '', 'ui-icon-28'), el('span', 'card-heading', item.count === 1 ? 'Kid arrived at the Garden.' : `${item.count} kids arrived at the Garden.`));
       case 'refusal':
         return el('div', 'toast toast-short', icon('icon_warning', '', 'ui-icon-28'), el('span', 'card-heading', text ?? refusalText(item.reason, item.command)));
-      case 'sentHome':
+      case 'planted':
         return el('div', 'toast', el('span', 'card-heading', this.notes.heading(this.name(item.kidType))));
     }
   }
@@ -588,7 +588,7 @@ export class Hud {
    * this profile explains where the kid went, stays 6 s and can be closed; its copy follows
    * whether the Compendium is built when it appears, and only then is it marked as shown.
    */
-  private sentHomeCard(item: Extract<FeedbackItem, { kind: 'sentHome' }>): Card {
+  private sentHomeCard(item: Extract<FeedbackItem, { kind: 'planted' }>): Card {
     const { kidType } = item;
     const first = this.notes.claimFirst();
     const lines = first ? [el('span', 'card-line'), el('span', 'card-line')] : [el('span', 'card-line', this.notes.later())];

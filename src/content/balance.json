@@ -102,5 +102,12 @@
       "costBase": 1000,
       "costGrowth": 1
     }
+  },
+  "planting": {
+    "growSeconds": 1800,
+    "startPlots": 1,
+    "maxPlots": 4,
+    "unlockCostBase": 1000,
+    "unlockCostGrowth": 5
   }
 }

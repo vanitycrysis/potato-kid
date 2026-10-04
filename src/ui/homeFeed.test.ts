@@ -24,7 +24,7 @@ function setup() {
   } as unknown as SendHomeNotes & { markShown: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> };
   const feed = new HomeFeed(scene, content, notes);
   feed.active = true;
-  const sent = (id: number): GameEvent => ({ type: 'sentHome', kid: { id, type: 'fire' } as never });
+  const sent = (id: number): GameEvent => ({ type: 'planted', kid: { id, type: 'fire' } as never, plot: 0 });
   return { feed, notes, commands, sent, departing };
 }
 
@@ -33,7 +33,7 @@ describe('the Dex Send home feed (GUI_MVP §13.3-13.4)', () => {
     const { feed, commands, sent } = setup();
     feed.send(1, 'fire');
     feed.send(2, 'fire');
-    expect(commands).toEqual([{ type: 'sendHome', kidId: 1 }]);
+    expect(commands).toEqual([{ type: 'plant', kidId: 1 }]);
     expect(feed.onStep([sent(1)])).toHaveLength(1);
     feed.send(2, 'fire');
     expect(commands).toHaveLength(2);
