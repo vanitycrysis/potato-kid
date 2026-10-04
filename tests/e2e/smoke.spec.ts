@@ -2543,3 +2543,21 @@ test.describe('the world lives on while away (D-053)', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test('a sprout that comes up while away is drawn like any arrival (Codex review, PR #72)', async ({ page }) => {
+  const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  const sprouted = await page.evaluate(async () => {
+    const pk = window.__PK__!;
+    const ids = [pk.debugAdd!('plain', 250, 1500), pk.debugAdd!('fire', 600, 1500), pk.debugAdd!('snow', 950, 1500)];
+    for (const id of ids) pk.debugCommand!({ type: 'plant', kidId: id });
+    await pk.debugAway!(0); // a step: the three are planted
+    pk.debugCommand!({ type: 'startGrowing', plot: 0 });
+    await pk.debugAway!(0); // a step: it starts growing
+    await pk.debugAway!(2 * 3600 * 1000); // long enough to ripen
+    for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
+    return pk.lastOffline()!.sprouted.map((k) => ({ id: k.id, drawn: !!pk.screenPointOf(k.id) }));
+  });
+  expect(sprouted).toHaveLength(1);
+  expect(sprouted[0]!.drawn).toBe(true);
+  expect(errors).toEqual([]);
+});

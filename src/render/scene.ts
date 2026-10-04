@@ -291,7 +291,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'unlockPlot' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' }>): void {
     this.pending.push(cmd);
   }
 
@@ -321,7 +321,8 @@ export class MapScene {
     // Kids wandered while away (D-053): they are found where they are, never seen sliding
     // there from where they were left.
     for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
-    for (const kid of report.spawned) this.addView(kid);
+    // Garden arrivals and sprouts alike need a view (Codex review, PR #72).
+    for (const kid of [...report.spawned, ...report.sprouted]) this.addView(kid);
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
     return report;
