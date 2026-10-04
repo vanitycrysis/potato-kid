@@ -174,6 +174,7 @@ function validatePlanting(balance: unknown): string[] {
     errors.push('balance.planting.rareVariants must be distinct, non-empty ids');
   }
   num('rareIncomeMultiplier', (v) => v >= 1, 'a finite number >= 1');
+  num('miniScale', (v) => v > 0 && v <= 1, 'a finite number in (0, 1]');
   return errors;
 }
 

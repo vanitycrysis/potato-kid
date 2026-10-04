@@ -346,11 +346,12 @@ describe("Codex's round-3 trace (plan §4)", () => {
 
 describe('schema 2: the tutorial counter (D-052)', () => {
   /** A schema-1 state: today's state without the fields schemas 2 and 3 added. */
-  function schema1(): Omit<PersistedState, 'gardenSpawns' | 'plots'> {
+  function schema1(): Omit<PersistedState, 'gardenSpawns' | 'plots' | 'discoveredVariants'> {
     const rest: Partial<PersistedState> = newGame().persisted();
     delete rest.gardenSpawns;
     delete rest.plots;
-    return rest as Omit<PersistedState, 'gardenSpawns' | 'plots'>;
+    delete rest.discoveredVariants;
+    return rest as Omit<PersistedState, 'gardenSpawns' | 'plots' | 'discoveredVariants'>;
   }
 
   it('a new game starts at the beginning of the tutorial', () => {
@@ -380,13 +381,14 @@ describe('schema 2: the tutorial counter (D-052)', () => {
 
 describe('schema 3: plots (D-061)', () => {
   it('a schema-2 save loads with its first plots, empty', async () => {
-    expect(SAVE_SCHEMA).toBe(3);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(3);
     const storage = new TestStorage();
     const old: Partial<PersistedState> = newGame().persisted();
     delete old.plots;
+    delete old.discoveredVariants;
     storage.data.set('slotA', encode(2, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
+    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })), discoveredVariants: {} });
   });
 
   it('a schema-3 save must carry valid plots (D-061)', () => {
@@ -444,4 +446,29 @@ describe('schema 3: plots (D-061)', () => {
     for (const v of ['sparkly', '', 3, null]) expect(validateState(withVariant(v), content)).not.toEqual([]);
   });
 
+});
+
+describe('schema 4: rare variants found (D-062)', () => {
+  it('a schema-3 save counts the rares it already holds, on the map or planted, as found', async () => {
+    expect(SAVE_SCHEMA).toBe(4);
+    const g = newGame();
+    const old = g.persisted() as PersistedState & Record<string, unknown>;
+    delete (old as Partial<PersistedState>).discoveredVariants;
+    const kid = old.world.kids[0]!;
+    kid.variant = 'rainbow';
+    const look = { body: 'default', face: 'default', scale: 1 };
+    old.plots = [{ seed: { planted: [{ type: kid.type, look, variant: 'rainbow' }, { type: 'fire', look, variant: 'mini' }], sprout: null, grown: 0 } }];
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(3, 4, 1, old));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state!.discoveredVariants).toEqual({ [kid.type]: ['rainbow'], fire: ['mini'] });
+  });
+
+  it('a schema-4 save must name known types and variants, each once', () => {
+    const state = newGame().persisted() as unknown as Record<string, unknown>;
+    for (const bad of [undefined, null, [], { nobody: ['rainbow'] }, { fire: ['sparkly'] }, { fire: 'rainbow' }, { fire: ['rainbow', 'rainbow'] }]) {
+      expect(validateState({ ...state, discoveredVariants: bad }, content), JSON.stringify(bad)).not.toEqual([]);
+    }
+    expect(validateState({ ...state, discoveredVariants: { fire: ['rainbow', 'mini'] } }, content)).toEqual([]);
+  });
 });

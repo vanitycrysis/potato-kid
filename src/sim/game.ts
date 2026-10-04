@@ -122,6 +122,8 @@ export type GameEvent =
   /** `plot`: the plot a sprout came up from (0-based). */
   | { type: 'spawned'; kid: Kid; source: SpawnSource; plot?: number }
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
+  /** A rare variant seen on this type for the first time (D-062). */
+  | { type: 'variantFound'; kidType: KidId; variant: string }
   | { type: 'pickedUp'; kidId: number }
   | { type: 'dropped'; kidId: number }
   /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
@@ -156,6 +158,8 @@ export interface GameState {
   plots: Plot[];
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
+  /** Rare variants found, by kid type, in the order found (D-062; GUI_MVP §16.4). */
+  discoveredVariants: Partial<Record<KidId, string[]>>;
   /** Recipe pair keys (`pairKey`) the player has triggered. */
   discoveredRecipes: string[];
   /** Soft currency, earned passively by every kid on the map (D-020). Fractional. */
@@ -253,6 +257,7 @@ export class Game {
       gardenSpawns: 0,
       plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })),
       discoveredKids: [],
+      discoveredVariants: {},
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,
       potatokens: content.balance.economy.startingPotatokens,
@@ -633,7 +638,8 @@ export class Game {
 
   /** A newborn at the Garden outlet, if a spot is free; the type is drawn only then. */
   private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[], variant: string | null = null): Kid | null {
-    const look = this.peekLook();
+    // A Mini is smaller all through: its look and its box, before it looks for room (§16.1).
+    const look = variant === 'mini' ? this.mini(this.peekLook()) : this.peekLook();
     const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
     if (!p) return null;
     this.rollLook(); // commit the peeked roll
@@ -641,7 +647,23 @@ export class Game {
     if (variant) kid.variant = variant;
     events.push({ type: 'spawned', kid, source });
     this.discover(kid.type, events);
+    if (variant) this.discoverVariant(kid.type, variant, events);
     return kid;
+  }
+
+  /** A look at Mini size: appearance and box scaled about the ground point (GUI_MVP §16.1). */
+  private mini(look: Look & { box: Box }): Look & { box: Box } {
+    const m = this.content.balance.planting.miniScale;
+    const b = look.box;
+    return { ...look, scale: look.scale * m, box: { left: b.left * m, top: b.top * m, right: b.right * m, bottom: b.bottom * m } };
+  }
+
+  /** Records a rare variant found on a type (D-062): a new one is an event. */
+  private discoverVariant(type: KidId, variant: string, events: GameEvent[]): void {
+    const found = (this.state.discoveredVariants[type] ??= []);
+    if (found.includes(variant)) return;
+    found.push(variant);
+    events.push({ type: 'variantFound', kidType: type, variant });
   }
 
   /**

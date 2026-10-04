@@ -109,6 +109,8 @@ export interface PlantingBalance {
   rareVariants: string[];
   /** A rare kid earns this many times its type's Materials (D-062). */
   rareIncomeMultiplier: number;
+  /** A Mini kid's size: its saved appearance and its box, times this (GUI_MVP §16.1). */
+  miniScale: number;
 }
 
 export interface Balance {
