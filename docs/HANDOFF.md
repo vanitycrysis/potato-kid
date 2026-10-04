@@ -1,51 +1,51 @@
-# Session handoff (2026-10-03, second session, for the next Claude session)
+# Session handoff (2026-10-04, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-059**) and `docs/TASKS.md`. Pull `main` first.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-066**: gate-4 feedback, then the planting rework) and `docs/TASKS.md`. Pull `main` first.
 
 ## Where we are
 
-- **Gate 4 came back with feedback** (2026-10-03), not approval. The owner's answers are recorded as **D-050..D-059** (PR #60, merged), and every item is a task on the board in `TASKS.md`, with an order of work. After those tasks, the MVP goes back to the owner as gate 4.
-- In brief:
-  - The **icon is approved**.
-  - **Forgiving drop** (D-051): drop a kid onto another to try the pair; the kid under the finger is highlighted. No fusing screen.
-  - **Pacing** (D-052): a tutorial at 1 kid/min, then 20 min per kid, falling to about 8 min with Garden upgrades; much slower Materials.
-  - **Offline** (D-053): kids keep spawning and are found where they wandered; still no offline fusions.
-  - **Planting replaces Send home** (D-054): grows over time in plots, then sprouts a random kid, sometimes a variant. A planting sound is wanted.
-  - **Rainbow and Mini variants** of any kid (D-055).
-  - **Feeding** (D-056): a happy kid earns more and sprouts better variants; each type has a favourite food and a hated one, which it refuses.
-  - **Naming** (D-057) and **personalities** (D-058): a description, likes, hates and hobbies per type.
-  - **The wave becomes a fast stubby-arm wiggle** (D-059).
-  - **Music loop bug.**
-- **The repo is public now** (D-060, PR #64, merged; CI's token is read-only). Public repos don't use the owner's Actions minutes.
-- **The owner has given full access and doesn't want permission questions** (see the memory file `no-permission-asks`). Still stop at the owner gates. Claude Code's auto-mode classifier blocked two actions anyway: turning on GitHub Pages, and stopping the stale Codex processes. Both are left to the owner.
+- **Gate 4 came back with feedback** (D-050..D-059). Most of it is now built and merged; planting is being reworked with the owner.
+- **Merged this session:**
+  - WAVE-WIGGLE (#62)
+  - MUSIC-LOOP (#61)
+  - FUSE-DROP's engine side (#66: the kid under the finger)
+  - GATE4-DESIGN (#67, Codex's design)
+  - PACING (#68: 60 s × 10 tutorial, then 20 min → 8 min, ~100× slower Materials, save schema 2)
+  - PERSONALITY (#69, Codex's text in `art/data/personality_v1.json`)
+  - OFFLINE-WANDER (#70)
+  - the planting decisions (#71: D-061..D-065)
+- **Planting was reworked with the owner (2026-10-04).** The simulator showed D-054 (one kid in, one out) clogs the map: casual players were stuck on 77 % of turns. The owner chose:
+  - **D-061:** plant **3–5 kids for one sprout**, by drag or by tapping a plot and picking. **Start growing** is never automatic and sparkles at 5. A sprout is a random Garden kid, with independent rolls for a **special** (10→20 %) and a **rare** (5→10 %) by count and tier.
+  - **D-062:** **ten rare variants** that sparkle and earn more.
+  - **D-063:** **20 apex special kids**, tier 5–6: in no recipe, plantable, in the Dex, never sold.
+  - **D-064:** a **trophy map** for dedicated players (later).
+  - **D-065:** **expeditions**, parked.
+  - **D-066:** the owner approved all 20 special concepts (12 at T5, 8 at T6), and two rules: a happy kid counts one tier higher in the odds; a planted special counts by its tier.
+  - Simulator with these rules: nobody is ever stuck; casual players finish the roster on day ~6.4–7.1; daily players have 0–2 specials after two weeks.
+- **The owner reached this session through another session** ("session 03", relaying word for word over cross-session messages). Replies to the owner went back that way. If no relay is around, ask the owner directly.
+- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates. Auto mode blocked merging a PR the owner hadn't named until the owner said "Merge whatever you need".
 
 ## Open work at handoff (check each first)
 
-1. **PR #61, MUSIC-LOOP: merged.** The music loops on a decoded Web Audio buffer and survives hide/show and system interruptions; Off/On resumes from the same offset. It needs listening on the device at the next gate-4 build.
-2. **PR #62, WAVE-WIGGLE (Codex art):** `chatgpt/wave-wiggle`.
-   - **Round 1:** Claude committed Codex's round 1 unchanged and merged `main` into the branch (TASKS.md conflict resolved to main's board).
-   - **Claude's review, round 1 (posted on the PR):** the nubs are stubby now, but the wiggle is **invisible at 55 px** (about 2 CSS px of travel), and many costumes hide the left nub. The review asks for a bigger angular sweep and a costume-agnostic fix, perhaps both nubs.
-   - **Round 2 is delivered and pushed** (1050909, committed unchanged as ChatGPT):
-     - both stubby nubs, constant length, sweep 106°, about 5.2 CSS px of tip travel at 55 px;
-     - right-hand props bob through the shared attachment;
-     - still 500 ms, reserves unchanged; all 64 costumes audited.
-     - Codex says Water's hood still partly masks a nub.
-   - **Next:** Claude's round-2 review at 55 px. Use the colour and grayscale sheets and `wave-wiggle-preview.html`, which compares old, round 1 and round 2, in `../potato-kid-chatgpt/.codex-out/`. Judge especially Water and the prop bob on Baker, Blacksmith, Pinwheel and Rescue Station. Then the engine check, and merge when it passes.
-   - **Never discard or rerun a Codex task's edits** while its task may still be running: one writer per worktree. Check the companion's job status first.
-   - **Engine side, after the art passes:** `waveSeconds` derives from the clip (0.5 s now); Send home's farewell uses the same clip.
-3. **FUSE-DROP (Claude), next up.** Nothing written yet. The design worked out:
-   - **The target (D-051): the kid under the finger.** Hit-test the pointer's world point (`w` in `endDrag`, *before* `HOLD_LIFT`; the held kid is drawn 70 units above the finger) against the other kids' drawn boxes (`this.drawn` + their `box`). Not the lifted body's overlap, which can pick a neighbour (Codex review, PR #63).
-   - **The scene** computes the target each frame in `resolveHeld()` (`src/render/scene.ts`), stores it on the `Drag`, and exposes it to tests (for example `__PK__.dropTarget()`).
-   - **The command:** `endDrag` sends `{ type: 'drop', ..., target }`.
-   - **The sim:** in `src/sim/game.ts`, `applyCommands` returns the targeted pair, and `resolveFusions` gives it priority (`d = -1`) ahead of the `seen` contacts. A non-recipe target just lands at the free spot (D-039). Kids in newborn grace stay ineligible.
-   - **Unless the drop is over the Garden**, where the home/plant target keeps priority.
-   - **The highlight's look is Codex's** (GATE4-DESIGN). Claude draws nothing (D-036), so ship the logic first and render the highlight once the design lands.
-   - **Tests:** unit tests for target choice and priority; e2e for a crowded drop onto a partner and onto a non-partner; mutation-check both.
-4. **Then, in the board's order:**
-   - **Claude:** PACING (`src/content/balance.json`, `npm run balance`; spawn is 12 s today, so the target is 60 s for a tutorial of about 10 spawns, then 1200 s falling to about 480 s at Garden level 10, a factor of about 0.903 per level) and OFFLINE-WANDER (`Game.reconcile` in `src/sim/game.ts`).
-   - **Codex:** GATE4-DESIGN, one big interaction-design and art task: the highlight, plots/seed/sprout, the Rainbow and Mini looks, foods, the kid card, feeding, naming, and the planting cue. Also PERSONALITY (text for 64 types plus liked and hated foods). Codex's worktree takes **one task at a time**, so queue them after WAVE-WIGGLE.
-   - **Claude, after those designs:** PLANTING (reuse Send home's 400 ms hold gesture), VARIANTS, FEED-NAME.
-   - Numbers that D-052..D-056 leave open (tutorial length, growing time, odds, prices, happiness duration) are Claude's to tune with the simulator, review with Codex, and show the owner at gate 4.
+1. **PR #72, PLANTING (draft), branch `claude/planting`.** The sim and save for D-061..D-063 are done, reviewed by Codex twice, and every finding fixed:
+   - plots and `plant {kidIds, plot?}` (atomic batch), `startGrowing {plot}`, `unlockPlot`;
+   - odds by count and tier (`oddsFor`); independent special and rare rolls;
+   - rare kids' `variant` and income multiplier; snapshots of planted kids;
+   - growth online and offline on one timeline with Garden spawns; waiting `full` / `noRoom`;
+   - schema 3, and a save round-trip test.
+   - **Still to do on the same branch** (Codex asked that planting never reach `main` without its controls): the **engine and UI** from GUI_MVP §15/§16 as revised in #73. Then rerun Codex's review on the whole and un-draft.
+   - Notes:
+     - The happy-kid rule (+1 tier) arrives with FEED-NAME.
+     - The UI still shows Send home's copy and farewell until then.
+     - The refusal copy for `plotFull` / `tooFewKids` is a placeholder in `ui/feedback.ts`.
+2. **PR #73, PLANT-V2-DESIGN (Codex): approved in round 2.** Claude merged `main` into it (the board conflict was resolved to done). **Merge it when CI is green** (CI was running at handoff).
+3. **PR #74 (D-066): merged.**
+4. **Then, in order:**
+   - PLANTING's engine and UI (above).
+   - **SPECIALS (Codex), next for Codex** once #73 merges (start `chatgpt/specials` from `main`); the brief is in `docs/briefs/codex-specials.md`: the costume round for the 20 approved kids, plus names, personalities and foods in the existing format. The four riskiest (Music Box, Puppet Theatre, Paper Town, Marble Run) come back with simpler alternatives if they fail at 55 px.
+   - **VARIANTS (Claude):** rendering the ten rares and their Dex rows.
+   - **FEED-NAME (Claude):** loading `personality_v1.json`, feeding, happiness (+1 tier in planting odds), naming, the kid card.
+   - Then the gate-4 build for the owner.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -65,6 +65,14 @@
   - Batch lessons so far: no shared torso mark as the main read; nothing on or under the mouth line; no kid-in-a-vessel; no faint cues; no stereotype-adjacent shapes; no medical or weapon reads; check against everyday objects too.
   - Codex's art PRs are gated by Claude's review.
 
+## The balance simulator (`npm run balance [seeds]`)
+
+- It runs every scenario × seed in its own process, in parallel: 3 seeds take about 7 minutes.
+- Scenarios: the first hour; casual (10 min every 3 h, 14 days); daily (30 min a day, 14 days).
+- It reports wall-clock milestones, levels, income by day, plots, plantings and sprouts, and specials on the map against capacity.
+- **Tuning runs side by side:** `PK_BALANCE='{"planting":{...}}'` merges over the balance one level deep, and `PK_SPECIALS=20` adds stand-in special kids (tier 5, in no recipe). Run each variant as **its own background command** with full paths; never share shell variables across `&`.
+- **Never edit `src/`, or run mutation tests, while it runs.** Its worker processes load `src/` as they start, so a mutant can silently corrupt some seeds.
+
 ## Testing gotchas learned this session
 
 - **The e2e preview server** (port 4173) is reused if running: it serves **this worktree's `dist/`**. Rebuild before every run, and don't test another worktree's code against it.
@@ -80,14 +88,22 @@
 - **CI runs about 3× slower than this machine,** and the Garden keeps spawning during tests. Anything timed against a short window (the 650 ms farewell, a row count) belongs in the page, inside a `requestAnimationFrame` loop, not in clicks from the test (PR #54). To stage frames below 10 fps, busy-wait in each frame (`slowFrames` in `smoke.spec.ts`).
 - `a view change just before release restarts the dwell` (PR #50) timed out once in about 80 local runs and has never failed on CI. If it shows up again, look at it.
 
+- **Reproduce a reported bug before fixing it.** A regression test that passes on the unfixed code tests nothing. It happened twice this session: the scenery case first needed the shipped body bounds; the crowd case first needed touching spacing (box 120 + gap ≤ 8).
+- **Mutation runner** (`mutate.py` in the scratchpad):
+  - open files with `newline=''`, or Windows rewrites LF as CRLF;
+  - run build-plus-e2e mutants through a small bash script, not `cmd.exe` (which mangles quoted paths);
+  - a surviving mutant can be *equivalent* (it changes nothing observable): say so rather than chase it.
+- **Commit messages with double quotes** break `git commit -m "…"` in a chain. Use `git commit -F - <<'EOF'`.
+- **A `SaveManager` saves only after it has loaded**, in tests too.
+- **Codex's reviews can't see PR replies.** When a finding is resolved by process (for example "this PR won't merge alone"), make it structural (a draft, one combined PR), or the next round repeats the finding.
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout, left on `main`.
-  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/wave-wiggle`.
-  - `potato-kid-review-50`: the Codex review worktree, with `node_modules`.
+  - `potato-kid-claude`: Claude's main checkout, on `claude/planting` (PR #72).
+  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/plant-v2-design` (PR #73).
+  - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached; check it out per review).
   - `potato-kid-docs`: docs branches.
-- **Finished worktrees removed:** the old `potato-kid-import3` and `-review-41..57` worktrees were removed from git this session. Their **empty folders** remain, locked by about 26 stale Codex processes (and their `node` helpers) from 2026-10-02. The owner hasn't said whether to stop those processes; the owner was told how to end them in Task Manager; once they're gone, delete the folders.
-- **Merged remote branches** (`claude/*`, `chatgpt/*`) were never deleted. That's harmless.
+- **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
+- **Merged remote branches** were never deleted. That's harmless.
 - **Gate captures** live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `-gate3\`.
-- **GitHub:** `gh` (authenticated) is used for PRs and comments.
+- **GitHub:** `gh` (authenticated) for PRs and comments; it sometimes returns HTTP 503, so retry a merge after a few seconds.
