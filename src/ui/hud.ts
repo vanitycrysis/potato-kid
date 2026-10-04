@@ -8,6 +8,7 @@ import { formatClock, formatCount, formatDuration, formatExact } from './format'
 import { BuildingSheets } from './buildings';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
+import type { PlotsSnapshot } from './gardenPlots';
 import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
@@ -86,7 +87,7 @@ export class Hud {
   private readonly trayCells = new Map<string, HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
-  private interrupted: (SheetSnapshot & { search: string }) | null = null;
+  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null }) | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -281,7 +282,7 @@ export class Hud {
     if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText };
+      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot };
     }
     this.summaryOpen = true;
     openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, (replaced) => {
@@ -293,7 +294,7 @@ export class Hud {
       if (back.key === 'dex') this.dex.open(back.launcher);
       else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
       else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
-        this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search });
+        this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
     });
   }
 

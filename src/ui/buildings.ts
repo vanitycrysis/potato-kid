@@ -5,7 +5,7 @@ import type { GameEvent } from '../sim/game';
 import { el, icon, shortName } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
-import { GardenPlots } from './gardenPlots';
+import { GardenPlots, type PlotsSnapshot } from './gardenPlots';
 import type { PlantingNotes } from './plantingNotes';
 import { LazyPortraits, portrait } from './portrait';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
@@ -37,6 +37,8 @@ interface CompendiumCard {
 export interface SheetRestore {
   scrollTop: number;
   search?: string;
+  /** The Garden's open plot view and picker draft (GUI_MVP §15). */
+  plots?: PlotsSnapshot | null;
 }
 
 export class BuildingSheets {
@@ -89,8 +91,14 @@ export class BuildingSheets {
       launcher,
     );
     this.controller = spec.mount(sheet.body, sheet.footer, (t) => sheet.setSubtitle(t), sheet.bar, sheet);
+    if (restore?.plots) this.plots?.restore(restore.plots);
     this.controller.update();
     if (restore) sheet.scrollTo(restore.scrollTop);
+  }
+
+  /** The Garden's open plot view and draft, for a snapshot (GUI_MVP §8). */
+  get plotsSnapshot(): PlotsSnapshot | null {
+    return this.plots?.snapshot() ?? null;
   }
 
   /** Opens the Garden on one plot: its picker or its detail (a tap on the map, §15.2). */

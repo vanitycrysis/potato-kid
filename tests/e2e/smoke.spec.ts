@@ -2061,18 +2061,22 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
   test('leaving in the frame the result lands keeps the explanation for the next add (Codex review, PR #54)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    // Back in the very frame the result lands (a click from the test could come too late
-    // on a slow runner): never seen, never recorded.
+    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
+    await dialog(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    // Back in the very step the result lands, after the Dex has answered it and before any
+    // frame could draw it (racing frames from the test is flaky under load): never seen,
+    // never recorded.
     const explained = await page.evaluate(
       () =>
         new Promise<boolean>((done) => {
-          const wait = () => {
-            if (window.__PK__!.kids().length > 1) return requestAnimationFrame(wait);
+          let left = false;
+          window.__PK__!.debugListenSteps!((types) => {
+            if (left || !types.includes('planted')) return;
+            left = true;
             (document.querySelector('.dex-back') as HTMLButtonElement).click();
             done(window.__PK__!.settings().plantV2Explained);
-          };
-          wait();
+          });
+          [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Add this kid')!.click();
         }),
     );
     expect(explained).toBe(false);
@@ -2608,6 +2612,51 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     expect(await visible('.picker-add')).toBe(true);
     await sheet(page).locator('.picker-add').click();
     await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(1);
+  });
+
+  test("the return summary hands back the picker with its draft, and a plot's detail (Codex review, PR #72)", async ({ page }) => {
+    await garden(page, ['fire', 'plain', 'water']);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    const rows = sheet(page).locator('.picker-row');
+    await rows.nth(0).click();
+    await rows.nth(2).click();
+    await sheet(page).getByLabel('Find a kid on your map').fill('kid');
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+    await expect(sheet(page).locator('.picker-row input:checked')).toHaveCount(2);
+    await expect(rows.nth(0).locator('input')).toBeChecked();
+    await expect(rows.nth(2).locator('input')).toBeChecked();
+    await expect(sheet(page).getByLabel('Find a kid on your map')).toHaveValue('kid');
+    await expect(sheet(page).locator('.picker-add')).toHaveText('Add 2 kids');
+    // A plot's detail comes back as itself too.
+    await sheet(page).getByRole('button', { name: 'Back to plots' }).click();
+    await row(page, 1).getByRole('button', { name: 'Review plot' }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Plot 1');
+    await expect(sheet(page).locator('.plot-start')).toBeVisible();
+  });
+
+  test('leaving the picker before Add lands spends no explanation: the next add shows it (Codex review, PR #72)', async ({ page }) => {
+    await garden(page, ['fire', 'plain', 'water', 'plain']);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    for (const n of [0, 1, 2]) await sheet(page).locator('.picker-row').nth(n).click();
+    // In one task, before the sim's next step: Add, then back to the plots.
+    await page.evaluate(() => {
+      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === t)!;
+      byText('Add 3 kids').click();
+      byText('Back to plots').click();
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
+    await expect(row(page, 1).locator('.plot-row-status')).toHaveText('Filling · 3 / 5');
+    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(false);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    await sheet(page).locator('.picker-row').nth(0).click();
+    await sheet(page).locator('.picker-add').click();
+    await expect(sheet(page).locator('.plot-note')).toContainText('Add 3–5 kids, then press Start growing.');
+    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(true);
   });
 
   test('a focused checkbox keeps its focus when another kid arrives (Codex review, PR #72)', async ({ page }) => {
