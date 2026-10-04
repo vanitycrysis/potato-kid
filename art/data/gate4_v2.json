@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "gate4-design-2",
+  "revision": "plant-v2-design-2",
   "status": "Claude review pending",
   "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract",
   "assets": {
@@ -243,6 +243,226 @@
         128,
         224
       ]
+    },
+    "fx_variant_orbit": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_orbit": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_prism": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_prism": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_ribbon": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_ribbon": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_ripple": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_ripple": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_comet": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_comet": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_petal": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_petal": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_echo": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_echo": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_variant_zigzag": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_variant_zigzag": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_rare_sparkle": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        128
+      ],
+      "status": "Claude review pending"
+    },
+    "icon_rare_sparkle": {
+      "canvas": [
+        128,
+        128
+      ],
+      "sourcePivot": [
+        64,
+        64
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_plant_filling": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
+    },
+    "fx_plant_slot_filled": {
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "status": "Claude review pending"
     }
   },
   "drop": {
@@ -317,14 +537,107 @@
     "timer": "authoritative remaining foreground/offline time; no view timers",
     "sound": "sfx_plant",
     "sproutSound": "sfx_spawn",
-    "snapshotHappyOddsAtPlanting": true,
     "composedSourceBounds": [
       16,
       108,
       240,
       240
     ],
-    "waitingAsset": "fx_plant_waiting"
+    "waitingAsset": "fx_plant_waiting",
+    "minimumKids": 3,
+    "maximumKids": 5,
+    "startsAutomatically": false,
+    "removalBeforeStart": false,
+    "fillingAsset": "fx_plant_filling",
+    "filledSlotAsset": "fx_plant_slot_filled",
+    "filledSlotSourceCentre": [
+      128,
+      224
+    ],
+    "fillingSlotCentresSource": [
+      [
+        52,
+        213
+      ],
+      [
+        90,
+        213
+      ],
+      [
+        128,
+        213
+      ],
+      [
+        166,
+        213
+      ],
+      [
+        204,
+        213
+      ]
+    ],
+    "fillingSlotSizeSource": [
+      24,
+      24
+    ],
+    "dragPlotChoice": "lowest-index filling plot with room, otherwise lowest-index empty unlocked plot; never growing/waiting",
+    "startConfirmation": "separate inline roster review then deliberate Start growing; never default Enter",
+    "rollAt": "authoritative Start growing acceptance; persist result privately until admission",
+    "noRefund": true,
+    "baseOdds": {
+      "countFactor": "clamp((n - 3) / 2, 0, 1)",
+      "tierFactor": "clamp((meanTier - 2) / 3, 0, 1)",
+      "x": "(countFactor + tierFactor) / 2",
+      "specialPercent": "10 + 10 * x",
+      "rarePercent": "5 + 5 * x",
+      "independent": true,
+      "meanTier": "mean of each submitted tier plus 1 if that kid was happy at authoritative Add acceptance; same D-061 clamp"
+    },
+    "picker": {
+      "requestedHeight": 624,
+      "headerCssPx": [
+        80,
+        64
+      ],
+      "footerCssPx": [
+        188,
+        168
+      ],
+      "rowMinimumCssPx": 88,
+      "portraitCssPx": 48,
+      "maximumSelection": "5 - acceptedCount",
+      "addAtomic": true,
+      "roster": "all live main-map IDs including offscreen/special/rare; excludes already planted"
+    },
+    "fillingRunsOffline": false,
+    "happinessPolicy": "Happy counts one tier higher. Snapshot happy eligibility at authoritative Add acceptance; saved effective tier persists while Filling, no further timer/income/feeding. Current and projected use the same helper; clamp ceilings unchanged.",
+    "startSparkle": "icon_rare_sparkle",
+    "startSparklePeriodMs": 2400,
+    "oddsLabels": {
+      "special": "Special roll",
+      "rare": "Rare roll"
+    },
+    "outcomeRule": "Special-roll success selects special pool type. Otherwise rare-roll success selects any planted type weighted by copies, including planted special types. A rare look is applied if rare roll succeeds. Classify reveal by final type and variant; do not infer both flags from a rare special.",
+    "revealBurst": {
+      "asset": "fx_rare_sparkle",
+      "eligible": "actual newborn rare or special; one burst even for rare special; only after map admission",
+      "durationMs": 480,
+      "scale": [
+        1,
+        1.28
+      ],
+      "opacity": [
+        1,
+        0
+      ],
+      "placement": "same lifetime-centred six-star sleeve as rare idle",
+      "after": "rare switches to calm idle sparkle; ordinary special removes sleeve",
+      "reducedMotion": "rare has static idle immediately; special-only has static full-opacity sleeve for 1200 ms then removes; no expansion, fade or replay",
+      "cue": "existing spawn/discovery priority unchanged; no extra audio"
+    },
+    "happyOddsCopy": "Happy kids count as one tier higher.",
+    "specialParentCopy": "Special parents count by tier. A rare sprout can take a planted special's type.",
+    "openPolicy": "Add snapshot implements the already-reviewed happy-effects-end-at-Add flow; Claude validates atomic snapshot against sim integration."
   },
   "variants": {
     "rainbow": {
@@ -345,10 +658,209 @@
       "mapAsset": "fx_variant_mini",
       "icon": "icon_variant_mini",
       "scale": 0.72,
-      "hitMinimumCssPx": 44
+      "hitMinimumCssPx": 44,
+      "mark": "two unequal pebbles on a common baseline; no square or corner brackets; prior ground placement unchanged"
     },
     "mutuallyExclusive": true,
-    "reducedMotion": "same static looks"
+    "reducedMotion": "static full-opacity six-star map sparkle; static variants; Mini remains .72; Start keeps its approved two-star icon",
+    "order": [
+      "rainbow",
+      "mini",
+      "orbit",
+      "prism",
+      "ribbon",
+      "ripple",
+      "comet",
+      "petal",
+      "echo",
+      "zigzag"
+    ],
+    "specialOrthogonal": true,
+    "rareIncomeMultiplier": "{rareIncomeMultiplier[variant]}",
+    "sparkle": {
+      "mapAsset": "fx_rare_sparkle",
+      "icon": "icon_rare_sparkle",
+      "sourceCentre": [
+        128,
+        128
+      ],
+      "sourceClearWindowX": [
+        58,
+        198
+      ],
+      "stars": [
+        {
+          "centre": [
+            32,
+            48
+          ],
+          "radius": 20,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            32,
+            128
+          ],
+          "radius": 12,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            32,
+            208
+          ],
+          "radius": 18,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            224,
+            48
+          ],
+          "radius": 14,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            224,
+            128
+          ],
+          "radius": 22,
+          "stroke": 4
+        },
+        {
+          "centre": [
+            224,
+            208
+          ],
+          "radius": 16,
+          "stroke": 4
+        }
+      ],
+      "placement": "centre on projected costume-inclusive lifetime AABB; uniform source-pixel scale max(.24, (AABB.width + 8) / 140); use trim offset around full-source centre, never stretch the trimmed image",
+      "periodMs": 2400,
+      "opacityRange": [
+        0.8,
+        1
+      ],
+      "phase": "stable live instance ID, no RNG",
+      "reducedMotion": "static opacity 1",
+      "layer": "below every live kid layer, above ground/shadows; no filters, hit area or collision reserve",
+      "listPortraits": "Small <=48 CSS px list thumbnails keep glyph/Mini scale and Rare text, omit sleeve to preserve row geometry. Every map kid sparkles at all camera scales; live96 card reserves full sleeve."
+    },
+    "orbit": {
+      "mapAsset": "fx_variant_orbit",
+      "icon": "icon_variant_orbit",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "prism": {
+      "mapAsset": "fx_variant_prism",
+      "icon": "icon_variant_prism",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "ribbon": {
+      "mapAsset": "fx_variant_ribbon",
+      "icon": "icon_variant_ribbon",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "ripple": {
+      "mapAsset": "fx_variant_ripple",
+      "icon": "icon_variant_ripple",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "comet": {
+      "mapAsset": "fx_variant_comet",
+      "icon": "icon_variant_comet",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "petal": {
+      "mapAsset": "fx_variant_petal",
+      "icon": "icon_variant_petal",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "echo": {
+      "mapAsset": "fx_variant_echo",
+      "icon": "icon_variant_echo",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    },
+    "zigzag": {
+      "mapAsset": "fx_variant_zigzag",
+      "icon": "icon_variant_zigzag",
+      "bodyFilter": "none",
+      "placement": "above projected lifetime silhouette AABB, including all costume components; never at feet",
+      "widthCssPx": {
+        "minimum": 24,
+        "maximum": 36,
+        "canvasFraction": 0.6545454545454545
+      },
+      "gapCssPx": 4,
+      "fit": "visible trimmed bounds",
+      "neighbourOcclusion": "draw crowns below all kid layers; other silhouettes occlude effects, never paint on a neighbour or change collision/target boxes"
+    }
   },
   "feeding": {
     "foods": [
@@ -449,16 +961,99 @@
   "openNumbers": [
     "growDuration",
     "plotUpgradePrices",
-    "rainbowOdds",
-    "miniOdds",
-    "rainbowIncomeMultiplier",
+    "rareVariantWeights",
+    "specialPoolWeights",
+    "rareIncomeMultiplierByVariant",
     "foodPrices",
     "happyDurationOrdinary",
     "happyDurationFavourite",
     "happyIncomeOrdinary",
     "happyIncomeFavourite",
-    "happyOddsOrdinary",
-    "happyOddsFavourite",
-    "namePrice"
-  ]
+    "namePrice",
+    "specialRosterAndTierApproval"
+  ],
+  "rareProfiles": {
+    "rainbow": {
+      "name": "Rainbow",
+      "flavor": "A little borrowed colour, wherever this kid wanders.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "mini": {
+      "name": "Mini",
+      "flavor": "A small arrival with a very full afternoon ahead.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "orbit": {
+      "name": "Orbit",
+      "flavor": "A little loop that always finds its way around.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "prism": {
+      "name": "Prism",
+      "flavor": "One bright shape, with a different side to every day.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "ribbon": {
+      "name": "Ribbon",
+      "flavor": "A folded flourish for an otherwise ordinary stroll.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "ripple": {
+      "name": "Ripple",
+      "flavor": "Three quiet waves following the long way home.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "comet": {
+      "name": "Comet",
+      "flavor": "A small streak taking its time across the garden.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "petal": {
+      "name": "Petal",
+      "flavor": "A soft fan opening above a familiar little face.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "echo": {
+      "name": "Echo",
+      "flavor": "A few neat steps repeating a tiny good idea.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    },
+    "zigzag": {
+      "name": "Zigzag",
+      "flavor": "A bright crooked path with no hurry to straighten out.",
+      "origin": "Found by planting.",
+      "income": "{rareIncomeMultiplier[variant]}",
+      "effects": "More Materials only; no recipe/ability bonus"
+    }
+  },
+  "dex": {
+    "gridRareSummary": "Rare {found} / 10",
+    "detailRareRowMinimumCssPx": 44,
+    "sections": [
+      "Kids",
+      "Specials"
+    ],
+    "specialsCountTowardTypeCompletion": true,
+    "rareCompletionSeparate": true,
+    "unknownSpecial": "shared icon_unknown packet; no name/tier/type silhouette/variant status",
+    "trophyMap": "future live-copy section entry; hidden until separate approved design"
+  }
 }
