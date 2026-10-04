@@ -2592,6 +2592,93 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
   });
 });
 
+test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
+  // Plot n's soil centre: the Garden's ground (1080, 620) plus its offset, then the soil's middle.
+  const offsets = [
+    [-96, 88],
+    [96, 88],
+  ] as const;
+  const soil = (n: number) => ({ x: 1080 + offsets[n - 1]![0], y: 620 + offsets[n - 1]![1] - 37.5 });
+
+  async function setup(page: Page): Promise<{ x: number; y: number }> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    await page.waitForTimeout(100);
+    return page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1));
+  }
+
+  test('a tap on an empty plot opens its picker; on a growing plot, its detail', async ({ page }) => {
+    const at = await setup(page);
+    await page.mouse.click(at.x, at.y);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('plain', 300 + i * 250, 2600)), plot: 0 });
+      pk.debugCommand!({ type: 'startGrowing', plot: 0 });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    await page.mouse.click(at.x, at.y);
+    await expect(page.locator('.sheet-title')).toHaveText('Plot 1');
+    await expect(page.locator('.sheet-subtitle')).toHaveText('3 / 5 kids · Growing');
+  });
+
+  test('a long press or a pan opens nothing; a jitter within 8 px is still a tap, and the map holds', async ({ page }) => {
+    const at = await setup(page);
+    // Held past 220 ms.
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.waitForTimeout(350);
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Moved 30 px: a pan, which moves the map.
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(at.x + 30, at.y, { steps: 3 });
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Wait out the fling: a press on a moving map is never a tap.
+    let was = '';
+    await expect
+      .poll(
+        async () => {
+          const now = JSON.stringify(await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1)));
+          const still = now === was;
+          was = now;
+          return still;
+        },
+        { intervals: [150] },
+      )
+      .toBe(true);
+    const moved = await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1));
+    expect(moved.x).toBeGreaterThan(at.x + 10);
+    // Within 8 px the map holds still, and the tap opens the plot.
+    await page.mouse.move(moved.x, moved.y);
+    await page.mouse.down();
+    await page.mouse.move(moved.x + 5, moved.y + 3, { steps: 2 });
+    expect(await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1))).toEqual(moved);
+    await page.mouse.up();
+    await expect(page.locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+  });
+
+  test('a locked plot is no target, and a tap on bare ground opens nothing', async ({ page }) => {
+    await setup(page);
+    const locked = await page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(2));
+    await page.mouse.click(locked.x, locked.y);
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const bare = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1000));
+    await page.mouse.click(bare.x, bare.y);
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+});
+
 test.describe('forgiving drop (D-051)', () => {
   /**
    * A crowded map: `centre` (water) inside a tight ring of eight kids that fuse with

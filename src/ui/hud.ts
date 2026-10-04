@@ -148,6 +148,11 @@ export class Hud {
     this.notes = new PlantingNotes(settings);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
     this.dex = new Dex(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
+    const gardenCell = tray.querySelector<HTMLElement>('.tray-cell');
+    scene.listenPlotTap((plot) => {
+      if (!this.save.readOnly) this.buildings.openPlot(plot, gardenCell);
+    });
     // Send home (D-048): the target's label stays in the world area between HUD and tray.
     const home = new HomeOverlay(() => {
       const top = this.top.getBoundingClientRect();

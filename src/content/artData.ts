@@ -171,6 +171,8 @@ export interface PlantingArt {
   plotOffsetsWorld: [number, number][];
   plotCanvasScale: number;
   sourcePivot: [number, number];
+  /** The soil and stage art's bounds in source px [left, top, right, bottom] (§15.2). */
+  composedSourceBounds: [number, number, number, number];
   /** Soil, always drawn. */
   empty: string;
   /** Growing stages by progress, then the ready sign (`from: 1`). */

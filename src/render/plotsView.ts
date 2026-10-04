@@ -20,6 +20,46 @@ export function plotAssets(art: PlantingArt, plot: Plot, growSeconds: number, wa
   return [art.empty, stage.asset];
 }
 
+/** A plot's soil in world units: its drawn bounds (GUI_MVP §15.2). */
+export function plotRect(art: PlantingArt, garden: { x: number; y: number }, i: number): { left: number; top: number; right: number; bottom: number } {
+  const [dx, dy] = art.plotOffsetsWorld[i] ?? [0, 0];
+  const [l, t, r, b] = art.composedSourceBounds;
+  const [px, py] = art.sourcePivot;
+  const s = art.plotCanvasScale;
+  const gx = garden.x + dx;
+  const gy = garden.y + dy;
+  return { left: gx + (l - px) * s, top: gy + (t - py) * s, right: gx + (r - px) * s, bottom: gy + (b - py) * s };
+}
+
+/**
+ * The unlocked plot a tap at world point `p` hits, or null (§15.2). The drawn soil first;
+ * only when none is hit, each plot's envelope grown symmetrically to at least `minCss` CSS
+ * px per axis at this `zoom` (CSS px per world unit). Grown envelopes may overlap when
+ * zoomed out: the nearest plot centre wins, then the lowest index. Locked plots never hit.
+ */
+export function plotAt(art: PlantingArt, garden: { x: number; y: number }, unlocked: number, p: { x: number; y: number }, zoom: number, minCss = 44): number | null {
+  const rects = Array.from({ length: unlocked }, (_, i) => plotRect(art, garden, i));
+  const inside = (r: { left: number; top: number; right: number; bottom: number }) => p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom;
+  const hit = rects.findIndex(inside);
+  if (hit >= 0) return hit;
+  const min = minCss / zoom;
+  let best: number | null = null;
+  let bestD = Infinity;
+  rects.forEach((r, i) => {
+    const cx = (r.left + r.right) / 2;
+    const cy = (r.top + r.bottom) / 2;
+    const hw = Math.max(r.right - r.left, min) / 2;
+    const hh = Math.max(r.bottom - r.top, min) / 2;
+    if (!inside({ left: cx - hw, top: cy - hh, right: cx + hw, bottom: cy + hh })) return;
+    const d = Math.hypot(p.x - cx, p.y - cy);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
 export class PlotsView {
   readonly root = new Container();
   private readonly plots: { node: Container; key: string }[] = [];

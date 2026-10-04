@@ -7,7 +7,7 @@ import { rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
-import { PlotsView } from './plotsView';
+import { plotAt, PlotsView } from './plotsView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -59,6 +59,9 @@ const RELEASE_AFTER_MS = 15_000;
 const EDGE_ZONE = 56;
 /** Edge auto-scroll speed at the very edge, world units per second. */
 const EDGE_SPEED = 1100;
+/** A tap on the map (GUI_MVP §15.2): at most this long, and this far, in CSS px. */
+const TAP_MS = 220;
+const TAP_SLOP = 8;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -146,6 +149,14 @@ export class MapScene {
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
   private panVelocity = { x: 0, y: 0 };
   /**
+   * A ground press that may still be a tap on a plot (GUI_MVP §15.2): at most 220 ms and
+   * 8 CSS px, with no camera move and no second pointer. Until it moves 8 px the map holds.
+   */
+  private tap: { pointerId: number; x: number; y: number; t: number } | null = null;
+  private readonly plotTapListeners = new Set<(plot: number) => void>();
+  /** The Garden's ground point, which the plots sit around. */
+  private readonly gardenGround: { x: number; y: number };
+  /**
    * Kids released by the player whose drop/cancel the sim hasn't applied yet,
    * with where to keep drawing them meanwhile. Without this a released kid would
    * snap back to its pickup point for a frame, then slide (Codex review, PR #5).
@@ -196,6 +207,7 @@ export class MapScene {
     );
     this.resident = new Set(Object.keys(content.balance.spawnWeights));
     const [gx, gy] = art.map.garden.worldGround;
+    this.gardenGround = { x: gx, y: gy };
     this.home = art.home ? new HomeTarget({ x: gx, y: gy }, art.home.target) : null;
     // The tether is drawn beneath kids (GUI_MVP §13.1) and takes no input.
     this.homeLayer.eventMode = 'none';
@@ -231,6 +243,11 @@ export class MapScene {
   /** Calls `fn` with every sim event, after the scene has handled it. */
   listen(fn: (e: GameEvent) => void): void {
     this.listeners.add(fn);
+  }
+
+  /** Calls `fn` when a plot on the map is tapped (GUI_MVP §15.2): its 0-based index. */
+  listenPlotTap(fn: (plot: number) => void): void {
+    this.plotTapListeners.add(fn);
   }
 
   /** Calls `fn` every frame with what the Send home overlay should show (D-048). */
@@ -436,13 +453,28 @@ export class MapScene {
   // --- Panning -------------------------------------------------------------
 
   private startPan(e: FederatedPointerEvent): void {
+    // A second pointer is never a tap.
+    if (this.pan) this.tap = null;
     if (this.drag || this.pan || this.inputPaused) return;
+    // A press that stops a moving map is no tap: the camera was moving (§15.2).
+    const still = Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5;
+    this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now() } : null;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
   }
 
   private movePan(e: FederatedPointerEvent): void {
     const pan = this.pan!;
+    // Within 8 px a press may still be a tap: the map holds still. Crossing it pans.
+    if (this.tap) {
+      if (Math.hypot(e.global.x - this.tap.x, e.global.y - this.tap.y) <= TAP_SLOP) {
+        pan.lastX = e.global.x;
+        pan.lastY = e.global.y;
+        pan.lastT = performance.now();
+        return;
+      }
+      this.tap = null;
+    }
     const dx = e.global.x - pan.lastX;
     const dy = e.global.y - pan.lastY;
     const now = performance.now();
@@ -556,6 +588,15 @@ export class MapScene {
 
   private endPointer(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
     if (this.pan && e.pointerId === this.pan.pointerId) {
+      const tap = this.tap;
+      this.tap = null;
+      if (kind === 'drop' && tap && !this.inputPaused && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP) {
+        this.pan = undefined;
+        // Rechecked at release, where the finger is now (§15.2).
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, this.toWorld(e), this.cam.zoom) : null;
+        if (plot !== null) for (const fn of this.plotTapListeners) fn(plot);
+        return;
+      }
       // Fling with the finger's recent velocity, decayed by however long it then rested,
       // so a pause before lifting doesn't fling (Codex review, PR #11). Cancels never fling.
       const rested = (performance.now() - this.pan.lastT) / 1000;
