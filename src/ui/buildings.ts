@@ -5,8 +5,10 @@ import type { GameEvent } from '../sim/game';
 import { el, icon, shortName } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
+import { GardenPlots } from './gardenPlots';
+import type { PlantingNotes } from './plantingNotes';
 import { LazyPortraits, portrait } from './portrait';
-import { SCROLLER_CHANGE, type Sheets } from './sheet';
+import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
 // Garden, Capacity, Spawn bias and Compendium sheets (docs/GUI_MVP.md §§4-6, Codex's design, D-036).
 // Each sheet is built once and updated in place every frame, so focus is never lost; the
@@ -48,11 +50,14 @@ export class BuildingSheets {
   private arrived: { type: KidId; until: number } | null = null;
   /** The open Compendium list's portraits, composed as they near view. */
   private portraits: LazyPortraits | null = null;
+  /** The open Garden's plots (GUI_MVP §15.4). */
+  private plots: GardenPlots | null = null;
 
   constructor(
     private readonly scene: MapScene,
     private readonly content: Content,
     private readonly sheets: Sheets,
+    private readonly notes: PlantingNotes,
   ) {}
 
   /** Opens a building's sheet; `restore` brings back where it was (GUI_MVP §8). */
@@ -70,10 +75,12 @@ export class BuildingSheets {
         key: building,
         icon: `icon_${building}`,
         title: spec.title,
-        requestedHeight: building === 'bias' || building === 'compendium' ? 624 : 440,
+        requestedHeight: building === 'capacity' ? 440 : 624,
         update: () => this.controller?.update(),
+        onEscape: () => this.plots?.escape() ?? false,
         onClose: (replaced) => {
           this.controller = null;
+          this.plots = null;
           this.portraits?.dispose();
           this.portraits = null;
           onClose?.(replaced);
@@ -81,9 +88,15 @@ export class BuildingSheets {
       },
       launcher,
     );
-    this.controller = spec.mount(sheet.body, sheet.footer, (t) => sheet.setSubtitle(t), sheet.bar);
+    this.controller = spec.mount(sheet.body, sheet.footer, (t) => sheet.setSubtitle(t), sheet.bar, sheet);
     this.controller.update();
     if (restore) sheet.scrollTo(restore.scrollTop);
+  }
+
+  /** Opens the Garden on one plot: its picker or its detail (a tap on the map, §15.2). */
+  openPlot(plot: number, launcher: HTMLElement | null): void {
+    this.open('garden', launcher);
+    this.plots?.openPlot(plot);
   }
 
   /** The open sheet's search text, for a snapshot (GUI_MVP §8). */
@@ -116,7 +129,8 @@ export class BuildingSheets {
    * showed in the sheet, so world feedback doesn't repeat them.
    */
   onStep(events: GameEvent[]): GameEvent[] {
-    if (!this.pending) return [];
+    const plots = this.plots?.onStep(events) ?? [];
+    if (!this.pending) return plots;
     const p = this.pending;
     const handled: GameEvent[] = [];
     for (const e of events) {
@@ -144,7 +158,7 @@ export class BuildingSheets {
         handled.push(e);
       }
     }
-    return handled;
+    return [...plots, ...handled];
   }
 
   private send(cmd: Pending): void {
@@ -232,7 +246,7 @@ export class BuildingSheets {
         : ['A little more room to wander.', 'Upgrades add space for more kids.'];
     return {
       title,
-      mount: (body: HTMLElement, footer: HTMLElement, setSubtitle: (t: string) => void): Controller => {
+      mount: (body: HTMLElement, footer: HTMLElement, setSubtitle: (t: string) => void, _bar: HTMLElement, sheet: OpenSheet): Controller => {
         const nowValue = el('span', 'compare-value');
         const nextLabel = el('span', 'compare-label', 'Next level');
         const nextValue = el('span', 'compare-value');
@@ -248,11 +262,22 @@ export class BuildingSheets {
         const helper = el('p', 'sheet-helper');
         const maxed = el('div', 'sheet-cost', icon('icon_check', '', 'ui-icon-24'), 'This building is fully upgraded.');
         const status = this.statusRow();
-        body.append(el('p', 'sheet-body-text sheet-intro', intro[0]!, el('br', ''), intro[1]!), card, cost, holding, helper, maxed, status.row);
+        const parts = [el('p', 'sheet-body-text sheet-intro', intro[0]!, el('br', ''), intro[1]!), card, cost, holding, helper, maxed, status.row];
         const act = this.action(() => this.send({ type: 'upgrade', building }));
-        footer.append(act.button);
+        // The Garden has no footer of its own: its purchase sits in the body, then the
+        // plots follow (GUI_MVP §15.4).
+        if (building === 'garden') {
+          act.button.classList.add('garden-upgrade');
+          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button]);
+        } else {
+          body.append(...parts);
+          footer.append(act.button);
+        }
+        const plots = this.plots;
         return {
           update: () => {
+            plots?.update();
+            if (plots && !plots.inOverview) return;
             const g = this.game;
             const b = this.content.balance.buildings[building];
             const level = g.state.buildings[building];

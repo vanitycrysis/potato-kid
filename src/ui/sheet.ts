@@ -28,6 +28,8 @@ export interface OpenSheet {
   readonly bar: HTMLElement;
   readonly body: HTMLElement;
   readonly footer: HTMLElement;
+  /** A view inside the sheet names itself (a Garden plot, GUI_MVP §15.4). */
+  setTitle(text: string): void;
   setSubtitle(text: string): void;
   /** Scrolls whatever scrolls (the body, or a tight sheet) to `top`. */
   scrollTo(top: number): void;
@@ -182,6 +184,11 @@ export class Sheets {
       bar,
       body,
       footer,
+      setTitle: (t) => {
+        if (title.textContent === t) return;
+        title.textContent = t;
+        close.setAttribute('aria-label', `Close ${t}`);
+      },
       setSubtitle: (t) => (subtitle.textContent = t),
       scrollTo: (top) => {
         this.place();

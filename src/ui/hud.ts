@@ -145,8 +145,8 @@ export class Hud {
       () => (this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0),
       matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
-    this.buildings = new BuildingSheets(scene, content, this.sheets);
     this.notes = new PlantingNotes(settings);
+    this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
     this.dex = new Dex(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
     // Send home (D-048): the target's label stays in the world area between HUD and tray.
     const home = new HomeOverlay(() => {

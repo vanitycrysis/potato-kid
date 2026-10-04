@@ -16,8 +16,10 @@ async function boot(page: Page, query: string): Promise<string[]> {
 const balance = JSON.parse(readFileSync('src/content/balance.json', 'utf8')) as {
   buildings: Record<string, { costBase: number; costGrowth: number }>;
   economy: { respawnMaterials: number; materialsPerSecond: number };
-  planting: { growSeconds: number };
+  planting: { growSeconds: number; unlockCostBase: number; unlockCostGrowth: number; startPlots: number };
 };
+/** Materials to unlock the plot after the `unlocked` ones. */
+const plotPrice = (unlocked: number) => Math.ceil(balance.planting.unlockCostBase * balance.planting.unlockCostGrowth ** (unlocked - balance.planting.startPlots));
 /** Materials to upgrade `building` from `level`. */
 const price = (building: string, level: number) => Math.ceil(balance.buildings[building]!.costBase * balance.buildings[building]!.costGrowth ** level);
 /** Materials to bring back a kid of `tier` from the Compendium. */
@@ -800,12 +802,12 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     await page.waitForTimeout(300);
     expect((await page.evaluate(() => window.__PK__!.buildings())).levels.garden).toBe(1);
     // Nothing was sent: the engine would have answered with a refusal.
-    await expect(page.locator('.sheet-status')).toBeHidden();
+    await expect(page.locator('.garden-rate .sheet-status')).toBeHidden();
     await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
     await expect(action).toHaveAttribute('aria-disabled', 'false');
     const before = await page.evaluate(() => window.__PK__!.wallet().materials);
     await action.click();
-    await expect(page.locator('.sheet-status')).toContainText('Garden is now level 2.');
+    await expect(page.locator('.garden-rate .sheet-status')).toContainText('Garden is now level 2.');
     expect((await page.evaluate(() => window.__PK__!.buildings())).levels.garden).toBe(2);
     expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThan(before);
     await expect(page.locator('.sheet-subtitle')).toHaveText('Level 2 / 10');
@@ -823,7 +825,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
       (document.querySelector('.sheet-action') as HTMLButtonElement).click();
       window.__PK__!.debugGive!({ materials: -m });
     }, cost);
-    await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
+    await expect(page.locator('.garden-rate .sheet-status')).toContainText('Not enough Materials.');
     // World cards wait while a sheet is open, so check after it closes too. Sampled, not a
     // retrying assertion: a leaked 2.5 s card would eventually vanish and pass a retry.
     await page.keyboard.press('Escape');
@@ -953,9 +955,9 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
       (document.querySelector('.sheet-action') as HTMLButtonElement).click();
       window.__PK__!.debugGive!({ materials: -m });
     }, cost);
-    await expect(page.locator('.sheet-status')).toContainText('Not enough Materials.');
+    await expect(page.locator('.garden-rate .sheet-status')).toContainText('Not enough Materials.');
     const inBody = await page.evaluate(() => {
-      const r = document.querySelector('.sheet-status')!.getBoundingClientRect();
+      const r = document.querySelector('.garden-rate .sheet-status')!.getBoundingClientRect();
       const body = document.querySelector('.sheet-body')!.getBoundingClientRect();
       return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
     });
@@ -2394,6 +2396,199 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
     await send(1400);
     await expect(card).toContainText('Start growing at 3–5.');
     await expect(card.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
+  });
+});
+
+test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
+  const sheet = (page: Page) => page.getByRole('dialog');
+  const row = (page: Page, n: number) => page.locator('.plot-row').nth(n - 1);
+
+  /** The Garden open on its overview, with Tier 1 kids of these types on the map. */
+  async function garden(page: Page, kids: string[] = []): Promise<number[]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate((types) => types.map((t, i) => window.__PK__!.debugAdd!(t, 300 + (i % 4) * 300, 1500 + Math.floor(i / 4) * 300)), kids);
+    await page.locator('.tray-cell').nth(0).click();
+    return ids;
+  }
+
+  /** Puts `n` new Potato Kids straight into plot `plot` (0-based), as a drag would. */
+  async function plantPlain(page: Page, n: number, plot = 0): Promise<void> {
+    const before = await page.evaluate((i) => window.__PK__!.plots()[i]!.kids, plot);
+    await page.evaluate(
+      ([n, plot]) => {
+        const pk = window.__PK__!;
+        pk.debugCommand!({ type: 'plant', kidIds: Array.from({ length: n }, (_, i) => pk.debugAdd!('plain', 1400 + i * 200, 2700 + plot * 200)), plot });
+      },
+      [n, plot] as const,
+    );
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.plots()[i]!.kids, plot)).toBe(before + n);
+  }
+
+  test('the overview: one empty plot, three locked, and More plots unlocks the next', async ({ page }) => {
+    await garden(page);
+    await expect(row(page, 1).locator('.plot-row-heading')).toHaveText('Plot 1');
+    await expect(row(page, 1).locator('.plot-row-status')).toHaveText('Empty · 0 / 5');
+    await expect(row(page, 1).getByRole('img', { name: 'Empty space' })).toHaveCount(5);
+    for (const n of [2, 3, 4]) await expect(row(page, n).locator('.plot-row-heading')).toHaveText(`Plot ${n} · Locked`);
+    await expect(row(page, 2).getByRole('button')).toHaveCount(0);
+    const cost = plotPrice(1);
+    const unlock = sheet(page).getByRole('button', { name: `Unlock plot 2 · ${cost.toLocaleString('en-US')} Materials` });
+    await expect(sheet(page).locator('.garden-more')).toContainText('Now 1 · Next 2');
+    await expect(unlock).toHaveAttribute('aria-disabled', 'true');
+    await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), cost);
+    await expect(unlock).toHaveAttribute('aria-disabled', 'false');
+    await unlock.click();
+    await expect(sheet(page).locator('.garden-more .sheet-status')).toContainText('Plot 2 unlocked.');
+    await expect(row(page, 2).locator('.plot-row-status')).toHaveText('Empty · 0 / 5');
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBe(0);
+    await expect(sheet(page).locator('.garden-more')).toContainText('Now 2 · Next 3');
+  });
+
+  test('the picker adds the kids chosen, all at once, with the odds before and after (§15.3)', async ({ page }) => {
+    const ids = await garden(page, ['fire', 'water', 'plain', 'plain']);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('0 / 5 in this plot · 5 spaces');
+    // Every kid on the map, numbered within its type.
+    await expect(sheet(page).locator('.picker-row')).toHaveCount(4);
+    await expect(sheet(page).locator('.picker-row').nth(3)).toContainText('Tier 1 · Kid 2');
+    const add = sheet(page).locator('.picker-add');
+    await expect(add).toHaveText('Select kids to add');
+    await expect(add).toHaveAttribute('aria-disabled', 'true');
+    for (const n of [0, 1, 2]) await sheet(page).locator('.picker-row').nth(n).click();
+    // Choosing sends nothing: all four are still on the map.
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(4);
+    const footer = sheet(page).locator('.picker-lines');
+    await expect(footer).toContainText('Plot 1: 0 → 3 / 5');
+    await expect(footer).toContainText('Special roll: Need 3 more → 10%');
+    await expect(footer).toContainText('Rare roll: Need 3 more → 5%');
+    await expect(footer).toContainText('Added kids leave now. No refund.');
+    await add.click();
+    // One step: the three are planted together, and the detail shows what happened.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[3]]);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Plot 1');
+    await expect(sheet(page).locator('.sheet-title')).toBeFocused();
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('3 / 5 kids · Filling');
+    const note = sheet(page).locator('.plot-note');
+    await expect(note).toContainText('3 kids added to Plot 1.');
+    await expect(note).toContainText('Add 3–5 kids, then press Start growing.');
+    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(true);
+    await expect(sheet(page).locator('.plot-kid')).toHaveCount(3);
+    await expect(sheet(page).locator('.plot-space')).toHaveText(['Space 4 · Empty', 'Space 5 · Empty']);
+    // Answered in the sheet: no world card. Sampled, not retried.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(200);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+  });
+
+  test('the picker stops at the free spaces, and a chosen kid that leaves is unchecked, never swapped (§15.3)', async ({ page }) => {
+    await garden(page, ['fire', 'plain', 'plain']);
+    await plantPlain(page, 3);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('3 / 5 in this plot · 2 spaces');
+    const rows = sheet(page).locator('.picker-row');
+    await rows.nth(0).click();
+    await rows.nth(1).click();
+    await expect(sheet(page).locator('.picker-limit')).toHaveText('All 2 spaces selected. Uncheck a kid to change your choice.');
+    await expect(rows.nth(2).locator('input')).toBeDisabled();
+    await expect(rows.nth(1).locator('input')).toBeEnabled();
+    await expect(sheet(page).locator('.picker-add')).toHaveText('Add 2 kids');
+    // Fire Kid (the first chosen) fuses away: unchecked, said once, nothing chosen instead.
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(sheet(page).locator('.picker-blocked')).toContainText('The map changed. Check these kids and try Add again.');
+    await expect(sheet(page).locator('.picker-add')).toHaveText('Add 1 kid');
+    await expect(rows.locator('input:checked')).toHaveCount(1);
+  });
+
+  test('Start growing: disabled below 3, then a review that sends nothing, then a second press starts it (§15.4)', async ({ page }) => {
+    await garden(page);
+    await plantPlain(page, 2);
+    await row(page, 1).getByRole('button', { name: 'Review plot' }).click();
+    const start = sheet(page).locator('.plot-start');
+    await expect(start).toHaveAttribute('aria-disabled', 'true');
+    await expect(sheet(page).locator('.plot-start-helper')).toHaveText('Add 1 more kid to Start growing.');
+    await expect(sheet(page).locator('.plot-odds')).toContainText('Special roll: Need 1 more');
+    await plantPlain(page, 1);
+    await expect(sheet(page).locator('.plot-start-helper')).toHaveText('You can add 2 more before starting.');
+    await expect(sheet(page).locator('.plot-odds')).toContainText('Special roll: 10%');
+    await start.click();
+    // The review: exactly what starting does. Nothing was sent.
+    await expect(sheet(page).locator('.plot-review-heading')).toHaveText('Start Plot 1 growing?');
+    await expect(sheet(page).locator('.plot-review-heading')).toBeFocused();
+    await expect(sheet(page).locator('.plot-review')).toContainText('These kids have already left your map. No refund.');
+    await expect(sheet(page).locator('.plot-start')).toHaveText('Start growing · 3 kids');
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+    await sheet(page).locator('.plot-start').click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    await expect(sheet(page).locator('.plot-note')).toContainText('Plot 1 is growing.');
+    await expect(sheet(page).locator('.plot-note')).toContainText(`One kid sprouts in ${balance.planting.growSeconds / 60} m 00 s.`);
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('3 / 5 kids · Growing');
+    await expect(sheet(page).locator('.sheet-footer')).toHaveText('Back to plots');
+    await sheet(page).locator('.sheet-footer').getByRole('button', { name: 'Back to plots' }).click();
+    await expect(row(page, 1).locator('.plot-row-status')).toHaveText(/^Growing · (29:5\d|30:00)$/);
+    await expect(row(page, 1).getByRole('progressbar')).toHaveAttribute('aria-label', /^Plot 1, \d+ percent grown, \d+:\d\d left$/);
+    await expect(row(page, 1).getByRole('button', { name: 'View plot' })).toBeVisible();
+    await expect(row(page, 1).getByRole('button', { name: 'Add kids' })).toBeHidden();
+    // Answered in the sheet: no growing card once it closes. The debug adds have their own
+    // cards (6 s, then 2.5 s), so watch until the queue has drained. Sampled, not retried.
+    await page.keyboard.press('Escape');
+    const seen = await page.evaluate(
+      () =>
+        new Promise<string[]>((done) => {
+          const texts = new Set<string>();
+          const end = performance.now() + 12000;
+          const tick = () => {
+            const t = document.querySelector('.feedback')?.textContent ?? '';
+            if (t) texts.add(t);
+            if (performance.now() > end) done([...texts]);
+            else requestAnimationFrame(tick);
+          };
+          tick();
+        }),
+    );
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.filter((t) => t.includes('is growing'))).toEqual([]);
+  });
+
+  test('a review closes when the plot changes under it, and Escape steps back (§15.4)', async ({ page }) => {
+    await garden(page);
+    await plantPlain(page, 3);
+    await row(page, 1).getByRole('button', { name: 'Review plot' }).click();
+    await sheet(page).locator('.plot-start').click();
+    await expect(sheet(page).locator('.plot-review')).toBeVisible();
+    // A kid dragged in meanwhile.
+    await plantPlain(page, 1);
+    await expect(sheet(page).locator('.plot-note')).toContainText('This plot changed. Review it again before starting.');
+    await expect(sheet(page).locator('.plot-review')).toHaveCount(0);
+    await expect(sheet(page).locator('.plot-start')).toHaveText('Start growing');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+    // Escape: the review, then the detail, then the sheet.
+    await sheet(page).locator('.plot-start').click();
+    await expect(sheet(page).locator('.plot-review')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(sheet(page).locator('.plot-review')).toHaveCount(0);
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Plot 1');
+    await page.keyboard.press('Escape');
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Garden');
+    await expect(row(page, 1).locator('.plot-row-heading')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('a full plot sparkles beside Start growing and takes no more kids (§15.4)', async ({ page }) => {
+    await garden(page);
+    await plantPlain(page, 5);
+    await expect(row(page, 1).getByRole('button', { name: 'Add kids' })).toHaveAttribute('aria-disabled', 'true');
+    await row(page, 1).getByRole('button', { name: 'Review plot' }).click();
+    await expect(sheet(page).locator('.plot-start-helper')).toHaveText('Full plot · 5 / 5');
+    await expect(sheet(page).locator('.plot-start .plot-sparkle')).toBeVisible();
+    await expect(sheet(page).getByRole('button', { name: 'Add kids' })).toHaveCount(0);
   });
 });
 
