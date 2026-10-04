@@ -828,7 +828,8 @@ export class Game {
    * Planting (D-061), all or none. Refused if a kid is gone (`gone`), if no plot takes kids
    * (`plotFull` when filled plots only wait to be started, else `plotsBusy`), or if the plot is
    * growing (`plotsBusy`) or lacks the spaces (`plotFull`). Refused kids are put down clear of
-   * recipe partners: a refusal never fuses (GUI_MVP §15.1; Codex review, PR #72).
+   * recipe partners, with a newborn's grace: a refusal never fuses (GUI_MVP §15.1; Codex
+   * review, PR #72).
    */
   private plant(c: Extract<Command, { type: 'plant' }>, events: GameEvent[]): void {
     const world = this.state.world;
@@ -855,6 +856,9 @@ export class Game {
         kid.held = false;
         const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => recipes.has(pairKey(a.type, b.type)));
         if (spot) [kid.x, kid.y] = [spot.x, spot.y];
+        // "Release to keep this kid": it can't fuse for a newborn's grace either, so a
+        // partner walking up later this step can't take it (Codex review, PR #72).
+        kid.grace = Math.max(kid.grace, this.content.balance.spawn.newbornGraceSeconds);
       }
       events.push({ type: 'rejected', command: 'plant', reason: reason ?? 'plotsBusy' });
       return;

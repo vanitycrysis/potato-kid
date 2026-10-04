@@ -533,6 +533,8 @@ export class MapScene {
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
       e.stopPropagation(); // a kid press is a pickup, never a pan
+      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72).
+      this.tap = null;
       this.startDrag(kid.id, e);
     });
     this.views.set(kid.id, view);

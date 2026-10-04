@@ -720,7 +720,6 @@ export class GardenPlots {
       else notice = refusalText(reason, 'plant');
     };
 
-    let listKey = '';
     const refresh = () => {
       const info = this.info(i);
       const ids = live().map((k) => k.id);
@@ -742,17 +741,14 @@ export class GardenPlots {
           r.node.remove();
           rows.delete(id);
         }
+      // Newcomers go at the end (ids only grow), and no surviving row is ever moved: a
+      // focused checkbox keeps its focus (Codex review, PR #72).
       for (const id of [...ids].sort((a, b) => a - b)) {
         if (rows.has(id)) continue;
         const r = rowFor(id);
         rows.set(id, r);
         kinds.set(id, { rare: r.rare, special: r.special });
-      }
-      const order = [...rows.keys()].sort((a, b) => a - b);
-      const key = order.join(',');
-      if (key !== listKey) {
-        listKey = key;
-        list.replaceChildren(...order.map((id) => rows.get(id)!.node));
+        list.append(r.node);
       }
       let visible = 0;
       for (const [id, r] of rows) {
