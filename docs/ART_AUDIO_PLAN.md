@@ -1,5 +1,22 @@
 # Art and audio plan
 
+## PLANT-V2-DESIGN addendum (2026-10-04; Claude review pending)
+
+D-061–D-063 replace the historical one-kid planting and two-variant contract below. The current design is GUI_MVP §§15–16 with collection/profile/feeding amendments in §§7/17/18 and `art/data/gate4_v2.json`, revision `plant-v2-design-1`.
+
+| Item | Delivery / status |
+| --- | --- |
+| Filling and Start | Five visible slots; full-map instance picker; projected independent odds; explicit Start at 3–5 with separate review, sparkle at five; Claude review pending |
+| Ten rare looks | Retain Rainbow/Mini; add Orbit, Prism, Ribbon, Ripple, Comet, Petal, Echo, Zigzag; eight shared external glyphs preserve every costume/body/face; Claude review pending |
+| Common sparkle | One shared pair of paper/ink stars, below kid layers/right of lifetime AABB; slow 2400 ms opacity .65…1, reduced motion static 1; native icon reused at Start |
+| Collection/profile | Compact `Rare n / 10` grid summary, ten labelled detail rows, special section/type completion, planting-only rare profile and multiplier placeholder |
+| Special concepts | 20 pitches, 12 T5 / 8 T6; **owner approval pending before costume work**; no per-type final art this round |
+| Source/export | 20 new SVGs = 11 shared trimmed runtime PNGs and nine native SVG icons; exporter unchanged, 287 sources/five sidecars pass |
+| Decode budget | 218 PNGs / **12,664,136 bytes (12.07746 MiB)**; +798,320 bytes; 32 MiB actual allocation ceiling unchanged |
+| Verification | Prior runtime/source preservation; 25,344 external-AABB geometry cases and unchanged Garden reserve 290.489 < 300; 25 files / 215 tests pass; native SVG/PNG review gallery |
+
+No per-kid filters, masks, render targets, new face features, costume recolouring, per-type variant rasters or portrait texture caches. One rare uses its shared look plus a sparkle; four filling plots use up to 28 sprites/three shared filling textures. Existing growing stage art and spawn/discovery sounds remain; no new audio master. Materials multipliers and conditional rare/special weights belong to Claude. D-056's happiness odds versus D-061's fixed endpoints need explicit resolution before final feeding copy. Physical GPU/frame-time, input/focus and device perception remain integration review work. [Notes and evidence](../.codex-out/plant-v2-notes.md); [review gallery](../.codex-out/plant-v2-index.html); [owner concepts](../.codex-out/special-concepts.md).
+
 ## PERSONALITY addendum (2026-10-03; Claude review pending)
 
 | Item | Delivery / status |

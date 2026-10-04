@@ -1,5 +1,22 @@
 # Asset list
 
+## PLANT-V2-DESIGN delivery (2026-10-04; Claude review pending)
+
+`plant-v2-design-1` follows D-061–D-063 and replaces the planting/two-variant portions of the historical gate-4 delivery below. GUI_MVP §§15–16, with §§7/17/18 amendments, is the current interaction contract.
+
+| Asset / contract | Delivery | Status |
+| --- | --- | --- |
+| Eight rare looks | `fx_variant_{orbit,prism,ribbon,ripple,comet,petal,echo,zigzag}`: eight original 256 SVG sources and shared cropped PNGs; external symbols above the full costume envelope | exported; Claude review pending |
+| Rare icons | Eight matching 128 native SVGs, `icon_variant_{id}` | exported; 0 Pixi bytes |
+| Universal rare sparkle | `fx_rare_sparkle` 256 source/shared cropped PNG and `icon_rare_sparkle` 128 native SVG; 2400 ms calm opacity, static reduced motion; Start at five reuses icon | exported; Claude review pending |
+| Filling plots | `fx_plant_filling` five empty slots and `fx_plant_slot_filled` shared stamp, 256 SVG/cropped PNG; unchanged Garden grounds/reserve | exported; Claude review pending |
+| Flow, rare profile and Dex | Five-slot filling, full-map multi-picker/current→projected odds, explicit Start review, four reveal outcomes, ten-rare detail and Specials collection | GUI_MVP and `gate4_v2.json` revised; review/integration pending |
+| Special concepts | `.codex-out/special-concepts.md`: 20 ideas, 12 T5 / 8 T6, prize reasons and roster distinctions | **owner approval pending; no costumes produced** |
+| Native review gallery | `.codex-out/plant-v2-index.html` and `art/previews/ui/plant_v2_*` SVG/PNG at 390×844 and 640×360 | review fixtures; special artwork explicitly pending |
+| Runtime decode | 218 PNGs / **12,664,136 bytes (12.07746 MiB)**, +798,320 bytes / 11 shared PNGs; nine DOM icons | 32 MiB physical ceiling retained; device allocation check pending |
+
+Sources: `art/src/plant-v2/`; unchanged `npm run art:export` passed 287 sources/five sidecars. All prior runtime PNGs, kid/face/costume/rig/map/reference sources and `src/` hashes are unchanged. `npm test`: 25 files / 215 tests pass. Audit, geometry, budget, open weights/multipliers and D-056/D-061 happiness conflict: [.codex-out/plant-v2-notes.md](../.codex-out/plant-v2-notes.md). Claude reviews and integrates; the owner reviews concepts before the separate SPECIALS costume task.
+
 ## PERSONALITY delivery (2026-10-03; Claude review pending)
 
 | Asset / contract | Delivery | Status |
