@@ -118,4 +118,28 @@ describe('planting cards (GUI_MVP §15.5, §15.6)', () => {
     // Garden spawns of known types stay silent, as before.
     expect(feedbackFor([{ type: 'spawned', kid: k(11, 'fire'), source: 'garden' }], known, 2)).toEqual([]);
   });
+
+  it('a variant new to the Dex marks its own sprout card, or joins its new type: one card, never two', () => {
+    const known = new Set(['fire']);
+    expect(
+      feedbackFor(
+        [
+          { type: 'spawned', kid: k(9, 'fire', 'comet'), source: 'sprout', plot: 1 },
+          { type: 'variantFound', kidType: 'fire', variant: 'comet' },
+        ],
+        known,
+        1,
+      ),
+    ).toEqual([{ kind: 'sprouted', kidType: 'fire', kidId: 9, plot: 1, variant: 'comet', found: true }]);
+    expect(
+      feedbackFor(
+        [
+          { type: 'spawned', kid: k(10, 'hero', 'mini'), source: 'sprout', plot: 0 },
+          { type: 'variantFound', kidType: 'hero', variant: 'mini' },
+        ],
+        known,
+        2,
+      ),
+    ).toEqual([{ kind: 'newKid', childType: 'hero', kidId: 10, milestone: 0, variant: 'mini' }]);
+  });
 });

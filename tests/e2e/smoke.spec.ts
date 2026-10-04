@@ -2967,6 +2967,21 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     await expect(rows.nth(8)).toHaveAttribute('aria-label', `Echo: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
   });
 
+  test('a first Comet sprout reads as found; the next Comet just sprouts (§15.5)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // An ordinary Fire Kid sprouts first: the Dex (and the HUD) now know the type.
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', null));
+    await expect(page.locator('.feedback')).toContainText('Fire Kid');
+    await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
+    const card = page.locator('.feedback .toast-short');
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
+    await expect(card).toContainText('Comet found · Fire Kid');
+    await expect(card).toContainText('Rare variant · From Plot 1.');
+    await expect(card).toHaveCount(0, { timeout: 5000 });
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
+    await expect(card).toContainText('Comet Fire Kid sprouted!');
+  });
+
   test('reduced motion: the sleeve holds still at full opacity, and a newborn rare never bursts', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await boot(page, '?seed=3&debug=1&calm=1');
