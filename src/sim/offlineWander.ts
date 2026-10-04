@@ -91,6 +91,18 @@ export function wanderOffline(
   }
 }
 
+/**
+ * Where to put a kid down so it touches no recipe partner (it must not fuse): its own spot
+ * if that's free and clear, else the nearest clear spot (Codex review, PR #72). Null if none.
+ */
+export function clearSpotFor(world: World, kid: Kid, touchSlack: number, partners: (a: Kid, b: Kid) => boolean): { x: number; y: number } | null {
+  const clear = (k: Kid, x: number, y: number) =>
+    !world.kids.some((o) => o !== k && !o.held && partners(k, o) && touching(rectAt(k.box, x, y), kidRect(o), touchSlack));
+  if (isFree(world, kid.box, kid.x, kid.y, kid.id) && clear(kid, kid.x, kid.y)) return { x: kid.x, y: kid.y };
+  const ib = innerBounds(world.bounds, kid.box);
+  return nearestReachable(world, kid, ib, 600, clear) ?? nearestClear(world, kid, ib, clear);
+}
+
 /** Rings tried within reach, and spots per ring. */
 const RINGS = 6;
 const ANGLES = 24;

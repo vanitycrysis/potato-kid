@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { kidRig, mapData, uiData } from './content/artData';
+import { gate4Data, kidRig, mapData, uiData } from './content/artData';
 import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
@@ -48,7 +48,12 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'sendHome'; kidId: number }) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => void;
+      /**
+       * Only with `?debug=1`: calls `fn` with each sim step's event types, after the HUD has
+       * answered them and before the next frame draws anything (timing tests).
+       */
+      debugListenSteps?: (fn: (types: string[]) => void) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
       /** The audio runtime's state (tests). */
@@ -63,9 +68,11 @@ declare global {
       /** Only with `?debug=1`: the system suspends audio while the game is in front. */
       debugAudioInterrupt?: () => void;
       /** Send home (D-048): the Garden target's state, and kids still waving goodbye. */
-      home: () => { state: string; departing: number; departingAt: { x: number; y: number }[] };
+      home: () => { state: string };
       /** Forgiving drop (D-051): the kid under the finger while one is held, else null. */
       dropTarget: () => number | null;
+      /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
+      plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -108,8 +115,8 @@ async function boot(): Promise<void> {
   const storage = new PreferencesStorage();
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
-  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'sendHomeExplained'> } } | undefined)?.settings?.defaults;
-  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), sendHomeExplained: false };
+  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained'> } } | undefined)?.settings?.defaults;
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -132,6 +139,7 @@ async function boot(): Promise<void> {
       obstacles: obstaclesFrom(mapData),
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       home: homeArt(),
+      planting: gate4Data?.planting,
     },
     loaded.state ?? undefined,
   );
@@ -183,7 +191,7 @@ async function boot(): Promise<void> {
   }, SAVE_EVERY_MS);
   // Also after every fusion, purchase and upgrade (plan §4).
   const saveAfter = (e: GameEvent) =>
-    e.type === 'fused' || e.type === 'sentHome' || e.type === 'upgraded' || e.type === 'biasSet' || (e.type === 'spawned' && e.source !== 'garden');
+    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || (e.type === 'spawned' && e.source !== 'garden');
   scene.listen((e) => {
     if (saveAfter(e)) void save();
   });
@@ -208,8 +216,15 @@ async function boot(): Promise<void> {
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
     audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
-    home: () => ({ state: scene.homeState, departing: scene.departing.length, departingAt: scene.departing }),
+    home: () => ({ state: scene.homeState }),
     dropTarget: () => scene.dropTarget,
+    plots: () =>
+      scene.game.state.plots.map((p, i) => {
+        const seed = p.seed;
+        const progress = seed?.sprout ? seed.grown / scene.game.growSeconds : 0;
+        const state = !seed ? 'empty' : !seed.sprout ? 'filling' : progress >= 1 ? 'ready' : 'growing';
+        return { state, kids: seed?.planted.length ?? 0, progress, waiting: scene.game.plotWaiting(i), shown: scene.plotsShown[i] ?? [] };
+      }),
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
@@ -227,13 +242,14 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
+          debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
           debugGive: (amounts: { materials?: number; potatokens?: number }) => {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'sendHome'; kidId: number }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => scene.command(cmd),
         }
       : {}),
     };
@@ -248,7 +264,6 @@ function homeArt(): SceneArt['home'] {
   if (!sh || !ink) return undefined;
   return {
     target: sh.target,
-    departure: { clipMs: sh.departure.clipMs, fadeMs: sh.departure.fadeMs, reducedFadeMs: sh.departure.reducedMotion.fadeMs },
     tether: sh.target.tether,
     ink,
   };
@@ -258,7 +273,6 @@ type HomeArt = NonNullable<SceneArt['home']>;
 
 interface SendHomeTokens {
   target: HomeArt['target'] & { tether: HomeArt['tether'] };
-  departure: { clipMs: number; fadeMs: number; reducedMotion: { fadeMs: number } };
 }
 
 function calmed(c: Content): Content {

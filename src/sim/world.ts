@@ -58,6 +58,8 @@ export interface Kid {
   held: boolean;
   box: Box;
   look: Look;
+  /** A rare variant (D-062), from planting; absent for an ordinary kid. */
+  variant?: string;
 }
 
 /** Static scenery a kid's box may not enter (map v2 exclusions, already inflated by the gap). */

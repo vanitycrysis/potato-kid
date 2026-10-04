@@ -1,12 +1,13 @@
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
-import type { KidRig, MapData } from '../content/artData';
+import type { KidRig, MapData, PlantingArt } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
-import { intersects, rectAt, resolveDrawn, touching } from '../sim/space';
+import { rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
+import { plotAt, PlotsView } from './plotsView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -26,13 +27,14 @@ export interface SceneArt {
   ambient: Ambient;
   obstacles: Obstacle[];
   reducedMotion: boolean;
-  /** Send home (D-048, GUI_MVP §13): Codex's target and departure tokens, and its ink. */
+  /** The Garden's drop target (GUI_MVP §15.1, from Send home's §13): Codex's tokens and its ink. */
   home?: {
     target: HomeSpec;
-    departure: { clipMs: number; fadeMs: number; reducedFadeMs: number };
     tether: { strokePx: number; dashPx: [number, number]; stopBeforeKidBoxPx: number };
     ink: string;
   } | undefined;
+  /** Planting (D-061, GUI_MVP §15): Codex's plot art and its placement. */
+  planting?: PlantingArt | undefined;
 }
 
 /** What the Send home overlay draws this frame, in screen (CSS px) coordinates. */
@@ -43,18 +45,10 @@ export interface HomeView {
   point: { x: number; y: number } | null;
   /** The held kid's drawn silhouette box, while one is held. */
   held: { left: number; top: number; right: number; bottom: number } | null;
-}
-
-/** A kid going home: its view plays the farewell, apart from the sim (GUI_MVP §13.2). */
-interface Departure {
-  kidId: number;
-  view: KidRigView;
-  /** Its costume stays loaded until the view is gone (§13.2). */
-  type: KidId;
-  x: number;
-  y: number;
-  box: Kid['box'];
-  ms: number;
+  /** The plot a release would add to (0-based) and the kids already in it (GUI_MVP §15.1). */
+  plot: { index: number; count: number } | null;
+  /** No plot takes kids: filled plots wait to be started (`full`), or all are growing. */
+  busy: 'full' | 'growing' | null;
 }
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
@@ -65,6 +59,9 @@ const RELEASE_AFTER_MS = 15_000;
 const EDGE_ZONE = 56;
 /** Edge auto-scroll speed at the very edge, world units per second. */
 const EDGE_SPEED = 1100;
+/** A tap on the map (GUI_MVP §15.2): at most this long, and this far, in CSS px. */
+const TAP_MS = 220;
+const TAP_SLOP = 8;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -126,6 +123,12 @@ export class MapScene {
   private readonly absentSince = new Map<KidId, number>();
   /** Types kept loaded however long they are absent: the Garden spawns them all the time. */
   private readonly resident: Set<KidId>;
+  /** The plot and count the Garden target pointed at last frame; a change restarts the dwell. */
+  private lastPlotKey = '';
+  /** The held kid is over the target while every plot is busy: the map still holds still. */
+  private overBusyHome = false;
+  /** The plots on the map, if the art has them. */
+  private readonly plotsView: PlotsView | null;
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -146,6 +149,14 @@ export class MapScene {
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
   private panVelocity = { x: 0, y: 0 };
   /**
+   * A ground press that may still be a tap on a plot (GUI_MVP §15.2): at most 220 ms and
+   * 8 CSS px, with no camera move and no second pointer. Until it moves 8 px the map holds.
+   */
+  private tap: { pointerId: number; x: number; y: number; t: number } | null = null;
+  private readonly plotTapListeners = new Set<(plot: number) => void>();
+  /** The Garden's ground point, which the plots sit around. */
+  private readonly gardenGround: { x: number; y: number };
+  /**
    * Kids released by the player whose drop/cancel the sim hasn't applied yet,
    * with where to keep drawing them meanwhile. Without this a released kid would
    * snap back to its pickup point for a frame, then slide (Codex review, PR #5).
@@ -157,7 +168,6 @@ export class MapScene {
   /** Send home (D-048): the Garden target, its tether layer, and kids on their way out. */
   private readonly home: HomeTarget | null;
   private readonly homeLayer = new Graphics();
-  private readonly departures: Departure[] = [];
   private readonly homeListeners = new Set<(v: HomeView) => void>();
   /** Foreground time (ms): it only advances while frames run, never while hidden. */
   private clock = 0;
@@ -197,10 +207,14 @@ export class MapScene {
     );
     this.resident = new Set(Object.keys(content.balance.spawnWeights));
     const [gx, gy] = art.map.garden.worldGround;
+    this.gardenGround = { x: gx, y: gy };
     this.home = art.home ? new HomeTarget({ x: gx, y: gy }, art.home.target) : null;
     // The tether is drawn beneath kids (GUI_MVP §13.1) and takes no input.
     this.homeLayer.eventMode = 'none';
-    this.camera.addChild(buildMap(art.map, art.textures.map), this.homeLayer, this.kidLayer);
+    // Plots sit on the ground after the Garden and below kids (GUI_MVP §15.2); no input.
+    this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
+    if (this.plotsView) this.plotsView.root.eventMode = 'none';
+    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -231,6 +245,11 @@ export class MapScene {
     this.listeners.add(fn);
   }
 
+  /** Calls `fn` when a plot on the map is tapped (GUI_MVP §15.2): its 0-based index. */
+  listenPlotTap(fn: (plot: number) => void): void {
+    this.plotTapListeners.add(fn);
+  }
+
   /** Calls `fn` every frame with what the Send home overlay should show (D-048). */
   listenHome(fn: (v: HomeView) => void): void {
     this.homeListeners.add(fn);
@@ -239,19 +258,6 @@ export class MapScene {
   /** The Send home target's state (tests). */
   get homeState(): HomeState {
     return this.home?.state ?? 'hidden';
-  }
-
-  /**
-   * The kid's farewell is still playing (§13.3: its success waits for it). On the frame
-   * clock, not the wall clock: a slow frame plays at most 100 ms of it (Codex review, PR #54).
-   */
-  isDeparting(kidId: number): boolean {
-    return this.departures.some((d) => d.kidId === kidId);
-  }
-
-  /** Kids still playing their farewell, and where (tests). */
-  get departing(): { x: number; y: number }[] {
-    return this.departures.map((d) => ({ x: d.x, y: d.y }));
   }
 
   /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
@@ -277,6 +283,11 @@ export class MapScene {
     this.shownListeners.add(fn);
   }
 
+  /** Test hook: what each plot shows on the map, as asset names. */
+  get plotsShown(): string[][] {
+    return this.plotsView?.shown() ?? [];
+  }
+
   /** Whether a kid is drawn now, or still exists waiting for its costume. */
   viewState(kidId: number): 'shown' | 'pending' | 'gone' {
     if (this.views.has(kidId)) return 'shown';
@@ -291,7 +302,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'sendHome' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' }>): void {
     this.pending.push(cmd);
   }
 
@@ -308,8 +319,7 @@ export class MapScene {
     if (this.pending.length) this.stepOnce(0);
     // Panning is dropped too: its pointerup may never arrive (Codex review, PR #11).
     this.pan = undefined;
-    // Hidden: departures are disposed, not replayed, and any dwell starts over (§13).
-    this.endDepartures();
+    // Hidden: any dwell starts over (§15.1).
     this.home?.reset();
     this.panVelocity = { x: 0, y: 0 };
     this.app.ticker.stop();
@@ -321,7 +331,8 @@ export class MapScene {
     // Kids wandered while away (D-053): they are found where they are, never seen sliding
     // there from where they were left.
     for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
-    for (const kid of report.spawned) this.addView(kid);
+    // Garden arrivals and sprouts alike need a view (Codex review, PR #72).
+    for (const kid of [...report.spawned, ...report.sprouted]) this.addView(kid);
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
     return report;
@@ -334,9 +345,6 @@ export class MapScene {
    */
   private releaseUnused(now: number): void {
     const present = new Set(this.game.state.world.kids.map((k) => k.type));
-    // A farewell still draws its costume: keep it loaded until the view is disposed (Codex
-    // review, PR #50).
-    for (const d of this.departures) present.add(d.type);
     for (const type of this.art.textures.loadedTypes) {
       if (present.has(type) || this.resident.has(type)) {
         this.absentSince.delete(type);
@@ -445,13 +453,28 @@ export class MapScene {
   // --- Panning -------------------------------------------------------------
 
   private startPan(e: FederatedPointerEvent): void {
+    // A second pointer is never a tap.
+    if (this.pan) this.tap = null;
     if (this.drag || this.pan || this.inputPaused) return;
+    // A press that stops a moving map is no tap: the camera was moving (§15.2).
+    const still = Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5;
+    this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now() } : null;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
   }
 
   private movePan(e: FederatedPointerEvent): void {
     const pan = this.pan!;
+    // Within 8 px a press may still be a tap: the map holds still. Crossing it pans.
+    if (this.tap) {
+      if (Math.hypot(e.global.x - this.tap.x, e.global.y - this.tap.y) <= TAP_SLOP) {
+        pan.lastX = e.global.x;
+        pan.lastY = e.global.y;
+        pan.lastT = performance.now();
+        return;
+      }
+      this.tap = null;
+    }
     const dx = e.global.x - pan.lastX;
     const dy = e.global.y - pan.lastY;
     const now = performance.now();
@@ -506,6 +529,8 @@ export class MapScene {
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
       e.stopPropagation(); // a kid press is a pickup, never a pan
+      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72).
+      this.tap = null;
       this.startDrag(kid.id, e);
     });
     this.views.set(kid.id, view);
@@ -565,6 +590,15 @@ export class MapScene {
 
   private endPointer(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
     if (this.pan && e.pointerId === this.pan.pointerId) {
+      const tap = this.tap;
+      this.tap = null;
+      if (kind === 'drop' && tap && !this.inputPaused && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP) {
+        this.pan = undefined;
+        // Rechecked at release, where the finger is now (§15.2).
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, this.toWorld(e), this.cam.zoom) : null;
+        if (plot !== null) for (const fn of this.plotTapListeners) fn(plot);
+        return;
+      }
       // Fling with the finger's recent velocity, decayed by however long it then rested,
       // so a pause before lifting doesn't fling (Codex review, PR #11). Cancels never fling.
       const rested = (performance.now() - this.pan.lastT) / 1000;
@@ -588,9 +622,12 @@ export class MapScene {
     if (this.viewKey() !== this.lastView) this.home?.restartDwell();
     // Released over the armed target, rechecked now: the kid goes home instead of landing
     // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
-    if (this.home?.releases(this.clock, this.homeEligible(), w)) {
+    // Released over the armed target, or over the target while every plot is busy: the
+    // plant is sent, and the sim refuses the busy one (the kid is put down clear, §15.1).
+    const busyRelease = !!this.home && this.homeEligible() && this.home.contains(w) && this.plantTarget().busy !== null;
+    if (this.home && (busyRelease || this.home.releases(this.clock, this.homeEligible(), w))) {
       const { kidId, spot } = this.drag;
-      this.pending.push({ type: 'sendHome', kidId });
+      this.pending.push({ type: 'plant', kidIds: [kidId] });
       this.placing.set(kidId, spot);
       this.views.get(kidId)?.dropped();
       this.drag = undefined;
@@ -737,16 +774,32 @@ export class MapScene {
     const moved = view !== this.lastView;
     this.lastView = view;
     const point = this.drag ? this.camera.toLocal(this.dragScreen) : null;
-    const state = this.home.update(this.clock, this.homeEligible(), point ? { x: point.x, y: point.y } : null, moved);
+    const { plot, busy } = this.plantTarget();
+    // A different plot or count under a still finger starts the dwell over (GUI_MVP §15.1).
+    const plotKey = plot ? `${plot.index}:${plot.count}` : '';
+    if (plotKey !== this.lastPlotKey) this.home.restartDwell();
+    this.lastPlotKey = plotKey;
+    // With every plot busy the target never arms; a release over it is refused (§15.1).
+    const state = this.home.update(this.clock, this.homeEligible(), point && !busy ? { x: point.x, y: point.y } : null, moved);
     const over = state === 'waiting' || state === 'ready';
+    this.overBusyHome = !!busy && !!point && state !== 'hidden' && this.home.contains(point);
     this.drawTether(over);
     const v: HomeView = {
       state,
       target: this.homeScreenRect(),
       point: over ? { x: this.dragScreen.x, y: this.dragScreen.y } : null,
       held: state === 'hidden' ? null : this.heldScreenRect(),
+      plot,
+      busy,
     };
     for (const fn of this.homeListeners) fn(v);
+  }
+
+  /** Where a drop on the Garden goes now: a plot and its count, or why none takes kids. */
+  private plantTarget(): Pick<HomeView, 'plot' | 'busy'> {
+    const index = this.game.plotForDrop();
+    if (index !== null) return { plot: { index, count: this.game.state.plots[index]?.seed?.planted.length ?? 0 }, busy: null };
+    return { plot: null, busy: this.game.state.plots.some((p) => p.seed && !p.seed.sprout) ? 'full' : 'growing' };
   }
 
   /**
@@ -779,50 +832,6 @@ export class MapScene {
     g.stroke({ width: t.strokePx / z, color: this.art.home!.ink });
   }
 
-  /** The kid's view leaves the sim's world but waves goodbye where it was last drawn. */
-  private startDeparture(kid: Kid): void {
-    const view = this.views.get(kid.id);
-    if (!view || !this.art.home) {
-      this.removeView(kid.id);
-      return;
-    }
-    this.views.delete(kid.id);
-    this.prev.delete(kid.id);
-    this.drawn.delete(kid.id);
-    this.pendingViews.delete(kid.id);
-    view.root.eventMode = 'none';
-    this.departures.push({ kidId: kid.id, view, type: kid.type, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
-  }
-
-  /**
-   * Plays each farewell, and ends it early rather than ever overlapping a live kid, the
-   * held preview or a newer departure (no-overlap holds for what is drawn, §13.2).
-   */
-  private updateDepartures(dt: number): void {
-    const timing = this.art.home?.departure;
-    if (!timing) return;
-    const live = this.game.state.world.kids.flatMap((k) => {
-      const at = this.drag?.kidId === k.id ? this.drag.spot : this.drawn.get(k.id);
-      return at ? [rectAt(k.box, at.x, at.y)] : [];
-    });
-    for (let i = this.departures.length - 1; i >= 0; i--) {
-      const d = this.departures[i]!;
-      d.ms += dt * 1000;
-      const box = rectAt(d.box, d.x, d.y);
-      const newer = this.departures.slice(i + 1).map((n) => rectAt(n.box, n.x, n.y));
-      const blocked = [...live, ...newer].some((o) => intersects(box, o));
-      if (blocked || !d.view.depart(d.x, d.y, d.ms, timing)) {
-        d.view.destroy();
-        this.departures.splice(i, 1);
-      }
-    }
-  }
-
-  private endDepartures(): void {
-    for (const d of this.departures) d.view.destroy();
-    this.departures.length = 0;
-  }
-
   // --- Frame loop --------------------------------------------------------
 
   private frame(dt: number): void {
@@ -852,8 +861,8 @@ export class MapScene {
       this.resolveHeld();
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
+    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
     this.updateHome();
-    this.updateDepartures(dt);
     for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
@@ -900,8 +909,8 @@ export class MapScene {
       // even on short landscape screens.
       const zy = zone(bottom - top - (held ? held.bottom - held.top : 0));
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
-      // Over the Send home target, the map holds still (GUI_MVP §13.1).
-      const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready';
+      // Over the planting target, the map holds still, armed or busy (GUI_MVP §13.1, §15.1).
+      const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready' || this.overBusyHome;
       if ((ex || ey) && !this.drag.noRoom && !overHome) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
@@ -929,10 +938,11 @@ export class MapScene {
       case 'spawned':
         this.addView(e.kid).play('spawn');
         break;
-      case 'sentHome': {
-        // Gone from the sim at once (D-048); its view stays briefly to wave goodbye.
+      case 'planted': {
+        // Gone from the sim and the map at once (GUI_MVP §15.5: no ghost or wave); its plot
+        // shows the new stamp.
         if (this.drag?.kidId === e.kid.id) this.drag = undefined;
-        this.startDeparture(e.kid);
+        this.removeView(e.kid.id);
         break;
       }
       case 'fused': {

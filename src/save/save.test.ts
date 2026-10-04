@@ -345,11 +345,12 @@ describe("Codex's round-3 trace (plan §4)", () => {
 });
 
 describe('schema 2: the tutorial counter (D-052)', () => {
-  /** A schema-1 state: today's state without the field schema 2 added. */
-  function schema1(): Omit<PersistedState, 'gardenSpawns'> {
+  /** A schema-1 state: today's state without the fields schemas 2 and 3 added. */
+  function schema1(): Omit<PersistedState, 'gardenSpawns' | 'plots'> {
     const rest: Partial<PersistedState> = newGame().persisted();
     delete rest.gardenSpawns;
-    return rest as Omit<PersistedState, 'gardenSpawns'>;
+    delete rest.plots;
+    return rest as Omit<PersistedState, 'gardenSpawns' | 'plots'>;
   }
 
   it('a new game starts at the beginning of the tutorial', () => {
@@ -357,12 +358,12 @@ describe('schema 2: the tutorial counter (D-052)', () => {
   });
 
   it('a schema-1 save loads past the tutorial: it was played on the old fast schedule', async () => {
-    expect(SAVE_SCHEMA).toBe(2);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(2);
     const storage = new TestStorage();
     const old = schema1();
     storage.data.set('slotA', encode(1, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual({ ...old, gardenSpawns: content.balance.spawn.tutorialSpawns });
+    expect(r.state).toMatchObject({ ...old, gardenSpawns: content.balance.spawn.tutorialSpawns });
     // It plays on the slow schedule at once.
     const game = new Game(structuredClone(content), options, 5, r.state!);
     expect(game.interval).toBe(content.balance.spawn.intervalSeconds * content.balance.economy.gardenIntervalFactor ** (game.state.buildings.garden - 1));
@@ -375,4 +376,72 @@ describe('schema 2: the tutorial counter (D-052)', () => {
     }
     expect(validateState({ ...state, gardenSpawns: 7 }, content)).toEqual([]);
   });
+});
+
+describe('schema 3: plots (D-061)', () => {
+  it('a schema-2 save loads with its first plots, empty', async () => {
+    expect(SAVE_SCHEMA).toBe(3);
+    const storage = new TestStorage();
+    const old: Partial<PersistedState> = newGame().persisted();
+    delete old.plots;
+    storage.data.set('slotA', encode(2, 4, 1, old as PersistedState));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
+  });
+
+  it('a schema-3 save must carry valid plots (D-061)', () => {
+    const state = newGame().persisted() as unknown as Record<string, unknown>;
+    const plan = content.balance.planting;
+    const kid = (type: string, extra: Record<string, unknown> = {}) => ({ type, look: { body: 'default', face: 'default', scale: 1 }, ...extra });
+    const three = [kid('plain'), kid('fire'), kid('water')];
+    const bad: unknown[] = [
+      undefined,
+      [],
+      Array.from({ length: plan.maxPlots + 1 }, () => ({ seed: null })),
+      [{}],
+      [{ seed: { planted: [], sprout: null, grown: 0 } }],
+      [{ seed: { planted: ['plain'], sprout: null, grown: 0 } }], // a bare type, not a snapshot
+      [{ seed: { planted: [kid('nobody')], sprout: null, grown: 0 } }],
+      [{ seed: { planted: [{ type: 'plain' }], sprout: null, grown: 0 } }], // no look
+      [{ seed: { planted: [kid('plain', { variant: 'sparkly' })], sprout: null, grown: 0 } }],
+      [{ seed: { planted: Array.from({ length: plan.maxKids + 1 }, () => kid('plain')), sprout: null, grown: 0 } }],
+      [{ seed: { planted: three, sprout: null, grown: 5 } }], // grew before it started
+      [{ seed: { planted: [kid('plain')], sprout: { type: 'plain', variant: null }, grown: 0 } }], // started with too few
+      [{ seed: { planted: three, sprout: { type: 'nobody', variant: null }, grown: 0 } }],
+      [{ seed: { planted: three, sprout: { type: 'plain', variant: 'sparkly' }, grown: 0 } }],
+      [{ seed: { planted: three, sprout: { type: 'plain', variant: null }, grown: plan.growSeconds + 1 } }],
+      [{ seed: { planted: three, sprout: { type: 'plain', variant: null }, grown: Number.NaN } }],
+    ];
+    for (const plots of bad) expect(validateState({ ...state, plots }, content), JSON.stringify(plots)).not.toEqual([]);
+    const good = [
+      { seed: null },
+      { seed: { planted: [kid('plain', { variant: plan.rareVariants[0] })], sprout: null, grown: 0 } },
+      { seed: { planted: three, sprout: { type: 'hero', variant: plan.rareVariants[0] }, grown: plan.growSeconds } },
+    ];
+    expect(validateState({ ...state, plots: good }, content)).toEqual([]);
+  });
+
+  it('a game with planted and growing plots saves and loads back exactly (D-061)', async () => {
+    const g = newGame();
+    const kids = g.state.world.kids.slice(0, 3);
+    g.step([{ type: 'plant', kidIds: kids.map((k) => k.id) }], 0);
+    g.step([{ type: 'startGrowing', plot: 0 }], 0);
+    g.step([], 7);
+    expect(g.state.plots[0]!.seed!.sprout).not.toBeNull();
+    const storage = new TestStorage();
+    const m = new SaveManager(storage, content);
+    await m.load(); // a manager saves only after it has loaded
+    await m.save(g.persisted());
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual(g.persisted());
+  });
+
+  it('a kid may carry a known rare variant, nothing else (D-062)', () => {
+    const state = newGame().persisted() as unknown as { world: { kids: Record<string, unknown>[] } };
+    const kid = state.world.kids[0]!;
+    const withVariant = (variant: unknown) => ({ ...state, world: { ...state.world, kids: [{ ...kid, variant }, ...state.world.kids.slice(1)] } });
+    expect(validateState(withVariant(content.balance.planting.rareVariants[0]), content)).toEqual([]);
+    for (const v of ['sparkly', '', 3, null]) expect(validateState(withVariant(v), content)).not.toEqual([]);
+  });
+
 });

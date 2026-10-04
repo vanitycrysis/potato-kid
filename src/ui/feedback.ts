@@ -16,8 +16,12 @@ export type FeedbackItem =
   /** Instant spawns that landed (successive ones coalesce). */
   | { kind: 'arrival'; count: number }
   | { kind: 'refusal'; command: string; reason: RejectReason }
-  /** A kid sent home (D-048, GUI_MVP §13.3). */
-  | { kind: 'sentHome'; kidType: KidId; kidId: number };
+  /** Kids added to a plot (D-061, GUI_MVP §15.6): one card per plot per step; `count` in it now. */
+  | { kind: 'planted'; kidType: KidId; kidId: number; plot: number; count: number; added: number }
+  /** A plot started growing (§15.6). */
+  | { kind: 'growing'; plot: number }
+  /** A known type sprouted from a plot (§15.5); a new type gets the discovery card instead. */
+  | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number; variant: string | null };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -48,6 +52,9 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
         } else {
           current = null;
         }
+        if (e.source === 'sprout' && current === null && e.plot !== undefined) {
+          out.push({ kind: 'sprouted', kidType: e.kid.type, kidId: e.kid.id, plot: e.plot, variant: e.kid.variant ?? null });
+        }
         if (e.source === 'instant') {
           const last = out[out.length - 1];
           if (last?.kind === 'arrival') last.count++;
@@ -68,8 +75,18 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
           else out.push({ kind: 'milestone', potatokens: e.potatokens, kids: discovered });
         }
         break;
-      case 'sentHome':
-        out.push({ kind: 'sentHome', kidType: e.kid.type, kidId: e.kid.id });
+      case 'planted': {
+        // Several added at once (the picker) make one card (§15.6).
+        const last = out[out.length - 1];
+        if (last?.kind === 'planted' && last.plot === e.plot) {
+          last.added++;
+          last.count = e.count;
+          last.kidId = e.kid.id;
+        } else out.push({ kind: 'planted', kidType: e.kid.type, kidId: e.kid.id, plot: e.plot, count: e.count, added: 1 });
+        break;
+      }
+      case 'growing':
+        out.push({ kind: 'growing', plot: e.plot });
         break;
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });
@@ -104,5 +121,12 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'This kid can’t be favoured by the Garden.';
     case 'gone':
       return 'This kid has already left the map.';
+    case 'plotsBusy':
+      return 'All plots are growing. Try again when one is empty.';
+    // GUI_MVP §15.1 and §15.4.
+    case 'plotFull':
+      return 'All plots are full. Start growing a filled plot first.';
+    case 'tooFewKids':
+      return 'Add at least 3 kids to Start growing.';
   }
 }

@@ -101,7 +101,7 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
     const bot = createBot(g, c);
     // Every other pairing on the map has been tried already.
     for (const p of ['aurora|plain', 'aurora|aurora', 'aurora|water']) bot.tried.add(p);
-    expect(bot.decide()).toEqual([{ type: 'sendHome', kidId: expect.any(Number) }]);
+    expect(bot.decide()).toEqual([{ type: 'plant', kidIds: [expect.any(Number)] }]);
   });
 
   it('drags the other way when only the second kid of a pair can reach the first', () => {

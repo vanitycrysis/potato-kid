@@ -11,8 +11,8 @@ import { STEP } from './world';
 
 export interface Scenario {
   name: string;
-  /** Whether the bot may send kids home (D-048); off measures the map clogging. */
-  sendHome?: boolean;
+  /** Whether the bot may plant kids (D-054); off measures the map clogging. */
+  plant?: boolean;
   /** Play sessions: each is `play` seconds of active play, then `away` seconds offline. */
   sessions: { play: number; away: number }[];
   /** Seconds between the bot's actions (one drag or one purchase). */
@@ -32,6 +32,11 @@ export interface Report {
   discoveredClock: Record<'25' | '50' | '75' | '100', number | null>;
   /** When each building first reached each level: active play and wall-clock seconds. */
   levelAt: Record<BuildingId, Record<number, { play: number; clock: number }>>;
+  /** When the player had each number of plots (D-054): active play and wall-clock seconds. */
+  plotsAt: Record<number, { play: number; clock: number }>;
+  /** Kids planted, and kids that sprouted. */
+  planted: number;
+  sprouted: number;
   /** Wall-clock seconds at which the tutorial's last spawn arrived (null: not reached). */
   tutorialDone: number | null;
   /**
@@ -52,6 +57,10 @@ export interface Report {
   end: {
     playSeconds: number;
     kidsDiscovered: number;
+    /** Special kids on the map at the end, out of `capacity`, and special types found. */
+    specialsOnMap: number;
+    capacity: number;
+    specialsFound: number;
     recipesFound: number;
     levels: Record<BuildingId, number>;
     materials: number;
@@ -62,16 +71,21 @@ export interface Report {
 /** Plays `scenario` from a new game with `seed`; deterministic for a given seed. */
 export function simulate(content: Content, options: GameOptions, scenario: Scenario, seed: number): Report {
   const game = new Game(content, { ...options, now: 0 }, seed);
-  const sendHome = scenario.sendHome ?? true;
+  const plant = scenario.plant ?? true;
   const tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
-  const roster = content.kids.length;
+  // The roster: the recipe kids; planting-only specials are counted apart.
+  const specials = new Set(content.kids.filter((k) => k.special).map((k) => k.id));
+  const roster = content.kids.length - specials.size;
   const firstOfTier: Record<number, number | null> = {};
   for (const k of content.kids) firstOfTier[k.tier] = null;
   const discovered: Report['discovered'] = { '25': null, '50': null, '75': null, '100': null };
   const discoveredClock: Report['discoveredClock'] = { '25': null, '50': null, '75': null, '100': null };
   const levelAt = Object.fromEntries(Object.keys(game.state.buildings).map((b) => [b, {}])) as Report['levelAt'];
   let tutorialDone: number | null = null;
+  const plotsAt: Report['plotsAt'] = {};
+  let planted = 0;
+  let sprouted = 0;
   const income: Report['income'] = [];
   let firstRecipe: number | null = null;
   let play = 0;
@@ -85,22 +99,25 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const note = () => {
     const s = game.state;
     if (firstRecipe === null && s.discoveredRecipes.length > 0) firstRecipe = play;
+    const found = s.discoveredKids.filter((t) => !specials.has(t)).length;
     for (const t of s.discoveredKids) {
+      if (specials.has(t)) continue;
       const tier = tiers.get(t)!;
       if (firstOfTier[tier] === null) firstOfTier[tier] = play;
     }
     for (const q of ['25', '50', '75', '100'] as const) {
-      if (discovered[q] === null && s.discoveredKids.length >= (roster * Number(q)) / 100) {
+      if (discovered[q] === null && found >= (roster * Number(q)) / 100) {
         discovered[q] = play;
         discoveredClock[q] = clock;
       }
     }
     for (const [b, level] of Object.entries(s.buildings) as [BuildingId, number][]) levelAt[b][level] ??= { play, clock };
     if (tutorialDone === null && s.gardenSpawns >= content.balance.spawn.tutorialSpawns) tutorialDone = clock;
+    plotsAt[s.plots.length] ??= { play, clock };
   };
   note();
 
-  const bot = createBot(game, content, sendHome);
+  const bot = createBot(game, content, plant);
   const decide = bot.decide;
 
   /** Where the sessions put the clock: summed exactly, so no step drift builds up (Codex review, PR #68). */
@@ -119,7 +136,12 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
           if (deadlocked(game, recipes)) deadTurns++;
         }
       }
-      bot.learn(game.step(commands));
+      const events = game.step(commands);
+      for (const e of events) {
+        if (e.type === 'planted') planted++;
+        else if (e.type === 'spawned' && e.source === 'sprout') sprouted++;
+      }
+      bot.learn(events);
       play += STEP;
       clock += STEP;
       if (game.state.world.kids.length < 0.3 * game.capacity) starvedTime += STEP;
@@ -133,7 +155,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       const before = { spawns: game.state.gardenSpawns, progress: game.state.spawnProgress, interval: game.interval };
       planned += session.away;
       clock = planned;
-      game.reconcile(clock * 1000);
+      sprouted += game.reconcile(clock * 1000).sprouted.length;
       // A tutorial that ends while away ends at its last spawn's arrival, not at the
       // return (Codex review, PR #68). Tutorial spawns are evenly spaced from the first due.
       const need = content.balance.spawn.tutorialSpawns - before.spawns;
@@ -155,13 +177,19 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     discoveredClock,
     levelAt,
     tutorialDone,
+    plotsAt,
+    planted,
+    sprouted,
     income,
     starvation: play ? starvedTime / play : 0,
     stuck: turns ? stuckTurns / turns : 0,
     deadlocked: turns ? deadTurns / turns : 0,
     end: {
       playSeconds: play,
-      kidsDiscovered: s.discoveredKids.length,
+      kidsDiscovered: s.discoveredKids.filter((t) => !specials.has(t)).length,
+      specialsOnMap: s.world.kids.filter((k) => specials.has(k.type)).length,
+      capacity: game.capacity,
+      specialsFound: s.discoveredKids.filter((t) => specials.has(t)).length,
       recipesFound: s.discoveredRecipes.length,
       levels: { ...s.buildings },
       materials: s.materials,
@@ -177,10 +205,11 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
 export function createBot(
   game: Game,
   content: Content,
-  sendHome = true,
+  plant = true,
 ): { decide: () => Command[] | null; learn: (events: GameEvent[]) => void; tried: Set<string> } {
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const tried = new Set<string>();
+  const specials = new Set(content.kids.filter((k) => k.special).map((k) => k.id));
   let pending: Drop | null = null;
   /** The bot's one action this turn, or null when it has nothing useful to do. */
   const decide = (): Command[] | null => {
@@ -237,18 +266,25 @@ export function createBot(
         }
       }
     }
-    // 3c. Still full: send home (D-048) the kid with the fewest untried pairings on the
-    //     map (a dead end, or a spare copy), so the Garden can bring someone new.
-    if (full && sendHome && free.length) {
+    // 3b'. Start a plot growing once it holds the most kids (D-061: the best odds).
+    const ready = s.plots.findIndex((p) => p.seed && !p.seed.sprout && p.seed.planted.length >= content.balance.planting.maxKids);
+    if (plant && ready >= 0) return [{ type: 'startGrowing', plot: ready }];
+    // 3c. Still full: plant (D-061) the kid with the fewest untried pairings on the map (a
+    //     dead end, or a spare copy) into the plot that is filling, if any takes it.
+    if (full && plant && free.length && game.plotForDrop() !== null) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
-      const pick = free.reduce((best, k) => (untried(k.type) < untried(best.type) ? k : best));
-      return [{ type: 'sendHome', kidId: pick.id }];
+      // A player keeps a special kid while any other dead end can go first (a found
+      // special stays in the Dex, so it's planted only as a last resort).
+      const ordinary = free.filter((k) => !specials.has(k.type));
+      const plantable = ordinary.length ? ordinary : free;
+      const pick = plantable.reduce<(typeof free)[number] | undefined>((best, k) => (!best || untried(k.type) < untried(best.type) ? k : best), undefined);
+      if (pick) return [{ type: 'plant', kidIds: [pick.id] }];
     }
     // 4. Out of ideas with room to spare: bring back a known type that pairs untried with
     //    the map (Compendium), else an instant spawn.
     if (s.world.kids.length < game.capacity) {
       if (s.buildings.compendium > 0) {
-        const pick = s.discoveredKids.find((t) => free.some((k) => !tried.has(pairKey(t, k.type))));
+        const pick = s.discoveredKids.find((t) => !specials.has(t) && free.some((k) => !tried.has(pairKey(t, k.type))));
         if (pick) {
           const cost = game.respawnCost(pick);
           if (s.materials >= cost.materials) return [{ type: 'respawn', kidType: pick, pay: 'materials' }];
@@ -335,9 +371,15 @@ function purchase(game: Game): Command | null {
     return c !== null && s.materials >= c ? c : null;
   };
   if (s.buildings.compendium === 0 && s.discoveredKids.length >= 6 && afford('compendium') !== null) return { type: 'upgrade', building: 'compendium' };
-  const options = (['garden', 'capacity'] as const).map((b) => ({ b, c: afford(b) })).filter((o) => o.c !== null);
-  options.sort((x, y) => x.c! - y.c!);
-  return options[0] ? { type: 'upgrade', building: options[0].b } : null;
+  // The cheapest affordable of Garden, Capacity and the next plot.
+  const plot = game.plotUnlockCost;
+  const options: { c: number; cmd: Command }[] = (['garden', 'capacity'] as const).flatMap((b) => {
+    const c = afford(b);
+    return c === null ? [] : [{ c, cmd: { type: 'upgrade', building: b } as Command }];
+  });
+  if (plot !== null && s.materials >= plot) options.push({ c: plot, cmd: { type: 'unlockPlot' } });
+  options.sort((x, y) => x.c - y.c);
+  return options[0]?.cmd ?? null;
 }
 
 /** Median of the non-null values, or null if most runs never got there. */

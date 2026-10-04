@@ -102,5 +102,18 @@
       "costBase": 1000,
       "costGrowth": 1
     }
+  },
+  "planting": {
+    "growSeconds": 1800,
+    "startPlots": 1,
+    "maxPlots": 4,
+    "unlockCostBase": 1000,
+    "unlockCostGrowth": 5,
+    "minKids": 3,
+    "maxKids": 5,
+    "specialOdds": [0.1, 0.2],
+    "rareOdds": [0.05, 0.1],
+    "rareVariants": ["rainbow", "mini"],
+    "rareIncomeMultiplier": 2
   }
 }

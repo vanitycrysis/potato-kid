@@ -6,7 +6,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 2;
+export const SAVE_SCHEMA = 3;
 
 export interface SaveRecord {
   schema: number;
@@ -73,6 +73,50 @@ export function validateState(state: unknown, content: Content): string[] {
   if (!whole(s.potatokens)) p.push('potatokens is invalid');
   if (!whole(s.milestonesPaid)) p.push('milestonesPaid is invalid');
   if (!whole(s.gardenSpawns)) p.push('gardenSpawns is invalid');
+  // Plots (D-061): one to maxPlots, each empty or a seed: the kids planted (known types, at
+  // most maxKids) and, once started, its sprout and how long it has grown.
+  const plan = content.balance.planting;
+  if (!Array.isArray(s.plots) || s.plots.length < 1 || s.plots.length > plan.maxPlots) p.push('plots is invalid');
+  else {
+    s.plots.forEach((raw: unknown, i) => {
+      const plot = raw as Record<string, unknown> | null;
+      if (typeof plot !== 'object' || plot === null || !('seed' in plot)) return void p.push(`plot ${i} is invalid`);
+      const seed = plot.seed as Record<string, unknown> | null;
+      if (seed === null) return;
+      if (typeof seed !== 'object') return void p.push(`plot ${i} seed is invalid`);
+      // Each kid as planted: a known type, a look, and maybe a known rare variant.
+      const plantedOk = (k: unknown) => {
+        const o = k as Record<string, unknown> | null;
+        const look = o?.look as Record<string, unknown> | undefined;
+        return (
+          typeof o === 'object' &&
+          o !== null &&
+          typeof o.type === 'string' &&
+          kidIds.has(o.type) &&
+          typeof look === 'object' &&
+          look !== null &&
+          typeof look.body === 'string' &&
+          typeof look.face === 'string' &&
+          finite(look.scale) &&
+          (look.scale as number) > 0 &&
+          (!('variant' in o) || (typeof o.variant === 'string' && plan.rareVariants.includes(o.variant)))
+        );
+      };
+      const planted = seed.planted;
+      if (!Array.isArray(planted) || planted.length < 1 || planted.length > plan.maxKids || !planted.every(plantedOk)) {
+        p.push(`plot ${i} planted kids are invalid`);
+      }
+      if (!finite(seed.grown) || (seed.grown as number) < 0 || (seed.grown as number) > plan.growSeconds) p.push(`plot ${i} seed grown is invalid`);
+      const sprout = seed.sprout as Record<string, unknown> | null;
+      if (sprout === null) {
+        if (seed.grown !== 0) p.push(`plot ${i} grew before it started`);
+        return;
+      }
+      if (typeof sprout !== 'object' || typeof sprout.type !== 'string' || !kidIds.has(sprout.type)) p.push(`plot ${i} sprout is invalid`);
+      else if (sprout.variant !== null && !(typeof sprout.variant === 'string' && plan.rareVariants.includes(sprout.variant))) p.push(`plot ${i} sprout variant is invalid`);
+      else if (Array.isArray(planted) && planted.length < plan.minKids) p.push(`plot ${i} started with too few kids`);
+    });
+  }
   if (!finite(s.accountedUntil)) p.push('accountedUntil is invalid');
   if (s.biasTarget !== null && !(typeof s.biasTarget === 'string' && s.biasTarget in content.balance.spawnWeights)) p.push('biasTarget is invalid');
   if (!Array.isArray(s.discoveredKids) || !s.discoveredKids.every((k) => typeof k === 'string' && kidIds.has(k))) p.push('discoveredKids has unknown kids');
@@ -115,6 +159,7 @@ export function validateState(state: unknown, content: Content): string[] {
     if (typeof look !== 'object' || look === null || typeof look.body !== 'string' || typeof look.face !== 'string' || !finite(look.scale) || (look.scale as number) <= 0) {
       p.push(`kid ${String(id)} look is invalid`);
     }
+    if ('variant' in k && !(typeof k.variant === 'string' && content.balance.planting.rareVariants.includes(k.variant))) p.push(`kid ${String(id)} variant is invalid`);
     const box = k.box as Record<string, unknown> | undefined;
     if (typeof box !== 'object' || box === null || !(['left', 'top', 'right', 'bottom'] as const).every((f) => finite(box[f]))) {
       p.push(`kid ${String(id)} box is invalid`);

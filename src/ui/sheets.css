@@ -90,6 +90,10 @@
   bottom: 0;
   background: var(--ui-paper);
 }
+/* Too short even for that: the footer follows the content (GUI_MVP §15.3, "all in flow"). */
+.sheet[data-flow='true'] .sheet-footer {
+  position: static;
+}
 
 /* Fixed region above the body (Compendium toolbar and message, GUI_MVP §6). */
 .sheet-bar {
@@ -763,6 +767,28 @@
 .dex-home-confirm .sheet-body-text {
   margin: 0;
 }
+/* Planting from the Dex (GUI_MVP §15.6): the plot chooser and one plot's confirmation. */
+.dex-home-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-home-step .sheet-body-text,
+.dex-home-step .sheet-helper {
+  margin: 0;
+}
+.ui-button.dex-home-row.dex-plot-row {
+  min-height: 44px;
+}
+.dex-home-who {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dex-home-planting {
+  font-size: 22px;
+  line-height: 28px;
+}
 .ui-button.dex-home-action {
   width: 100%;
   min-height: 48px;
@@ -806,4 +832,257 @@
   .sheet-scrim {
     transition: none !important;
   }
+}
+
+/* --- The Garden's plots (GUI_MVP §15.2-15.4) ------------------------------------------ */
+.garden-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.garden-link {
+  min-height: 44px;
+  font-size: 16px;
+}
+.garden-rate,
+.garden-plots,
+.garden-more {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.garden-section-heading {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.garden-section-heading:focus,
+.plot-row-heading:focus,
+.plot-detail-heading:focus,
+.plot-review-heading:focus {
+  outline: none;
+}
+.garden-plot-helpers .sheet-helper,
+.garden-more .sheet-body-text,
+.garden-more .sheet-helper {
+  margin: 0;
+}
+.ui-button.garden-upgrade,
+.ui-button.plot-action-full {
+  width: 100%;
+  min-height: 48px;
+  font-size: 18px;
+}
+.plot-row {
+  min-height: 190px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plot-row[data-state='locked'] {
+  min-height: 0;
+}
+.plot-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plot-row-heading {
+  margin: 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.plot-row-status,
+.plot-row .sheet-helper {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.plot-slots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.plot-slot {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.plot-slot-empty {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ui-ink);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.plot-rail {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ui-disabled);
+  overflow: hidden;
+}
+.plot-rail-fill {
+  height: 100%;
+  background: var(--ui-ink);
+}
+.plot-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ui-button.plot-action {
+  min-height: 48px;
+  font-size: 16px;
+}
+.ui-button.plot-back {
+  min-height: 44px;
+  padding: 0 12px;
+  justify-self: start;
+  align-self: flex-start;
+  font-size: 16px;
+}
+.plot-detail-heading {
+  margin: 8px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.plot-detail,
+.plot-kids,
+.plot-review,
+.picker-helpers,
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plot-detail p,
+.plot-review p,
+.picker-helpers p {
+  margin: 0;
+}
+.plot-kid {
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.plot-review {
+  padding: 8px;
+}
+.plot-note {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plot-note[hidden] {
+  display: none;
+}
+.sheet-action.plot-start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+/* Full plot: the shared sparkle breathes beside Start growing, never moving (§15.4). */
+.plot-sparkle {
+  animation: plot-sparkle 2400ms ease-in-out infinite;
+}
+@keyframes plot-sparkle {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plot-sparkle {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* The picker (§15.3). */
+.picker-search-label {
+  font-size: 16px;
+  line-height: 22px;
+}
+.picker-search {
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  padding: 0 12px;
+}
+.picker-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ui-button.picker-filter {
+  min-height: 44px;
+  font-size: 16px;
+}
+.ui-button.picker-filter.is-selected {
+  border-image-source: var(--ui-button-selected);
+}
+.picker-row {
+  min-height: 88px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+.picker-row[hidden] {
+  display: none;
+}
+.picker-row.is-selected {
+  outline: 3px solid var(--ui-ink);
+  outline-offset: -3px;
+}
+.picker-row-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.picker-row-name {
+  font-size: 18px;
+  line-height: 24px;
+}
+.picker-check {
+  width: 24px;
+  height: 24px;
+  margin: 10px;
+  flex: none;
+}
+.picker-limit,
+.picker-empty {
+  margin: 0;
+}
+.picker-lines,
+.picker-notices {
+  display: flex;
+  flex-direction: column;
+}
+.picker-line {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

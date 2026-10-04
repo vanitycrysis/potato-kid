@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { parseSettings, SettingsStore } from './settings';
 import { MemoryStorage, type SaveStorage } from './storage';
 
-const DEFAULTS = { audio: true, music: 70, sfx: 80, sendHomeExplained: false };
+const DEFAULTS = { audio: true, music: 70, sfx: 80, plantV2Explained: false };
 
 describe('settings', () => {
   it('fills missing or invalid fields from the defaults, and clamps volumes', () => {
     expect(parseSettings(null, DEFAULTS)).toEqual(DEFAULTS);
     expect(parseSettings('not json', DEFAULTS)).toEqual(DEFAULTS);
     expect(parseSettings('[1,2]', DEFAULTS)).toEqual(DEFAULTS);
-    expect(parseSettings('{"audio":"no","music":140,"sfx":-3}', DEFAULTS)).toEqual({ audio: true, music: 100, sfx: 0, sendHomeExplained: false });
-    expect(parseSettings('{"audio":false,"music":33.6,"sendHomeExplained":true}', DEFAULTS)).toEqual({ audio: false, music: 34, sfx: 80, sendHomeExplained: true });
+    expect(parseSettings('{"audio":"no","music":140,"sfx":-3}', DEFAULTS)).toEqual({ audio: true, music: 100, sfx: 0, plantV2Explained: false });
+    expect(parseSettings('{"audio":false,"music":33.6,"plantV2Explained":true}', DEFAULTS)).toEqual({ audio: false, music: 34, sfx: 80, plantV2Explained: true });
   });
 
   it('round-trips through storage', async () => {
@@ -22,7 +22,7 @@ describe('settings', () => {
     await a.flushed();
     const b = new SettingsStore(storage, DEFAULTS);
     await b.load();
-    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, sendHomeExplained: false });
+    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false });
   });
 
   it('keeps the defaults when storage fails, and survives failed writes', async () => {

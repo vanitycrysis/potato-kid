@@ -9,7 +9,7 @@ import { HomeFeed } from './homeFeed';
 import { formatRate } from './format';
 import { LazyPortraits, portrait } from './portrait';
 import type { GameEvent } from '../sim/game';
-import type { SendHomeNotes } from './sendHome';
+import type { PlantingNotes } from './plantingNotes';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
 // The Potato-Dex (docs/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
@@ -72,7 +72,7 @@ export class Dex {
     private readonly content: Content,
     private readonly sheets: Sheets,
     private readonly buildings: BuildingSheets,
-    notes: SendHomeNotes,
+    notes: PlantingNotes,
     private readonly readOnly: () => boolean = () => false,
   ) {
     this.feed = new HomeFeed(scene, content, notes);

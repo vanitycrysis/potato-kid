@@ -5,6 +5,8 @@ export interface KidDef {
   tier: number;
   /** Display name; placeholder until ChatGPT names the roster. */
   name: string;
+  /** A planting-only special kid (owner, 2026-10-04): in no recipe, not in the roster count. */
+  special?: boolean;
 }
 
 export interface RecipeDef {
@@ -86,6 +88,29 @@ export interface EconomyBalance {
   offlineSummaryMinSeconds: number;
 }
 
+/** Planting (D-061): 3 to 5 kids become a seed in a plot, which grows into one kid. */
+export interface PlantingBalance {
+  /** Seconds a started seed takes to grow, online and offline. */
+  growSeconds: number;
+  /** Plots unlocked on a new game. */
+  startPlots: number;
+  /** Plots there can ever be (GUI_MVP §15.2). */
+  maxPlots: number;
+  /** Materials to unlock plot n (n > startPlots): `unlockCostBase · unlockCostGrowth^(n − startPlots − 1)`. */
+  unlockCostBase: number;
+  unlockCostGrowth: number;
+  /** Kids a plot needs before it can start growing, and the most it takes. */
+  minKids: number;
+  maxKids: number;
+  /** [floor, ceiling] chance a sprout is a special kid (D-063), and a rare variant (D-062). */
+  specialOdds: [number, number];
+  rareOdds: [number, number];
+  /** The rare variants a sprout can be (D-062); one is picked at random. */
+  rareVariants: string[];
+  /** A rare kid earns this many times its type's Materials (D-062). */
+  rareIncomeMultiplier: number;
+}
+
 export interface Balance {
   spawnWeights: Record<KidId, number>;
   spawn: SpawnBalance;
@@ -94,6 +119,7 @@ export interface Balance {
   wander: WanderBalance;
   economy: EconomyBalance;
   buildings: Record<BuildingId, BuildingBalance>;
+  planting: PlantingBalance;
 }
 
 export interface Content {

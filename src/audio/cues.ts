@@ -2,11 +2,12 @@ import type { GameEvent } from '../sim/game';
 
 // Which sound a sim step gets (ART_AUDIO_PLAN audio priorities, Codex's design): one cue
 // per step, the most important event winning. Discovery replaces fusion for the same event.
-// Send home adds no sound (GUI_MVP §13); passive income never ticks.
+// Planting has its own cue, once at acceptance; a sprout arrives with the spawn cue (GUI_MVP
+// §15.3). Passive income never ticks.
 
-export type Cue = 'sfx_discovery' | 'sfx_fusion' | 'sfx_upgrade' | 'sfx_spawn' | 'sfx_place' | 'sfx_pick_up' | 'sfx_ui_tap' | 'sfx_spend';
+export type Cue = 'sfx_discovery' | 'sfx_fusion' | 'sfx_upgrade' | 'sfx_plant' | 'sfx_spawn' | 'sfx_place' | 'sfx_pick_up' | 'sfx_ui_tap' | 'sfx_spend';
 
-const PRIORITY: Cue[] = ['sfx_discovery', 'sfx_fusion', 'sfx_upgrade', 'sfx_spawn', 'sfx_place', 'sfx_pick_up'];
+const PRIORITY: Cue[] = ['sfx_discovery', 'sfx_fusion', 'sfx_upgrade', 'sfx_plant', 'sfx_spawn', 'sfx_place', 'sfx_pick_up'];
 
 /** The one cue for a step's events, or null. Offline arrivals are silent. */
 export function cueFor(events: GameEvent[]): Cue | null {
@@ -17,7 +18,8 @@ export function cueFor(events: GameEvent[]): Cue | null {
   };
   for (const e of events) {
     if (e.type === 'fused') consider(e.firstDiscovery ? 'sfx_discovery' : 'sfx_fusion');
-    else if (e.type === 'upgraded') consider('sfx_upgrade');
+    else if (e.type === 'upgraded' || e.type === 'plotUnlocked') consider('sfx_upgrade');
+    else if (e.type === 'planted') consider('sfx_plant');
     else if (e.type === 'spawned' && e.source !== 'offline') consider('sfx_spawn');
     else if (e.type === 'dropped') consider('sfx_place');
     else if (e.type === 'pickedUp') consider('sfx_pick_up');
