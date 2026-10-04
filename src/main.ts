@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { kidRig, mapData, uiData } from './content/artData';
+import { gate4Data, kidRig, mapData, uiData } from './content/artData';
 import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
@@ -66,6 +66,8 @@ declare global {
       home: () => { state: string; departing: number; departingAt: { x: number; y: number }[] };
       /** Forgiving drop (D-051): the kid under the finger while one is held, else null. */
       dropTarget: () => number | null;
+      /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
+      plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -132,6 +134,7 @@ async function boot(): Promise<void> {
       obstacles: obstaclesFrom(mapData),
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       home: homeArt(),
+      planting: gate4Data?.planting,
     },
     loaded.state ?? undefined,
   );
@@ -210,6 +213,13 @@ async function boot(): Promise<void> {
     audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
     home: () => ({ state: scene.homeState, departing: scene.departing.length, departingAt: scene.departing }),
     dropTarget: () => scene.dropTarget,
+    plots: () =>
+      scene.game.state.plots.map((p, i) => {
+        const seed = p.seed;
+        const progress = seed?.sprout ? seed.grown / scene.game.growSeconds : 0;
+        const state = !seed ? 'empty' : !seed.sprout ? 'filling' : progress >= 1 ? 'ready' : 'growing';
+        return { state, kids: seed?.planted.length ?? 0, progress, waiting: scene.game.plotWaiting(i), shown: scene.plotsShown[i] ?? [] };
+      }),
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),

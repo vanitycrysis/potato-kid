@@ -1,5 +1,5 @@
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
-import type { KidRig, MapData } from '../content/artData';
+import type { KidRig, MapData, PlantingArt } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
@@ -7,6 +7,7 @@ import { intersects, rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
+import { PlotsView } from './plotsView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -33,6 +34,8 @@ export interface SceneArt {
     tether: { strokePx: number; dashPx: [number, number]; stopBeforeKidBoxPx: number };
     ink: string;
   } | undefined;
+  /** Planting (D-061, GUI_MVP §15): Codex's plot art and its placement. */
+  planting?: PlantingArt | undefined;
 }
 
 /** What the Send home overlay draws this frame, in screen (CSS px) coordinates. */
@@ -126,6 +129,8 @@ export class MapScene {
   private readonly absentSince = new Map<KidId, number>();
   /** Types kept loaded however long they are absent: the Garden spawns them all the time. */
   private readonly resident: Set<KidId>;
+  /** The plots on the map, if the art has them. */
+  private readonly plotsView: PlotsView | null;
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -200,7 +205,10 @@ export class MapScene {
     this.home = art.home ? new HomeTarget({ x: gx, y: gy }, art.home.target) : null;
     // The tether is drawn beneath kids (GUI_MVP §13.1) and takes no input.
     this.homeLayer.eventMode = 'none';
-    this.camera.addChild(buildMap(art.map, art.textures.map), this.homeLayer, this.kidLayer);
+    // Plots sit on the ground after the Garden and below kids (GUI_MVP §15.2); no input.
+    this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
+    if (this.plotsView) this.plotsView.root.eventMode = 'none';
+    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -275,6 +283,11 @@ export class MapScene {
    */
   listenShown(fn: (kidId: number) => void): void {
     this.shownListeners.add(fn);
+  }
+
+  /** Test hook: what each plot shows on the map, as asset names. */
+  get plotsShown(): string[][] {
+    return this.plotsView?.shown() ?? [];
   }
 
   /** Whether a kid is drawn now, or still exists waiting for its costume. */
@@ -853,6 +866,7 @@ export class MapScene {
       this.resolveHeld();
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
+    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
     this.updateHome();
     this.updateDepartures(dt);
     for (const k of kids) {
