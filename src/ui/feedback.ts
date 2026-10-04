@@ -106,5 +106,10 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'This kid has already left the map.';
     case 'plotsBusy':
       return 'All plots are growing. Try again when one is empty.';
+    // Placeholders until PLANT-V2-DESIGN gives the copy (D-061).
+    case 'plotFull':
+      return 'This plot is full. Start it growing first.';
+    case 'tooFewKids':
+      return 'Plant at least 3 kids first.';
   }
 }

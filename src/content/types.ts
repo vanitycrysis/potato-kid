@@ -88,9 +88,9 @@ export interface EconomyBalance {
   offlineSummaryMinSeconds: number;
 }
 
-/** Planting (D-054): a kid becomes a seed in a plot and grows into a random Garden kid. */
+/** Planting (D-061): 3 to 5 kids become a seed in a plot, which grows into one kid. */
 export interface PlantingBalance {
-  /** Seconds a seed takes to grow, online and offline. */
+  /** Seconds a started seed takes to grow, online and offline. */
   growSeconds: number;
   /** Plots unlocked on a new game. */
   startPlots: number;
@@ -99,24 +99,16 @@ export interface PlantingBalance {
   /** Materials to unlock plot n (n > startPlots): `unlockCostBase · unlockCostGrowth^(n − startPlots − 1)`. */
   unlockCostBase: number;
   unlockCostGrowth: number;
-  /** A growing seed keeps its kid's place on the map, so its sprout always has room. */
-  seedsHoldPlace?: boolean;
-  /** Experiment (owner, 2026-10-04): kids a plot takes before its seed starts growing; 1 if absent. */
-  kidsPerSeed?: number;
-  /** Experiment: chance a sprout is a special kid. */
-  specialChance?: number;
-  /** Experiment: what an ordinary sprout is: a random Garden kid, any recipe kid, or one of the kids planted. */
-  sproutFrom?: 'garden' | 'any' | 'planted';
-  /** Experiment v2 (owner, 2026-10-04): a plot takes minKids..maxKids and grows once started. */
-  minKids?: number;
-  maxKids?: number;
-  /** Experiment v2: [floor, ceiling] chance of a special and of a rare, by kids planted and their tiers. */
-  specialOdds?: [number, number];
-  rareOdds?: [number, number];
-  /** Experiment v2: a special roll gives only a special not yet found (none once all are). */
-  specialsOnlyUnfound?: boolean;
-  /** Experiment v2, for the simulator's bot: start a plot once it holds this many kids. */
-  botStartAt?: number;
+  /** Kids a plot needs before it can start growing, and the most it takes. */
+  minKids: number;
+  maxKids: number;
+  /** [floor, ceiling] chance a sprout is a special kid (D-063), and a rare variant (D-062). */
+  specialOdds: [number, number];
+  rareOdds: [number, number];
+  /** The rare variants a sprout can be (D-062); one is picked at random. */
+  rareVariants: string[];
+  /** A rare kid earns this many times its type's Materials (D-062). */
+  rareIncomeMultiplier: number;
 }
 
 export interface Balance {

@@ -53,6 +53,13 @@ export function validateContent(content: Content): string[] {
   errors.push(...validateEconomy(content.balance, content.kids.length));
   errors.push(...validatePlanting(content.balance));
 
+  // Special kids (D-063): apex, tier 5 or above, in no recipe, never from the Garden.
+  for (const k of content.kids.filter((x) => x.special)) {
+    if (k.tier < 5) errors.push(`special kid "${k.id}" must be tier 5 or above`);
+    if (content.recipes.some((r) => r.a === k.id || r.b === k.id || r.result === k.id)) errors.push(`special kid "${k.id}" must not be in a recipe`);
+    if (k.id in content.balance.spawnWeights) errors.push(`special kid "${k.id}" must not be in the spawn pool`);
+  }
+
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));
   let changed = true;
@@ -70,8 +77,9 @@ export function validateContent(content: Content): string[] {
       errors.push(`recipe ${r.a} + ${r.b} → ${r.result} is unreachable`);
     }
   }
+  // Special kids come only from planting (D-063), so they're reachable that way.
   for (const k of content.kids) {
-    if (!reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
+    if (!k.special && !reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
   }
 
   return errors;
@@ -153,6 +161,19 @@ function validatePlanting(balance: unknown): string[] {
   if (typeof p.startPlots === 'number' && typeof p.maxPlots === 'number' && p.startPlots > p.maxPlots) {
     errors.push('balance.planting.startPlots must not exceed maxPlots');
   }
+  num('minKids', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('maxKids', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  if (typeof p.minKids === 'number' && typeof p.maxKids === 'number' && p.minKids > p.maxKids) errors.push('balance.planting.minKids must not exceed maxKids');
+  for (const key of ['specialOdds', 'rareOdds'] as const) {
+    const v = p[key];
+    const ok = Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1) && v[0] <= v[1];
+    if (!ok) errors.push(`balance.planting.${key} must be [floor, ceiling] chances in 0..1, floor <= ceiling`);
+  }
+  const variants = p.rareVariants;
+  if (!Array.isArray(variants) || !variants.every((v) => typeof v === 'string' && v.length > 0) || new Set(variants).size !== variants.length) {
+    errors.push('balance.planting.rareVariants must be distinct, non-empty ids');
+  }
+  num('rareIncomeMultiplier', (v) => v >= 1, 'a finite number >= 1');
   return errors;
 }
 

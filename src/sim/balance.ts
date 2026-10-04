@@ -57,8 +57,9 @@ export interface Report {
   end: {
     playSeconds: number;
     kidsDiscovered: number;
-    /** Special kids on the map at the end, and special types found. */
+    /** Special kids on the map at the end, out of `capacity`, and special types found. */
     specialsOnMap: number;
+    capacity: number;
     specialsFound: number;
     recipesFound: number;
     levels: Record<BuildingId, number>;
@@ -187,6 +188,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       playSeconds: play,
       kidsDiscovered: s.discoveredKids.filter((t) => !specials.has(t)).length,
       specialsOnMap: s.world.kids.filter((k) => specials.has(k.type)).length,
+      capacity: game.capacity,
       specialsFound: s.discoveredKids.filter((t) => specials.has(t)).length,
       recipesFound: s.discoveredRecipes.length,
       levels: { ...s.buildings },
@@ -264,12 +266,12 @@ export function createBot(
         }
       }
     }
-    // 3b'. Experiment v2: start a plot once it holds enough kids.
-    const startAt = content.balance.planting.botStartAt;
-    if (plant && startAt !== undefined && game.fillingKids >= startAt) return [{ type: 'startGrowing' }];
-    // 3c. Still full: plant (D-054) the kid with the fewest untried pairings on the map (a
-    //     dead end, or a spare copy), if a plot is free; it grows back as someone new.
-    if (full && plant && free.length && game.canPlant) {
+    // 3b'. Start a plot growing once it holds the most kids (D-061: the best odds).
+    const ready = s.plots.findIndex((p) => p.seed && !p.seed.sprout && p.seed.planted.length >= content.balance.planting.maxKids);
+    if (plant && ready >= 0) return [{ type: 'startGrowing', plot: ready }];
+    // 3c. Still full: plant (D-061) the kid with the fewest untried pairings on the map (a
+    //     dead end, or a spare copy) into the plot that is filling, if any takes it.
+    if (full && plant && free.length && game.plotForDrop() !== null) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
       // A player keeps a special kid while any other dead end can go first (a found
       // special stays in the Dex, so it's planted only as a last resort).

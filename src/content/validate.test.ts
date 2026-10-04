@@ -64,3 +64,34 @@ describe('validateContent', () => {
     expect(errors).toContain('balance.body.radius must be a finite number > 0');
   });
 });
+
+describe('planting and special kids (D-061, D-063)', () => {
+  const special = { id: 'special_a', tier: 5, name: 'Special A', special: true };
+
+  it('accepts a special kid that only planting can bring', () => {
+    expect(validateContent(withChanges({ kids: [...content.kids, special] }))).toEqual([]);
+  });
+
+  it('a special kid is tier 5 or above, in no recipe, and never from the Garden', () => {
+    const low = validateContent(withChanges({ kids: [...content.kids, { ...special, tier: 4 }] }));
+    expect(low).toContain('special kid "special_a" must be tier 5 or above');
+    const inRecipe = withChanges({ kids: [...content.kids, special], recipes: [...content.recipes, { a: 'special_a', b: 'plain', result: 'hero' }] });
+    expect(validateContent(inRecipe)).toContain('special kid "special_a" must not be in a recipe');
+    const asResult = withChanges({ kids: [...content.kids, special], recipes: [...content.recipes, { a: 'festival', b: 'mosaic', result: 'special_a' }] });
+    expect(validateContent(asResult)).toContain('special kid "special_a" must not be in a recipe');
+    const pooled = withChanges({ kids: [...content.kids, special] });
+    pooled.balance.spawnWeights.special_a = 1;
+    expect(validateContent(pooled)).toContain('special kid "special_a" must not be in the spawn pool');
+  });
+
+  it('checks the planting numbers', () => {
+    const c = structuredClone(content);
+    c.balance.planting = { ...c.balance.planting, minKids: 6, specialOdds: [0.3, 0.2], rareOdds: [0, 1.5], rareVariants: ['a', 'a'], rareIncomeMultiplier: 0.5 };
+    const errors = validateContent(c);
+    expect(errors).toContain('balance.planting.minKids must not exceed maxKids');
+    expect(errors).toContain('balance.planting.specialOdds must be [floor, ceiling] chances in 0..1, floor <= ceiling');
+    expect(errors).toContain('balance.planting.rareOdds must be [floor, ceiling] chances in 0..1, floor <= ceiling');
+    expect(errors).toContain('balance.planting.rareVariants must be distinct, non-empty ids');
+    expect(errors).toContain('balance.planting.rareIncomeMultiplier must be a finite number >= 1');
+  });
+});

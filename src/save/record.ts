@@ -73,7 +73,8 @@ export function validateState(state: unknown, content: Content): string[] {
   if (!whole(s.potatokens)) p.push('potatokens is invalid');
   if (!whole(s.milestonesPaid)) p.push('milestonesPaid is invalid');
   if (!whole(s.gardenSpawns)) p.push('gardenSpawns is invalid');
-  // Plots (D-054): one to maxPlots, each empty or a seed of a known type, grown within range.
+  // Plots (D-061): one to maxPlots, each empty or a seed: the kids planted (known types, at
+  // most maxKids) and, once started, its sprout and how long it has grown.
   const plan = content.balance.planting;
   if (!Array.isArray(s.plots) || s.plots.length < 1 || s.plots.length > plan.maxPlots) p.push('plots is invalid');
   else {
@@ -82,8 +83,20 @@ export function validateState(state: unknown, content: Content): string[] {
       if (typeof plot !== 'object' || plot === null || !('seed' in plot)) return void p.push(`plot ${i} is invalid`);
       const seed = plot.seed as Record<string, unknown> | null;
       if (seed === null) return;
-      if (typeof seed !== 'object' || typeof seed.type !== 'string' || !kidIds.has(seed.type)) p.push(`plot ${i} seed type is invalid`);
-      else if (!finite(seed.grown) || (seed.grown as number) < 0 || (seed.grown as number) > plan.growSeconds) p.push(`plot ${i} seed grown is invalid`);
+      if (typeof seed !== 'object') return void p.push(`plot ${i} seed is invalid`);
+      const planted = seed.planted;
+      if (!Array.isArray(planted) || planted.length < 1 || planted.length > plan.maxKids || !planted.every((k) => typeof k === 'string' && kidIds.has(k))) {
+        p.push(`plot ${i} planted kids are invalid`);
+      }
+      if (!finite(seed.grown) || (seed.grown as number) < 0 || (seed.grown as number) > plan.growSeconds) p.push(`plot ${i} seed grown is invalid`);
+      const sprout = seed.sprout as Record<string, unknown> | null;
+      if (sprout === null) {
+        if (seed.grown !== 0) p.push(`plot ${i} grew before it started`);
+        return;
+      }
+      if (typeof sprout !== 'object' || typeof sprout.type !== 'string' || !kidIds.has(sprout.type)) p.push(`plot ${i} sprout is invalid`);
+      else if (sprout.variant !== null && !(typeof sprout.variant === 'string' && plan.rareVariants.includes(sprout.variant))) p.push(`plot ${i} sprout variant is invalid`);
+      else if (Array.isArray(planted) && planted.length < plan.minKids) p.push(`plot ${i} started with too few kids`);
     });
   }
   if (!finite(s.accountedUntil)) p.push('accountedUntil is invalid');
@@ -128,6 +141,7 @@ export function validateState(state: unknown, content: Content): string[] {
     if (typeof look !== 'object' || look === null || typeof look.body !== 'string' || typeof look.face !== 'string' || !finite(look.scale) || (look.scale as number) <= 0) {
       p.push(`kid ${String(id)} look is invalid`);
     }
+    if ('variant' in k && !(typeof k.variant === 'string' && content.balance.planting.rareVariants.includes(k.variant))) p.push(`kid ${String(id)} variant is invalid`);
     const box = k.box as Record<string, unknown> | undefined;
     if (typeof box !== 'object' || box === null || !(['left', 'top', 'right', 'bottom'] as const).every((f) => finite(box[f]))) {
       p.push(`kid ${String(id)} box is invalid`);
