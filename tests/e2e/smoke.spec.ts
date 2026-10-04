@@ -2700,6 +2700,131 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
   });
 });
 
+test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () => {
+  const variants = ['rainbow', 'mini', 'orbit', 'prism', 'ribbon', 'ripple', 'comet', 'petal', 'echo', 'zigzag'];
+
+  /** Ten rare Fire Kids and one ordinary, spaced apart, in view. Returns their ids (ordinary last). */
+  async function rares(page: Page): Promise<number[]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate((v) => {
+      const pk = window.__PK__!;
+      const out = v.map((x, i) => pk.debugAdd!('fire', 560 + (i % 4) * 230, 1250 + Math.floor(i / 4) * 260, { body: 'round', scale: 1 }, x));
+      out.push(pk.debugAdd!('fire', 1250, 1770, { body: 'round', scale: 1 }));
+      pk.centerOn(900, 1520);
+      return out;
+    }, variants);
+    await page.waitForTimeout(300);
+    return ids;
+  }
+
+  test('each rare shows its own mark and the sleeve; an ordinary kid shows neither', async ({ page }) => {
+    const ids = await rares(page);
+    const shown = await page.evaluate(() => window.__PK__!.rares());
+    expect(shown.map((r) => r.id).sort((a, b) => a - b)).toEqual(ids.slice(0, 10).sort((a, b) => a - b));
+    for (const [i, id] of ids.slice(0, 10).entries()) {
+      const r = shown.find((x) => x.id === id)!;
+      expect(r.mark).toBe(`fx_variant_${variants[i]}`);
+      expect(r.sleeve).toBe(true);
+      expect(r.sleeveAlpha).toBeGreaterThanOrEqual(0.8 - 1e-9);
+      expect(r.sleeveAlpha).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test("a mark's visible bottom sits 4 CSS px above its kid's box, centred, 24 to 36 px wide (§16.1)", async ({ page }) => {
+    const ids = await rares(page);
+    // Rainbow's visible trim in its 256 px canvas: x 23, y 98, 210 × 109.
+    const at = await page.evaluate((id) => {
+      const pk = window.__PK__!;
+      const k = pk.kids().find((c) => c.id === id)!;
+      const top = pk.worldToScreen(k.x, k.y + k.box.top).y;
+      const centre = pk.worldToScreen(k.x + (k.box.left + k.box.right) / 2, k.y).x;
+      return { top, centre, mark: pk.rares().find((r) => r.id === id)!.markBounds! };
+    }, ids[0]!);
+    const px = at.mark.w / 256;
+    expect(at.mark.y + (98 + 109) * px).toBeCloseTo(at.top - 4, 0);
+    expect(at.mark.x + (23 + 105) * px).toBeCloseTo(at.centre, 0);
+    expect(210 * px).toBeGreaterThanOrEqual(24 - 0.01);
+    expect(210 * px).toBeLessThanOrEqual(36 + 0.01);
+  });
+
+  test('a Mini is 0.72 the size of its ordinary twin, box and all', async ({ page }) => {
+    const ids = await rares(page);
+    const [mini, ordinary] = await page.evaluate(
+      ([a, b]) => [a, b].map((id) => window.__PK__!.kids().find((k) => k.id === id)!),
+      [ids[1]!, ids[10]!] as const,
+    );
+    expect(mini!.look.scale).toBeCloseTo(ordinary!.look.scale * 0.72, 12);
+    expect(mini!.box.right - mini!.box.left).toBeCloseTo((ordinary!.box.right - ordinary!.box.left) * 0.72, 9);
+  });
+
+  test('fusing a rare makes an ordinary kid: no mark, no sleeve', async ({ page }) => {
+    const ids = await rares(page);
+    const water = await page.evaluate(() => window.__PK__!.debugAdd!('water', 1020, 1770));
+    await page.waitForTimeout(200);
+    await dropOnto(page, water, ids[0]!);
+    await expect.poll(() => page.evaluate((id) => window.__PK__!.kids().some((k) => k.id === id), ids[0]!)).toBe(false);
+    const shown = await page.evaluate(() => window.__PK__!.rares().map((r) => r.id));
+    expect(shown).toHaveLength(9);
+    expect(shown).not.toContain(ids[0]);
+  });
+
+  test('a rare that sprouts live bursts, then settles into its idle sleeve (§15.5)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const before = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
+    // Per frame from the sprout's step: the newborn's sleeve opacity and scale.
+    const log = await page.evaluate(
+      (old) =>
+        new Promise<[number, number][]>((done) => {
+          const pk = window.__PK__!;
+          pk.debugReadySeed!(0, 'fire', 'comet');
+          const out: [number, number][] = [];
+          const end = performance.now() + 1200;
+          const frame = () => {
+            const r = pk.rares().find((x) => !old.includes(x.id));
+            if (r) out.push([r.sleeveAlpha, r.sleeveScale]);
+            if (performance.now() < end) requestAnimationFrame(frame);
+            else done(out);
+          };
+          requestAnimationFrame(frame);
+        }),
+      before,
+    );
+    expect(log.length).toBeGreaterThan(5);
+    // It burst: faded well below the idle floor while growing past its idle size...
+    const faded = log.filter(([a]) => a < 0.5);
+    expect(faded.length).toBeGreaterThan(0);
+    const settled = log[log.length - 1]!;
+    expect(Math.max(...faded.map(([, s]) => s))).toBeGreaterThan(settled[1] * 1.05);
+    // ...then settled into the idle pulse, at idle size.
+    expect(settled[0]).toBeGreaterThanOrEqual(0.8 - 1e-9);
+  });
+
+  test('reduced motion: the sleeve holds still at full opacity, and a newborn rare never bursts', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const before = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
+    const alphas = await page.evaluate(
+      (old) =>
+        new Promise<number[]>((done) => {
+          const pk = window.__PK__!;
+          pk.debugReadySeed!(0, 'fire', 'comet');
+          const out: number[] = [];
+          const end = performance.now() + 800;
+          const frame = () => {
+            const r = pk.rares().find((x) => !old.includes(x.id));
+            if (r) out.push(r.sleeveAlpha);
+            if (performance.now() < end) requestAnimationFrame(frame);
+            else done(out);
+          };
+          requestAnimationFrame(frame);
+        }),
+      before,
+    );
+    expect(alphas.length).toBeGreaterThan(5);
+    expect(new Set(alphas)).toEqual(new Set([1]));
+  });
+});
+
 test.describe('forgiving drop (D-051)', () => {
   /**
    * A crowded map: `centre` (water) inside a tight ring of eight kids that fuse with

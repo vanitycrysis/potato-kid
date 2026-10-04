@@ -44,11 +44,13 @@ declare global {
       centerOn: (x: number, y: number) => void;
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
-      debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
+      debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string) => number;
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => void;
+      /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
+      debugReadySeed?: (plot: number, type: string, variant: string | null) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
       /** The audio runtime's state (tests). */
@@ -68,6 +70,8 @@ declare global {
       dropTarget: () => number | null;
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
+      /** Rare marks and sleeves drawn now (GUI_MVP §16). */
+      rares: () => { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null }[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -213,6 +217,7 @@ async function boot(): Promise<void> {
     audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
     home: () => ({ state: scene.homeState }),
     dropTarget: () => scene.dropTarget,
+    rares: () => scene.raresShown,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
         const seed = p.seed;
@@ -226,7 +231,7 @@ async function boot(): Promise<void> {
     centerOn: (x, y) => scene.centerOn(x, y),
     ...(params.get('debug') === '1'
       ? {
-          debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => scene.debugAdd(t, x, y, look),
+          debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string) => scene.debugAdd(t, x, y, look, variant),
           debugAway: async (awayMs: number) => {
             scene.suspend();
             lastOffline = scene.resume(scene.game.state.accountedUntil + awayMs);
@@ -237,6 +242,7 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
+          debugReadySeed: (plot: number, type: string, variant: string | null) => scene.game.debugReadySeed(plot, { type, variant }),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
           debugGive: (amounts: { materials?: number; potatokens?: number }) => {

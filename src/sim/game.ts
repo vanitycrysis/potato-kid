@@ -878,6 +878,16 @@ export class Game {
   }
 
   /** Seconds a seed takes to grow. */
+  /** A planting-only special type (D-063). */
+  isSpecial(type: KidId): boolean {
+    return !!this.content.kids.find((k) => k.id === type)?.special;
+  }
+
+  /** A kid's look scale before any Mini shrink: its normal size (GUI_MVP §16.1). */
+  normalScale(kid: Pick<Kid, 'look' | 'variant'>): number {
+    return kid.variant === 'mini' ? kid.look.scale / this.content.balance.planting.miniScale : kid.look.scale;
+  }
+
   get growSeconds(): number {
     return this.content.balance.planting.growSeconds;
   }
@@ -905,11 +915,21 @@ export class Game {
   }
 
   /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */
-  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
-    const look = this.forceLook(this.rollLook(), force);
+  /** Debug only: a plot ready to sprout `sprout` at the next step (three Potato Kids in it). */
+  debugReadySeed(plot: number, sprout: Sprout): void {
+    const p = this.state.plots[plot];
+    if (!p) return;
+    p.seed = { planted: Array.from({ length: this.content.balance.planting.minKids }, () => ({ type: 'plain', look: { ...DEFAULT_LOOK } })), sprout, grown: this.growSeconds };
+  }
+
+  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>, variant?: string): Kid {
+    const forced = this.forceLook(this.rollLook(), force);
+    const look = variant === 'mini' ? this.mini(forced) : forced;
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
+    if (variant) kid.variant = variant;
     this.discover(type);
+    if (variant) this.discoverVariant(type, variant, []);
     this.syncRngState();
     return kid;
   }
