@@ -516,7 +516,11 @@ describe('schema 5: names and happiness (D-056, D-057)', () => {
       return validateState(s, content);
     };
     expect(check({ name: 'Sir Spud', happy: { left: 60, favourite: true } })).toEqual([]);
-    for (const bad of [{ name: '' }, { name: ' Spud' }, { name: 'Spud🥔' }, { name: 'x'.repeat(25) }, { name: 7 }]) expect(check(bad), JSON.stringify(bad)).toContain(`kid ${String(kid.id)} name is invalid`);
+    // A save checks a name's shape, and only a generous length cap: how a platform counts
+    // clusters must never make a good save unreadable (Codex review, FEED-NAME).
+    const cap = content.balance.naming.maxLength * 8;
+    for (const bad of [{ name: '' }, { name: ' Spud' }, { name: 'Spud🥔' }, { name: 'aㅤb' }, { name: 'x'.repeat(cap + 1) }, { name: 7 }]) expect(check(bad), JSON.stringify(bad)).toContain(`kid ${String(kid.id)} name is invalid`);
+    expect(check({ name: 'ൎന'.repeat(13) })).toEqual([]);
     const most = content.balance.feeding.favouriteSeconds;
     for (const bad of [{ left: 0, favourite: true }, { left: most + 1, favourite: false }, { left: 60 }, { left: Number.NaN, favourite: true }]) {
       expect(check({ happy: bad }), JSON.stringify(bad)).toContain(`kid ${String(kid.id)} happy is invalid`);

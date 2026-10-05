@@ -994,7 +994,9 @@ export class MapScene {
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
       // Over the planting target, the map holds still, armed or busy (GUI_MVP §13.1, §15.1).
       const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready' || this.overBusyHome;
-      if ((ex || ey) && !this.drag.noRoom && !overHome) {
+      // A press that may still be a tap on the kid (§18.1) never moves the map.
+      const maybeTap = this.kidTap !== null && performance.now() - this.kidTap.t <= TAP_MS;
+      if ((ex || ey) && !this.drag.noRoom && !overHome && !maybeTap) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();

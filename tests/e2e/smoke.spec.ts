@@ -3064,6 +3064,41 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toBeFocused();
   });
 
+  test('a rename while a plot is being chosen shows in its confirmation (Codex review round 6, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await card(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    await expect(card(page).getByText('Add Fire Kid to Plot 1?')).toBeVisible();
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    await card(page).getByLabel('Kid name').fill('Spud');
+    await card(page).locator('.name-save').click();
+    await expect(card(page).getByText('Add Spud to Plot 1?')).toBeVisible();
+    await expect(card(page).locator('.dex-home-who .dex-home-row-name')).toHaveText('Spud');
+  });
+
+  test('a tap on a kid near the edge never moves the map (Codex review round 6, FEED-NAME)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
+    // The kid just below the HUD: a held kid there sits in the top edge zone.
+    const top = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
+    await page.evaluate(([y]) => {
+      const pk = window.__PK__!;
+      pk.centerOn(800, 1500);
+      const at = pk.worldToScreen(800, 1500);
+      const zoom = (pk.worldToScreen(0, 100).y - pk.worldToScreen(0, 0).y) / 100;
+      pk.centerOn(800, 1500 + (at.y - (y! + 70)) / zoom);
+    }, [top] as const);
+    await page.waitForTimeout(200);
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(800, 1500));
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.move(k.x, k.y - 10);
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Fire Kid');
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(800, 1500))).toEqual(before);
+  });
+
   test('a refusal stays until the player moves on; a success goes after 2.5 s (Codex review round 5, FEED-NAME)', async ({ page }) => {
     await open(page);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();

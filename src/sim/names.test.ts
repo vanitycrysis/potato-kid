@@ -46,3 +46,30 @@ describe('grapheme clusters without Intl.Segmenter (Codex review, FEED-NAME)', (
     }
   });
 });
+
+describe('the fallback against the platform, fuzzed (Codex review round 6, FEED-NAME)', () => {
+  it('agrees on prepend letters, Hangul, conjuncts in many scripts, attaching letters and marks', () => {
+    const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    const pool = [
+      'a', 'é', '́', '̂', '1',
+      // Devanagari, Bengali, Malayalam (with its prepend dot reph), Myanmar, Khmer, Thai, Balinese.
+      'क', 'स', '्', 'ा', 'े', 'अ', 'ক', '্', 'ന', '്', 'ൎ',
+      'က', '္', 'ခ', 'ក', '្', 'ខ', 'ก', 'ำ', 'ᬓ', '᭄',
+      // Hangul: jamo L, V, T and syllables LV, LVT.
+      'ᄀ', 'ᅡ', 'ᆨ', '가', '각',
+    ];
+    let seed = 7;
+    const rand = (n: number) => ((seed = (seed * 1103515245 + 12345) % 2 ** 31), seed % n);
+    for (let i = 0; i < 20000; i++) {
+      let s = '';
+      const len = 1 + rand(10);
+      for (let j = 0; j < len; j++) s += pool[rand(pool.length)];
+      expect(graphemesFallback(s), JSON.stringify(s)).toEqual([...seg.segment(s)].map((x) => x.segment));
+    }
+    expect(graphemesFallback('ൎന'.repeat(13))).toHaveLength(13);
+  });
+
+  it('refuses invisible characters, alone or after a letter', () => {
+    for (const bad of ['ㅤ', 'aㅤb', 'a͏', 'aᅟ', 'Spud⁠']) expect(checkName(bad, 24), JSON.stringify(bad)).toMatchObject({ ok: false, reason: 'chars' });
+  });
+});

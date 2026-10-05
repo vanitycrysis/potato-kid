@@ -23,8 +23,8 @@ export interface PlotRouteOptions {
   content: Content;
   kidId: number;
   type: KidId;
-  /** The kid's name if it has one, else its type's (GUI_MVP §18.1). */
-  displayName: string;
+  /** The kid's name if it has one, else its type's (GUI_MVP §18.1), as it is now. */
+  displayName: () => string;
   ordinal: number;
   readOnly: () => boolean;
   /** An add is waiting for its result (one at a time, anywhere). */
@@ -50,16 +50,17 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
   const { scene, content, kidId, type } = o;
   const kidDef = content.kids.find((k) => k.id === type);
   const live = () => scene.game.state.world.kids.find((k) => k.id === kidId);
-  const title = el('h4', 'dex-home-confirm-title', `Add ${o.displayName} to Plot ${plot + 1}?`);
+  const title = el('h4', 'dex-home-confirm-title', `Add ${o.displayName()} to Plot ${plot + 1}?`);
   title.tabIndex = -1;
   const kid = live();
   const rare = rareMark(kid?.variant);
   const marks = [`Tier ${kidDef?.tier ?? 1}`, `Kid ${o.ordinal}`, ...(rare ? [rare] : []), ...(kidDef?.special ? ['Special'] : [])];
+  const whoName = el('span', 'dex-home-row-name', o.displayName());
   const who = el(
     'div',
     'dex-home-who',
     portrait(kidRig!, type, 48, kid?.look, kid?.variant ? { variant: kid.variant, miniScale: content.balance.planting.miniScale } : undefined),
-    el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', o.displayName), el('span', 'sheet-helper', marks.join(' · '))),
+    el('span', 'dex-home-row-text', whoName, el('span', 'sheet-helper', marks.join(' · '))),
   );
   const odds = el('div', 'dex-home-odds');
   const notices = [
@@ -89,6 +90,11 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
   const node = el('div', 'dex-home-step', title, who, odds, helperText, ...notices, why, keep, add);
   /** The plot's own kids now, and with this one added: recomputed as the plot or the kid changes. */
   const refresh = () => {
+    // A rename meanwhile shows here at once: this is the kid the Add would consume.
+    const name = o.displayName();
+    const heading = `Add ${name} to Plot ${plot + 1}?`;
+    if (title.textContent !== heading) title.textContent = heading;
+    if (whoName.textContent !== name) whoName.textContent = name;
     const p = content.balance.planting;
     const accepted = scene.game.state.plots[plot]?.seed?.planted ?? [];
     const me = live();

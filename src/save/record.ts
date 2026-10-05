@@ -1,4 +1,4 @@
-import { checkName, normalizeName } from '../sim/names';
+import { storedNameOk } from '../sim/names';
 import { BUILDING_IDS, type Content } from '../content/types';
 import type { PersistedState } from '../sim/game';
 
@@ -173,7 +173,7 @@ export function validateState(state: unknown, content: Content): string[] {
     }
     if ('variant' in k && !(typeof k.variant === 'string' && content.balance.planting.rareVariants.includes(k.variant))) p.push(`kid ${String(id)} variant is invalid`);
     // A name exactly as the sim stores one: already normalized and allowed (D-057).
-    if ('name' in k && !(typeof k.name === 'string' && checkName(k.name, content.balance.naming.maxLength).ok && normalizeName(k.name) === k.name)) p.push(`kid ${String(id)} name is invalid`);
+    if ('name' in k && !(typeof k.name === 'string' && storedNameOk(k.name, content.balance.naming.maxLength))) p.push(`kid ${String(id)} name is invalid`);
     // Happiness: time left, no more than a favourite lasts, and which kind (D-056).
     const h = k.happy as Record<string, unknown> | undefined;
     if ('happy' in k && !(typeof h === 'object' && h !== null && finite(h.left) && (h.left as number) > 0 && (h.left as number) <= content.balance.feeding.favouriteSeconds && typeof h.favourite === 'boolean')) {

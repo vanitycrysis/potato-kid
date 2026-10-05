@@ -417,7 +417,7 @@ export class KidCard {
         content: this.content,
         kidId: this.kidId,
         type,
-        displayName: this.displayName(),
+        displayName: () => this.displayName(),
         ordinal: this.ordinal(),
         readOnly: () => this.readOnly() || !this.kid(),
         busy: () => this.pending !== null,
