@@ -94,7 +94,12 @@ export class RareLayer {
 
   constructor(
     private readonly textures: Map<string, Texture>,
-    private readonly reducedMotion: boolean,
+    /**
+     * Reduced motion, as the player's preference is now: a change applies at once, a rare
+     * going still and a special's still sleeve keeping its first deadline (§16.2; Codex
+     * review, PR #77). Births are timed from admission, so none restarts.
+     */
+    public reducedMotion: boolean,
     /** The rig: a kid canvas's source size, ground anchor and world size. */
     private readonly rig: { canvas: [number, number]; groundAnchor: [number, number]; worldCanvasSize: number },
   ) {

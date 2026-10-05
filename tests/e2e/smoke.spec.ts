@@ -2746,6 +2746,24 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     expect(log.filter((a) => a < 0.5).length).toBeGreaterThan(0);
   });
 
+  test('turning reduced motion on mid-game stills the sleeves at once (Codex review, PR #77)', async ({ page }) => {
+    const ids = await rares(page);
+    const alphas = () => page.evaluate((id) => window.__PK__!.rares().find((r) => r.id === id)!.sleeveAlpha, ids[0]!);
+    // Pulsing: some frame below full opacity within a cycle.
+    const seen: number[] = [];
+    for (let i = 0; i < 12; i++) {
+      seen.push(await alphas());
+      await page.waitForTimeout(200);
+    }
+    expect(Math.min(...seen)).toBeLessThan(0.99);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForTimeout(100);
+    for (let i = 0; i < 12; i++) {
+      expect(await alphas()).toBe(1);
+      await page.waitForTimeout(200);
+    }
+  });
+
   test('reduced motion: the sleeve holds still at full opacity, and a newborn rare never bursts', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await boot(page, '?seed=3&debug=1&calm=1');

@@ -226,6 +226,9 @@ export class MapScene {
     this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
     if (this.plotsView) this.plotsView.root.eventMode = 'none';
     this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
+    // The preference can change while the game is open: the rare layer follows it at once.
+    const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+    motion?.addEventListener('change', (e) => (this.rareLayer.reducedMotion = e.matches));
     this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.rareLayer.root, this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
