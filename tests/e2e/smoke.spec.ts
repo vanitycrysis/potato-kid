@@ -2971,11 +2971,12 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     await expect(rows.nth(8)).toHaveAttribute('aria-label', `Echo: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
   });
 
-  test("a Mini's list portrait is Mini too: smaller about its ground, pebbles at its foot (§16.2)", async ({ page }) => {
+  test("a rare's list portrait shows its look: a Mini smaller with its pebbles, others their mark (§16.2; Codex review, PR #77)", async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => {
       window.__PK__!.debugAdd!('fire', 600, 1400, undefined, 'mini');
       window.__PK__!.debugAdd!('fire', 900, 1400);
+      window.__PK__!.debugAdd!('fire', 1200, 1400, undefined, 'comet');
     });
     await page.locator('.tray-cell').nth(0).click();
     await page.getByRole('button', { name: 'Add kids' }).first().click();
@@ -2984,6 +2985,10 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     await expect(rows.nth(0).locator('[data-asset="fx_variant_mini"]')).toHaveCount(1);
     expect(await rows.nth(0).locator('.portrait-canvas > .portrait-layer').first().evaluate((e) => (e as HTMLElement).style.transform)).toContain(`scale(${0.72})`);
     await expect(rows.nth(1).locator('[data-asset="fx_variant_mini"]')).toHaveCount(0);
+    // Any other rare shows its own mark there too, with no sleeve; an ordinary kid neither.
+    await expect(rows.nth(2).locator('[data-asset="fx_variant_comet"]')).toHaveCount(1);
+    await expect(rows.locator('[data-asset="fx_rare_sparkle"]')).toHaveCount(0);
+    await expect(rows.nth(1).locator('[data-asset^="fx_variant"]')).toHaveCount(0);
   });
 
   test('a first Comet sprout reads as found; the next Comet just sprouts (§15.5)', async ({ page }) => {
@@ -2999,6 +3004,60 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     await expect(card).toHaveCount(0, { timeout: 5000 });
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
     await expect(card).toContainText('Comet Fire Kid sprouted!');
+  });
+
+  test("a press just outside a small Mini's body, within 44 CSS px, picks it up (Codex review, PR #77)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => {
+      window.__PK__!.centerOn(800, 1500);
+      // Smaller than any rolled look (test only), so the target reaches well past its sprites.
+      return window.__PK__!.debugAdd!('fire', 800, 1500, { scale: 0.5 }, 'mini');
+    });
+    await page.waitForTimeout(200);
+    const at = await page.evaluate((i) => {
+      const pk = window.__PK__!;
+      const k = pk.kids().find((c) => c.id === i)!;
+      const a = pk.worldToScreen(k.x + k.box.left, k.y + k.box.top);
+      const b = pk.worldToScreen(k.x + k.box.right, k.y + k.box.bottom);
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w: b.x - a.x, h: b.y - a.y, kx: k.x };
+    }, id);
+    // Small on screen: its drawn box is well under 44 px wide.
+    expect(at.w).toBeLessThan(30);
+    // Right of its box, inside the 44 px target: press, drag 100 px, release.
+    const x = at.x + at.w / 2 + (22 - at.w / 2) / 2;
+    expect(x).toBeGreaterThan(at.x + at.w / 2);
+    await page.mouse.move(x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(x + 100, at.y, { steps: 6 });
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.kids().find((c) => c.id === i)!.x, id)).toBeGreaterThan(at.kx + 40);
+  });
+
+  test('a rare whose costume is still loading bursts once it appears (Codex review, PR #77)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const type = 'hero';
+    expect(await page.evaluate((t) => window.__PK__!.debugLoadedCostumes!().includes(t), type)).toBe(false);
+    const before = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
+    const log = await page.evaluate(
+      ([old, t]) =>
+        new Promise<number[]>((done) => {
+          const pk = window.__PK__!;
+          pk.debugReadySeed!(0, t, 'comet');
+          const out: number[] = [];
+          const end = performance.now() + 3000;
+          const frame = () => {
+            const r = pk.rares().find((x) => !old.includes(x.id));
+            if (r) out.push(r.sleeveAlpha);
+            if (performance.now() < end) requestAnimationFrame(frame);
+            else done(out);
+          };
+          requestAnimationFrame(frame);
+        }),
+      [before, type] as const,
+    );
+    // Drawn only once its costume arrived, and it burst then: faded well below the idle floor.
+    expect(log.length).toBeGreaterThan(5);
+    expect(log.filter((a) => a < 0.5).length).toBeGreaterThan(0);
   });
 
   test('reduced motion: the sleeve holds still at full opacity, and a newborn rare never bursts', async ({ page }) => {
