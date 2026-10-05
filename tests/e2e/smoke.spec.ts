@@ -3121,6 +3121,131 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
   });
 });
 
+test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)', () => {
+  const card = (page: Page) => page.getByRole('dialog');
+  const personality = JSON.parse(readFileSync('assets/data/personality_v1.json', 'utf8')).types as Record<string, { description: string; favouriteFood: string; hatedFood: string }>;
+  const foods = JSON.parse(readFileSync('src/content/balance.json', 'utf8')).feeding as { foods: { id: string; name: string; price: number }[]; favouriteSeconds: number };
+  const foodName = (id: string) => foods.foods.find((f) => f.id === id)!.name;
+  const fire = personality.fire!;
+
+  /** A Fire Kid in view, Materials to spend, and its card open by a tap. */
+  async function open(page: Page, materials = 1000): Promise<number> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate((m) => {
+      window.__PK__!.debugGive!({ materials: m });
+      window.__PK__!.centerOn(800, 1500);
+      return window.__PK__!.debugAdd!('fire', 800, 1500);
+    }, materials);
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.click(k.x, k.y - 20);
+    await expect(card(page).locator('.sheet-title')).toHaveText('Fire Kid');
+    return id;
+  }
+
+  test('a tap opens the card: who the kid is, its personality, and its two foods; a drag does not', async ({ page }) => {
+    const id = await open(page);
+    await expect(card(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 1');
+    await expect(card(page)).toContainText(fire.description);
+    await expect(card(page).locator('.kid-card-food').first()).toContainText(foodName(fire.favouriteFood));
+    await expect(card(page).locator('.kid-card-food').nth(1)).toContainText(foodName(fire.hatedFood));
+    await expect(card(page)).toContainText('Not happy right now.');
+    // The tap left the kid where it was.
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+    // Closed, focus goes to the Dex button.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('.dex-button')).toBeFocused();
+    // A drag moves the kid and opens nothing.
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(k.x + 120, k.y - 20, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('its favourite: charged, happy for longer, the sun at its foot; the hated food is refused for free', async ({ page }) => {
+    const id = await open(page);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    await expect(card(page).locator('.sheet-title')).toHaveText('Feed Fire Kid');
+    const fav = foods.foods.find((f) => f.id === fire.favouriteFood)!;
+    // The favourite comes first, marked; the hated food last, refused.
+    await expect(card(page).locator('.feed-row').first()).toContainText(`${fav.name}Favourite`);
+    const refused = card(page).locator('.feed-row').last();
+    await expect(refused).toContainText(`This kid won’t eat ${foodName(fire.hatedFood)}. Nothing charged.`);
+    await expect(refused.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
+    await expect(card(page).locator('.feed-row')).toHaveCount(12);
+    await card(page).getByRole('button', { name: `Feed ${fav.name}, ${fav.price} Materials` }).click();
+    await expect(card(page).locator('.kid-status')).toContainText(`${fav.name} is Fire Kid’s favourite!`);
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThanOrEqual(1000 - fav.price + 1);
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.rares().find((r) => r.id === i)?.happy ?? false, id)).toBe(true);
+    await card(page).getByRole('button', { name: 'Back' }).click();
+    await expect(card(page).locator('.kid-card-happy')).toContainText(/Happy · (1:00:00|59:5\d)/);
+    await expect(card(page).locator('.kid-card-happy')).toContainText('Counts as Tier 2 when added to a plot; odds stay capped.');
+  });
+
+  test('short of Materials, a food says how many more, and nothing is sent', async ({ page }) => {
+    await open(page, 40);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    const row = card(page).locator('.feed-row').nth(1);
+    await expect(row).toContainText(/Need \d+ more Materials\./);
+    await expect(row.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('naming: saved for its price, unchanged is free, a bad name says why, and the name can go back free', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    const input = card(page).getByLabel('Kid name');
+    const save = card(page).locator('.name-save');
+    await input.fill('Spud 🥔');
+    await expect(card(page).locator('.name-error')).toHaveText('Use letters, numbers, spaces, apostrophes or hyphens.');
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await input.fill('   ');
+    await expect(card(page).locator('.name-error')).toHaveText('Enter a name, or keep the type name.');
+    await input.fill('  Sir   Spud ');
+    await expect(card(page).locator('.name-count')).toHaveText('8 / 24 characters');
+    await expect(save).toHaveText('Save name · 50 Materials');
+    await input.press('Enter');
+    await expect(card(page).locator('.sheet-title')).toHaveText('Sir Spud');
+    await expect(card(page).locator('.sheet-subtitle')).toHaveText('Fire Kid');
+    await expect(card(page).locator('.kid-status')).toContainText('Named Sir Spud.');
+    const after = await page.evaluate(() => window.__PK__!.wallet().materials);
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    await expect(input).toHaveValue('Sir Spud');
+    await expect(save).toHaveText('Name unchanged');
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await card(page).getByRole('button', { name: 'Use type name · free' }).click();
+    await expect(card(page)).toContainText('This kid will be called Fire Kid.');
+    await card(page).getByRole('button', { name: 'Remove name' }).click();
+    await expect(card(page).locator('.sheet-title')).toHaveText('Fire Kid');
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeGreaterThanOrEqual(after);
+  });
+
+  test('a kid that leaves while its card is open: the card stays, read-only, and says so (§18.3)', async ({ page }) => {
+    await open(page);
+    // Fire + Water make Steam: the kid fuses away.
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
+    await expect(card(page).locator('.kid-status')).toContainText('This kid has already left the map.');
+    await expect(card(page).locator('.sheet-title')).toHaveText('Fire Kid');
+    await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    await expect(card(page).getByRole('button', { name: 'Name', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    await expect(card(page).getByRole('button', { name: 'Choose a plot' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('planting from the card: one plot, Add, then the plot detail explains (§15.6, §18.3)', async ({ page }) => {
+    const id = await open(page);
+    await card(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await card(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    await card(page).getByRole('button', { name: 'Add this kid' }).click();
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(false);
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Plot 1');
+    await expect(page.getByRole('dialog').locator('.plot-note')).toContainText('Fire Kid added to Plot 1.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(1);
+  });
+});
+
 test.describe('forgiving drop (D-051)', () => {
   /**
    * A crowded map: `centre` (water) inside a tight ring of eight kids that fuse with

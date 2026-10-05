@@ -76,7 +76,7 @@ declare global {
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** Rare marks and sleeves drawn now (GUI_MVP §16). */
-      rares: () => { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null }[];
+      rares: () => { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null; happy: boolean }[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */

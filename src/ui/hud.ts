@@ -9,6 +9,7 @@ import { BuildingSheets } from './buildings';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
 import type { PlotsSnapshot } from './gardenPlots';
+import { KidCard } from './kidCard';
 import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
@@ -83,6 +84,7 @@ export class Hud {
   private readonly buildings: BuildingSheets;
   private readonly dex: Dex;
   private readonly notes: PlantingNotes;
+  private readonly kidCard: KidCard;
   private readonly dexButton = el('button', 'ui-button dex-button', icon('icon_dex', '', 'ui-icon-24'));
   private readonly trayCells = new Map<string, HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
@@ -149,6 +151,10 @@ export class Hud {
     this.notes = new PlantingNotes(settings);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
     this.dex = new Dex(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex button
+    // (world kids are no focus targets); a read-only save can still browse it.
+    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    scene.listenKidTap((kidId) => this.kidCard.open(kidId, this.dexButton));
     // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
     const gardenCell = tray.querySelector<HTMLElement>('.tray-cell');
     scene.listenPlotTap((plot) => {
@@ -414,7 +420,7 @@ export class Hud {
 
   private onStep(events: GameEvent[]): void {
     // A sheet shows its own command's refusal inline; the world never repeats it (GUI_MVP §9).
-    const inSheet = new Set([...this.buildings.onStep(events), ...this.dex.onStep(events)]);
+    const inSheet = new Set([...this.buildings.onStep(events), ...this.dex.onStep(events), ...this.kidCard.onStep(events)]);
     const items = feedbackFor(
       events.filter((e) => !inSheet.has(e)),
       this.known,

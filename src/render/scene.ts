@@ -319,7 +319,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' | 'feed' | 'name' }>): void {
     this.pending.push(cmd);
   }
 
@@ -944,10 +944,10 @@ export class MapScene {
     const rares: RareKid[] = [];
     for (const k of kids) {
       const special = this.game.isSpecial(k.type);
-      if (!k.variant && !special) continue;
+      if (!k.variant && !special && !k.happy) continue;
       if (!this.views.has(k.id)) continue;
       const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
-      rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k) });
+      rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k), happy: !!k.happy });
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
   }

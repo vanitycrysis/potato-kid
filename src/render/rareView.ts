@@ -72,11 +72,14 @@ export interface RareKid {
   box: Box;
   /** Its normal (un-Mini) look scale. */
   normalScale: number;
+  /** Happy from food (D-056): the sun at its left foot, until it wears off (GUI_MVP §17.2). */
+  happy?: boolean;
 }
 
 interface Item {
   sleeve: Sprite | null;
   mark: Sprite | null;
+  happy: Sprite | null;
 }
 
 export class RareLayer {
@@ -115,12 +118,28 @@ export class RareLayer {
       const birth = this.births.get(k.id) ?? undefined;
       const burst = birth === undefined ? null : burstAt(now - birth, this.reducedMotion, !!k.variant);
       if (birth !== undefined && !burst) this.births.delete(k.id);
-      if (!k.variant && !burst) continue;
+      if (!k.variant && !burst && !k.happy) continue;
       seen.add(k.id);
       let item = this.items.get(k.id);
       if (!item) {
-        item = { sleeve: null, mark: null };
+        item = { sleeve: null, mark: null, happy: null };
         this.items.set(k.id, item);
+      }
+      // Happy: a still sun at the left foot, at normal size (a Mini's too), no motion.
+      if (k.happy) {
+        item.happy ??= this.sprite('fx_happy', this.rig.groundAnchor);
+        item.happy.position.set(k.x, k.y);
+        item.happy.scale.set((k.normalScale * this.rig.worldCanvasSize) / this.rig.canvas[0]);
+      } else if (item.happy) {
+        item.happy.destroy();
+        item.happy = null;
+      }
+      if (!k.variant && !burst) {
+        item.sleeve?.destroy();
+        item.sleeve = null;
+        item.mark?.destroy();
+        item.mark = null;
+        continue;
       }
       const box = { left: k.x + k.box.left, top: k.y + k.box.top, right: k.x + k.box.right, bottom: k.y + k.box.bottom };
 
@@ -160,17 +179,19 @@ export class RareLayer {
       if (seen.has(id)) continue;
       item.sleeve?.destroy();
       item.mark?.destroy();
+      item.happy?.destroy();
       this.items.delete(id);
     }
     for (const id of this.births.keys()) if (!alive.has(id)) this.births.delete(id);
   }
 
   /** Test hook: what each drawn rare shows. */
-  shown(): { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null }[] {
+  shown(): { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null; happy: boolean }[] {
     return [...this.items].map(([id, i]) => {
       const b = i.mark?.getBounds();
       return {
         id,
+        happy: !!i.happy,
         mark: i.mark ? ([...this.textures].find(([, t]) => t === i.mark!.texture)?.[0] ?? null) : null,
         sleeve: !!i.sleeve,
         sleeveAlpha: i.sleeve?.alpha ?? 0,

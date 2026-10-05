@@ -450,7 +450,6 @@ export class KidCard {
     s.body.replaceChildren(
       this.back('card'),
       status.node,
-      el('h3', 'sheet-section kid-card-heading', `Feed ${this.displayName()}`),
       replaces,
       ...(fav
         ? [

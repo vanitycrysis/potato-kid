@@ -1141,3 +1141,172 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* --- The kid card, feeding and naming (GUI_MVP §17-18) ------------------------------- */
+.kid-card-portrait {
+  display: flex;
+  justify-content: center;
+}
+.kid-card-marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+.kid-card-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.kid-card-tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.kid-card-tier .sheet-helper,
+.kid-card-happy p,
+.kid-card-planting p,
+.kid-status ~ p,
+.sheet-body p.kid-card-food {
+  margin: 0;
+}
+.kid-card-heading {
+  margin: 16px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.kid-card-trait {
+  margin: 8px 0 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.kid-card-happy-line,
+.kid-card-food {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.kid-card-food strong {
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kid-card-planting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kid-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ui-button.kid-card-action {
+  min-height: 48px;
+}
+.kid-status:focus {
+  outline: none;
+}
+
+/* Feeding (§17.2): one 64 px row per food; the price always on its button. */
+.feed-row {
+  min-height: 64px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 32px 1fr 160px;
+  align-items: start;
+  column-gap: 8px;
+}
+.feed-row > img {
+  margin-top: 8px;
+}
+.feed-row.is-selected {
+  outline: 3px solid var(--ui-ink);
+  outline-offset: -3px;
+}
+.feed-text {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+}
+.feed-name {
+  font-size: 18px;
+  line-height: 24px;
+}
+.feed-relation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.ui-button.feed-button {
+  width: 160px;
+  min-height: 48px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.feed-button .action-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.feed-price {
+  font-size: 16px;
+  line-height: 22px;
+}
+.feed-short,
+.feed-refused {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+}
+/* Too narrow for the button beside the name: it goes below, full width (§17.2). */
+@media (max-width: 300px) {
+  .feed-row {
+    grid-template-columns: 32px 1fr;
+  }
+  .ui-button.feed-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+/* Naming (§18.2). */
+.name-portrait {
+  margin-top: 8px;
+}
+.name-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.name-input {
+  min-height: 48px;
+  font: inherit;
+  font-size: 18px;
+  padding: 0 12px;
+  border: 2px solid var(--ui-ink);
+  border-radius: 8px;
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+}
+.name-input:focus {
+  outline: 2px solid var(--ui-ink);
+  outline-offset: 2px;
+}
+.name-count,
+.name-error {
+  margin: 0;
+}
+.name-error:empty {
+  display: none;
+}
+.ui-button.name-save {
+  width: 100%;
+  min-height: 48px;
+}
