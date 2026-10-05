@@ -801,6 +801,10 @@
   border-image-source: var(--ui-button-selected);
 }
 .dex-home-row-text {
+  flex: 1;
+  /* A kid's name can be one long word: it wraps, inside the row (GUI_MVP §18.2). */
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
 }
@@ -1108,6 +1112,8 @@
 }
 .picker-row-text {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
 }

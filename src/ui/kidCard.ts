@@ -33,6 +33,8 @@ export interface CardSnapshot {
   view: View;
   draft: string | null;
   back: { label: string; go: () => void } | null;
+  /** The kid as the card last knew it, so a card whose kid has left comes back too (§18.3). */
+  seen: Seen;
 }
 
 /** What the card last knew of its kid: kept when the kid leaves (§18.3). */
@@ -126,12 +128,12 @@ export class KidCard {
   /** Where the open card is: its kid, page, Name draft and way back. */
   snapshot(): CardSnapshot | null {
     if (!this.sheet) return null;
-    return { kidId: this.kidId, view: this.view, draft: this.draft, back: this.backTo };
+    return { kidId: this.kidId, view: this.view, draft: this.draft, back: this.backTo, seen: { ...this.seen!, look: { ...this.seen!.look } } };
   }
 
   /** Back where a snapshot was (its kid still on the map): the same page, draft and scroll. */
   restore(s: CardSnapshot, launcher: HTMLElement | null, scrollTop: number): void {
-    this.open(s.kidId, launcher, s.back ?? undefined);
+    this.open(s.kidId, launcher, s.back ?? undefined, s.seen);
     if (!this.sheet) return;
     this.draft = s.draft;
     if (s.view !== 'card') this.show(s.view);
@@ -143,13 +145,17 @@ export class KidCard {
     return this.sheet ? this.kidId : null;
   }
 
-  open(kidId: number, launcher: HTMLElement | null, back?: { label: string; go: () => void }): void {
+  /**
+   * Opens a kid's card. `seen`: what an interrupted card last showed; with it, a kid that has
+   * since left still gets its card back, read-only (§18.3).
+   */
+  open(kidId: number, launcher: HTMLElement | null, back?: { label: string; go: () => void }, seen?: Seen): void {
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
-    if (!kid) return;
+    if (!kid && !seen) return;
     this.kidId = kidId;
     this.launcher = launcher;
     this.backTo = back ?? null;
-    this.seen = { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant };
+    this.seen = kid ? { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant } : seen!;
     this.view = 'card';
     // An action still waiting for its result stays waiting: it answers here, or in the world.
     this.status = null;
@@ -613,6 +619,8 @@ export class KidCard {
       clear.focus();
     });
     const remove = this.button('Remove name', 'ui-primary dex-home-action', () => this.send({ type: 'name', name: null }));
+    // Its acceptance has its own tap: no click tap first (as Save name).
+    remove.dataset.cue = 'success';
     const confirm = el('div', 'dex-home-confirm ui-surface', confirmTitle, el('p', 'sheet-body-text', `This kid will be called ${this.typeName(type)}.`), keep, remove);
     confirm.hidden = true;
     s.body.replaceChildren(

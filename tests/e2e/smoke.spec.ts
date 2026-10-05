@@ -2019,6 +2019,50 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await expect(page.locator('.dex-button')).toBeFocused();
   });
 
+  test('a 24-letter name wraps inside the Dex row and the picker row (Codex review round 4, FEED-NAME)', async ({ page }) => {
+    // A phone: 24 W's are wider than a row's text column.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const ids = await fireDetail(page);
+    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'name', kidId: id, name: 'W'.repeat(24) }), ids[0]!);
+    const row = dialog(page).getByRole('button', { name: new RegExp(`^${'W'.repeat(24)}, Fire Kid`) });
+    await expect(row).toBeVisible();
+    // The name itself stays inside the row (a button would just clip it).
+    expect(
+      await row.evaluate((r) => {
+        const name = r.querySelector('.dex-home-row-name')!.getBoundingClientRect();
+        return name.right <= r.getBoundingClientRect().right + 0.5 && r.getBoundingClientRect().right <= r.closest('.sheet')!.getBoundingClientRect().right;
+      }),
+    ).toBe(true);
+    await page.keyboard.press('Escape');
+    await page.locator('.tray-cell').nth(0).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Add kids' }).first().click();
+    const picker = page.getByRole('dialog').locator('.picker-row').nth(0);
+    await expect(picker.locator('.picker-row-name')).toHaveText('W'.repeat(24));
+    expect(
+      await picker.evaluate((r) => {
+        const box = r.querySelector('.picker-check')!.getBoundingClientRect();
+        const row = r.getBoundingClientRect();
+        return box.right <= row.right + 0.5 && r.scrollWidth <= r.clientWidth + 1;
+      }),
+    ).toBe(true);
+  });
+
+  test('a card whose kid has left comes back after the return summary too, read-only, draft kept (Codex review round 4, FEED-NAME)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await sheet(page).getByRole('button', { name: 'Name', exact: true }).click();
+    await sheet(page).getByLabel('Kid name').fill('Sir Sp');
+    // Fire + Water make Steam: the kid fuses away, then the app is away a while.
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(sheet(page).locator('.kid-status')).toContainText('This kid has already left the map.');
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Name this kid');
+    await expect(sheet(page).getByLabel('Kid name')).toHaveValue('Sir Sp');
+    await expect(sheet(page).locator('.kid-status')).toContainText('This kid has already left the map.');
+    await expect(sheet(page).getByLabel('Kid name')).toBeDisabled();
+  });
+
   test('the return summary hands back a kid card on its Name page, with the draft (Codex review, FEED-NAME)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
@@ -2927,6 +2971,8 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(save).toHaveText('Name unchanged');
     await expect(save).toHaveAttribute('aria-disabled', 'true');
     await card(page).getByRole('button', { name: 'Use type name · free' }).click();
+    // Its acceptance plays the one tap: no click tap first (Codex review round 4).
+    await expect(card(page).getByRole('button', { name: 'Remove name' })).toHaveAttribute('data-cue', 'success');
     await expect(card(page)).toContainText('This kid will be called Fire Kid.');
     await card(page).getByRole('button', { name: 'Remove name' }).click();
     await expect(card(page).locator('.sheet-title')).toHaveText('Fire Kid');
