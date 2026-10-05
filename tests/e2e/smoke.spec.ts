@@ -727,6 +727,41 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
   expect(errors).toEqual([]);
 });
 
+test('a first-variant card waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77)', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.route('**/kid_lantern_*', async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.continue();
+  });
+  await boot(page, '?seed=3&debug=1&calm=1');
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
+  // A Lantern Kid fuses: the type is known, its costume still downloading.
+  await dropOnto(page, hero, glass);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
+  // Per frame until its card shows: the Comet Lantern's card, and whether the kid is drawn.
+  const log = await page.evaluate(
+    () =>
+      new Promise<[boolean, boolean][]>((done) => {
+        const pk = window.__PK__!;
+        const before = pk.kids().map((k) => k.id);
+        pk.debugReadySeed!(0, 'lantern', 'comet');
+        const out: [boolean, boolean][] = [];
+        const end = performance.now() + 20_000;
+        const frame = () => {
+          const card = (document.querySelector('.feedback')?.textContent ?? '').includes('Comet found');
+          const drawn = pk.rares().some((r) => !before.includes(r.id));
+          out.push([card, drawn]);
+          if (card || performance.now() > end) done(out);
+          else requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+      }),
+  );
+  expect(log.filter(([card, drawn]) => card && !drawn)).toEqual([]);
+  expect(log[log.length - 1]).toEqual([true, true]);
+});
+
 test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => {
   const measure = (page: Page) =>
     page.evaluate(() => ({
