@@ -3197,6 +3197,20 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).locator('.kid-card-happy')).toContainText('Counts as Tier 2 when added to a plot; odds stay capped.');
   });
 
+  test("the Dex detail shows the type's personality too, after the rare rows (§18.1)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
+    await page.locator('.dex-button').click();
+    const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+    await dex.locator('[data-kid="fire"]').click();
+    const blocks = dex.locator('.dex-personality');
+    await expect(blocks).toContainText(fire.description);
+    await expect(blocks.locator('.kid-card-food').first()).toContainText(foodName(fire.favouriteFood));
+    // Order: rare rows, then personality, then the live copies.
+    const order = await dex.evaluate((d) => ['.dex-rare-rows', '.dex-personality', '.dex-home'].map((s) => d.querySelector(s)!.getBoundingClientRect().top));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+  });
+
   test('short of Materials, a food says how many more, and nothing is sent', async ({ page }) => {
     await open(page, 40);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();

@@ -1,3 +1,4 @@
+import { personalityBlocks } from './kidCard';
 import { kidRig } from '../content/artData';
 import type { Content, KidId, RecipeDef } from '../content/types';
 import { pairKey } from '../content/validate';
@@ -469,6 +470,8 @@ export class Dex {
       el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type) * 3600)} Materials / h`),
       el('h3', 'sheet-section dex-rare-heading', 'Rare variants'),
       rareBox,
+      // The type's personality, as on a kid's card (GUI_MVP §18.1); never one kid's name or mood.
+      el('section', 'dex-personality', ...personalityBlocks(this.content, type)),
       p.home.root,
       el('h3', 'sheet-section', 'Found recipes'),
       foundBox,

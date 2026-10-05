@@ -35,6 +35,29 @@ interface Seen {
 
 const cap = (s: string) => `${s[0]!.toUpperCase()}${s.slice(1)}`;
 
+/**
+ * A type's Personality blocks (GUI_MVP §18.1): its description, then Likes and Hates (each
+ * food's icon and name before the prose) and Hobbies. The same on a kid's card and in the
+ * Dex's type detail.
+ */
+export function personalityBlocks(content: Content, type: KidId): HTMLElement[] {
+  const p = content.personality[type];
+  const food = (id: string | undefined, prose: string | undefined) => {
+    const f = id ? content.balance.feeding.foods.find((x) => x.id === id) : undefined;
+    return el('p', 'sheet-body-text kid-card-food', ...(f ? [icon(`icon_food_${f.id}`, '', 'ui-icon-24'), el('strong', '', f.name), ' '] : []), prose ?? '');
+  };
+  return [
+    el('h3', 'sheet-section kid-card-heading', 'Personality'),
+    el('p', 'sheet-body-text', p?.description ?? 'Personality is being written.'),
+    el('h4', 'kid-card-trait', 'Likes'),
+    food(p?.favouriteFood, p?.likes),
+    el('h4', 'kid-card-trait', 'Hates'),
+    food(p?.hatedFood, p?.hates),
+    el('h4', 'kid-card-trait', 'Hobbies'),
+    el('p', 'sheet-body-text', p?.hobbies ?? ''),
+  ];
+}
+
 export class KidCard {
   private sheet: OpenSheet | null = null;
   private kidId = 0;
@@ -306,21 +329,9 @@ export class KidCard {
     const happy = el('div', 'kid-card-happy');
     happy.setAttribute('aria-live', 'off');
 
-    const p = this.content.personality[type];
-    const foodLine = (id: string | undefined, prose: string | undefined) => {
-      const f = id ? this.food(id) : undefined;
-      return el('p', 'sheet-body-text kid-card-food', ...(f ? [icon(`icon_food_${f.id}`, '', 'ui-icon-24'), el('strong', '', f.name), ' '] : []), prose ?? '');
-    };
     const personality = [
       ...(special && !variant ? [el('p', 'sheet-helper', 'Found only through planting. No fusion recipes. Special kids cannot be bought.')] : []),
-      el('h3', 'sheet-section kid-card-heading', 'Personality'),
-      el('p', 'sheet-body-text', p?.description ?? 'Personality is being written.'),
-      el('h4', 'kid-card-trait', 'Likes'),
-      foodLine(p?.favouriteFood, p?.likes),
-      el('h4', 'kid-card-trait', 'Hates'),
-      foodLine(p?.hatedFood, p?.hates),
-      el('h4', 'kid-card-trait', 'Hobbies'),
-      el('p', 'sheet-body-text', p?.hobbies ?? ''),
+      ...personalityBlocks(this.content, type),
     ];
 
     // Planting (§15.6): what it does, then Choose a plot, in this sheet.
