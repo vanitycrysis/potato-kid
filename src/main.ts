@@ -48,7 +48,7 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => void;
       /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
       debugReadySeed?: (plot: number, type: string, variant: string | null) => void;
       /**
@@ -255,7 +255,7 @@ async function boot(): Promise<void> {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => scene.command(cmd),
         }
       : {}),
     };

@@ -241,6 +241,8 @@ export class KidCard {
   private statusBox(): { node: HTMLElement; update(): void } {
     const node = el('div', 'plot-note kid-status');
     node.setAttribute('role', 'status');
+    // Focus can land here when what it was on goes away (a stale kid's name input).
+    node.tabIndex = -1;
     node.hidden = true;
     let shown = '';
     return {
@@ -609,9 +611,11 @@ export class KidCard {
           confirm.hidden = true;
         } else if (confirm.hidden && clear.hidden) clear.hidden = false;
         this.setEnabled(remove, !!kid && !this.readOnly() && !this.pending);
+        // Gone while typing: stop editing, keep the draft shown, and move focus to the
+        // notice first, so it never falls out of the sheet (§18.3; Codex review).
+        const typing = document.activeElement === input;
+        if (!kid && typing) status.node.focus();
         input.disabled = !kid || this.readOnly();
-        // Gone while typing: stop editing, keep the draft shown (§18.3).
-        if (!kid && document.activeElement === input) status.node.focus();
       },
     };
   }

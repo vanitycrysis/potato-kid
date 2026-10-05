@@ -7,7 +7,8 @@ import type { GameEvent } from '../sim/game';
 
 export type Cue = 'sfx_discovery' | 'sfx_fusion' | 'sfx_upgrade' | 'sfx_plant' | 'sfx_spawn' | 'sfx_place' | 'sfx_pick_up' | 'sfx_ui_tap' | 'sfx_spend';
 
-const PRIORITY: Cue[] = ['sfx_discovery', 'sfx_fusion', 'sfx_upgrade', 'sfx_plant', 'sfx_spawn', 'sfx_place', 'sfx_pick_up'];
+// A bite or a name accepted is a quiet UI tap, below everything else (GUI_MVP §17.2, §18.2).
+const PRIORITY: Cue[] = ['sfx_discovery', 'sfx_fusion', 'sfx_upgrade', 'sfx_plant', 'sfx_spawn', 'sfx_place', 'sfx_pick_up', 'sfx_ui_tap'];
 
 /** The one cue for a step's events, or null. Offline arrivals are silent. */
 export function cueFor(events: GameEvent[]): Cue | null {
@@ -23,6 +24,7 @@ export function cueFor(events: GameEvent[]): Cue | null {
     else if (e.type === 'spawned' && e.source !== 'offline') consider('sfx_spawn');
     else if (e.type === 'dropped') consider('sfx_place');
     else if (e.type === 'pickedUp') consider('sfx_pick_up');
+    else if (e.type === 'fed' || e.type === 'named') consider('sfx_ui_tap');
   }
   return best < 0 ? null : PRIORITY[PRIORITY.length - best]!;
 }

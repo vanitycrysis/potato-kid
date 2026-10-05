@@ -2710,6 +2710,27 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(box).toBeChecked();
   });
 
+  test('a happy kid counts one tier higher in every preview: the picker, the plot and its review (Codex review, FEED-NAME)', async ({ page }) => {
+    // Three Chef Kids (T2) in Plot 1; a fourth, fed, waits on the map.
+    const [chef] = await garden(page, ['chef']);
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugGive!({ materials: 1000 });
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('chef', 1400 + i * 200, 2700)), plot: 0 });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
+    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }), chef!);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    await sheet(page).locator('.picker-row').nth(0).click();
+    // 3 × T2 + one happy T2: mean tier 2.25 → 12.92 % / 6.46 % (§15.3), not 12.5 % / 6.25 %.
+    await expect(sheet(page).locator('.picker-lines')).toContainText('Special roll: 10% → 12.92%');
+    await expect(sheet(page).locator('.picker-lines')).toContainText('Rare roll: 5% → 6.46%');
+    await sheet(page).locator('.picker-add').click();
+    await expect(sheet(page).locator('.plot-odds')).toContainText('Special roll: 12.92%');
+    await sheet(page).locator('.plot-start').click();
+    await expect(sheet(page).locator('.plot-review')).toContainText('Special roll: 12.92%');
+  });
+
   test('a full plot sparkles beside Start growing and takes no more kids (§15.4)', async ({ page }) => {
     await garden(page);
     await plantPlain(page, 5);
@@ -3266,6 +3287,19 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toHaveAttribute('aria-disabled', 'true');
     await expect(card(page).getByRole('button', { name: 'Name', exact: true })).toHaveAttribute('aria-disabled', 'true');
     await expect(card(page).getByRole('button', { name: 'Choose a plot' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('typing a name when the kid fuses away: focus stays in the sheet, on the notice (Codex review, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    const input = card(page).getByLabel('Kid name');
+    await input.fill('Spud');
+    await expect(input).toBeFocused();
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
+    await expect(card(page).locator('.kid-status')).toBeFocused();
+    await expect(card(page).locator('.kid-status')).toContainText('This kid has already left the map.');
+    await expect(input).toBeDisabled();
+    await expect(input).toHaveValue('Spud');
   });
 
   test('planting from the card: one plot, Add, then the plot detail explains (§15.6, §18.3)', async ({ page }) => {

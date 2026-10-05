@@ -481,7 +481,8 @@ export class GardenPlots {
   /** The plot's two rolls now (§15.3): "Need n more" below 3. */
   private rolls(planted: readonly PlantedKid[]): string[] {
     const p = this.planting;
-    const odds = this.game.oddsFor(planted.map((k) => k.type));
+    // Kids added while happy count one tier higher, for good (D-056, §15.3).
+    const odds = this.game.oddsFor(planted);
     const n = planted.length;
     return [`Special roll: ${chance(n, odds.special, p.minKids, p.specialOdds[1])}`, `Rare roll: ${chance(n, odds.rare, p.minKids, p.rareOdds[1])}`];
   }
@@ -735,8 +736,12 @@ export class GardenPlots {
 
     /** The footer's numbers for the plot now and with the draft added. */
     const projection = () => {
-      const accepted = this.info(i).planted.map((k) => k.type);
-      const chosen = draft.map((id) => live().find((k) => k.id === id)?.type).filter((t): t is KidId => !!t);
+      // Accepted kids as they were added; chosen kids as they are now, happy or not (D-056).
+      const accepted = this.info(i).planted;
+      const chosen = draft.flatMap((id) => {
+        const k = live().find((c) => c.id === id);
+        return k ? [{ type: k.type, happy: !!k.happy }] : [];
+      });
       const now = { count: accepted.length, ...this.game.oddsFor(accepted) };
       const next = { count: accepted.length + chosen.length, ...this.game.oddsFor([...accepted, ...chosen]) };
       return oddsLines(i, now, next, { minKids: p.minKids, maxKids: max, ceiling: { special: p.specialOdds[1], rare: p.rareOdds[1] } });
