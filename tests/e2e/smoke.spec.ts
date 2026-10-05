@@ -3238,10 +3238,25 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await page.waitForTimeout(200);
     const before = await page.evaluate(() => window.__PK__!.worldToScreen(800, 1500));
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    await page.mouse.move(k.x, k.y - 10);
-    await page.mouse.down();
-    await page.waitForTimeout(150);
-    await page.mouse.up();
+    // Down, two frames (edge scrolling would act in them), up: in the page, so a slow
+    // runner can't stretch the press past the 220 ms a tap allows.
+    const during = await page.evaluate(
+      (p) =>
+        new Promise<{ x: number; y: number }>((done) => {
+          const canvas = document.querySelector('canvas')!;
+          const fire = (type: string) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: p.x, clientY: p.y - 10, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
+          fire('pointerdown');
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              const at = window.__PK__!.worldToScreen(800, 1500);
+              fire('pointerup');
+              done(at);
+            }),
+          );
+        }),
+      k,
+    );
+    expect(during).toEqual(before);
     await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Fire Kid');
     expect(await page.evaluate(() => window.__PK__!.worldToScreen(800, 1500))).toEqual(before);
   });
