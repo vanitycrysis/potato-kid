@@ -2074,6 +2074,18 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
   });
 
+  test("a Dex row's number carries into the card it opens, even after a lower copy left (Codex review round 9, FEED-NAME)", async ({ page }) => {
+    await fireDetail(page);
+    // Kid 1 fuses away while the detail is open; the row for kid 2 keeps its number.
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect(dialog(page).getByRole('button', { name: /kid 1 on your map/ })).toHaveCount(0);
+    await dialog(page).getByRole('button', { name: 'Fire Kid, kid 2 on your map' }).click();
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
+    await sheet(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await sheet(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    await expect(sheet(page).locator('.dex-home-who')).toContainText('Kid 2');
+  });
+
   test('an add refused because its plot filled says so about that plot (Codex review round 8, FEED-NAME)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
@@ -2445,6 +2457,21 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(first.locator('.picker-row-name')).toHaveText('Lady Mash');
     await sheet(page).getByLabel('Find a kid on your map').fill('mash');
     await expect(sheet(page).locator('.picker-row:visible')).toHaveCount(1);
+  });
+
+  test('the picker says which kids are happy, live; an accepted happy kid stays counted a tier higher (Codex review round 9, FEED-NAME)', async ({ page }) => {
+    const [a] = await garden(page, ['chef', 'chef']);
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 1000 }));
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    const first = sheet(page).locator('.picker-row').nth(0);
+    await expect(first.locator('.picker-row-detail')).toHaveText('Tier 2 · Kid 1');
+    // Fed while the picker is open: the row says so at once.
+    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }), a!);
+    await expect(first.locator('.picker-row-detail')).toHaveText('Tier 2 · Happy · Counts as Tier 3 · Kid 1');
+    await expect(sheet(page).locator('.picker-row').nth(1).locator('.picker-row-detail')).toHaveText('Tier 2 · Kid 2');
+    await first.click();
+    await sheet(page).locator('.picker-add').click();
+    await expect(sheet(page).locator('.plot-kid')).toContainText('Tier 2 · Counted as Tier 3 when added');
   });
 
   test('a full plot sparkles beside Start growing and takes no more kids (§15.4)', async ({ page }) => {

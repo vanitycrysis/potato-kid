@@ -150,7 +150,7 @@ export class Hud {
     );
     this.notes = new PlantingNotes(settings);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
-    this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back), () => this.save.readOnly);
+    this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly);
     // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex button
     // (world kids are no focus targets); a read-only save can still browse it.
     this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);

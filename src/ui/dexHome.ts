@@ -17,7 +17,7 @@ export interface HomeSection {
   dispose(): void;
 }
 
-export function homeSection(type: KidId, content: Content, scene: MapScene, openCard: (kidId: number) => void): HomeSection {
+export function homeSection(type: KidId, content: Content, scene: MapScene, openCard: (kidId: number, ordinal: number) => void): HomeSection {
   const typeName = content.kids.find((k) => k.id === type)?.name ?? type;
   const heading = el('h3', 'sheet-section dex-home-heading');
   heading.tabIndex = -1;
@@ -46,7 +46,8 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, open
       el('span', 'dex-home-row-text', title, sub),
     );
     row.type = 'button';
-    row.addEventListener('click', () => openCard(kidId));
+    // The card shows the number this row shows (Codex review, FEED-NAME).
+    row.addEventListener('click', () => openCard(kidId, ordinal));
     let shown: string | undefined | null = null;
     // A named copy leads with its name; type and number still tell copies apart (§18.2).
     const set = (name: string | undefined) => {

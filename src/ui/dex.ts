@@ -77,7 +77,7 @@ export class Dex {
      * Opens a live kid's card in place of the Dex (GUI_MVP §18.1); `back` returns here: this
      * detail, its scroll, and focus on that kid's row.
      */
-    private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }) => void,
+    private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }, ordinal: number) => void,
     private readonly readOnly: () => boolean = () => false,
   ) {}
 
@@ -453,11 +453,11 @@ export class Dex {
     };
     p.refreshRare();
     p.home?.dispose();
-    p.home = homeSection(type, this.content, this.scene, (kidId) => {
+    p.home = homeSection(type, this.content, this.scene, (kidId, ordinal) => {
       // The detail is kept, scroll and all, for coming back.
       this.remember();
       const launcher = this.launcher;
-      this.openKid(kidId, launcher, { label: `Back to ${k.name}`, go: () => this.open(launcher, undefined, kidId) });
+      this.openKid(kidId, launcher, { label: `Back to ${k.name}`, go: () => this.open(launcher, undefined, kidId) }, ordinal);
     });
     const name = el('h3', 'dex-detail-name', k.name);
     p.detail.replaceChildren(
