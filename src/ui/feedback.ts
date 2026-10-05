@@ -23,6 +23,10 @@ export type FeedbackItem =
   | { kind: 'planted'; kidType: KidId; kidId: number; plot: number; count: number; added: number }
   /** A plot started growing (§15.6). */
   | { kind: 'growing'; plot: number }
+  /** A bite accepted where no kid card showed it (§17.2): its card had closed. */
+  | { kind: 'fed'; kidType: KidId; kidId: number; name: string | undefined; food: string; favourite: boolean }
+  /** A name given or cleared where no kid card showed it (§18.2). */
+  | { kind: 'named'; kidType: KidId; kidId: number; name: string | null }
   /**
    * A known type sprouted from a plot (§15.5); a new type gets the discovery card instead.
    * `found`: its variant is new to the Dex, so it reads as a discovery.
@@ -93,6 +97,12 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
       }
       case 'growing':
         out.push({ kind: 'growing', plot: e.plot });
+        break;
+      case 'fed':
+        out.push({ kind: 'fed', kidType: e.kid.type, kidId: e.kid.id, name: e.kid.name, food: e.food, favourite: e.favourite });
+        break;
+      case 'named':
+        out.push({ kind: 'named', kidType: e.kid.type, kidId: e.kid.id, name: e.name });
         break;
       case 'variantFound': {
         // The card for that very kid says so: one card, never a second (§15.5).

@@ -2953,6 +2953,55 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).getByRole('button', { name: 'Choose a plot' })).toHaveAttribute('aria-disabled', 'true');
   });
 
+  test('on a 320 px phone every food row keeps its button inside it (Codex review round 3, FEED-NAME)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await open(page);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    const fits = await card(page).locator('.feed-row').evaluateAll((rows) =>
+      rows.map((r) => {
+        const row = r.getBoundingClientRect();
+        const b = r.querySelector('.feed-button')!.getBoundingClientRect();
+        const name = r.querySelector('.feed-text')!.getBoundingClientRect();
+        // Beside the name at its 160 px, or below it at the row's full width (§17.2).
+        const beside = Math.abs(b.top - name.top) < 12 && Math.abs(b.width - 160) < 1;
+        // The row's content width: inside its border and 8 px padding.
+        const below = b.top >= name.bottom - 1 && b.width >= r.clientWidth - 16 - 1;
+        // The name keeps its room: at most two 24 px lines, never squeezed letter by letter.
+        const nameFits = r.querySelector('.feed-name')!.getBoundingClientRect().height <= 2 * 24 + 1;
+        return b.left >= row.left - 0.5 && b.right <= row.right + 0.5 && r.scrollWidth <= r.clientWidth + 1 && (beside || below) && nameFits;
+      }),
+    );
+    expect(fits).toHaveLength(12);
+    expect(fits.every(Boolean)).toBe(true);
+  });
+
+  test('a 24-letter name wraps in the header, clear of the close button (Codex review round 3, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    await card(page).getByLabel('Kid name').fill('W'.repeat(24));
+    await card(page).locator('.name-save').click();
+    await expect(card(page).locator('.sheet-title')).toHaveText('W'.repeat(24));
+    const box = await card(page).evaluate((s) => {
+      const t = s.querySelector('.sheet-title')!.getBoundingClientRect();
+      const x = s.querySelector('.sheet-close')!.getBoundingClientRect();
+      return { right: t.right, close: x.left, sheet: s.scrollWidth <= s.clientWidth + 1 };
+    });
+    expect(box.right).toBeLessThanOrEqual(box.close + 0.5);
+    expect(box.sheet).toBe(true);
+  });
+
+  test('closing the card before a bite is accepted: the world still says so (Codex review round 3, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    const fav = foods.foods.find((f) => f.id === fire.favouriteFood)!;
+    // In one task, before the sim's next step: feed, then close.
+    await page.evaluate((label) => {
+      document.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!.click();
+      document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
+    }, `Feed ${fav.name}, ${fav.price} Materials`);
+    await expect(page.locator('.feedback')).toContainText(`${fav.name} is Fire Kid’s favourite!`);
+  });
+
   test('Enter right after typing a valid name saves it, with no frame in between (Codex review round 2, FEED-NAME)', async ({ page }) => {
     await open(page);
     await card(page).getByRole('button', { name: 'Name', exact: true }).click();

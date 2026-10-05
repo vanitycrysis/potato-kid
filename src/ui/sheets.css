@@ -40,6 +40,8 @@
   font-size: 26px;
   line-height: 32px;
   font-weight: 400;
+  /* A kid's name can be one long word: it wraps, clear of the close button (GUI_MVP §18.1). */
+  overflow-wrap: anywhere;
 }
 .sheet-title:focus {
   outline: none;
@@ -1214,16 +1216,20 @@
   outline: none;
 }
 
-/* Feeding (§17.2): one 64 px row per food; the price always on its button. */
+/* Feeding (§17.2): one 64 px row per food; the price always on its button. Where the
+   name and the 160 px button don't both fit (a narrow phone, larger text), the button
+   goes below, full width, and nothing leaves the row. */
 .feed-row {
+  container-type: inline-size;
   min-height: 64px;
   padding: 8px;
-  display: grid;
-  grid-template-columns: 32px 1fr 160px;
-  align-items: start;
-  column-gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
 }
 .feed-row > img {
+  flex: none;
   margin-top: 8px;
 }
 .feed-row.is-selected {
@@ -1231,9 +1237,12 @@
   outline-offset: -3px;
 }
 .feed-text {
+  flex: 1 1 96px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   padding-top: 4px;
+  overflow-wrap: anywhere;
 }
 .feed-name {
   font-size: 18px;
@@ -1247,7 +1256,8 @@
   line-height: 22px;
 }
 .ui-button.feed-button {
-  width: 160px;
+  flex: 0 0 160px;
+  max-width: 100%;
   min-height: 48px;
   display: inline-flex;
   flex-direction: column;
@@ -1263,17 +1273,13 @@
 }
 .feed-short,
 .feed-refused {
-  grid-column: 1 / -1;
-  margin: 8px 0 0;
+  flex: 1 0 100%;
+  margin: 0;
 }
-/* Too narrow for the button beside the name: it goes below, full width (§17.2). */
-@media (max-width: 300px) {
-  .feed-row {
-    grid-template-columns: 32px 1fr;
-  }
+/* Measured in em, so larger text stacks sooner: icon, a name's room, the button. */
+@container (max-width: 20.5em) {
   .ui-button.feed-button {
-    grid-column: 1 / -1;
-    width: 100%;
+    flex-basis: 100%;
   }
 }
 

@@ -604,6 +604,23 @@ export class Hud {
             el('span', 'card-line', `One kid sprouts in ${formatDuration(this.scene.game.growSeconds)}.`),
           ),
         );
+      case 'fed': {
+        // Its card had closed before the bite was accepted: the result is still said (§17.2).
+        const f = this.content.balance.feeding;
+        const who = item.name ?? this.name(item.kidType);
+        const food = f.foods.find((x) => x.id === item.food)?.name ?? item.food;
+        const lines = item.favourite
+          ? [`${food} is ${who}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}.`]
+          : [`${who} enjoyed ${food}.`, `Happy for ${formatDuration(f.happySeconds)}.`];
+        return el('div', 'toast toast-short', icon('icon_happy', '', 'ui-icon-28'), el('div', 'card-text', el('span', 'card-heading', lines[0]!), el('span', 'card-line', lines[1]!)));
+      }
+      case 'named':
+        return el(
+          'div',
+          'toast toast-short',
+          icon('icon_check', '', 'ui-icon-28'),
+          el('span', 'card-heading', item.name ? `Named ${item.name}.` : `Called ${this.name(item.kidType)} again.`),
+        );
       case 'sprouted': {
         // The four reveals (GUI_MVP §15.5): by the actual kid, never by which roll hit.
         const special = this.content.kids.find((k) => k.id === item.kidType)?.special === true;

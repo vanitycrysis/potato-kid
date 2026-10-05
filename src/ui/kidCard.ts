@@ -23,7 +23,9 @@ import type { OpenSheet, Sheets } from './sheet';
 const STATUS_MS = 2500;
 
 type View = 'card' | 'feed' | 'name';
-type Pending = { type: 'feed'; food: string } | { type: 'name'; name: string | null } | { type: 'plant'; plot: number };
+type Action = { type: 'feed'; food: string } | { type: 'name'; name: string | null } | { type: 'plant'; plot: number };
+/** A sent action and the kid it was for: its result is matched to that kid, card open or not. */
+type Pending = Action & { kidId: number };
 
 /** Where a card was, for coming back after an interruption (the return summary, GUI_MVP §8). */
 export interface CardSnapshot {
@@ -149,7 +151,7 @@ export class KidCard {
     this.backTo = back ?? null;
     this.seen = { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant };
     this.view = 'card';
-    this.pending = null;
+    // An action still waiting for its result stays waiting: it answers here, or in the world.
     this.status = null;
     this.draft = null;
     this.sheet = this.sheets.open(
@@ -202,8 +204,18 @@ export class KidCard {
    */
   onStep(events: GameEvent[]): GameEvent[] {
     const p = this.pending;
-    if (!p || !this.sheet) return [];
+    if (!p) return [];
     const handled: GameEvent[] = [];
+    // Its card closed (or shows another kid) before the result came: the world says it, so
+    // a payment is never left unconfirmed (GUI_MVP §17.2; Codex review).
+    const here = !!this.sheet && this.kidId === p.kidId;
+    if (!here) {
+      for (const e of events) {
+        const mine = (e.type === 'fed' || e.type === 'named' || e.type === 'planted') && e.kid.id === p.kidId;
+        if (mine || (e.type === 'rejected' && e.command === p.type)) this.pending = null;
+      }
+      return [];
+    }
     const name = this.displayName();
     for (const e of events) {
       if (p.type === 'feed' && e.type === 'fed' && e.kid.id === this.kidId) {
@@ -224,8 +236,8 @@ export class KidCard {
         if (this.seen) this.seen.name = e.name ?? undefined;
         this.say([e.name ? `Named ${e.name}.` : `Called ${this.typeName(this.seen!.type)} again.`], false);
         this.show('card');
-        this.sheet.setTitle(this.displayName());
-        this.sheet.body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus();
+        this.sheet!.setTitle(this.displayName());
+        this.sheet!.body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus();
       } else if (p.type === 'plant' && e.type === 'planted' && e.kid.id === this.kidId) {
         this.pending = null;
         handled.push(e);
@@ -256,9 +268,9 @@ export class KidCard {
     this.status = { lines, warn, until: performance.now() + STATUS_MS };
   }
 
-  private send(p: Pending): void {
+  private send(p: Action): void {
     if (this.pending || this.readOnly()) return;
-    this.pending = p;
+    this.pending = { ...p, kidId: this.kidId };
     this.status = null;
     if (p.type === 'feed') this.scene.command({ type: 'feed', kidId: this.kidId, food: p.food });
     else if (p.type === 'name') this.scene.command({ type: 'name', kidId: this.kidId, name: p.name });
