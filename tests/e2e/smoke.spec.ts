@@ -1791,6 +1791,29 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     await page.mouse.up();
   });
 
+  test('a kid press cancelled by the system makes no sound later (Codex review, FEED-NAME)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.mouse.click(200, 600);
+    await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
+    const id = await page.evaluate(() => {
+      window.__PK__!.centerOn(800, 1500);
+      return window.__PK__!.debugAdd!('fire', 800, 1500);
+    });
+    await page.waitForTimeout(400);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const before = (await audio(page)).played.length;
+    await page.evaluate((p) => {
+      const canvas = document.querySelector('canvas')!;
+      const fire = (type: string) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: p.x, clientY: p.y - 20, buttons: 1, bubbles: true }));
+      fire('pointerdown');
+      fire('pointercancel');
+    }, k);
+    // Well past the 220 ms a press may be a tap: nothing resolves, nothing sounds.
+    await page.waitForTimeout(600);
+    expect((await audio(page)).played.slice(before)).toEqual([]);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
   test('a command button plays its success cue alone; other buttons tap (Codex review, PR #53)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.mouse.click(200, 600);

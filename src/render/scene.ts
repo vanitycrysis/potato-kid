@@ -802,6 +802,8 @@ export class MapScene {
   }
 
   private cancelActiveDrag(): void {
+    // A cancelled press resolves as nothing: never a tap, never a later drag (Codex review).
+    this.kidTap = null;
     this.home?.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
