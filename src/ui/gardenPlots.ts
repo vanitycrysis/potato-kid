@@ -136,6 +136,15 @@ export class GardenPlots {
     if (s.picker) this.current?.restore?.(s.picker);
   }
 
+  /** A plot's detail with a note in it: where a kid card's accepted Add lands (GUI_MVP §18.3). */
+  openDetail(i: number, lines: string[]): void {
+    if (this.info(i).state === 'locked') return;
+    this.show({ kind: 'detail', plot: i });
+    this.note = { plot: i, note: { lines, warn: false } };
+    this.current?.update();
+    this.sheet.body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus();
+  }
+
   /** Opens a plot from outside (a tap on the map): the picker while it takes kids, else its detail (§15.2). */
   openPlot(i: number): void {
     const p = this.info(i);

@@ -3,8 +3,8 @@ import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import { el, icon } from './dom';
 import { portrait } from './portrait';
-import { chosenPlotRefusal, type HomeFeed, type Message } from './homeFeed';
-import { oddsLines } from './plantingNotes';
+import type { HomeFeed, Message } from './homeFeed';
+import { plotRoute, rareMark } from './plotRoute';
 
 // Planting from a kid's Dex detail (D-061, docs/GUI_MVP.md §15.6, Codex's design; it began
 // as Send home's, §13.4): the path for anyone who can't drag. Each live copy of the type is
@@ -15,8 +15,6 @@ import { oddsLines } from './plantingNotes';
 // inline messages, so leaving and reopening a detail never loses a result or a reading
 // (Codex review, PR #54). A detail's section only draws the feed for its kid type.
 
-/** A rare variant's label, "Rare: Rainbow" (GUI_MVP §15.3). */
-const rareMark = (variant: string | undefined) => (variant ? `Rare: ${variant[0]!.toUpperCase()}${variant.slice(1)}` : null);
 
 export interface HomeSection {
   root: HTMLElement;
@@ -119,130 +117,6 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     focusHeading();
   };
 
-  const planting = () => content.balance.planting;
-  const kidDef = content.kids.find((k) => k.id === type);
-
-  /** Whether a plot takes a kid now, and if not, why (§15.6: Growing and Ready are disabled, with the reason). */
-  const plotState = (i: number): { count: number; reason: string | null } => {
-    const seed = scene.game.state.plots[i]?.seed ?? null;
-    const count = seed?.planted.length ?? 0;
-    if (seed?.sprout) return { count, reason: seed.grown >= scene.game.growSeconds ? 'Ready. Waiting to sprout.' : 'Growing.' };
-    if (count >= planting().maxKids) return { count, reason: 'Full. Start growing it in the Garden.' };
-    return { count, reason: null };
-  };
-
-  /** Stage 3: "Add {name} to Plot {n}?", the odds it makes, and the one Add (never Start). */
-  const confirmFor = (kidId: number, plot: number) => {
-    const title = el('h4', 'dex-home-confirm-title', `Add ${kidName} to Plot ${plot + 1}?`);
-    title.tabIndex = -1;
-    const kid = live().find((k) => k.id === kidId);
-    const rare = rareMark(kid?.variant);
-    const marks = [`Tier ${kidDef?.tier ?? 1}`, `Kid ${ordinals.get(kidId)}`, ...(rare ? [rare] : []), ...(kidDef?.special ? ['Special'] : [])];
-    const who = el(
-      'div',
-      'dex-home-who',
-      portrait(kidRig!, type, 48, kid?.look, kid?.variant ? { variant: kid.variant, miniScale: content.balance.planting.miniScale } : undefined),
-      el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', kidName), el('span', 'sheet-helper', marks.join(' · '))),
-    );
-    const odds = el('div', 'dex-home-odds');
-    const notices = [
-      el('p', 'sheet-body-text', 'This kid leaves the map. Its name, income and happy effect end here. No refund.'),
-      el('p', 'sheet-body-text', 'Its type and found variants stay in your Dex.'),
-      ...(rare ? [el('p', 'sheet-body-text', 'Rare variants cannot be bought back.')] : []),
-      ...(kidDef?.special ? [el('p', 'sheet-body-text', 'Special kids cannot be bought back.')] : []),
-    ];
-    const why = el('p', 'sheet-body-text dex-home-why');
-    why.hidden = true;
-    const keep = el('button', 'ui-button dex-home-action', 'Keep on map');
-    keep.type = 'button';
-    keep.addEventListener('click', () => close(true));
-    const add = el('button', 'ui-button ui-primary dex-home-action', 'Add this kid');
-    add.type = 'button';
-    add.addEventListener('click', () => {
-      if (feed.pending || add.getAttribute('aria-disabled') === 'true' || readOnly()) return;
-      // Revalidated right before adding: never any other copy, never another plot (§15.6).
-      if (!live().some((k) => k.id === kidId)) {
-        stale();
-        return;
-      }
-      add.setAttribute('aria-disabled', 'true');
-      feed.send(kidId, type, plot);
-    });
-    const helperText = el('p', 'sheet-helper', 'Two separate rolls. A sprout can be both special and rare.');
-    const node = el('div', 'dex-home-step', title, who, odds, helperText, ...notices, why, keep, add);
-    /** The plot's own kids now, and with this one added: recomputed as the plot changes. */
-    const refresh = () => {
-      const p = planting();
-      const accepted = scene.game.state.plots[plot]?.seed?.planted.map((k) => k.type) ?? [];
-      const now = { count: accepted.length, ...scene.game.oddsFor(accepted) };
-      const next = { count: accepted.length + 1, ...scene.game.oddsFor([...accepted, type]) };
-      const lines = oddsLines(plot, now, next, { minKids: p.minKids, maxKids: p.maxKids, ceiling: { special: p.specialOdds[1], rare: p.rareOdds[1] } });
-      const text = lines.join('\n');
-      if (odds.dataset.text !== text) {
-        odds.dataset.text = text;
-        odds.replaceChildren(...lines.map((l) => el('p', 'sheet-body-text', l)));
-      }
-      // A plot that started or filled meanwhile: no reroute, just why (§15.3).
-      const { reason } = plotState(plot);
-      const blocked = reason === null ? null : chosenPlotRefusal(scene.game.state.plots[plot]?.seed?.sprout ? 'plotsBusy' : 'plotFull');
-      why.hidden = blocked === null;
-      why.textContent = blocked ?? '';
-      // One add at a time across every confirmation, until its result arrives.
-      add.setAttribute('aria-disabled', String(blocked !== null || !!feed.pending || readOnly()));
-    };
-    return { node, title, refresh };
-  };
-
-  /** Stage 2: one row per unlocked plot, `Plot {n} · {count} / 5`; none is chosen for the player. */
-  const chooser = (kidId: number) => {
-    const title = el('h4', 'dex-home-confirm-title', 'Choose a plot');
-    title.tabIndex = -1;
-    const list = el('div', 'dex-home-rows');
-    const rows: { row: HTMLButtonElement; name: HTMLElement; reason: HTMLElement }[] = [];
-    let chosen: { plot: number; step: ReturnType<typeof confirmFor> } | null = null;
-    const node = el('div', 'dex-home-step', title, list);
-    const choose = (i: number) => {
-      chosen?.step.node.remove();
-      chosen = { plot: i, step: confirmFor(kidId, i) };
-      for (const [j, r] of rows.entries()) {
-        r.row.setAttribute('aria-pressed', String(j === i));
-        r.row.classList.toggle('is-selected', j === i);
-      }
-      node.append(chosen.step.node);
-      chosen.step.refresh();
-      chosen.step.title.focus();
-    };
-    const refresh = () => {
-      while (rows.length < scene.game.state.plots.length) {
-        const i = rows.length;
-        const name = el('span', 'dex-home-row-name');
-        const reason = el('span', 'sheet-helper');
-        const row = el('button', 'ui-button dex-home-row dex-plot-row', el('span', 'dex-home-row-text', name, reason));
-        row.type = 'button';
-        row.setAttribute('aria-pressed', 'false');
-        row.addEventListener('click', () => {
-          if (row.getAttribute('aria-disabled') === 'true' || readOnly()) return;
-          choose(i);
-        });
-        rows.push({ row, name, reason });
-        list.append(row);
-      }
-      for (const [i, r] of rows.entries()) {
-        const { count, reason } = plotState(i);
-        const name = `Plot ${i + 1} · ${count} / ${planting().maxKids}`;
-        if (r.name.textContent !== name) r.name.textContent = name;
-        if (r.reason.textContent !== (reason ?? '')) r.reason.textContent = reason ?? '';
-        r.reason.hidden = reason === null;
-        // The chosen plot stays chosen when it fills or starts: its own step says why.
-        const off = readOnly() || (reason !== null && chosen?.plot !== i);
-        r.row.setAttribute('aria-disabled', String(off));
-        r.row.classList.toggle('is-disabled', off);
-      }
-      chosen?.step.refresh();
-    };
-    return { node, title, refresh };
-  };
-
   /** Stage 1, the kid's card: what planting does, then Choose a plot (§15.6). */
   const open = (kidId: number) => {
     close(false);
@@ -262,7 +136,20 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     panel = opened;
     pick.addEventListener('click', () => {
       if (readOnly() || panel !== opened) return;
-      const c = chooser(kidId);
+      const kid = live().find((k) => k.id === kidId);
+      const c = plotRoute({
+        scene,
+        content,
+        kidId,
+        type,
+        displayName: kid?.name ?? kidName,
+        ordinal,
+        readOnly,
+        busy: () => !!feed.pending,
+        onAdd: (plot) => feed.send(kidId, type, plot),
+        onKeep: () => close(true),
+        onStale: stale,
+      });
       pick.replaceWith(c.node);
       opened.refresh = c.refresh;
       c.refresh();

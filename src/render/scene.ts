@@ -159,6 +159,12 @@ export class MapScene {
    */
   private tap: { pointerId: number; x: number; y: number; t: number } | null = null;
   private readonly plotTapListeners = new Set<(plot: number) => void>();
+  /**
+   * A kid press that may still be a tap, which opens its card (GUI_MVP §18.1): the same
+   * 220 ms and 8 CSS px. The kid lifts as for a drag; a tap puts it back untouched.
+   */
+  private kidTap: { pointerId: number; kidId: number; x: number; y: number; t: number } | null = null;
+  private readonly kidTapListeners = new Set<(kidId: number) => void>();
   /** The Garden's ground point, which the plots sit around. */
   private readonly gardenGround: { x: number; y: number };
   /**
@@ -249,6 +255,11 @@ export class MapScene {
   /** Calls `fn` with every sim event, after the scene has handled it. */
   listen(fn: (e: GameEvent) => void): void {
     this.listeners.add(fn);
+  }
+
+  /** Calls `fn` when a kid on the map is tapped (GUI_MVP §18.1): its id. */
+  listenKidTap(fn: (kidId: number) => void): void {
+    this.kidTapListeners.add(fn);
   }
 
   /** Calls `fn` when a plot on the map is tapped (GUI_MVP §15.2): its 0-based index. */
@@ -461,6 +472,7 @@ export class MapScene {
   private startPan(e: FederatedPointerEvent): void {
     // A second pointer is never a tap.
     if (this.pan) this.tap = null;
+    if (this.drag) this.kidTap = null;
     if (this.drag || this.pan || this.inputPaused) return;
     // A press near a Mini picks it up: its target is at least 44 CSS px each way (§16.1).
     // Its own body, any other kid's and real soil all come first: they took the press already.
@@ -570,8 +582,10 @@ export class MapScene {
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
       e.stopPropagation(); // a kid press is a pickup, never a pan
-      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72).
+      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72),
+      // and a second finger cancels a kid tap.
       this.tap = null;
+      if (this.drag) this.kidTap = null;
       this.startDrag(kid.id, e);
     });
     this.views.set(kid.id, view);
@@ -613,6 +627,7 @@ export class MapScene {
     this.home?.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
+    this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now() };
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
@@ -622,6 +637,7 @@ export class MapScene {
       return;
     }
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    if (this.kidTap && Math.hypot(e.global.x - this.kidTap.x, e.global.y - this.kidTap.y) > TAP_SLOP) this.kidTap = null;
     this.dragScreen = { x: e.global.x, y: e.global.y };
     const w = this.toWorld(e);
     this.home?.move(w);
@@ -653,8 +669,16 @@ export class MapScene {
 
   private endDrag(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    const tap = this.kidTap;
+    this.kidTap = null;
     if (kind === 'cancelDrag') {
       this.cancelActiveDrag();
+      return;
+    }
+    // A tap on a kid: put it back untouched, and open its card (GUI_MVP §18.1).
+    if (tap && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP) {
+      this.cancelActiveDrag();
+      for (const fn of this.kidTapListeners) fn(tap.kidId);
       return;
     }
     const w = this.toWorld(e);

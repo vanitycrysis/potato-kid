@@ -101,6 +101,12 @@ export class BuildingSheets {
     return this.plots?.snapshot() ?? null;
   }
 
+  /** Opens the Garden on a plot's detail, with a note (a kid card's accepted Add, GUI_MVP §18.3). */
+  openPlotDetail(plot: number, launcher: HTMLElement | null, lines: string[]): void {
+    this.open('garden', launcher);
+    this.plots?.openDetail(plot, lines);
+  }
+
   /** Opens the Garden on one plot: its picker or its detail (a tap on the map, §15.2). */
   openPlot(plot: number, launcher: HTMLElement | null): void {
     this.open('garden', launcher);
