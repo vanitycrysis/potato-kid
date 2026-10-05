@@ -119,7 +119,7 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
 }
 
 /** Stage 2: one row per unlocked plot, `Plot {n} · {count} / 5`; none is chosen for the player. Stage 3 opens below. */
-export function plotRoute(o: PlotRouteOptions): { node: HTMLElement; title: HTMLElement; refresh(): void } {
+export function plotRoute(o: PlotRouteOptions): { node: HTMLElement; title: HTMLElement; refresh(): void; chosen(): number | null; choose(plot: number): void } {
   const { scene, content } = o;
   const title = el('h4', 'dex-home-confirm-title', 'Choose a plot');
   title.tabIndex = -1;
@@ -166,5 +166,15 @@ export function plotRoute(o: PlotRouteOptions): { node: HTMLElement; title: HTML
     }
     chosen?.step.refresh();
   };
-  return { node, title, refresh };
+  return {
+    node,
+    title,
+    refresh,
+    chosen: () => chosen?.plot ?? null,
+    // Back to a plot chosen before an interruption (a restore): only one that still exists.
+    choose: (plot) => {
+      refresh();
+      if (plot < rows.length) choose(plot);
+    },
+  };
 }

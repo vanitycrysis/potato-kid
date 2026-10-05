@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkName, graphemes, graphemesFallback, normalizeName } from './names';
+import { checkName, graphemes, graphemesFallback, normalizeName, storedNameOk } from './names';
 
 describe('kid names (D-057, GUI_MVP §18.2)', () => {
   it('normalizes: NFC, ends trimmed, inner runs of spaces made one', () => {
@@ -71,5 +71,30 @@ describe('the fallback against the platform, fuzzed (Codex review round 6, FEED-
 
   it('refuses invisible characters, alone or after a letter', () => {
     for (const bad of ['ㅤ', 'aㅤb', 'a͏', 'aᅟ', 'Spud⁠']) expect(checkName(bad, 24), JSON.stringify(bad)).toMatchObject({ ok: false, reason: 'chars' });
+  });
+});
+
+describe('an accepted name always fits a save (Codex review round 7, FEED-NAME)', () => {
+  it('refuses a name whose clusters carry too many marks, as a save would', () => {
+    const heavy = ('x' + '́'.repeat(9)).repeat(24);
+    expect(checkName(heavy, 24)).toMatchObject({ ok: false, reason: 'long' });
+    expect(storedNameOk(heavy, 24)).toBe(false);
+  });
+
+  it('every name naming accepts, a save accepts too', () => {
+    const pool = ['a', 'Z', 'é', '́', '̂', ' ', '-', "'", '’', '7', 'क', '्', 'ा', 'ൎ', 'ന', '가', 'ᄀ', 'ᅡ', 'ก', 'ำ'];
+    let seed = 11;
+    const rand = (n: number) => ((seed = (seed * 1103515245 + 12345) % 2 ** 31), seed % n);
+    let accepted = 0;
+    for (let i = 0; i < 20000; i++) {
+      let s = '';
+      const len = 1 + rand(60);
+      for (let j = 0; j < len; j++) s += pool[rand(pool.length)];
+      const r = checkName(s, 24);
+      if (!r.ok) continue;
+      accepted++;
+      expect(storedNameOk(r.name, 24), JSON.stringify(r.name)).toBe(true);
+    }
+    expect(accepted).toBeGreaterThan(1000);
   });
 });

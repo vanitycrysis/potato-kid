@@ -35,6 +35,8 @@ export interface CardSnapshot {
   back: { label: string; go: () => void } | null;
   /** The kid as the card last knew it, so a card whose kid has left comes back too (§18.3). */
   seen: Seen;
+  /** The planting route: open or not, and the plot chosen in it. */
+  planting: { open: boolean; plot: number | null };
 }
 
 /** What the card last knew of its kid: kept when the kid leaves (§18.3). */
@@ -82,6 +84,8 @@ export class KidCard {
   private current: { update(): void } | null = null;
   /** What opened the card: focus goes back there, through any sheet it hands over to. */
   private launcher: HTMLElement | null = null;
+  /** The open card's planting route: its stage, and a way to reopen it there. */
+  private plantingState: { get(): { open: boolean; plot: number | null }; open(plot: number | null): void } | null = null;
   /** Opened from the Dex: the way back to that kid's type detail (GUI_MVP §18.1). */
   private backTo: { label: string; go: () => void } | null = null;
   private readonly tierOf: Map<KidId, number>;
@@ -128,7 +132,14 @@ export class KidCard {
   /** Where the open card is: its kid, page, Name draft and way back. */
   snapshot(): CardSnapshot | null {
     if (!this.sheet) return null;
-    return { kidId: this.kidId, view: this.view, draft: this.draft, back: this.backTo, seen: { ...this.seen!, look: { ...this.seen!.look } } };
+    return {
+      kidId: this.kidId,
+      view: this.view,
+      draft: this.draft,
+      back: this.backTo,
+      seen: { ...this.seen!, look: { ...this.seen!.look } },
+      planting: this.plantingState?.get() ?? { open: false, plot: null },
+    };
   }
 
   /** Back where a snapshot was (its kid still on the map): the same page, draft and scroll. */
@@ -136,6 +147,8 @@ export class KidCard {
     this.open(s.kidId, launcher, s.back ?? undefined, s.seen);
     if (!this.sheet) return;
     this.draft = s.draft;
+    // The card's planting route as it was, then the page that was open over it.
+    if (s.planting.open) this.plantingState?.open(s.planting.plot);
     if (s.view !== 'card') this.show(s.view);
     this.sheet.scrollTo(scrollTop);
   }
@@ -410,9 +423,11 @@ export class KidCard {
     ];
 
     // Planting (§15.6): what it does, then Choose a plot, in this sheet.
-    const pick = this.button('Choose a plot', 'ui-primary dex-home-action', () => {
-      if (this.readOnly() || !this.kid()) return;
-      const route = plotRoute({
+    let route: ReturnType<typeof plotRoute> | null = null;
+    /** Opens the plot route; `plot`: a plot chosen before an interruption, chosen again. */
+    const openRoute = (plot: number | null) => {
+      if (this.readOnly() || !this.kid() || route) return;
+      route = plotRoute({
         scene: this.scene,
         content: this.content,
         kidId: this.kidId,
@@ -423,18 +438,23 @@ export class KidCard {
         busy: () => this.pending !== null,
         onAdd: (plot) => this.send({ type: 'plant', plot }),
         onKeep: () => {
-          route.node.replaceWith(pick);
-          routeRefresh = null;
+          route?.node.replaceWith(pick);
+          route = null;
           pick.focus();
         },
         onStale: () => this.say(['This kid has already left the map.'], true),
       });
       pick.replaceWith(route.node);
-      routeRefresh = route.refresh;
       route.refresh();
-      route.title.focus();
-    });
-    let routeRefresh: (() => void) | null = null;
+      if (plot !== null) route.choose(plot);
+      else route.title.focus();
+    };
+    const pick = this.button('Choose a plot', 'ui-primary dex-home-action', () => openRoute(null));
+    // For a snapshot, and to come back to: whether the route is open, and the plot chosen.
+    this.plantingState = {
+      get: () => ({ open: route !== null, plot: route?.chosen() ?? null }),
+      open: openRoute,
+    };
     const planting = el(
       'section',
       'kid-card-planting',
@@ -482,7 +502,7 @@ export class KidCard {
         }
         for (const b of [feed, name]) this.setEnabled(b, !gone && !this.readOnly());
         this.setEnabled(pick, !gone && !this.readOnly());
-        routeRefresh?.();
+        route?.refresh();
       },
     };
   }

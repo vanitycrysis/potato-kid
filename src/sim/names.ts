@@ -118,9 +118,13 @@ export function checkName(raw: string, maxLength: number): NameCheck {
   // Only the allowed characters (no emoji, controls, invisibles, markup or line breaks),
   // at least one letter or digit, and no mark standing on its own at the start.
   if (!charsOk(name)) return { ok: false, name, length, reason: 'chars' };
-  if (length > maxLength) return { ok: false, name, length, reason: 'long' };
+  // The save's cap too, so a name accepted here is always one a save accepts (Codex review).
+  if (length > maxLength || [...name].length > maxLength * CODE_POINTS_PER_CLUSTER) return { ok: false, name, length, reason: 'long' };
   return { ok: true, name, length };
 }
+
+/** At most this many code points per allowed cluster, on average: generous, and the same cap for naming and saves. */
+const CODE_POINTS_PER_CLUSTER = 8;
 
 /**
  * A stored name, as a save may hold it (§18.2): normalized and of allowed characters. Its
@@ -128,5 +132,5 @@ export function checkName(raw: string, maxLength: number): NameCheck {
  * platform counts clusters never makes a good save unreadable (Codex review, FEED-NAME).
  */
 export function storedNameOk(name: string, maxLength: number): boolean {
-  return name !== '' && normalizeName(name) === name && charsOk(name) && [...name].length <= maxLength * 8;
+  return name !== '' && normalizeName(name) === name && charsOk(name) && [...name].length <= maxLength * CODE_POINTS_PER_CLUSTER;
 }

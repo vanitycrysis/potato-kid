@@ -3064,6 +3064,19 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toBeFocused();
   });
 
+  test('the return summary hands back the plot being chosen, under the page that was open (Codex review round 7, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await card(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(card(page).locator('.sheet-title')).toHaveText('Name this kid');
+    await card(page).getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(card(page).getByText('Add Fire Kid to Plot 1?')).toBeVisible();
+    await expect(card(page).getByRole('button', { name: /^Plot 1 ·/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('a rename while a plot is being chosen shows in its confirmation (Codex review round 6, FEED-NAME)', async ({ page }) => {
     await open(page);
     await card(page).getByRole('button', { name: 'Choose a plot' }).click();
