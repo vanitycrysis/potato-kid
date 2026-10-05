@@ -609,9 +609,15 @@ export class Hud {
         const variant = item.variant ? `${item.variant[0]!.toUpperCase()}${item.variant.slice(1)} ` : '';
         const from = `From Plot ${item.plot + 1}.`;
         const helper = special ? (item.variant ? `Rare special kid · ${from}` : `Special kid · ${from}`) : item.variant ? `Rare variant · ${from}` : from;
-        // A variant new to the Dex reads as its discovery: "{variant} found · {type}".
+        // A variant new to the Dex reads as its discovery, "{variant} found · {type}", and like
+        // any discovery the whole card opens that kid in the Dex (§9; Codex review, PR #77).
         const heading = item.found ? `${variant.trim()} found · ${this.name(item.kidType)}` : `${variant}${this.name(item.kidType)} sprouted!`;
-        return el('div', 'toast toast-short', portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', heading), el('span', 'card-line', helper)));
+        const parts = [portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', heading), el('span', 'card-line', helper))];
+        if (!item.found) return el('div', 'toast toast-short', ...parts);
+        const card = el('button', 'toast toast-reward toast-button', ...parts);
+        card.type = 'button';
+        card.addEventListener('click', () => this.dex.open(card, item.kidType));
+        return card;
       }
     }
   }

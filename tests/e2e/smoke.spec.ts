@@ -3032,13 +3032,24 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', null));
     await expect(page.locator('.feedback')).toContainText('Fire Kid');
     await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
+    // A discovery: the whole card opens the kid in the Dex (§9).
+    const found = page.locator('.feedback').getByRole('button', { name: /Comet found · Fire Kid/ });
+    await expect(found).toContainText('Rare variant · From Plot 1.');
+    await found.click();
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' }).locator('.dex-detail-name')).toHaveText('Fire Kid');
+    await page.keyboard.press('Escape');
+    // Focus came back to the card, and the pointer rests on it: either holds it on show.
+    // Move both on, and it goes.
+    await expect(found).toBeFocused();
+    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+    await page.mouse.move(5, 5);
+    await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
+    // A repeat is a short card, nothing to open.
     const card = page.locator('.feedback .toast-short');
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
-    await expect(card).toContainText('Comet found · Fire Kid');
-    await expect(card).toContainText('Rare variant · From Plot 1.');
-    await expect(card).toHaveCount(0, { timeout: 5000 });
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
     await expect(card).toContainText('Comet Fire Kid sprouted!');
+    await expect(page.locator('.feedback button.toast')).toHaveCount(0);
   });
 
   test("a press just outside a small Mini's body, within 44 CSS px, picks it up (Codex review, PR #77)", async ({ page }) => {
