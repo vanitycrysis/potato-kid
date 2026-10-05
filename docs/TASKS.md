@@ -2,12 +2,12 @@
 
 Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not owner approval. Since D-027, ChatGPT's role is run as Codex (`gpt-6.1-sol`, high effort) by Claude; Claude does no art (D-036).
 
-## Where things stand (Claude, 2026-10-03)
+## Where things stand (Claude, 2026-10-05)
 
 **Gates 1–3 are approved. Gate 4 came back with feedback** (D-050..D-059): the icon is approved; the MVP gets a forgiving drop, much slower pacing, a world that lives on offline, planting with Rainbow and Mini variants (replacing Send home), feeding, naming, kid personalities, a stubby-arm wiggle, and a music-loop fix. Then gate 4 goes back to the owner.
 
 **Order of work**
-- **Done:** MUSIC-LOOP (#61), WAVE-WIGGLE (#62), FUSE-DROP's engine side (#66), GATE4-DESIGN (#67), PACING (#68), PERSONALITY (#69), OFFLINE-WANDER (#70), PLANT-V2-DESIGN (#73), PLANTING (#72), VARIANTS (#77) and FEED-NAME (#78). Everything gate 4 asked for is on `main`, for the owner's device.
+- **Done:** MUSIC-LOOP (#61), WAVE-WIGGLE (#62), FUSE-DROP's engine side (#66), GATE4-DESIGN (#67), PACING (#68), PERSONALITY (#69), OFFLINE-WANDER (#70), PLANT-V2-DESIGN (#73), PLANTING (#72), VARIANTS (#77) and FEED-NAME (#78). Everything gate 4 asked for is on `main`. **The new gate-4 build went to the owner on 2026-10-05** (APK from `main`'s CI run 37269632535), with D-067's numbers for them to confirm.
 - **Now:** SPECIALS (#76, Codex's art and writing) waits on two owner decisions: the four held costumes (D-066), and whether specials should look grander. Then Claude adds the 20 `kids.json` entries and the Dex's Ordinary/Specials segments (§16.4).
 - **Parked:** expeditions (D-065), an owner idea for later; nothing is built for it.
 
@@ -56,5 +56,5 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | SPECIALS | ChatGPT (art, writing) / Claude (content, rules) | D-063: about 20 apex special kids (tier 5 or above): costumes, names, personalities and foods; content entries that no recipe uses, outside the spawn pool and the Compendium | **review** (#76: art and writing delivered; waits on the owner's two decisions, the four held costumes and how grand specials look; then Claude's content entries) | Every special passes content and art checks; Claude's review passes |
 | TROPHY-MAP | Both | D-064: a map to display special kids, bought for an absurd price | later (after SPECIALS) | — |
 | WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | **done** (#62, Claude's review passed in round 2; Water's hood is the weakest case, for the owner's device check) | Claude's review passes; the owner sees it on device at the next gate-4 build |
-| GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: icon approved; D-050..D-059 to do first) | Explicit approval before polish |
+| GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: icon approved; D-050..D-059 done since; the new build went to the owner on 2026-10-05, awaiting their look) | Explicit approval before polish |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |
