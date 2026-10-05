@@ -15,7 +15,10 @@
 
 ## Open work at handoff
 
-1. **The gate-4 build for the owner:** `main`'s CI run publishes `potato-kid-debug-apk`. Send the owner the link and what to look at (planting, rares, feeding, naming, the kid card, D-067's numbers), then wait for their gate-4 feedback.
+1. **The gate-4 build is with the owner (sent 2026-10-05 through the relay).**
+   - The APK is `potato-kid-debug-apk` from `main`'s CI run 37269632535 (the #78 merge; #79 changed docs only): https://github.com/vanitycrysis/potato-kid/actions/runs/37269632535. CI artifacts expire, so rebuild from `main` if the owner asks again after that.
+   - The note listed what to try: planting 3–5 kids and Start growing, the rare looks and the Dex's rare rows, tapping a kid to feed, name or plant it, and D-067's numbers to confirm.
+   - **Next:** wait for the owner's gate-4 feedback. Turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building. If the owner confirms or changes D-067, update its status and `balance.json` (`feeding`, `naming`).
 2. **PR #76, SPECIALS (Codex's art and writing), open.** It waits on two **owner decisions**, sent through the relay on 2026-10-04:
    - **The four D-066 holds** (Music Box, Marble Run, Puppet Theatre, Paper Town): keep, take Codex's simpler proposal, or swap for another keepsake. Claude's view: only Marble Run's proposal reads clearly better at 55 px.
    - **How grand specials should look.** At game size they read plainer than ordinary T2–T4 kids with hats.
@@ -85,7 +88,7 @@
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout (on the handoff branch at handoff; switch to `main`).
+  - `potato-kid-claude`: Claude's main checkout (on `claude/handoff-2026-10-05b` at handoff; switch to `main`).
   - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials` (PR #76).
   - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached; check it out per review).
   - `potato-kid-docs`: docs branches.
