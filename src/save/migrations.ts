@@ -27,5 +27,9 @@ export function migrations(content: Content): Record<number, Migration> {
       }
       return { ...(s as object), discoveredVariants: found };
     },
+    // Schema 5 (D-056, D-057): kids may carry a name and happiness, and a planted kid whether
+    // it was happy. Nothing to add: a schema-4 save has none. The bump keeps an older build
+    // from loading a save it can't read.
+    4: (state) => state,
   };
 }

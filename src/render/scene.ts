@@ -157,8 +157,16 @@ export class MapScene {
    * A ground press that may still be a tap on a plot (GUI_MVP §15.2): at most 220 ms and
    * 8 CSS px, with no camera move and no second pointer. Until it moves 8 px the map holds.
    */
-  private tap: { pointerId: number; x: number; y: number; t: number } | null = null;
+  private tap: { pointerId: number; x: number; y: number; t: number; view: string } | null = null;
   private readonly plotTapListeners = new Set<(plot: number) => void>();
+  /**
+   * A kid press that may still be a tap, which opens its card (GUI_MVP §18.1): the same
+   * 220 ms and 8 CSS px. The kid lifts as for a drag; a tap puts it back untouched.
+   */
+  private kidTap: { pointerId: number; kidId: number; x: number; y: number; t: number; view: string } | null = null;
+  private readonly kidTapListeners = new Set<(kidId: number) => void>();
+  /** How a kid press resolved: a drag (from the moment it is one) or a tap (Codex review). */
+  private readonly gestureListeners = new Set<(kind: 'drag' | 'tap') => void>();
   /** The Garden's ground point, which the plots sit around. */
   private readonly gardenGround: { x: number; y: number };
   /**
@@ -254,6 +262,27 @@ export class MapScene {
     this.listeners.add(fn);
   }
 
+  /**
+   * Calls `fn` when a kid press resolves: 'drag' once it can no longer be a tap (moved 8 px,
+   * held 220 ms, a second finger or a view change), 'tap' when it opens the card. Sounds
+   * follow this, not the sim's pick-up, so a tap never sounds like a pick-up.
+   */
+  listenGesture(fn: (kind: 'drag' | 'tap') => void): void {
+    this.gestureListeners.add(fn);
+  }
+
+  /** A kid press that can no longer be a tap is a drag, from now. */
+  private promoteToDrag(): void {
+    if (!this.kidTap) return;
+    this.kidTap = null;
+    for (const fn of this.gestureListeners) fn('drag');
+  }
+
+  /** Calls `fn` when a kid on the map is tapped (GUI_MVP §18.1): its id. */
+  listenKidTap(fn: (kidId: number) => void): void {
+    this.kidTapListeners.add(fn);
+  }
+
   /** Calls `fn` when a plot on the map is tapped (GUI_MVP §15.2): its 0-based index. */
   listenPlotTap(fn: (plot: number) => void): void {
     this.plotTapListeners.add(fn);
@@ -311,7 +340,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' | 'feed' | 'name' }>): void {
     this.pending.push(cmd);
   }
 
@@ -464,6 +493,7 @@ export class MapScene {
   private startPan(e: FederatedPointerEvent): void {
     // A second pointer is never a tap.
     if (this.pan) this.tap = null;
+    if (this.drag) this.promoteToDrag();
     if (this.drag || this.pan || this.inputPaused) return;
     // A press near a Mini picks it up: its target is at least 44 CSS px each way (§16.1).
     // Its own body, any other kid's and real soil all come first: they took the press already.
@@ -474,7 +504,7 @@ export class MapScene {
     }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
     const still = Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5;
-    this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now() } : null;
+    this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey() } : null;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
   }
@@ -573,8 +603,10 @@ export class MapScene {
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
       e.stopPropagation(); // a kid press is a pickup, never a pan
-      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72).
+      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72),
+      // and a second finger cancels a kid tap.
       this.tap = null;
+      if (this.drag) this.promoteToDrag();
       this.startDrag(kid.id, e);
     });
     this.views.set(kid.id, view);
@@ -616,6 +648,7 @@ export class MapScene {
     this.home?.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
+    this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey() };
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
@@ -625,6 +658,7 @@ export class MapScene {
       return;
     }
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    if (this.kidTap && Math.hypot(e.global.x - this.kidTap.x, e.global.y - this.kidTap.y) > TAP_SLOP) this.promoteToDrag();
     this.dragScreen = { x: e.global.x, y: e.global.y };
     const w = this.toWorld(e);
     this.home?.move(w);
@@ -636,7 +670,7 @@ export class MapScene {
     if (this.pan && e.pointerId === this.pan.pointerId) {
       const tap = this.tap;
       this.tap = null;
-      if (kind === 'drop' && tap && !this.inputPaused && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP) {
+      if (kind === 'drop' && tap && !this.inputPaused && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP && this.viewKey() === tap.view) {
         this.pan = undefined;
         // Rechecked at release, where the finger is now (§15.2).
         const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, this.toWorld(e), this.cam.zoom) : null;
@@ -656,10 +690,22 @@ export class MapScene {
 
   private endDrag(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    const tap = this.kidTap;
+    this.kidTap = null;
     if (kind === 'cancelDrag') {
       this.cancelActiveDrag();
       return;
     }
+    // A tap on a kid: put it back untouched, and open its card (GUI_MVP §18.1). The view must
+    // be as it was at the press: a camera or viewport change makes it something else.
+    if (tap && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP && this.viewKey() === tap.view) {
+      this.cancelActiveDrag();
+      for (const fn of this.gestureListeners) fn('tap');
+      for (const fn of this.kidTapListeners) fn(tap.kidId);
+      return;
+    }
+    // Not a tap after all: a drag that never sounded gets its pick-up now, then its drop.
+    if (tap) for (const fn of this.gestureListeners) fn('drag');
     const w = this.toWorld(e);
     // A view change since the last frame (camera, viewport, insets) also restarts the dwell,
     // checked here too: no frame may have run in between (Codex review, PR #50).
@@ -756,6 +802,8 @@ export class MapScene {
   }
 
   private cancelActiveDrag(): void {
+    // A cancelled press resolves as nothing: never a tap, never a later drag (Codex review).
+    this.kidTap = null;
     this.home?.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
@@ -880,6 +928,8 @@ export class MapScene {
 
   private frame(dt: number): void {
     this.clock += dt * 1000;
+    // A kid press held past 220 ms, or under a view that changed, is a drag (§18.1).
+    if (this.kidTap && (performance.now() - this.kidTap.t > TAP_MS || this.viewKey() !== this.kidTap.view)) this.promoteToDrag();
     this.updateCamera(dt);
     this.releaseUnused(performance.now());
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are
@@ -923,10 +973,10 @@ export class MapScene {
     const rares: RareKid[] = [];
     for (const k of kids) {
       const special = this.game.isSpecial(k.type);
-      if (!k.variant && !special) continue;
+      if (!k.variant && !special && !k.happy) continue;
       if (!this.views.has(k.id)) continue;
       const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
-      rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k) });
+      rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k), happy: !!k.happy });
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
   }
@@ -970,7 +1020,9 @@ export class MapScene {
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
       // Over the planting target, the map holds still, armed or busy (GUI_MVP §13.1, §15.1).
       const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready' || this.overBusyHome;
-      if ((ex || ey) && !this.drag.noRoom && !overHome) {
+      // A press that may still be a tap on the kid (§18.1) never moves the map.
+      const maybeTap = this.kidTap !== null && performance.now() - this.kidTap.t <= TAP_MS;
+      if ((ex || ey) && !this.drag.noRoom && !overHome && !maybeTap) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();

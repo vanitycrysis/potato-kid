@@ -116,5 +116,26 @@
     "rareVariants": ["rainbow", "mini", "orbit", "prism", "ribbon", "ripple", "comet", "petal", "echo", "zigzag"],
     "rareIncomeMultiplier": 2,
     "miniScale": 0.72
-  }
+  },
+  "feeding": {
+    "foods": [
+      { "id": "toast", "name": "Toast", "price": 100 },
+      { "id": "berry_jam", "name": "Berry jam", "price": 100 },
+      { "id": "berries", "name": "Berries", "price": 100 },
+      { "id": "apple", "name": "Apple", "price": 100 },
+      { "id": "carrot", "name": "Carrot", "price": 100 },
+      { "id": "corn", "name": "Corn", "price": 100 },
+      { "id": "mushroom", "name": "Mushroom", "price": 100 },
+      { "id": "pickle", "name": "Pickle", "price": 100 },
+      { "id": "cheese", "name": "Cheese", "price": 100 },
+      { "id": "soup", "name": "Soup", "price": 100 },
+      { "id": "cocoa", "name": "Cocoa", "price": 100 },
+      { "id": "cracker", "name": "Cracker", "price": 100 }
+    ],
+    "happySeconds": 1200,
+    "happyMultiplier": 1.5,
+    "favouriteSeconds": 3600,
+    "favouriteMultiplier": 2
+  },
+  "naming": { "price": 50, "maxLength": 24 }
 }

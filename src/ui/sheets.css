@@ -40,6 +40,8 @@
   font-size: 26px;
   line-height: 32px;
   font-weight: 400;
+  /* A kid's name can be one long word: it wraps, clear of the close button (GUI_MVP §18.1). */
+  overflow-wrap: anywhere;
 }
 .sheet-title:focus {
   outline: none;
@@ -799,6 +801,10 @@
   border-image-source: var(--ui-button-selected);
 }
 .dex-home-row-text {
+  flex: 1;
+  /* A kid's name can be one long word: it wraps, inside the row (GUI_MVP §18.2). */
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
 }
@@ -1106,6 +1112,8 @@
 }
 .picker-row-text {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
 }
@@ -1140,4 +1148,185 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* --- The kid card, feeding and naming (GUI_MVP §17-18) ------------------------------- */
+.kid-card-portrait {
+  display: flex;
+  justify-content: center;
+}
+.kid-card-marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+.kid-card-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.kid-card-tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.kid-card-tier .sheet-helper,
+.kid-card-happy p,
+.kid-card-planting p,
+.kid-status ~ p,
+.sheet-body p.kid-card-food {
+  margin: 0;
+}
+.kid-card-heading {
+  margin: 16px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.kid-card-trait {
+  margin: 8px 0 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.kid-card-happy-line,
+.kid-card-food {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.kid-card-food strong {
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kid-card-planting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kid-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ui-button.kid-card-action {
+  min-height: 48px;
+}
+.kid-status:focus {
+  outline: none;
+}
+
+/* Feeding (§17.2): one 64 px row per food; the price always on its button. Where the
+   name and the 160 px button don't both fit (a narrow phone, larger text), the button
+   goes below, full width, and nothing leaves the row. */
+.feed-row {
+  container-type: inline-size;
+  min-height: 64px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.feed-row > img {
+  flex: none;
+  margin-top: 8px;
+}
+.feed-row.is-selected {
+  outline: 3px solid var(--ui-ink);
+  outline-offset: -3px;
+}
+.feed-text {
+  flex: 1 1 96px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+  overflow-wrap: anywhere;
+}
+.feed-name {
+  font-size: 18px;
+  line-height: 24px;
+}
+.feed-relation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.ui-button.feed-button {
+  flex: 0 0 160px;
+  max-width: 100%;
+  min-height: 48px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.feed-button .action-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.feed-price {
+  font-size: 16px;
+  line-height: 22px;
+}
+.feed-short,
+.feed-refused {
+  flex: 1 0 100%;
+  margin: 0;
+}
+/* Measured in em, so larger text stacks sooner: icon, a name's room, the button. */
+@container (max-width: 20.5em) {
+  .ui-button.feed-button {
+    flex-basis: 100%;
+  }
+}
+
+/* Naming (§18.2). */
+.name-portrait {
+  margin-top: 8px;
+}
+.name-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.name-input {
+  min-height: 48px;
+  font: inherit;
+  font-size: 18px;
+  padding: 0 12px;
+  border: 2px solid var(--ui-ink);
+  border-radius: 8px;
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+}
+.name-input:focus {
+  outline: 2px solid var(--ui-ink);
+  outline-offset: 2px;
+}
+.name-count,
+.name-error {
+  margin: 0;
+}
+.name-error:empty {
+  display: none;
+}
+.ui-button.name-save {
+  width: 100%;
+  min-height: 48px;
+}
+.dex-personality {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-personality p {
+  margin: 0;
 }

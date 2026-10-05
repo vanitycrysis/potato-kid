@@ -1,3 +1,4 @@
+import { storedNameOk } from '../sim/names';
 import { BUILDING_IDS, type Content } from '../content/types';
 import type { PersistedState } from '../sim/game';
 
@@ -6,7 +7,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 4;
+export const SAVE_SCHEMA = 5;
 
 export interface SaveRecord {
   schema: number;
@@ -99,7 +100,8 @@ export function validateState(state: unknown, content: Content): string[] {
           typeof look.face === 'string' &&
           finite(look.scale) &&
           (look.scale as number) > 0 &&
-          (!('variant' in o) || (typeof o.variant === 'string' && plan.rareVariants.includes(o.variant)))
+          (!('variant' in o) || (typeof o.variant === 'string' && plan.rareVariants.includes(o.variant))) &&
+          (!('happy' in o) || o.happy === true)
         );
       };
       const planted = seed.planted;
@@ -170,6 +172,13 @@ export function validateState(state: unknown, content: Content): string[] {
       p.push(`kid ${String(id)} look is invalid`);
     }
     if ('variant' in k && !(typeof k.variant === 'string' && content.balance.planting.rareVariants.includes(k.variant))) p.push(`kid ${String(id)} variant is invalid`);
+    // A name exactly as the sim stores one: already normalized and allowed (D-057).
+    if ('name' in k && !(typeof k.name === 'string' && storedNameOk(k.name, content.balance.naming.maxLength))) p.push(`kid ${String(id)} name is invalid`);
+    // Happiness: time left, no more than a favourite lasts, and which kind (D-056).
+    const h = k.happy as Record<string, unknown> | undefined;
+    if ('happy' in k && !(typeof h === 'object' && h !== null && finite(h.left) && (h.left as number) > 0 && (h.left as number) <= content.balance.feeding.favouriteSeconds && typeof h.favourite === 'boolean')) {
+      p.push(`kid ${String(id)} happy is invalid`);
+    }
     const box = k.box as Record<string, unknown> | undefined;
     if (typeof box !== 'object' || box === null || !(['left', 'top', 'right', 'bottom'] as const).every((f) => finite(box[f]))) {
       p.push(`kid ${String(id)} box is invalid`);

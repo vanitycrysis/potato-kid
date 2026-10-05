@@ -52,6 +52,7 @@ export function validateContent(content: Content): string[] {
   errors.push(...validateSpawn(content.balance));
   errors.push(...validateEconomy(content.balance, content.kids.length));
   errors.push(...validatePlanting(content.balance));
+  errors.push(...validateFeeding(content));
 
   // Special kids (D-063): apex, tier 5 or above, in no recipe, never from the Garden.
   for (const k of content.kids.filter((x) => x.special)) {
@@ -175,6 +176,38 @@ function validatePlanting(balance: unknown): string[] {
   }
   num('rareIncomeMultiplier', (v) => v >= 1, 'a finite number >= 1');
   num('miniScale', (v) => v > 0 && v <= 1, 'a finite number in (0, 1]');
+  return errors;
+}
+
+/** Feeding and naming (D-056, D-057), and every type's personality with two known, different foods. */
+function validateFeeding(content: Content): string[] {
+  const errors: string[] = [];
+  const f = (content.balance as unknown as Record<string, unknown>).feeding as Content['balance']['feeding'] | undefined;
+  if (typeof f !== 'object' || f === null) return ['balance.feeding is missing'];
+  const ids = new Set<string>();
+  if (!Array.isArray(f.foods) || f.foods.length === 0) errors.push('balance.feeding.foods must list the foods');
+  for (const food of f.foods ?? []) {
+    if (typeof food.id !== 'string' || !food.id || ids.has(food.id)) errors.push(`food "${String(food.id)}" needs a distinct id`);
+    ids.add(food.id);
+    if (typeof food.name !== 'string' || !food.name) errors.push(`food "${food.id}" needs a name`);
+    if (typeof food.price !== 'number' || !Number.isFinite(food.price) || food.price < 0) errors.push(`food "${food.id}" price must be a finite number >= 0`);
+  }
+  const pos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+  if (!pos(f.happySeconds) || !pos(f.favouriteSeconds)) errors.push('balance.feeding happy durations must be > 0');
+  if (!(f.happyMultiplier >= 1) || !(f.favouriteMultiplier >= 1)) errors.push('balance.feeding multipliers must be >= 1');
+  // A favourite is never worse than any other food (GUI_MVP §17.2).
+  if (f.favouriteSeconds < f.happySeconds || f.favouriteMultiplier < f.happyMultiplier) errors.push('balance.feeding: a favourite must last and pay at least as much as other foods');
+  const n = (content.balance as unknown as Record<string, unknown>).naming as Content['balance']['naming'] | undefined;
+  if (!n || !(n.price >= 0) || !Number.isInteger(n.maxLength) || n.maxLength < 1) errors.push('balance.naming needs a price >= 0 and a whole maxLength >= 1');
+  for (const k of content.kids) {
+    const p = content.personality?.[k.id];
+    if (!p) {
+      errors.push(`kid "${k.id}" has no personality`);
+      continue;
+    }
+    if (!ids.has(p.favouriteFood) || !ids.has(p.hatedFood)) errors.push(`kid "${k.id}" has an unknown food`);
+    if (p.favouriteFood === p.hatedFood) errors.push(`kid "${k.id}" can't like and hate the same food`);
+  }
   return errors;
 }
 

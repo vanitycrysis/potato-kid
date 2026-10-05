@@ -48,7 +48,7 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => void;
       /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
       debugReadySeed?: (plot: number, type: string, variant: string | null) => void;
       /**
@@ -76,7 +76,7 @@ declare global {
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** Rare marks and sleeves drawn now (GUI_MVP §16). */
-      rares: () => { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null }[];
+      rares: () => { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null; happy: boolean }[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -175,6 +175,7 @@ async function boot(): Promise<void> {
   audio = new AudioPlayer(settings);
   const player = audio;
   scene.listenSteps((events) => player.onStep(events));
+  scene.listenGesture((kind) => player.gesture(kind));
   if (loaded.state) lastOffline = scene.resume(Date.now());
   void save();
   const lifecycle = new Lifecycle({
@@ -195,7 +196,7 @@ async function boot(): Promise<void> {
   }, SAVE_EVERY_MS);
   // Also after every fusion, purchase and upgrade (plan §4).
   const saveAfter = (e: GameEvent) =>
-    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || (e.type === 'spawned' && e.source !== 'garden');
+    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden');
   scene.listen((e) => {
     if (saveAfter(e)) void save();
   });
@@ -255,7 +256,7 @@ async function boot(): Promise<void> {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => scene.command(cmd),
         }
       : {}),
     };

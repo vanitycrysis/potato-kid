@@ -37,3 +37,14 @@ describe('audio cues (ART_AUDIO_PLAN priorities)', () => {
     expect(l.allow('sfx_spawn', 300)).toBe(true);
   });
 });
+
+describe('feeding and naming cues (GUI_MVP §17.2, §18.2)', () => {
+  it('an accepted bite or name is a quiet UI tap, below every world sound; a refusal is silent', () => {
+    expect(cueFor([{ type: 'fed', kid, food: 'apple', favourite: false }])).toBe('sfx_ui_tap');
+    expect(cueFor([{ type: 'named', kid, name: 'Spud' }])).toBe('sfx_ui_tap');
+    expect(cueFor([{ type: 'fed', kid, food: 'apple', favourite: true }, { type: 'dropped', kidId: 1 }])).toBe('sfx_place');
+    // The sim's pick-up is silent: the scene's gesture sounds it once a press is a drag.
+    expect(cueFor([{ type: 'pickedUp', kidId: 1 }])).toBeNull();
+    expect(cueFor([{ type: 'rejected', command: 'feed', reason: 'hated' }])).toBeNull();
+  });
+});

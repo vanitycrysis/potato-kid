@@ -9,6 +9,7 @@ import { BuildingSheets } from './buildings';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
 import type { PlotsSnapshot } from './gardenPlots';
+import { KidCard, type CardSnapshot } from './kidCard';
 import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
@@ -83,11 +84,12 @@ export class Hud {
   private readonly buildings: BuildingSheets;
   private readonly dex: Dex;
   private readonly notes: PlantingNotes;
+  private readonly kidCard: KidCard;
   private readonly dexButton = el('button', 'ui-button dex-button', icon('icon_dex', '', 'ui-icon-24'));
   private readonly trayCells = new Map<string, HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
-  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null }) | null = null;
+  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null }) | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -148,7 +150,11 @@ export class Hud {
     );
     this.notes = new PlantingNotes(settings);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
-    this.dex = new Dex(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly);
+    // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex button
+    // (world kids are no focus targets); a read-only save can still browse it.
+    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    scene.listenKidTap((kidId) => this.kidCard.open(kidId, this.dexButton));
     // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
     const gardenCell = tray.querySelector<HTMLElement>('.tray-cell');
     scene.listenPlotTap((plot) => {
@@ -282,7 +288,7 @@ export class Hud {
     if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot };
+      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot() };
     }
     this.summaryOpen = true;
     openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, (replaced) => {
@@ -292,6 +298,7 @@ export class Hud {
       this.interrupted = null;
       if (!back) return;
       if (back.key === 'dex') this.dex.open(back.launcher);
+      else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
       else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
         this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
@@ -414,7 +421,7 @@ export class Hud {
 
   private onStep(events: GameEvent[]): void {
     // A sheet shows its own command's refusal inline; the world never repeats it (GUI_MVP §9).
-    const inSheet = new Set([...this.buildings.onStep(events), ...this.dex.onStep(events)]);
+    const inSheet = new Set([...this.buildings.onStep(events), ...this.kidCard.onStep(events)]);
     const items = feedbackFor(
       events.filter((e) => !inSheet.has(e)),
       this.known,
@@ -596,6 +603,23 @@ export class Hud {
             el('span', 'card-heading', `Plot ${item.plot + 1} is growing.`),
             el('span', 'card-line', `One kid sprouts in ${formatDuration(this.scene.game.growSeconds)}.`),
           ),
+        );
+      case 'fed': {
+        // Its card had closed before the bite was accepted: the result is still said (§17.2).
+        const f = this.content.balance.feeding;
+        const who = item.name ?? this.name(item.kidType);
+        const food = f.foods.find((x) => x.id === item.food)?.name ?? item.food;
+        const lines = item.favourite
+          ? [`${food} is ${who}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}.`]
+          : [`${who} enjoyed ${food}.`, `Happy for ${formatDuration(f.happySeconds)}.`];
+        return el('div', 'toast toast-short', icon('icon_happy', '', 'ui-icon-28'), el('div', 'card-text', el('span', 'card-heading', lines[0]!), el('span', 'card-line', lines[1]!)));
+      }
+      case 'named':
+        return el(
+          'div',
+          'toast toast-short',
+          icon('icon_check', '', 'ui-icon-28'),
+          el('span', 'card-heading', item.name ? `Named ${item.name}.` : `Called ${this.name(item.kidType)} again.`),
         );
       case 'sprouted': {
         // The four reveals (GUI_MVP §15.5): by the actual kid, never by which roll hit.

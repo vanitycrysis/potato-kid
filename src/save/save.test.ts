@@ -450,7 +450,7 @@ describe('schema 3: plots (D-061)', () => {
 
 describe('schema 4: rare variants found (D-062)', () => {
   it('a schema-3 save counts the rares it already holds, on the map or planted, as found', async () => {
-    expect(SAVE_SCHEMA).toBe(4);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(4);
     const g = newGame();
     const old = g.persisted() as PersistedState & Record<string, unknown>;
     delete (old as Partial<PersistedState>).discoveredVariants;
@@ -494,5 +494,40 @@ describe('schema 4: rare variants found (D-062)', () => {
       expect(validateState({ ...state, discoveredVariants: bad }, content), JSON.stringify(bad)).not.toEqual([]);
     }
     expect(validateState({ ...state, discoveredVariants: { fire: ['rainbow', 'mini'] } }, content)).toEqual([]);
+  });
+});
+
+describe('schema 5: names and happiness (D-056, D-057)', () => {
+  it('a schema-4 save loads as it was', async () => {
+    expect(SAVE_SCHEMA).toBe(5);
+    const old = newGame().persisted();
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(4, 4, 1, old));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual(old);
+  });
+
+  it('a kid may carry a normalized, allowed name and some happiness; a planted kid whether it was happy', () => {
+    const state = newGame().persisted() as unknown as { world: { kids: Record<string, unknown>[] }; plots: unknown[] };
+    const kid = state.world.kids[0]!;
+    const check = (patch: Record<string, unknown>) => {
+      const s = structuredClone(state);
+      Object.assign(s.world.kids[0]!, patch);
+      return validateState(s, content);
+    };
+    expect(check({ name: 'Sir Spud', happy: { left: 60, favourite: true } })).toEqual([]);
+    // A save checks a name's shape, and only a generous length cap: how a platform counts
+    // clusters must never make a good save unreadable (Codex review, FEED-NAME).
+    const cap = content.balance.naming.maxLength * 8;
+    for (const bad of [{ name: '' }, { name: ' Spud' }, { name: 'Spud🥔' }, { name: 'aㅤb' }, { name: 'x'.repeat(cap + 1) }, { name: 7 }]) expect(check(bad), JSON.stringify(bad)).toContain(`kid ${String(kid.id)} name is invalid`);
+    expect(check({ name: 'ൎന'.repeat(13) })).toEqual([]);
+    const most = content.balance.feeding.favouriteSeconds;
+    for (const bad of [{ left: 0, favourite: true }, { left: most + 1, favourite: false }, { left: 60 }, { left: Number.NaN, favourite: true }]) {
+      expect(check({ happy: bad }), JSON.stringify(bad)).toContain(`kid ${String(kid.id)} happy is invalid`);
+    }
+    const look = { body: 'default', face: 'default', scale: 1 };
+    const plots = (happy: unknown) => [{ seed: { planted: [{ type: 'plain', look, happy }], sprout: null, grown: 0 } }];
+    expect(validateState({ ...state, plots: plots(true) }, content)).toEqual([]);
+    expect(validateState({ ...state, plots: plots('yes') }, content)).not.toEqual([]);
   });
 });

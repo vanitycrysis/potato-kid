@@ -88,6 +88,11 @@ export class AudioPlayer {
     };
   }
 
+  /** A kid press resolved (the scene's gesture): a drag picks up, a tap is a UI tap. */
+  gesture(kind: 'drag' | 'tap'): void {
+    this.play(kind === 'drag' ? 'sfx_pick_up' : 'sfx_ui_tap');
+  }
+
   /** A sim step: its one cue (see cueFor). */
   onStep(events: GameEvent[]): void {
     const cue = cueFor(events);
