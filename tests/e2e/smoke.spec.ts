@@ -1992,6 +1992,33 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     expect(await page.evaluate(() => window.__PK__!.plots().map((p) => p.kids))).toEqual([3, 3, 0, 0]);
   });
 
+  test('a type with no copies on the map says so (Codex review round 2, FEED-NAME)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // Discovered, then planted away: none left on the map.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!('fire', 800, 1500)], plot: 0 });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(0);
+    await page.locator('.dex-button').click();
+    await dialog(page).locator('[data-kid="fire"]').click();
+    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 0');
+    await expect(dialog(page).locator('.dex-home')).toContainText('None on your map.');
+  });
+
+  test('planting from a card opened in the Dex: closing the plot detail returns focus to the Dex button (Codex review round 2, FEED-NAME)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await sheet(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await sheet(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    await sheet(page).getByRole('button', { name: 'Add this kid' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Plot 1');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('.dex-button')).toBeFocused();
+  });
+
   test('the return summary hands back a kid card on its Name page, with the draft (Codex review, FEED-NAME)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
@@ -2924,6 +2951,42 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toHaveAttribute('aria-disabled', 'true');
     await expect(card(page).getByRole('button', { name: 'Name', exact: true })).toHaveAttribute('aria-disabled', 'true');
     await expect(card(page).getByRole('button', { name: 'Choose a plot' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('Enter right after typing a valid name saves it, with no frame in between (Codex review round 2, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Name', exact: true }).click();
+    // Type an invalid draft, let a frame draw it, then fix it and press Enter in one task.
+    await card(page).getByLabel('Kid name').fill('Spud!');
+    await expect(card(page).locator('.name-save')).toHaveAttribute('aria-disabled', 'true');
+    await page.evaluate(() => {
+      const input = document.querySelector<HTMLInputElement>('#kid-name')!;
+      input.value = 'Spud';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    await expect(card(page).locator('.sheet-title')).toHaveText('Spud');
+  });
+
+  test('a bite or a name is saved at once, not at the next autosave (Codex review round 2, FEED-NAME)', async ({ page }) => {
+    const id = await open(page);
+    await page.evaluate((i) => {
+      window.__PK__!.debugCommand!({ type: 'feed', kidId: i, food: 'apple' });
+      window.__PK__!.debugCommand!({ type: 'name', kidId: i, name: 'Spud' });
+    }, id);
+    // Well inside the 10 s autosave: the newest slot already holds both.
+    await expect
+      .poll(
+        () =>
+          page.evaluate((i) => {
+            const slots = ['A', 'B'].map((s) => localStorage.getItem(`CapacitorStorage.potato-kid/slot${s}`)).filter((x): x is string => !!x).map((x) => JSON.parse(x));
+            const newest = slots.sort((a, b) => b.revision - a.revision)[0];
+            const kid = newest?.state?.world?.kids?.find((k: { id: number }) => k.id === i);
+            return kid ? `${kid.name ?? ''}|${!!kid.happy}` : '';
+          }, id),
+        { timeout: 2000 },
+      )
+      .toBe('Spud|true');
   });
 
   test('typing a name when the kid fuses away: focus stays in the sheet, on the notice (Codex review, FEED-NAME)', async ({ page }) => {

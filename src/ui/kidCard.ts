@@ -76,6 +76,8 @@ export class KidCard {
   /** The Name page's draft: kept while the sheet is open (Back keeps it, close discards). */
   private draft: string | null = null;
   private current: { update(): void } | null = null;
+  /** What opened the card: focus goes back there, through any sheet it hands over to. */
+  private launcher: HTMLElement | null = null;
   /** Opened from the Dex: the way back to that kid's type detail (GUI_MVP §18.1). */
   private backTo: { label: string; go: () => void } | null = null;
   private readonly tierOf: Map<KidId, number>;
@@ -143,6 +145,7 @@ export class KidCard {
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     if (!kid) return;
     this.kidId = kidId;
+    this.launcher = launcher;
     this.backTo = back ?? null;
     this.seen = { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant };
     this.view = 'card';
@@ -230,7 +233,8 @@ export class KidCard {
         const first = this.notes.claimFirst();
         const lines = [this.notes.heading(name, e.plot), ...(first ? this.notes.firstLines() : [this.notes.later(e.count)])];
         if (first) this.notes.markShown();
-        this.buildings.openPlotDetail(e.plot, null, lines);
+        // Handed over with the card's own launcher, so closing the Garden returns focus there.
+        this.buildings.openPlotDetail(e.plot, this.launcher, lines);
       } else if (e.type === 'rejected' && e.command === p.type) {
         this.pending = null;
         handled.push(e);
@@ -566,8 +570,13 @@ export class KidCard {
     const save = el('button', 'ui-button ui-primary sheet-action name-save');
     save.type = 'button';
     save.dataset.cue = 'success';
+    /** Whether the draft can be saved now: checked at once, never from the last frame's state. */
+    const canSave = () => {
+      const check = checkName(input.value, n.maxLength);
+      return !!this.kid() && !this.readOnly() && !this.pending && check.ok && check.name !== this.seen!.name && this.game.state.materials >= n.price;
+    };
     const trySave = () => {
-      if (composing || save.getAttribute('aria-disabled') === 'true') return;
+      if (composing || !canSave()) return;
       this.send({ type: 'name', name: input.value });
     };
     save.addEventListener('click', trySave);
@@ -631,7 +640,7 @@ export class KidCard {
         const saving = this.pending?.type === 'name' && this.pending.name !== null;
         const text = saving ? 'Saving…' : unchanged ? 'Name unchanged' : `Save name · ${formatExact(n.price)} Materials`;
         if (save.textContent !== text) save.textContent = text;
-        const ok = !!kid && !this.readOnly() && !this.pending && check.ok && !unchanged && have >= n.price;
+        const ok = canSave();
         this.setEnabled(save, ok);
         save.classList.toggle('ui-primary', ok);
         clear.hidden = clear.hidden || !this.seen!.name;

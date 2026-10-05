@@ -60,7 +60,8 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, open
     return { row, set };
   };
 
-  let shown = '';
+  // Null until first drawn: no copies at all is a key ('') worth drawing too.
+  let shown: string | null = null;
   const update = () => {
     const kids = live();
     const ids = kids.map((k) => k.id);
