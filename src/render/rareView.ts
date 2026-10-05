@@ -82,8 +82,12 @@ interface Item {
 export class RareLayer {
   readonly root = new Container();
   private readonly items = new Map<number, Item>();
-  /** Newborns still bursting: kid id → foreground ms at admission. */
-  private readonly births = new Map<number, number>();
+  /**
+   * Newborns still bursting: kid id → foreground ms its burst began, or null while its view
+   * is still loading (a costume not yet resident): the burst starts when it appears (Codex
+   * review, PR #77).
+   */
+  private readonly births = new Map<number, number | null>();
 
   constructor(
     private readonly textures: Map<string, Texture>,
@@ -95,15 +99,20 @@ export class RareLayer {
   }
 
   /** A rare or special kid just came up on the map, live (never an offline birth). */
-  born(id: number, now: number): void {
-    this.births.set(id, now);
+  born(id: number): void {
+    this.births.set(id, null);
   }
 
-  /** Draws every rare and bursting newborn; `now` is foreground ms. */
-  update(kids: readonly RareKid[], zoom: number, now: number): void {
+  /**
+   * Draws every rare and bursting newborn among `kids` (those drawn now); `now` is foreground
+   * ms. `alive`: every kid in the world, drawn or not, so a newborn still loading keeps its
+   * burst for when it appears.
+   */
+  update(kids: readonly RareKid[], zoom: number, now: number, alive: ReadonlySet<number>): void {
     const seen = new Set<number>();
     for (const k of kids) {
-      const birth = this.births.get(k.id);
+      if (this.births.get(k.id) === null) this.births.set(k.id, now);
+      const birth = this.births.get(k.id) ?? undefined;
       const burst = birth === undefined ? null : burstAt(now - birth, this.reducedMotion, !!k.variant);
       if (birth !== undefined && !burst) this.births.delete(k.id);
       if (!k.variant && !burst) continue;
@@ -153,7 +162,7 @@ export class RareLayer {
       item.mark?.destroy();
       this.items.delete(id);
     }
-    for (const id of this.births.keys()) if (!kids.some((k) => k.id === id)) this.births.delete(id);
+    for (const id of this.births.keys()) if (!alive.has(id)) this.births.delete(id);
   }
 
   /** Test hook: what each drawn rare shows. */

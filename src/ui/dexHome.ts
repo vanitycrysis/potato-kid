@@ -141,7 +141,7 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     const who = el(
       'div',
       'dex-home-who',
-      portrait(kidRig!, type, 48, kid?.look, kid?.variant === 'mini' ? { scale: content.balance.planting.miniScale } : undefined),
+      portrait(kidRig!, type, 48, kid?.look, kid?.variant ? { variant: kid.variant, miniScale: content.balance.planting.miniScale } : undefined),
       el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', kidName), el('span', 'sheet-helper', marks.join(' · '))),
     );
     const odds = el('div', 'dex-home-odds');
@@ -282,7 +282,7 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, feed
     const row = el(
       'button',
       'ui-button dex-home-row',
-      portrait(kidRig!, type, 48, kid.look, kid.variant === 'mini' ? { scale: content.balance.planting.miniScale } : undefined),
+      portrait(kidRig!, type, 48, kid.look, kid.variant ? { variant: kid.variant, miniScale: content.balance.planting.miniScale } : undefined),
       el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', `Kid ${ordinal}${rare ? ` · ${rare}` : ''}`), el('span', 'sheet-helper', 'Choose this kid')),
     );
     row.type = 'button';

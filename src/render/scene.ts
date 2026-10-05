@@ -63,6 +63,8 @@ const EDGE_SPEED = 1100;
 /** A tap on the map (GUI_MVP §15.2): at most this long, and this far, in CSS px. */
 const TAP_MS = 220;
 const TAP_SLOP = 8;
+/** The least a small kid's pickup target spans each way, in CSS px (GUI_MVP §16.1). */
+const TAP_TARGET = 44;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -460,11 +462,46 @@ export class MapScene {
     // A second pointer is never a tap.
     if (this.pan) this.tap = null;
     if (this.drag || this.pan || this.inputPaused) return;
+    // A press near a Mini picks it up: its target is at least 44 CSS px each way (§16.1).
+    // Its own body, any other kid's and real soil all come first: they took the press already.
+    const mini = this.miniAt(this.toWorld(e));
+    if (mini !== null) {
+      this.startDrag(mini, e);
+      return;
+    }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
     const still = Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5;
     this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now() } : null;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
+  }
+
+  /**
+   * The Mini whose pickup target holds world point `p`, or null (GUI_MVP §16.1): its drawn box
+   * grown to at least 44 CSS px each way, about its centre. Never over real soil; where two
+   * overlap, the nearest centre wins, then the lower id. Only for picking up: drops and
+   * fusions use the drawn box.
+   */
+  private miniAt(p: { x: number; y: number }): number | null {
+    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return null;
+    const min = TAP_TARGET / this.cam.zoom;
+    let best: number | null = null;
+    let bestD = Infinity;
+    for (const k of this.game.state.world.kids) {
+      if (k.variant !== 'mini' || !this.views.has(k.id)) continue;
+      const at = this.drawn.get(k.id) ?? k;
+      const cx = at.x + (k.box.left + k.box.right) / 2;
+      const cy = at.y + (k.box.top + k.box.bottom) / 2;
+      const hw = Math.max(k.box.right - k.box.left, min) / 2;
+      const hh = Math.max(k.box.bottom - k.box.top, min) / 2;
+      if (Math.abs(p.x - cx) > hw || Math.abs(p.y - cy) > hh) continue;
+      const d = Math.hypot(p.x - cx, p.y - cy);
+      if (d < bestD || (d === bestD && best !== null && k.id < best)) {
+        bestD = d;
+        best = k.id;
+      }
+    }
+    return best;
   }
 
   private movePan(e: FederatedPointerEvent): void {
@@ -888,7 +925,7 @@ export class MapScene {
       const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
       rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k) });
     }
-    this.rareLayer.update(rares, this.cam.zoom, this.clock);
+    this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
   }
 
   /** Test hook: the rares drawn now. */
@@ -957,7 +994,7 @@ export class MapScene {
       case 'spawned':
         this.addView(e.kid).play('spawn');
         // A rare or special newborn's burst, once it is on the map (GUI_MVP §15.5).
-        if (e.source === 'sprout' && (e.kid.variant || this.game.isSpecial(e.kid.type))) this.rareLayer.born(e.kid.id, this.clock);
+        if (e.source === 'sprout' && (e.kid.variant || this.game.isSpecial(e.kid.type))) this.rareLayer.born(e.kid.id);
         break;
       case 'planted': {
         // Gone from the sim and the map at once (GUI_MVP §15.5: no ghost or wave); its plot
