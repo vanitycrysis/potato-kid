@@ -54,7 +54,9 @@ describe('the fallback against the platform, fuzzed (Codex review round 6, FEED-
       'a', 'é', '́', '̂', '1',
       // Devanagari, Bengali, Malayalam (with its prepend dot reph), Myanmar, Khmer, Thai, Balinese.
       'क', 'स', '्', 'ा', 'े', 'अ', 'ক', '্', 'ന', '്', 'ൎ',
-      'က', '္', 'ခ', 'ក', '្', 'ខ', 'ก', 'ำ', 'ᬓ', '᭄',
+      'က', '္', 'ခ', 'ာ', 'း', 'ၢ', 'ក', '្', 'ខ', 'ก', 'ำ', 'ᬓ', '᭄',
+      // Tai Tham and Tai Viet: a linker, and marks that don't extend.
+      'ᨠ', '᩠', 'ᩡ', 'ᩣ', 'ꪀ', 'ꩻ',
       // Hangul: jamo L, V, T and syllables LV, LVT.
       'ᄀ', 'ᅡ', 'ᆨ', '가', '각',
     ];
@@ -67,6 +69,8 @@ describe('the fallback against the platform, fuzzed (Codex review round 6, FEED-
       expect(graphemesFallback(s), JSON.stringify(s)).toEqual([...seg.segment(s)].map((x) => x.segment));
     }
     expect(graphemesFallback('ൎന'.repeat(13))).toHaveLength(13);
+    // Myanmar AA doesn't extend: 24 × "ကာ" is 48 clusters, too long for a name anywhere.
+    expect(graphemesFallback('ကာ'.repeat(24))).toHaveLength(48);
   });
 
   it('refuses invisible characters, alone or after a letter', () => {

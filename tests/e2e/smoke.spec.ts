@@ -2063,6 +2063,32 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await expect(sheet(page).getByLabel('Kid name')).toBeDisabled();
   });
 
+  test("an open card keeps its kid's number when a lower copy leaves (Codex review round 8, FEED-NAME)", async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: 'Fire Kid, kid 2 on your map' }).click();
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
+    // Kid 1 fuses away (Fire + Water make Steam).
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().filter((k) => k.type === 'fire').length)).toBe(1);
+    await page.waitForTimeout(200);
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
+  });
+
+  test('an add refused because its plot filled says so about that plot (Codex review round 8, FEED-NAME)', async ({ page }) => {
+    await fireDetail(page);
+    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
+    await sheet(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await sheet(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    // In one task: Plot 1 fills, then Add, before any frame redraws it.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2, 3, 4].map((i) => pk.debugAdd!('plain', 1400 + i * 200, 2700)), plot: 0 });
+      [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Add this kid')!.click();
+    });
+    await expect(sheet(page).locator('.kid-status')).toContainText('This plot is full. Review it to Start growing.');
+    await expect(sheet(page).locator('.kid-status')).not.toContainText('All plots');
+  });
+
   test('the return summary hands back a kid card on its Name page, with the draft (Codex review, FEED-NAME)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();

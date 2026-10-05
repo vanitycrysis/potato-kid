@@ -28,6 +28,11 @@ const set = (ranges: readonly Range[]): Set<number> => {
 
 /** Prepend letters (GB9b): they join what follows. Malayalam dot reph and others. */
 const PREPEND = set([0x0d4e, [0x111c2, 0x111c3], 0x113d1, 0x1193f, 0x11941, [0x11a84, 0x11a89], 0x11d46, 0x11f02]);
+/**
+ * Marks whose Grapheme_Cluster_Break is Other: they start a cluster of their own rather than
+ * extending one (Myanmar, Tai Tham, Tai Viet and Ahom vowel signs and tone marks; Codex review).
+ */
+const NOT_EXTENDING = set([[0x102b, 0x102c], 0x1038, [0x1062, 0x1064], [0x1067, 0x106d], 0x1083, [0x1087, 0x108c], 0x108f, [0x109a, 0x109c], 0x1a61, [0x1a63, 0x1a64], 0xaa7b, 0xaa7d, [0x11720, 0x11721]]);
 /** Letters that attach to what comes before (spacing marks and extenders that aren't marks). */
 const ATTACH = set([0x0e33, 0x0eb3, [0xff9e, 0xff9f]]);
 /** Indic Conjunct Break linkers (viramas) and consonants (GB9c). */
@@ -47,6 +52,7 @@ type Kind = 'prepend' | 'extend' | 'linker' | 'consonant' | 'L' | 'V' | 'T' | 'L
 
 function kindOf(c: number, ch: string): Kind {
   if (LINKER.has(c)) return 'linker';
+  if (NOT_EXTENDING.has(c)) return 'other';
   if (ATTACH.has(c) || /\p{M}/u.test(ch)) return 'extend';
   if (PREPEND.has(c)) return 'prepend';
   if (CONSONANT.has(c)) return 'consonant';

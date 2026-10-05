@@ -9,7 +9,7 @@ import { el, icon } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatRate, formatTimeLeft } from './format';
 import type { PlantingNotes } from './plantingNotes';
-import { plotRoute } from './plotRoute';
+import { chosenPlotRefusal, plotRoute } from './plotRoute';
 import { portrait } from './portrait';
 import type { OpenSheet, Sheets } from './sheet';
 
@@ -37,6 +37,8 @@ export interface CardSnapshot {
   seen: Seen;
   /** The planting route: open or not, and the plot chosen in it. */
   planting: { open: boolean; plot: number | null };
+  /** Its number as the card showed it. */
+  ordinal: number;
 }
 
 /** What the card last knew of its kid: kept when the kid leaves (§18.3). */
@@ -120,9 +122,16 @@ export class KidCard {
   }
 
   /** Kid n among live copies of its type, by id (§13.4's rule). */
+  /** Its number, fixed when the card opened: copies leaving never renumber it (Codex review). */
+  private kidOrdinal = 1;
+
   private ordinal(): number {
-    const type = this.seen!.type;
-    return this.game.state.world.kids.filter((k) => k.type === type && k.id <= this.kidId).length || 1;
+    return this.kidOrdinal;
+  }
+
+  /** Kid n among live copies of its type, by id (§13.4's rule), now. */
+  private ordinalNow(kidId: number, type: KidId): number {
+    return this.game.state.world.kids.filter((k) => k.type === type && k.id <= kidId).length || 1;
   }
 
   private food(id: string): FoodDef | undefined {
@@ -139,12 +148,13 @@ export class KidCard {
       back: this.backTo,
       seen: { ...this.seen!, look: { ...this.seen!.look } },
       planting: this.plantingState?.get() ?? { open: false, plot: null },
+      ordinal: this.kidOrdinal,
     };
   }
 
   /** Back where a snapshot was (its kid still on the map): the same page, draft and scroll. */
   restore(s: CardSnapshot, launcher: HTMLElement | null, scrollTop: number): void {
-    this.open(s.kidId, launcher, s.back ?? undefined, s.seen);
+    this.open(s.kidId, launcher, s.back ?? undefined, s.seen, s.ordinal);
     if (!this.sheet) return;
     this.draft = s.draft;
     // The card's planting route as it was, then the page that was open over it.
@@ -162,13 +172,14 @@ export class KidCard {
    * Opens a kid's card. `seen`: what an interrupted card last showed; with it, a kid that has
    * since left still gets its card back, read-only (§18.3).
    */
-  open(kidId: number, launcher: HTMLElement | null, back?: { label: string; go: () => void }, seen?: Seen): void {
+  open(kidId: number, launcher: HTMLElement | null, back?: { label: string; go: () => void }, seen?: Seen, ordinal?: number): void {
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     if (!kid && !seen) return;
     this.kidId = kidId;
     this.launcher = launcher;
     this.backTo = back ?? null;
     this.seen = kid ? { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant } : seen!;
+    this.kidOrdinal = ordinal ?? this.ordinalNow(kidId, this.seen.type);
     this.view = 'card';
     this.kept = null;
     // An action still waiting for its result stays waiting: it answers here, or in the world.
@@ -303,6 +314,8 @@ export class KidCard {
     if (reason === 'gone') return this.say(['This kid has already left the map.'], true);
     if (p.type === 'feed' && reason === 'hated') return this.say([`${name} won’t eat ${this.food(p.food)?.name ?? p.food}. Nothing was spent.`], true);
     if (p.type === 'name' && reason === 'invalid') return this.say(['Use letters, numbers, spaces, apostrophes or hyphens.'], true);
+    // An add was for one plot: say what changed there, not about every plot (§15.3).
+    if (p.type === 'plant' && (reason === 'plotsBusy' || reason === 'plotFull')) return this.say([chosenPlotRefusal(reason)], true);
     this.say([refusalText(reason, p.type, 'materials')], true);
   }
 
