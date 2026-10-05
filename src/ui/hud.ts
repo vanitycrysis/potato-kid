@@ -442,6 +442,9 @@ export class Hud {
    * after its effect); Infinity while its costume is still loading.
    */
   private readyAt(item: FeedbackItem, now: number): number {
+    // A sprout's card waits for its kid too: a costume still loading would leave it on show
+    // for a kid nobody can see yet (Codex review, PR #77).
+    if (item.kind === 'sprouted') return this.scene.viewState(item.kidId) === 'pending' ? Infinity : now;
     if (item.kind !== 'discovery' && item.kind !== 'newKid') return now;
     const after = item.kind === 'discovery' ? this.scene.discoveryToastDelayMs : 0;
     const state = item.kidId === undefined ? 'shown' : this.scene.viewState(item.kidId);
@@ -450,7 +453,7 @@ export class Hud {
 
   private kidShown(kidId: number, now: number): void {
     for (const c of this.queue) {
-      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
+      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid' || c.item.kind === 'sprouted') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
     }
   }
 
