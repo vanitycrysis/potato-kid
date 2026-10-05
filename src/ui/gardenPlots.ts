@@ -707,21 +707,38 @@ export class GardenPlots {
     announce.setAttribute('aria-live', 'polite');
     footer.replaceChildren(lines, notices, add, announce);
 
-    const rows = new Map<number, { node: HTMLElement; box: HTMLInputElement; text: string }>();
+    const rows = new Map<number, { node: HTMLElement; box: HTMLInputElement; text: string; named: (name: string | undefined) => void }>();
     const rowFor = (id: number) => {
       const k = live().find((c) => c.id === id)!;
       const box = el('input', 'picker-check');
       box.type = 'checkbox';
-      const name = this.name(k.type);
+      const typeName = this.name(k.type);
       const detail = this.marks(k.type, k.variant, [`Kid ${number(id, k.type)}`]);
+      // A named kid: its name, then its full type name, then tier and number (§15.3).
+      const nameEl = el('span', 'picker-row-name');
+      const typeEl = el('span', 'sheet-helper picker-row-type', typeName);
       // The full row toggles its checkbox once (a native label).
       const node = el(
         'label',
         'ui-surface picker-row',
         portrait(kidRig!, k.type, 48, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined),
-        el('span', 'picker-row-text', el('span', 'picker-row-name', name), el('span', 'sheet-helper', detail)),
+        el('span', 'picker-row-text', nameEl, typeEl, el('span', 'sheet-helper', detail)),
         box,
       );
+      const row = {
+        node,
+        box,
+        text: '',
+        // A name given or cleared while the picker is open shows, and is searchable, at once.
+        named: (name: string | undefined) => {
+          if (nameEl.textContent !== (name ?? typeName)) nameEl.textContent = name ?? typeName;
+          typeEl.hidden = !name;
+          row.text = `${name ?? ''} ${typeName} ${detail}`.toLowerCase();
+        },
+        rare: !!k.variant,
+        special: this.special(k.type),
+      };
+      row.named(k.name);
       box.addEventListener('change', () => {
         const at = draft.indexOf(id);
         if (box.checked && at < 0) draft.push(id);
@@ -730,7 +747,7 @@ export class GardenPlots {
         refresh();
         say();
       });
-      return { node, box, text: `${name} ${detail}`.toLowerCase(), rare: !!k.variant, special: this.special(k.type) };
+      return row;
     };
     const kinds = new Map<number, { rare: boolean; special: boolean }>();
 
@@ -791,6 +808,7 @@ export class GardenPlots {
       }
       let visible = 0;
       for (const [id, r] of rows) {
+        r.named(live().find((k) => k.id === id)?.name);
         const kind = kinds.get(id)!;
         const show = (filter === 'all' || (filter === 'rares' ? kind.rare : kind.special)) && (!query || r.text.includes(query));
         r.node.hidden = !show;

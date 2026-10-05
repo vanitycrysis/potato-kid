@@ -1914,8 +1914,9 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
   });
 });
 
-test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () => {
+test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => {
   const dialog = (page: Page) => page.getByRole('dialog', { name: 'Potato-Dex' });
+  const sheet = (page: Page) => page.getByRole('dialog');
 
   /** Every plot unlocked, so several kids can be planted in a row (D-054). */
   async function allPlots(page: Page): Promise<void> {
@@ -1924,13 +1925,6 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
       for (let i = 0; i < 3; i++) window.__PK__!.debugCommand!({ type: 'unlockPlot' });
     });
     await page.evaluate(() => window.__PK__!.debugAway!(0)); // one step: the unlocks apply
-  }
-
-  /** From a chosen kid's card: Choose a plot, that plot, then Add this kid (§15.6). */
-  async function addTo(page: Page, plot = 1): Promise<void> {
-    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
-    await dialog(page).getByRole('button', { name: new RegExp(`^Plot ${plot} ·`) }).click();
-    await dialog(page).getByRole('button', { name: 'Add this kid' }).click();
   }
 
   /** Two Fire Kids on the map, every plot unlocked, the Dex open on Fire's detail. */
@@ -1943,58 +1937,32 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
     return ids;
   }
 
-  test('choose a particular kid, keep it, then add it to a chosen plot from the Dex', async ({ page }) => {
-    const ids = await fireDetail(page);
+  test("a row opens that kid's card; Back returns to the detail with its row focused; closing returns to the Dex button", async ({ page }) => {
+    await fireDetail(page);
     await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 2');
-    const kid1 = dialog(page).getByRole('button', { name: 'Choose Fire Kid, kid 1 on your map, to add to a plot' });
-    await kid1.click();
-    // The card: what planting does, then Choose a plot (no direct add).
-    await expect(dialog(page).getByText('Planting', { exact: true })).toBeFocused();
-    await expect(dialog(page).locator('.dex-home-confirm')).toContainText('Add this kid to a plot. Leaves the map right away; kept in your Dex. No refund.');
-    await expect(dialog(page).getByRole('button', { name: 'Add this kid' })).toHaveCount(0);
-    // Choosing never adds: still two on the map.
-    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(2);
-    await dialog(page).getByRole('button', { name: 'Keep on map' }).click();
-    await expect(kid1).toBeFocused();
-    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
-
-    await kid1.click();
-    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
-    await expect(dialog(page).getByText('Choose a plot', { exact: true })).toBeFocused();
-    // One row per unlocked plot, none chosen for the player.
-    await expect(dialog(page).locator('.dex-plot-row')).toHaveText(['Plot 1 · 0 / 5', 'Plot 2 · 0 / 5', 'Plot 3 · 0 / 5', 'Plot 4 · 0 / 5']);
-    await expect(dialog(page).locator('.dex-plot-row[aria-pressed="true"]')).toHaveCount(0);
-    await dialog(page).getByRole('button', { name: /^Plot 2 ·/ }).click();
-    await expect(dialog(page).getByText('Add Fire Kid to Plot 2?')).toBeFocused();
-    const step = dialog(page).locator('.dex-home-confirm');
-    await expect(step).toContainText('Plot 2: 0 → 1 / 5');
-    await expect(step).toContainText('Special roll: Need 3 more → Need 2 more');
-    await expect(step).toContainText('Rare roll: Need 3 more → Need 2 more');
-    await expect(step).toContainText('This kid leaves the map. Its name, income and happy effect end here. No refund.');
-    await expect(step).toContainText('Its type and found variants stay in your Dex.');
-    await dialog(page).getByRole('button', { name: 'Add this kid' }).click();
-    // Kid 1 is the lower id: exactly that one left.
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
-    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 1');
-    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
-    // The one left keeps its number.
-    await expect(dialog(page).getByRole('button', { name: /kid 2 on your map/ })).toBeVisible();
-    // Into the plot chosen, never another.
-    expect(await page.evaluate(() => window.__PK__!.plots().map((p) => p.kids))).toEqual([0, 1, 0, 0]);
-    const status = dialog(page).locator('.dex-home-status');
-    await expect(status).toContainText('Fire Kid added to Plot 2.');
-    await expect(status).toContainText('Added kids leave the map. No refund.');
-    await expect(status).toContainText('Add 3–5 kids, then press Start growing.');
-    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(true);
-    // The Dex answered it: no world card afterwards. Sampled, not retried.
+    await dialog(page).getByRole('button', { name: 'Fire Kid, kid 2 on your map' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Fire Kid');
+    await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
+    await sheet(page).getByRole('button', { name: 'Back to Fire Kid' }).click();
+    await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Fire Kid');
+    await expect(dialog(page).getByRole('button', { name: 'Fire Kid, kid 2 on your map' })).toBeFocused();
+    await dialog(page).getByRole('button', { name: 'Fire Kid, kid 1 on your map' }).click();
     await page.keyboard.press('Escape');
-    for (let i = 0; i < 6; i++) {
-      await page.waitForTimeout(200);
-      expect(await page.locator('.feedback').textContent()).toBe('');
-    }
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('.dex-button')).toBeFocused();
   });
 
-  test('a growing plot cannot be chosen, and a chosen plot that starts meanwhile is never swapped (GUI_MVP §15.3, §15.6)', async ({ page }) => {
+  test('a named copy leads with its name, its type and number beside it, and follows a new name at once (Codex review, FEED-NAME)', async ({ page }) => {
+    const ids = await fireDetail(page);
+    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'name', kidId: id, name: 'Sir Spud' }), ids[0]!);
+    const row = dialog(page).getByRole('button', { name: 'Sir Spud, Fire Kid, kid 1 on your map' });
+    await expect(row).toContainText('Sir Spud');
+    await expect(row).toContainText('Fire Kid · Kid 1');
+    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'name', kidId: id, name: null }), ids[0]!);
+    await expect(dialog(page).getByRole('button', { name: 'Fire Kid, kid 1 on your map' })).toContainText('Kid 1');
+  });
+
+  test('from the card, a growing plot cannot be chosen, and a chosen plot that starts meanwhile is never swapped (GUI_MVP §15.3, §15.6)', async ({ page }) => {
     await fireDetail(page);
     // Plot 1 growing, Plot 2 holding three kids, not started.
     await page.evaluate(() => {
@@ -2004,283 +1972,38 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
       plant(1);
       pk.debugCommand!({ type: 'startGrowing', plot: 0 });
     });
-    await expect.poll(() => page.evaluate(() => window.__PK__!.plots().map((p) => [p.state, p.kids]))).toEqual([
-      ['growing', 3],
-      ['filling', 3],
-      ['empty', 0],
-      ['empty', 0],
-    ]);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots().map((p) => p.state))).toEqual(['growing', 'filling', 'empty', 'empty']);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
-    const growing = dialog(page).getByRole('button', { name: /^Plot 1 ·/ });
+    await sheet(page).getByRole('button', { name: 'Choose a plot' }).click();
+    const growing = sheet(page).getByRole('button', { name: /^Plot 1 ·/ });
     await expect(growing).toHaveText('Plot 1 · 3 / 5Growing.');
     await expect(growing).toHaveAttribute('aria-disabled', 'true');
     await growing.click({ force: true });
-    await expect(dialog(page).locator('.dex-home-confirm-title', { hasText: /^Add / })).toHaveCount(0);
-    // Plot 2's odds now, and with this Tier 1 kid added (D-061).
-    await dialog(page).getByRole('button', { name: /^Plot 2 ·/ }).click();
-    const step = dialog(page).locator('.dex-home-confirm');
-    await expect(step).toContainText('Plot 2: 3 → 4 / 5');
-    await expect(step).toContainText('Special roll: 10% → 12.5%');
-    await expect(step).toContainText('Rare roll: 5% → 6.25%');
-    await expect(step).toContainText('Two separate rolls. A sprout can be both special and rare.');
-    // It starts growing while the confirmation is open: Add says why, and adds nowhere else.
+    await expect(sheet(page).locator('.dex-home-confirm-title', { hasText: /^Add / })).toHaveCount(0);
+    await sheet(page).getByRole('button', { name: /^Plot 2 ·/ }).click();
+    await expect(sheet(page)).toContainText('Plot 2: 3 → 4 / 5');
+    await expect(sheet(page)).toContainText('Special roll: 10% → 12.5%');
     await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 1 }));
-    await expect(step).toContainText('This plot is already growing. Choose another plot.');
-    const add = dialog(page).getByRole('button', { name: 'Add this kid' });
+    await expect(sheet(page)).toContainText('This plot is already growing. Choose another plot.');
+    const add = sheet(page).getByRole('button', { name: 'Add this kid' });
     await expect(add).toHaveAttribute('aria-disabled', 'true');
     await add.click({ force: true });
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => window.__PK__!.plots().map((p) => p.kids))).toEqual([3, 3, 0, 0]);
-    expect(await page.evaluate(() => window.__PK__!.kids().filter((k) => k.type === 'fire').length)).toBe(2);
   });
 
-  test('one send at a time, across confirmations (Codex review, PR #54)', async ({ page }) => {
-    const ids = await fireDetail(page);
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    // In one task, before the sim's next step: confirm kid 1, then choose kid 2 and confirm.
-    await page.evaluate(() => {
-      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.dex-home button')].find((b) => b.textContent === t)!;
-      const add = () => {
-        byText('Choose a plot').click();
-        byText('Plot 1 · 0 / 5').click();
-        byText('Add this kid').click();
-      };
-      add();
-      document.querySelector<HTMLButtonElement>('[aria-label*="kid 2 on your map"]')!.click();
-      add();
-    });
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
-    await expect(dialog(page).locator('.dex-home-status')).toContainText('Fire Kid added to Plot 1.');
-    await page.waitForTimeout(500);
-    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
-    await expect(dialog(page).locator('.dex-home-status')).not.toContainText('already left');
-  });
-
-  test('with many copies, the result stays in view while the heading takes focus (Codex review, PR #54)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => {
-      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
-    });
-    await page.locator('.dex-button').click();
-    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    const status = dialog(page).locator('.dex-home-status');
-    await expect(status).toContainText('Fire Kid added to Plot 1.');
-    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
-    const inView = await status.evaluate((el) => {
-      const r = el.getBoundingClientRect();
-      const body = el.closest('.sheet-body')!.getBoundingClientRect();
-      return r.top >= body.top - 1 && r.bottom <= body.bottom + 1;
-    });
-    expect(inView).toBe(true);
-  });
-
-  test('inline results keep the world timing: the explanation holds 6 s, then the next (Codex review, PR #54)', async ({ page }) => {
-    await fireDetail(page);
-    const status = dialog(page).locator('.dex-home-status');
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    await dialog(page).getByRole('button', { name: /kid 2 on your map/ }).click();
-    await addTo(page);
-    // The explanation isn't replaced early...
-    await page.waitForTimeout(3000);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    // ...then the second, short message follows, and expires.
-    await expect(status).toContainText('Start growing at 3–5.', { timeout: 6000 });
-    await expect(status).toBeHidden({ timeout: 5000 });
-  });
-
-  test('leaving in the frame the result lands keeps the explanation for the next add (Codex review, PR #54)', async ({ page }) => {
+  test('the return summary hands back a kid card on its Name page, with the draft (Codex review, FEED-NAME)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
-    await dialog(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
-    // Back in the very step the result lands, after the Dex has answered it and before any
-    // frame could draw it (racing frames from the test is flaky under load): never seen,
-    // never recorded.
-    const explained = await page.evaluate(
-      () =>
-        new Promise<boolean>((done) => {
-          let left = false;
-          window.__PK__!.debugListenSteps!((types) => {
-            if (left || !types.includes('planted')) return;
-            left = true;
-            (document.querySelector('.dex-back') as HTMLButtonElement).click();
-            done(window.__PK__!.settings().plantV2Explained);
-          });
-          [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Add this kid')!.click();
-        }),
-    );
-    expect(explained).toBe(false);
-    await page.waitForTimeout(1000);
-    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(false);
-    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    await dialog(page).getByRole('button', { name: /on your map, to add to a plot/ }).click();
-    await addTo(page);
-    await expect(dialog(page).locator('.dex-home-status')).toContainText('Their types stay in your Potato-Dex.');
-  });
-
-  test('hovering the message pauses it; a refusal hands it back afterwards (Codex review, PR #54)', async ({ page }) => {
-    await fireDetail(page);
-    const status = dialog(page).locator('.dex-home-status');
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    // A refusal interrupts: kid 2 is chosen, then fuses away.
-    await dialog(page).getByRole('button', { name: /kid 2 on your map/ }).click();
-    await page.mouse.move(5, 5); // not resting over the message, which would pause it
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
-    await expect(status).toContainText('This kid has already left the map.');
-    // After the refusal, the explanation returns with the time it had left.
-    await expect(status).toContainText('Their types stay in your Potato-Dex.', { timeout: 5000 });
-    // Held under the pointer, it outlasts its 6 s.
-    await status.hover();
-    await page.waitForTimeout(7000);
-    // Sampled, not retried: an expired message keeps its text but is hidden.
-    expect(await status.isVisible()).toBe(true);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    await page.mouse.move(5, 5);
-    await expect(status).toBeHidden({ timeout: 8000 });
-  });
-
-  test('a send outlives its detail: leaving before the result makes no world card (Codex review, PR #54)', async ({ page }) => {
-    const ids = await fireDetail(page);
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    // In one task, before the sim's next step: confirm, then leave the detail.
-    await page.evaluate(() => {
-      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === t)!;
-      byText('Choose a plot').click();
-      byText('Plot 1 · 0 / 5').click();
-      byText('Add this kid').click();
-      byText('Back to kids').click();
-    });
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
-    await page.keyboard.press('Escape');
-    // Sampled, not retried: a leaked world card would vanish and pass a retry.
-    for (let i = 0; i < 6; i++) {
-      await page.waitForTimeout(200);
-      expect(await page.locator('.feedback').textContent()).toBe('');
-    }
-  });
-
-  test('a send outlives its detail: a reopened detail still waits for it (Codex review, PR #54)', async ({ page }) => {
-    const ids = await fireDetail(page);
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    // In one task: confirm, leave, reopen and confirm another copy.
-    await page.evaluate(() => {
-      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === t)!;
-      const add = () => {
-        byText('Choose a plot').click();
-        byText('Plot 1 · 0 / 5').click();
-        byText('Add this kid').click();
-      };
-      add();
-      byText('Back to kids').click();
-      document.querySelector<HTMLButtonElement>('[aria-label^="Fire Kid, Tier 1,"]')!.click();
-      document.querySelector<HTMLButtonElement>('[aria-label*="kid 2 on your map"]')!.click();
-      add();
-    });
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
-    await page.waitForTimeout(400);
-    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[1]]);
-  });
-
-  test('a message scrolled out of view keeps its reading time (Codex review, PR #54)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => {
-      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
-    });
-    await page.locator('.dex-button').click();
-    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    const status = dialog(page).locator('.dex-home-status');
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    await page.mouse.move(5, 5);
-    // Scrolled away to the top of the detail for 7 s: the 6 s explanation isn't spent.
-    await dialog(page).locator('.sheet-body').evaluate((e) => (e.scrollTop = 0));
-    await page.waitForTimeout(7000);
-    await status.scrollIntoViewIfNeeded();
-    expect(await status.isVisible()).toBe(true);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-  });
-
-  test('a result waiting for a reopened detail is shown on screen before it counts as read (Codex review, PR #54)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => {
-      for (let i = 0; i < 8; i++) window.__PK__!.debugAdd!('fire', 200 + (i % 4) * 260, 1300 + Math.floor(i / 4) * 300);
-    });
-    await page.locator('.dex-button').click();
-    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await dialog(page).getByRole('button', { name: /^Choose a plot/ }).click();
-    await dialog(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
-    // Back in the very step the result lands, before any frame could draw it (racing frames
-    // from the test is flaky under load); reopen a little later, so the message is ready
-    // the moment the new detail is built (before it is mounted).
-    await page.evaluate(
-      () =>
-        new Promise<void>((done) => {
-          let left = false;
-          window.__PK__!.debugListenSteps!((types) => {
-            if (left || !types.includes('planted')) return;
-            left = true;
-            (document.querySelector('.dex-back') as HTMLButtonElement).click();
-            done();
-          });
-          [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Add this kid')!.click();
-        }),
-    );
-    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(false);
-    await page.waitForTimeout(800);
-    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    // Recorded only once its words are in view: checked in the frame the record appears
-    // (a Garden spawn may later push the message down, and that's fine once it was read).
-    const seen = await page.evaluate(
-      () =>
-        new Promise<boolean>((done) => {
-          const wait = () => {
-            if (!window.__PK__!.settings().plantV2Explained) return requestAnimationFrame(wait);
-            const text = document.querySelector('.dex-home-status .card-text');
-            if (!text) return done(false);
-            const r = text.getBoundingClientRect();
-            const body = text.closest('.sheet-body')!.getBoundingClientRect();
-            done(r.top >= body.top - 1 && r.bottom <= body.bottom + 1);
-          };
-          wait();
-        }),
-    );
-    expect(seen).toBe(true);
-    await expect(dialog(page).locator('.dex-home-status')).toContainText('Their types stay in your Potato-Dex.');
-  });
-
-  test('a result after the Dex closed keeps the explanation for the next send (Codex review, PR #54)', async ({ page }) => {
-    await fireDetail(page);
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    // In one task, before the sim's next step: confirm, then close the Dex.
-    await page.evaluate(() => {
-      const byText = (t: string) => [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === t)!;
-      byText('Choose a plot').click();
-      byText('Plot 1 · 0 / 5').click();
-      byText('Add this kid').click();
-      document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
-    });
-    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
-    // A drag send now still gets the first, explaining card.
-    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 760, 1000));
-    await page.waitForTimeout(200);
-    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
-    await page.mouse.move(k.x, k.y - 20);
-    await page.mouse.down();
-    await page.mouse.move(t.x, t.y, { steps: 8 });
-    await page.waitForTimeout(450);
-    await page.mouse.up();
-    await expect(page.locator('.feedback .toast-home')).toContainText('Their types stay in your Potato-Dex.');
+    await sheet(page).getByRole('button', { name: 'Name', exact: true }).click();
+    await sheet(page).getByLabel('Kid name').fill('Sir Sp');
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(sheet(page).locator('.sheet-title')).toHaveText('Name this kid');
+    await expect(sheet(page).getByLabel('Kid name')).toHaveValue('Sir Sp');
+    // And still the way back to the Dex.
+    await sheet(page).getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(sheet(page).getByRole('button', { name: 'Back to Fire Kid' })).toBeVisible();
   });
 
   test('focus on a copy that fuses away moves to the section heading (Codex review, PR #54)', async ({ page }) => {
@@ -2288,129 +2011,6 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).focus();
     await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
     await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
-  });
-
-  test('keyboard focus holds a message; a hovered explanation still counts as seen (Codex review, PR #54)', async ({ page }) => {
-    await fireDetail(page);
-    const status = dialog(page).locator('.dex-home-status');
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    // Under a resting pointer it is paused, but it was seen: recorded at once.
-    await status.hover();
-    expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(true);
-    // A keyboard user can focus it to hold it past its 6 s.
-    await page.mouse.move(5, 5);
-    await status.focus();
-    await page.waitForTimeout(7000);
-    expect(await status.isVisible()).toBe(true);
-  });
-
-  /**
-   * A short screen with the save banner, so the sheet scrolls as one below a sticky header;
-   * a kid added to a plot, its first explanation read; a spacer for room to scroll it away (a
-   * longer detail, e.g. a type in many recipes).
-   */
-  async function tightMessage(page: Page) {
-    await page.setViewportSize({ width: 568, height: 300 });
-    await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => {
-      window.__PK__!.debugAdd!('fire', 300, 1500);
-      window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
-    });
-    await page.locator('.dex-button').click({ force: true });
-    await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
-    await expect(page.locator('.sheet')).toHaveAttribute('data-tight', 'true');
-    const status = dialog(page).locator('.dex-home-status');
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await addTo(page);
-    await expect(status).toContainText('Their types stay in your Potato-Dex.');
-    await page.mouse.move(5, 5);
-    await page.waitForTimeout(200);
-    await page.evaluate(() => {
-      const spacer = document.createElement('div');
-      spacer.style.height = '400px';
-      document.querySelector('.sheet-body')!.append(spacer);
-    });
-    return status;
-  }
-
-  /** Scrolls the tight sheet to put the message somewhere; returns where things are. */
-  function place(page: Page, where: 'under header' | 'text under header' | 'below sheet') {
-    return page.evaluate((where) => {
-      const sheet = document.querySelector('.sheet') as HTMLElement;
-      const status = () => document.querySelector('.dex-home-status')!.getBoundingClientRect();
-      const text = () => document.querySelector('.dex-home-status .card-text')!.getBoundingClientRect();
-      const header = sheet.querySelector('.sheet-header')!.getBoundingClientRect().bottom;
-      const floor = sheet.getBoundingClientRect().bottom;
-      if (where === 'under header') sheet.scrollTop += status().bottom - header + 1;
-      else if (where === 'text under header') sheet.scrollTop += text().bottom - header + 1;
-      else sheet.scrollTop += status().top - floor - 1;
-      return { top: status().top, bottom: status().bottom, textBottom: text().bottom, header, floor, view: window.innerHeight, scrollTop: sheet.scrollTop };
-    }, where);
-  }
-
-  test('in a tight sheet, a message scrolled under the header or past the edge is not being read (Codex review, PR #54)', async ({ page }) => {
-    const status = await tightMessage(page);
-    // Its 6 s never run while hidden, whichever way: back in view, it is still there.
-    const under = await place(page, 'under header');
-    // In the viewport, inside the sheet body's (unclipped) box, yet covered or clipped.
-    expect(under.bottom).toBeGreaterThan(0);
-    expect(under.bottom).toBeLessThanOrEqual(under.header);
-    await page.waitForTimeout(6500);
-    await status.scrollIntoViewIfNeeded();
-    expect(await status.isVisible()).toBe(true);
-    const below = await place(page, 'below sheet');
-    expect(below.top).toBeGreaterThanOrEqual(below.floor);
-    expect(below.top).toBeLessThan(below.view);
-    await page.waitForTimeout(6500);
-    await status.scrollIntoViewIfNeeded();
-    expect(await status.isVisible()).toBe(true);
-    await expect(status).toBeHidden({ timeout: 9000 });
-  });
-
-  test('a sliver of the message box with its words hidden is not being read (Codex review, PR #54)', async ({ page }) => {
-    const status = await tightMessage(page);
-    const at = await place(page, 'text under header');
-    // Its blank margin shows below the header; every word is under it.
-    expect(at.bottom).toBeGreaterThan(at.header);
-    expect(at.textBottom).toBeLessThanOrEqual(at.header);
-    await page.waitForTimeout(6500);
-    await status.scrollIntoViewIfNeeded();
-    expect(await status.isVisible()).toBe(true);
-  });
-
-  test('a change on the map never scrolls back to a message already read (Codex review, PR #54)', async ({ page }) => {
-    const status = await tightMessage(page);
-    const away = await place(page, 'below sheet');
-    expect(away.top).toBeGreaterThanOrEqual(away.floor);
-    // Another Fire Kid arrives: the section updates, the scroll stays where the player put it.
-    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
-    await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 1');
-    await page.waitForTimeout(300);
-    expect(await page.evaluate(() => (document.querySelector('.sheet') as HTMLElement).scrollTop)).toBe(away.scrollTop);
-    expect(await status.isVisible()).toBe(true);
-  });
-
-  test('Escape closes an open confirmation before the sheet', async ({ page }) => {
-    await fireDetail(page);
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    await page.keyboard.press('Escape');
-    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
-    await expect(dialog(page)).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(dialog(page)).toBeHidden();
-  });
-
-  test('a chosen kid that leaves before it is sent is never swapped for another', async ({ page }) => {
-    const ids = await fireDetail(page);
-    await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).click();
-    // Kid 1 fuses away (Fire + Water make Steam) while its confirmation is open.
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
-    await expect(dialog(page).locator('.dex-home-confirm')).toHaveCount(0);
-    await expect(dialog(page).locator('.dex-home-status')).toContainText('This kid has already left the map.');
-    await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
-    expect(await page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toContain(ids[1]);
   });
 
   test('a drag send gets a world card: the first explains, later ones are short', async ({ page }) => {
@@ -2440,6 +2040,7 @@ test.describe('Planting, feedback and the Dex path (D-061, GUI_MVP §15.6)', () 
     await expect(card).toContainText('Start growing at 3–5.');
     await expect(card.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
   });
+
 });
 
 test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
@@ -2729,6 +2330,24 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(sheet(page).locator('.plot-odds')).toContainText('Special roll: 12.92%');
     await sheet(page).locator('.plot-start').click();
     await expect(sheet(page).locator('.plot-review')).toContainText('Special roll: 12.92%');
+  });
+
+  test('a named kid shows its name and type in the picker, is found by its name, and follows a rename (Codex review, FEED-NAME)', async ({ page }) => {
+    const [fireKid] = await garden(page, ['fire', 'fire']);
+    await page.evaluate((id) => {
+      window.__PK__!.debugGive!({ materials: 1000 });
+      window.__PK__!.debugCommand!({ type: 'name', kidId: id, name: 'Sir Spud' });
+    }, fireKid!);
+    await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
+    const first = sheet(page).locator('.picker-row').nth(0);
+    await expect(first.locator('.picker-row-name')).toHaveText('Sir Spud');
+    await expect(first.locator('.picker-row-type')).toHaveText('Fire Kid');
+    await sheet(page).getByLabel('Find a kid on your map').fill('spud');
+    await expect(sheet(page).locator('.picker-row:visible')).toHaveCount(1);
+    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'name', kidId: id, name: 'Lady Mash' }), fireKid!);
+    await expect(first.locator('.picker-row-name')).toHaveText('Lady Mash');
+    await sheet(page).getByLabel('Find a kid on your map').fill('mash');
+    await expect(sheet(page).locator('.picker-row:visible')).toHaveCount(1);
   });
 
   test('a full plot sparkles beside Start growing and takes no more kids (§15.4)', async ({ page }) => {

@@ -2,7 +2,6 @@ import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import { el } from './dom';
-import { chosenPlotRefusal } from './homeFeed';
 import { oddsLines } from './plantingNotes';
 import { portrait } from './portrait';
 
@@ -10,6 +9,11 @@ import { portrait } from './portrait';
 // Choose a plot, then "Add {name} to Plot {n}?" with the odds it makes, then one Add, into
 // that plot only. It never starts a plot growing. Shared by the Dex's live rows and the
 // kid card; each sends the add its own way and hears its own result.
+
+/** Why the plot the player chose can't take the kid (GUI_MVP §15.3): about that plot, not all of them. */
+export function chosenPlotRefusal(reason: 'plotsBusy' | 'plotFull'): string {
+  return reason === 'plotsBusy' ? 'This plot is already growing. Choose another plot.' : 'This plot is full. Review it to Start growing.';
+}
 
 /** A rare variant's label, "Rare: Rainbow" (GUI_MVP §15.3). */
 export const rareMark = (variant: string | undefined) => (variant ? `Rare: ${variant[0]!.toUpperCase()}${variant.slice(1)}` : null);

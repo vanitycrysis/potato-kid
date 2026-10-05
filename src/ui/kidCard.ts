@@ -25,6 +25,14 @@ const STATUS_MS = 2500;
 type View = 'card' | 'feed' | 'name';
 type Pending = { type: 'feed'; food: string } | { type: 'name'; name: string | null } | { type: 'plant'; plot: number };
 
+/** Where a card was, for coming back after an interruption (the return summary, GUI_MVP §8). */
+export interface CardSnapshot {
+  kidId: number;
+  view: View;
+  draft: string | null;
+  back: { label: string; go: () => void } | null;
+}
+
 /** What the card last knew of its kid: kept when the kid leaves (§18.3). */
 interface Seen {
   type: KidId;
@@ -68,6 +76,8 @@ export class KidCard {
   /** The Name page's draft: kept while the sheet is open (Back keeps it, close discards). */
   private draft: string | null = null;
   private current: { update(): void } | null = null;
+  /** Opened from the Dex: the way back to that kid's type detail (GUI_MVP §18.1). */
+  private backTo: { label: string; go: () => void } | null = null;
   private readonly tierOf: Map<KidId, number>;
 
   constructor(
@@ -109,15 +119,31 @@ export class KidCard {
     return this.content.balance.feeding.foods.find((f) => f.id === id);
   }
 
+  /** Where the open card is: its kid, page, Name draft and way back. */
+  snapshot(): CardSnapshot | null {
+    if (!this.sheet) return null;
+    return { kidId: this.kidId, view: this.view, draft: this.draft, back: this.backTo };
+  }
+
+  /** Back where a snapshot was (its kid still on the map): the same page, draft and scroll. */
+  restore(s: CardSnapshot, launcher: HTMLElement | null, scrollTop: number): void {
+    this.open(s.kidId, launcher, s.back ?? undefined);
+    if (!this.sheet) return;
+    this.draft = s.draft;
+    if (s.view !== 'card') this.show(s.view);
+    this.sheet.scrollTo(scrollTop);
+  }
+
   /** The open card's kid id, or null. */
   get showing(): number | null {
     return this.sheet ? this.kidId : null;
   }
 
-  open(kidId: number, launcher: HTMLElement | null): void {
+  open(kidId: number, launcher: HTMLElement | null, back?: { label: string; go: () => void }): void {
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     if (!kid) return;
     this.kidId = kidId;
+    this.backTo = back ?? null;
     this.seen = { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant };
     this.view = 'card';
     this.pending = null;
@@ -371,7 +397,10 @@ export class KidCard {
       pick,
     );
 
-    s.body.replaceChildren(status.node, pic, marks, tier, ...rare, happy, ...personality, planting);
+    // From the Dex: "Back to {type}", first in the body (§18.1).
+    const backTo = this.backTo;
+    const toDex = backTo ? [this.button(backTo.label, 'plot-back', () => backTo.go())] : [];
+    s.body.replaceChildren(...toDex, status.node, pic, marks, tier, ...rare, happy, ...personality, planting);
     const feed = this.button('Feed', 'sheet-action kid-card-action', () => this.show('feed'));
     feed.dataset.action = 'feed';
     const name = this.button('Name', 'sheet-action kid-card-action', () => this.show('name'));
