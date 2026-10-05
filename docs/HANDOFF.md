@@ -1,51 +1,32 @@
-# Session handoff (2026-10-04, for the next Claude session)
+# Session handoff (2026-10-05, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-066**: gate-4 feedback, then the planting rework) and `docs/TASKS.md`. Pull `main` first.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-067**) and `docs/TASKS.md`. Pull `main` first.
 
 ## Where we are
 
-- **Gate 4 came back with feedback** (D-050..D-059). Most of it is now built and merged; planting is being reworked with the owner.
-- **Merged this session:**
-  - WAVE-WIGGLE (#62)
-  - MUSIC-LOOP (#61)
-  - FUSE-DROP's engine side (#66: the kid under the finger)
-  - GATE4-DESIGN (#67, Codex's design)
-  - PACING (#68: 60 s × 10 tutorial, then 20 min → 8 min, ~100× slower Materials, save schema 2)
-  - PERSONALITY (#69, Codex's text in `art/data/personality_v1.json`)
-  - OFFLINE-WANDER (#70)
-  - the planting decisions (#71: D-061..D-065)
-- **Planting was reworked with the owner (2026-10-04).** The simulator showed D-054 (one kid in, one out) clogs the map: casual players were stuck on 77 % of turns. The owner chose:
-  - **D-061:** plant **3–5 kids for one sprout**, by drag or by tapping a plot and picking. **Start growing** is never automatic and sparkles at 5. A sprout is a random Garden kid, with independent rolls for a **special** (10→20 %) and a **rare** (5→10 %) by count and tier.
-  - **D-062:** **ten rare variants** that sparkle and earn more.
-  - **D-063:** **20 apex special kids**, tier 5–6: in no recipe, plantable, in the Dex, never sold.
-  - **D-064:** a **trophy map** for dedicated players (later).
-  - **D-065:** **expeditions**, parked.
-  - **D-066:** the owner approved all 20 special concepts (12 at T5, 8 at T6), and two rules: a happy kid counts one tier higher in the odds; a planted special counts by its tier.
-  - Simulator with these rules: nobody is ever stuck; casual players finish the roster on day ~6.4–7.1; daily players have 0–2 specials after two weeks.
-- **The owner reached this session through another session** ("session 03", relaying word for word over cross-session messages). Replies to the owner went back that way. If no relay is around, ask the owner directly.
-- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates. Auto mode blocked merging a PR the owner hadn't named until the owner said "Merge whatever you need".
+- **Everything gate 4 asked for is on `main`** (D-050..D-067), ready for the owner's device:
+  - PLANTING (#72): plots, the drag target, plot taps, the picker, Start growing with its review, the Dex and card route, offline growth.
+  - VARIANTS (#77): ten rare looks, their map marks and six-glint sleeve, the birth burst, Mini's size and pickup target, the Dex's rare rows, rare list portraits.
+  - FEED-NAME (#78): feeding, happiness (+1 tier in planting odds), naming, the kid card (a tap on a kid, or a Dex row), the happy sun, personality in the card and the Dex.
+  - **D-067 (proposed, tunable):** 100 Materials a bite; 20 min at ×1.5 for an ordinary food, 60 min at ×2 for a favourite; names cost 50. The owner hasn't confirmed these.
+- **Save schema is 5** (4: found variants; 5: names and happiness), with migrations from 1.
+- **The owner reached this session through another session** ("session 03", over cross-session messages; its pipe is in the transcript). If no relay is around, ask the owner directly.
+- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates.
 
-## Open work at handoff (check each first)
+## Open work at handoff
 
-1. **PR #72, PLANTING (draft), branch `claude/planting`.** The sim and save for D-061..D-063 are done, reviewed by Codex twice, and every finding fixed:
-   - plots and `plant {kidIds, plot?}` (atomic batch), `startGrowing {plot}`, `unlockPlot`;
-   - odds by count and tier (`oddsFor`); independent special and rare rolls;
-   - rare kids' `variant` and income multiplier; snapshots of planted kids;
-   - growth online and offline on one timeline with Garden spawns; waiting `full` / `noRoom`;
-   - schema 3, and a save round-trip test.
-   - **Still to do on the same branch** (Codex asked that planting never reach `main` without its controls): the **engine and UI** from GUI_MVP §15/§16 as revised in #73. Then rerun Codex's review on the whole and un-draft.
-   - Notes:
-     - The happy-kid rule (+1 tier) arrives with FEED-NAME.
-     - The UI still shows Send home's copy and farewell until then.
-     - The refusal copy for `plotFull` / `tooFewKids` is a placeholder in `ui/feedback.ts`.
-2. **PR #73, PLANT-V2-DESIGN (Codex): merged** (approved in round 2). GUI_MVP §15/§16 are the planting UI contract.
-3. **PR #74 (D-066): merged.**
-4. **Then, in order:**
-   - PLANTING's engine and UI (above).
-   - **SPECIALS (Codex): running at handoff** in `../potato-kid-chatgpt` on `chatgpt/specials` (brief: `docs/briefs/codex-specials.md`). When it's done, commit it unchanged as ChatGPT, add the 20 `kids.json` entries (`"special": true`) as Claude's own commit on that branch (the art checks need costumes and entries together), and review: the costume round for the 20 approved kids, plus names, personalities and foods in the existing format. The four riskiest (Music Box, Puppet Theatre, Paper Town, Marble Run) come back with simpler alternatives if they fail at 55 px.
-   - **VARIANTS (Claude):** rendering the ten rares and their Dex rows.
-   - **FEED-NAME (Claude):** loading `personality_v1.json`, feeding, happiness (+1 tier in planting odds), naming, the kid card.
-   - Then the gate-4 build for the owner.
+1. **The gate-4 build for the owner:** `main`'s CI run publishes `potato-kid-debug-apk`. Send the owner the link and what to look at (planting, rares, feeding, naming, the kid card, D-067's numbers), then wait for their gate-4 feedback.
+2. **PR #76, SPECIALS (Codex's art and writing), open.** It waits on two **owner decisions**, sent through the relay on 2026-10-04:
+   - **The four D-066 holds** (Music Box, Marble Run, Puppet Theatre, Paper Town): keep, take Codex's simpler proposal, or swap for another keepsake. Claude's view: only Marble Run's proposal reads clearly better at 55 px.
+   - **How grand specials should look.** At game size they read plainer than ordinary T2–T4 kids with hats.
+   - Claude's review round 1 is on the PR. A third finding (seven box-shaped props at the same hand spot; Gift, Music Box and Treasure Chest merge in grayscale) goes to Codex together with the owner's answers.
+   - **After the art is settled:**
+     - add the 20 `kids.json` entries (`"special": true`, names "… Kid", 12 at T5, 8 at T6) on top of the merged art;
+     - build the Dex's Ordinary/Specials segments (§16.4);
+     - check the T6 tier text (no badge exists past T5);
+     - check the specials' personalities load. They're in Codex's `personality_v1.json`, and content validation requires one per kid.
+3. **Small, for Codex's design:** where a variant's glyph sits in a ≤48 px list portrait. Claude applied the map rule inside the box (§16.2) and asked Codex to confirm in #77.
+4. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -75,6 +56,11 @@
 
 ## Testing gotchas learned this session
 
+- **Codex's model can be "at capacity".** Retry with the same model (the owner's instruction is `gpt-6.1-sol`): a background loop that reruns the review every 5 minutes until the log has no "at capacity" works.
+- **A tap is timed, so time it in the page.** Tests of 220 ms taps send their pointer events from `page.evaluate` (and wait for frames with `requestAnimationFrame`), never with Playwright's mouse and wall-clock waits, which CI stretches.
+- **A closing sheet stays in the DOM while it fades.** Scope locators to `getByRole('dialog')`, or they match two titles.
+- **Python heredocs and the Edit tool both turn `\uXXXX` into the character.** For code points in source, build them with `String.fromCodePoint(...)`.
+
 - **The e2e preview server** (port 4173) is reused if running: it serves **this worktree's `dist/`**. Rebuild before every run, and don't test another worktree's code against it.
 - A failing `tsc` makes `npm run build` fail and leaves a **stale `dist/`**. Read the build output before trusting test results.
 - **Retrying assertions** (`toBeHidden`, `toBeEmpty`) pass on transient UI by waiting it out. Use sampled checks for "never shown".
@@ -99,8 +85,8 @@
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout, on `claude/planting` (PR #72).
-  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials`.
+  - `potato-kid-claude`: Claude's main checkout (on the handoff branch at handoff; switch to `main`).
+  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials` (PR #76).
   - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached; check it out per review).
   - `potato-kid-docs`: docs branches.
 - **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
