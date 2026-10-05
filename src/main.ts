@@ -175,6 +175,7 @@ async function boot(): Promise<void> {
   audio = new AudioPlayer(settings);
   const player = audio;
   scene.listenSteps((events) => player.onStep(events));
+  scene.listenGesture((kind) => player.gesture(kind));
   if (loaded.state) lastOffline = scene.resume(Date.now());
   void save();
   const lifecycle = new Lifecycle({

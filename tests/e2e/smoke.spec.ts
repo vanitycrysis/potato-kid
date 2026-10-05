@@ -1766,6 +1766,31 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a tap on a kid sounds one UI tap, never a pick-up; a drag picks up once it is one (Codex review, FEED-NAME)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.mouse.click(200, 600);
+    await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
+    const id = await page.evaluate(() => {
+      window.__PK__!.centerOn(800, 1500);
+      return window.__PK__!.debugAdd!('fire', 800, 1500);
+    });
+    await page.waitForTimeout(400);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    let before = (await audio(page)).played.length;
+    await page.mouse.click(k.x, k.y - 20);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.waitForTimeout(300);
+    expect((await audio(page)).played.slice(before)).toEqual(['sfx_ui_tap']);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    before = (await audio(page)).played.length;
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(k.x + 60, k.y - 20, { steps: 4 });
+    await expect.poll(async () => (await audio(page)).played.slice(before)).toContain('sfx_pick_up');
+    await page.mouse.up();
+  });
+
   test('a command button plays its success cue alone; other buttons tap (Codex review, PR #53)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.mouse.click(200, 600);
@@ -3115,6 +3140,39 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).getByText('Add Fire Kid to Plot 1?')).toBeVisible();
     expect(Math.abs((await scrollTop()) - before)).toBeLessThan(2);
     await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toBeFocused();
+  });
+
+  test('a press whose view changes before release is no tap (Codex review round 10, FEED-NAME)', async ({ page }) => {
+    const id = await open(page);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    // Down on the kid, the camera moves, up at the same screen point: all in one task.
+    await page.evaluate((p) => {
+      const canvas = document.querySelector('canvas')!;
+      const fire = (type: string) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: p.x, clientY: p.y - 20, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
+      fire('pointerdown');
+      window.__PK__!.centerOn(820, 1500);
+      fire('pointerup');
+    }, k);
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('the return summary keeps where the card was scrolled under an open page (Codex review round 10, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    const scroller = await card(page).evaluate((s) => (s.dataset.tight === 'true' ? 'sheet' : 'body'));
+    const scrollTop = () => card(page).evaluate((s, which) => (which === 'sheet' ? s : s.querySelector('.sheet-body')!).scrollTop, scroller);
+    await card(page).evaluate((s, which) => ((which === 'sheet' ? s : s.querySelector('.sheet-body')!).scrollTop = 300), scroller);
+    const before = await scrollTop();
+    expect(before).toBeGreaterThan(100);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(60_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(card(page).locator('.sheet-title')).toHaveText('Feed Fire Kid');
+    await card(page).getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(card(page).locator('.sheet-title')).toHaveText('Fire Kid');
+    expect(Math.abs((await scrollTop()) - before)).toBeLessThan(2);
   });
 
   test('the return summary hands back the plot being chosen, under the page that was open (Codex review round 7, FEED-NAME)', async ({ page }) => {

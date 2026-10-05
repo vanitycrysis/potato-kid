@@ -39,6 +39,8 @@ export interface CardSnapshot {
   planting: { open: boolean; plot: number | null };
   /** Its number as the card showed it. */
   ordinal: number;
+  /** Where the card itself was scrolled, under a page open over it. */
+  cardScroll: number;
 }
 
 /** What the card last knew of its kid: kept when the kid leaves (§18.3). */
@@ -149,6 +151,7 @@ export class KidCard {
       seen: { ...this.seen!, look: { ...this.seen!.look } },
       planting: this.plantingState?.get() ?? { open: false, plot: null },
       ordinal: this.kidOrdinal,
+      cardScroll: this.view === 'card' ? (this.sheets.snapshot()?.scrollTop ?? 0) : (this.kept?.scroll ?? 0),
     };
   }
 
@@ -157,9 +160,13 @@ export class KidCard {
     this.open(s.kidId, launcher, s.back ?? undefined, s.seen, s.ordinal);
     if (!this.sheet) return;
     this.draft = s.draft;
-    // The card's planting route as it was, then the page that was open over it.
+    // The card's planting route as it was, the card scrolled where it was (kept as the page
+    // opens over it, for Back), then the page that was open over it.
     if (s.planting.open) this.plantingState?.open(s.planting.plot);
-    if (s.view !== 'card') this.show(s.view);
+    if (s.view !== 'card') {
+      this.sheet.scrollTo(s.cardScroll);
+      this.show(s.view);
+    }
     this.sheet.scrollTo(scrollTop);
   }
 

@@ -23,7 +23,8 @@ export function cueFor(events: GameEvent[]): Cue | null {
     else if (e.type === 'planted') consider('sfx_plant');
     else if (e.type === 'spawned' && e.source !== 'offline') consider('sfx_spawn');
     else if (e.type === 'dropped') consider('sfx_place');
-    else if (e.type === 'pickedUp') consider('sfx_pick_up');
+    // A pick-up sounds when the press becomes a drag (the scene's gesture), never at the
+    // press: a tap on a kid opens its card with a UI tap instead (Codex review, FEED-NAME).
     else if (e.type === 'fed' || e.type === 'named') consider('sfx_ui_tap');
   }
   return best < 0 ? null : PRIORITY[PRIORITY.length - best]!;
