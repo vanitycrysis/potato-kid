@@ -247,8 +247,9 @@ export class KidCard {
       node,
       update: () => {
         const gone = !this.kid();
-        // A kid that left says so for good; a result shows its 2.5 s.
-        const s = gone ? { lines: ['This kid has already left the map.'], warn: true } : this.status;
+        // A kid that left says so for good; a read-only save says why nothing can change
+        // (§10, §18.2); a result shows its 2.5 s.
+        const s = gone ? { lines: ['This kid has already left the map.'], warn: true } : this.readOnly() ? { lines: ['Update the game to continue.'], warn: true } : this.status;
         const key = s ? `${s.warn}|${s.lines.join('\n')}` : '';
         if (key === shown) return;
         shown = key;

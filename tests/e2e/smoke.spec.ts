@@ -3248,6 +3248,15 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeGreaterThanOrEqual(after);
   });
 
+  test('a read-only save lets the card be browsed, says why, and changes nothing (§10, §18.2)', async ({ page }) => {
+    await open(page);
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));
+    await expect(card(page).locator('.kid-status')).toContainText('Update the game to continue.');
+    await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    await expect(card(page).getByRole('button', { name: 'Name', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    await expect(card(page)).toContainText(fire.description);
+  });
+
   test('a kid that leaves while its card is open: the card stays, read-only, and says so (§18.3)', async ({ page }) => {
     await open(page);
     // Fire + Water make Steam: the kid fuses away.
