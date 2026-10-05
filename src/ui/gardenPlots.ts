@@ -236,7 +236,7 @@ export class GardenPlots {
       const k = planted[i];
       const slot = el('div', 'plot-slot');
       if (k) {
-        slot.append(portrait(kidRig!, k.type, 32, k.look));
+        slot.append(portrait(kidRig!, k.type, 32, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined));
         slot.setAttribute('role', 'img');
         slot.setAttribute('aria-label', `${this.name(k.type)}, ${this.marks(k.type, k.variant)}`);
       } else {
@@ -461,7 +461,7 @@ export class GardenPlots {
         el(
           'div',
           'plot-kid',
-          portrait(kidRig!, k.type, 48, k.look),
+          portrait(kidRig!, k.type, 48, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined),
           el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', this.name(k.type)), el('span', 'sheet-helper', this.marks(k.type, k.variant))),
         ),
       );
@@ -708,7 +708,7 @@ export class GardenPlots {
       const node = el(
         'label',
         'ui-surface picker-row',
-        portrait(kidRig!, k.type, 48, k.look),
+        portrait(kidRig!, k.type, 48, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined),
         el('span', 'picker-row-text', el('span', 'picker-row-name', name), el('span', 'sheet-helper', detail)),
         box,
       );

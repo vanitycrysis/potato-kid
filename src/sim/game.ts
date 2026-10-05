@@ -122,6 +122,8 @@ export type GameEvent =
   /** `plot`: the plot a sprout came up from (0-based). */
   | { type: 'spawned'; kid: Kid; source: SpawnSource; plot?: number }
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
+  /** A rare variant seen on this type for the first time (D-062). */
+  | { type: 'variantFound'; kidType: KidId; variant: string }
   | { type: 'pickedUp'; kidId: number }
   | { type: 'dropped'; kidId: number }
   /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
@@ -156,6 +158,8 @@ export interface GameState {
   plots: Plot[];
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
+  /** Rare variants found, by kid type, in the order found (D-062; GUI_MVP §16.4). */
+  discoveredVariants: Partial<Record<KidId, string[]>>;
   /** Recipe pair keys (`pairKey`) the player has triggered. */
   discoveredRecipes: string[];
   /** Soft currency, earned passively by every kid on the map (D-020). Fractional. */
@@ -253,6 +257,7 @@ export class Game {
       gardenSpawns: 0,
       plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })),
       discoveredKids: [],
+      discoveredVariants: {},
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,
       potatokens: content.balance.economy.startingPotatokens,
@@ -633,7 +638,8 @@ export class Game {
 
   /** A newborn at the Garden outlet, if a spot is free; the type is drawn only then. */
   private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[], variant: string | null = null): Kid | null {
-    const look = this.peekLook();
+    // A Mini is smaller all through: its look and its box, before it looks for room (§16.1).
+    const look = variant === 'mini' ? this.mini(this.peekLook()) : this.peekLook();
     const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
     if (!p) return null;
     this.rollLook(); // commit the peeked roll
@@ -641,7 +647,23 @@ export class Game {
     if (variant) kid.variant = variant;
     events.push({ type: 'spawned', kid, source });
     this.discover(kid.type, events);
+    if (variant) this.discoverVariant(kid.type, variant, events);
     return kid;
+  }
+
+  /** A look at Mini size: appearance and box scaled about the ground point (GUI_MVP §16.1). */
+  private mini(look: Look & { box: Box }): Look & { box: Box } {
+    const m = this.content.balance.planting.miniScale;
+    const b = look.box;
+    return { ...look, scale: look.scale * m, box: { left: b.left * m, top: b.top * m, right: b.right * m, bottom: b.bottom * m } };
+  }
+
+  /** Records a rare variant found on a type (D-062): a new one is an event. */
+  private discoverVariant(type: KidId, variant: string, events: GameEvent[]): void {
+    const found = (this.state.discoveredVariants[type] ??= []);
+    if (found.includes(variant)) return;
+    found.push(variant);
+    events.push({ type: 'variantFound', kidType: type, variant });
   }
 
   /**
@@ -860,6 +882,16 @@ export class Game {
   }
 
   /** Seconds a seed takes to grow. */
+  /** A planting-only special type (D-063). */
+  isSpecial(type: KidId): boolean {
+    return !!this.content.kids.find((k) => k.id === type)?.special;
+  }
+
+  /** A kid's look scale before any Mini shrink: its normal size (GUI_MVP §16.1). */
+  normalScale(kid: Pick<Kid, 'look' | 'variant'>): number {
+    return kid.variant === 'mini' ? kid.look.scale / this.content.balance.planting.miniScale : kid.look.scale;
+  }
+
   get growSeconds(): number {
     return this.content.balance.planting.growSeconds;
   }
@@ -887,11 +919,21 @@ export class Game {
   }
 
   /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */
-  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
-    const look = this.forceLook(this.rollLook(), force);
+  /** Debug only: a plot ready to sprout `sprout` at the next step (three Potato Kids in it). */
+  debugReadySeed(plot: number, sprout: Sprout): void {
+    const p = this.state.plots[plot];
+    if (!p) return;
+    p.seed = { planted: Array.from({ length: this.content.balance.planting.minKids }, () => ({ type: 'plain', look: { ...DEFAULT_LOOK } })), sprout, grown: this.growSeconds };
+  }
+
+  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>, variant?: string): Kid {
+    const forced = this.forceLook(this.rollLook(), force);
+    const look = variant === 'mini' ? this.mini(forced) : forced;
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
+    if (variant) kid.variant = variant;
     this.discover(type);
+    if (variant) this.discoverVariant(type, variant, []);
     this.syncRngState();
     return kid;
   }

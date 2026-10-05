@@ -8,6 +8,7 @@ import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
 import { plotAt, PlotsView } from './plotsView';
+import { RareLayer, type RareKid } from './rareView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -62,6 +63,8 @@ const EDGE_SPEED = 1100;
 /** A tap on the map (GUI_MVP §15.2): at most this long, and this far, in CSS px. */
 const TAP_MS = 220;
 const TAP_SLOP = 8;
+/** The least a small kid's pickup target spans each way, in CSS px (GUI_MVP §16.1). */
+const TAP_TARGET = 44;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -116,6 +119,8 @@ export class MapScene {
   private readonly shownListeners = new Set<(kidId: number) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
+  /** Rare marks and sleeves, beneath every kid (GUI_MVP §16.1-16.2). */
+  private readonly rareLayer: RareLayer;
   private readonly views = new Map<number, KidRigView>();
   /** Kids whose costume is still loading: their view, and what it should play, come after. */
   private readonly pendingViews = new Map<number, ((v: KidRigView) => void)[]>();
@@ -214,7 +219,11 @@ export class MapScene {
     // Plots sit on the ground after the Garden and below kids (GUI_MVP §15.2); no input.
     this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
     if (this.plotsView) this.plotsView.root.eventMode = 'none';
-    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.kidLayer);
+    this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
+    // The preference can change while the game is open: the rare layer follows it at once.
+    const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+    motion?.addEventListener('change', (e) => (this.rareLayer.reducedMotion = e.matches));
+    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.rareLayer.root, this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -373,8 +382,8 @@ export class MapScene {
   }
 
   /** Debug/test hook (only exposed with `?debug=1`): place a kid at a world point. */
-  debugAdd(type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }): number {
-    const kid = this.game.debugAddKid(type, x, y, look);
+  debugAdd(type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string): number {
+    const kid = this.game.debugAddKid(type, x, y, look, variant);
     this.addView(kid);
     return kid.id;
   }
@@ -456,11 +465,46 @@ export class MapScene {
     // A second pointer is never a tap.
     if (this.pan) this.tap = null;
     if (this.drag || this.pan || this.inputPaused) return;
+    // A press near a Mini picks it up: its target is at least 44 CSS px each way (§16.1).
+    // Its own body, any other kid's and real soil all come first: they took the press already.
+    const mini = this.miniAt(this.toWorld(e));
+    if (mini !== null) {
+      this.startDrag(mini, e);
+      return;
+    }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
     const still = Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5;
     this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now() } : null;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
+  }
+
+  /**
+   * The Mini whose pickup target holds world point `p`, or null (GUI_MVP §16.1): its drawn box
+   * grown to at least 44 CSS px each way, about its centre. Never over real soil; where two
+   * overlap, the nearest centre wins, then the lower id. Only for picking up: drops and
+   * fusions use the drawn box.
+   */
+  private miniAt(p: { x: number; y: number }): number | null {
+    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return null;
+    const min = TAP_TARGET / this.cam.zoom;
+    let best: number | null = null;
+    let bestD = Infinity;
+    for (const k of this.game.state.world.kids) {
+      if (k.variant !== 'mini' || !this.views.has(k.id)) continue;
+      const at = this.drawn.get(k.id) ?? k;
+      const cx = at.x + (k.box.left + k.box.right) / 2;
+      const cy = at.y + (k.box.top + k.box.bottom) / 2;
+      const hw = Math.max(k.box.right - k.box.left, min) / 2;
+      const hh = Math.max(k.box.bottom - k.box.top, min) / 2;
+      if (Math.abs(p.x - cx) > hw || Math.abs(p.y - cy) > hh) continue;
+      const d = Math.hypot(p.x - cx, p.y - cy);
+      if (d < bestD || (d === bestD && best !== null && k.id < best)) {
+        bestD = d;
+        best = k.id;
+      }
+    }
+    return best;
   }
 
   private movePan(e: FederatedPointerEvent): void {
@@ -875,6 +919,21 @@ export class MapScene {
       const at = drawn.get(k.id) ?? k;
       view.update(at.x, at.y, k.activity, false, dt);
     }
+    // Rares follow where their kid is drawn, held or not.
+    const rares: RareKid[] = [];
+    for (const k of kids) {
+      const special = this.game.isSpecial(k.type);
+      if (!k.variant && !special) continue;
+      if (!this.views.has(k.id)) continue;
+      const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
+      rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k) });
+    }
+    this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
+  }
+
+  /** Test hook: the rares drawn now. */
+  get raresShown(): ReturnType<RareLayer['shown']> {
+    return this.rareLayer.shown();
   }
 
   /** One fixed sim step with the queued commands (dt 0 applies commands without time passing). */
@@ -937,6 +996,8 @@ export class MapScene {
     switch (e.type) {
       case 'spawned':
         this.addView(e.kid).play('spawn');
+        // A rare or special newborn's burst, once it is on the map (GUI_MVP §15.5).
+        if (e.source === 'sprout' && (e.kid.variant || this.game.isSpecial(e.kid.type))) this.rareLayer.born(e.kid.id);
         break;
       case 'planted': {
         // Gone from the sim and the map at once (GUI_MVP §15.5: no ghost or wave); its plot

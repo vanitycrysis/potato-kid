@@ -47,6 +47,9 @@ interface KidsPanel {
   foundShown: number;
   /** Send home for this kid's live copies (§13.4). */
   home: HomeSection | null;
+  /** Redraws the detail's rare variant rows; the variants it last showed. */
+  refreshRare: (() => void) | null;
+  rareShown: string;
   update(): void;
   dispose(): void;
 }
@@ -276,6 +279,7 @@ export class Dex {
     // identical packets. Interleaving packets in roster order would give away each unknown
     // kid's tier by its position (GUI_MVP §7).
     const knownCells = new Map<KidId, { cell: HTMLElement; name: string }>();
+    let rareTiles = '';
     const unknownCells: HTMLElement[] = [];
     const cell = (node: HTMLElement) => {
       const item = el('div', 'dex-cell', node);
@@ -311,8 +315,17 @@ export class Dex {
       refreshFound: null,
       foundShown: -1,
       home: null,
+      refreshRare: null,
+      rareShown: '',
       update: () => {
         panel.home?.update();
+        // A variant found while the Dex is open: its tile's strip and the open detail follow.
+        const rareKey = JSON.stringify(this.game.state.discoveredVariants);
+        if (rareKey !== rareTiles) {
+          rareTiles = rareKey;
+          for (const [type, c] of knownCells) this.setRareStrip(c.cell, type);
+        }
+        if (panel.showing && panel.rareShown !== rareKey) panel.refreshRare?.();
         // Discoveries made under the open detail join its list (Codex review, PR #43).
         if (panel.showing && panel.foundShown !== this.game.state.discoveredRecipes.length) panel.refreshFound?.();
         // Five columns on a wide compact sheet, three from 360 px, else two (GUI_MVP §7).
@@ -360,12 +373,52 @@ export class Dex {
       portraits.add(type),
       el('span', 'dex-tile-name', shortName(k.name)),
       this.tierMark(k.tier, 20, `T${k.tier}`),
+      el('span', 'dex-tile-rare'),
     );
     b.type = 'button';
     b.dataset.kid = type;
-    b.setAttribute('aria-label', `${k.name}, Tier ${k.tier}`);
     b.addEventListener('click', () => this.showDetail(type));
+    this.setRareStrip(b, type);
     return b;
+  }
+
+  /** The variants found on a type, in the Dex's order (D-062). */
+  private variantsFound(type: KidId): string[] {
+    const found = this.game.state.discoveredVariants[type] ?? [];
+    return this.content.balance.planting.rareVariants.filter((v) => found.includes(v));
+  }
+
+  /** A tile's one-line rare progress, "Rare {found} / 10", and its full label (GUI_MVP §16.4). */
+  private setRareStrip(node: HTMLElement, type: KidId): void {
+    const tile = node.classList.contains('dex-tile') ? node : node.querySelector<HTMLElement>('.dex-tile');
+    const strip = tile?.querySelector<HTMLElement>('.dex-tile-rare');
+    if (!tile || !strip) return;
+    const k = this.kid(type);
+    const n = this.variantsFound(type).length;
+    const all = this.content.balance.planting.rareVariants.length;
+    strip.textContent = `Rare ${n} / ${all}`;
+    tile.setAttribute('aria-label', `${k.name}, Tier ${k.tier}, ${n} of ${all} rare variants found`);
+  }
+
+  /** "Rare variants": every variant in order, found or not (GUI_MVP §16.4). */
+  private rareRows(type: KidId): HTMLElement {
+    const found = this.variantsFound(type);
+    const mult = this.content.balance.planting.rareIncomeMultiplier;
+    const list = el('div', 'dex-rare-rows');
+    list.setAttribute('role', 'list');
+    for (const v of this.content.balance.planting.rareVariants) {
+      const has = found.includes(v);
+      const label = `${v[0]!.toUpperCase()}${v.slice(1)}`;
+      // Unfound: a plain square, never a faint copy of the variant's icon.
+      const mark = has ? icon(`icon_variant_${v}`, '', 'ui-icon-24') : el('span', 'dex-rare-unfound');
+      const status = has ? el('span', 'dex-rare-status', icon('icon_check', '', 'ui-icon-20'), 'Found') : el('span', 'dex-rare-status', el('span', 'dex-rare-empty'), 'Not found');
+      const text = el('span', 'dex-rare-text', el('span', 'dex-rare-label', label), ...(has ? [el('span', 'sheet-helper', `Materials ×${mult}`)] : []));
+      const row = el('div', 'dex-rare-row', mark, text, status);
+      row.setAttribute('role', 'listitem');
+      row.setAttribute('aria-label', has ? `${label}: found. Materials ×${mult}` : `${label}: not found`);
+      list.append(row);
+    }
+    return list;
   }
 
   /** The same packet for every unknown kid: no tier, number or name (GUI_MVP §7). */
@@ -398,6 +451,12 @@ export class Dex {
       portraits.watch(this.sheets.scrollRoot);
     };
     p.refreshFound();
+    const rareBox = el('div', 'dex-rare');
+    p.refreshRare = () => {
+      p.rareShown = JSON.stringify(this.game.state.discoveredVariants);
+      rareBox.replaceChildren(this.rareRows(type));
+    };
+    p.refreshRare();
     p.home?.dispose();
     p.home = homeSection(type, this.content, this.scene, this.feed, this.readOnly);
     const name = el('h3', 'dex-detail-name', k.name);
@@ -408,6 +467,8 @@ export class Dex {
       el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
       // Per hour: at the slow pacing (D-052) a per-second rate would round to 0.
       el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type) * 3600)} Materials / h`),
+      el('h3', 'sheet-section dex-rare-heading', 'Rare variants'),
+      rareBox,
       p.home.root,
       el('h3', 'sheet-section', 'Found recipes'),
       foundBox,
@@ -428,6 +489,7 @@ export class Dex {
     p.showing = null;
     this.detail = null;
     p.refreshFound = null;
+    p.refreshRare = null;
     p.home?.dispose();
     p.home = null;
     p.detailPortraits?.dispose();

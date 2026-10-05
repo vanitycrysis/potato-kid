@@ -6,7 +6,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 3;
+export const SAVE_SCHEMA = 4;
 
 export interface SaveRecord {
   schema: number;
@@ -121,6 +121,16 @@ export function validateState(state: unknown, content: Content): string[] {
   if (s.biasTarget !== null && !(typeof s.biasTarget === 'string' && s.biasTarget in content.balance.spawnWeights)) p.push('biasTarget is invalid');
   if (!Array.isArray(s.discoveredKids) || !s.discoveredKids.every((k) => typeof k === 'string' && kidIds.has(k))) p.push('discoveredKids has unknown kids');
   if (!Array.isArray(s.discoveredRecipes) || !s.discoveredRecipes.every((k) => typeof k === 'string')) p.push('discoveredRecipes is invalid');
+  // Rare variants found, by type (D-062): known types, known variants, each once.
+  const dv = s.discoveredVariants;
+  if (typeof dv !== 'object' || dv === null || Array.isArray(dv)) p.push('discoveredVariants is invalid');
+  else {
+    const known = content.balance.planting.rareVariants;
+    for (const [type, list] of Object.entries(dv as Record<string, unknown>)) {
+      const ok = kidIds.has(type) && Array.isArray(list) && list.every((v) => typeof v === 'string' && known.includes(v)) && new Set(list).size === list.length;
+      if (!ok) p.push(`discoveredVariants for ${type} is invalid`);
+    }
+  }
 
   const b = s.buildings as Record<string, unknown> | undefined;
   if (typeof b !== 'object' || b === null) p.push('buildings is missing');

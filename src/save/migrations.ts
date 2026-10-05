@@ -12,5 +12,20 @@ export function migrations(content: Content): Record<number, Migration> {
     1: (state) => ({ ...(state as object), gardenSpawns: content.balance.spawn.tutorialSpawns }),
     // Schema 3 (D-054): planting replaces Send home; the game starts with its first plots, empty.
     2: (state) => ({ ...(state as object), plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) }),
+    // Schema 4 (D-062): the Dex records rare variants found. A schema-3 save may already hold
+    // rares, on the map or planted: they count as found. A seed's hidden result does not.
+    // A Mini from before shrinks now, once, like a new one: its look (the box follows it on
+    // load), on the map or planted (Codex review, PR #77).
+    3: (state) => {
+      type Rare = { type: string; variant?: string; look?: { scale: number } };
+      const s = structuredClone(state) as { world?: { kids?: Rare[] }; plots?: { seed: { planted: Rare[] } | null }[] };
+      const found: Record<string, string[]> = {};
+      const rares = [...(s.world?.kids ?? []), ...(s.plots ?? []).flatMap((p) => p.seed?.planted ?? [])];
+      for (const k of rares) {
+        if (k.variant && !(found[k.type] ??= []).includes(k.variant)) found[k.type]!.push(k.variant);
+        if (k.variant === 'mini' && k.look) k.look.scale *= content.balance.planting.miniScale;
+      }
+      return { ...(s as object), discoveredVariants: found };
+    },
   };
 }

@@ -442,6 +442,9 @@ export class Hud {
    * after its effect); Infinity while its costume is still loading.
    */
   private readyAt(item: FeedbackItem, now: number): number {
+    // A sprout's card waits for its kid too: a costume still loading would leave it on show
+    // for a kid nobody can see yet (Codex review, PR #77).
+    if (item.kind === 'sprouted') return this.scene.viewState(item.kidId) === 'pending' ? Infinity : now;
     if (item.kind !== 'discovery' && item.kind !== 'newKid') return now;
     const after = item.kind === 'discovery' ? this.scene.discoveryToastDelayMs : 0;
     const state = item.kidId === undefined ? 'shown' : this.scene.viewState(item.kidId);
@@ -450,7 +453,7 @@ export class Hud {
 
   private kidShown(kidId: number, now: number): void {
     for (const c of this.queue) {
-      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
+      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid' || c.item.kind === 'sprouted') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
     }
   }
 
@@ -546,8 +549,12 @@ export class Hud {
     switch (item.kind) {
       case 'discovery':
       case 'newKid': {
-        const heading = item.kind === 'newKid' ? 'New kid discovered' : item.newKid ? 'New discovery' : 'New recipe found';
+        // A planting-only special found for the first time says so (GUI_MVP §15.5).
+        const special = this.content.kids.find((k) => k.id === item.childType)?.special === true;
+        const heading = item.kind === 'newKid' ? (special ? 'Special found' : 'New kid discovered') : item.newKid ? 'New discovery' : 'New recipe found';
         const lines: Node[] = [el('span', 'card-heading', heading), el('span', 'card-name', this.name(item.childType)), this.tier(item.childType)];
+        // New type and new variant at once: one card for both (§15.5).
+        if (item.kind === 'newKid' && item.variant) lines.push(el('span', 'card-line', `${item.variant[0]!.toUpperCase()}${item.variant.slice(1)} found`));
         if (item.kind === 'discovery' && item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
         if (item.milestone > 0) lines.push(el('span', 'card-line', `Dex milestone · +${formatExact(item.milestone)} Potatokens`));
         // The whole card opens this kid in the Potato-Dex (GUI_MVP §9).
@@ -596,12 +603,15 @@ export class Hud {
         const variant = item.variant ? `${item.variant[0]!.toUpperCase()}${item.variant.slice(1)} ` : '';
         const from = `From Plot ${item.plot + 1}.`;
         const helper = special ? (item.variant ? `Rare special kid · ${from}` : `Special kid · ${from}`) : item.variant ? `Rare variant · ${from}` : from;
-        return el(
-          'div',
-          'toast toast-short',
-          portrait(kidRig!, item.kidType, 48),
-          el('div', 'card-text', el('span', 'card-heading', `${variant}${this.name(item.kidType)} sprouted!`), el('span', 'card-line', helper)),
-        );
+        // A variant new to the Dex reads as its discovery, "{variant} found · {type}", and like
+        // any discovery the whole card opens that kid in the Dex (§9; Codex review, PR #77).
+        const heading = item.found ? `${variant.trim()} found · ${this.name(item.kidType)}` : `${variant}${this.name(item.kidType)} sprouted!`;
+        const parts = [portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', heading), el('span', 'card-line', helper))];
+        if (!item.found) return el('div', 'toast toast-short', ...parts);
+        const card = el('button', 'toast toast-reward toast-button', ...parts);
+        card.type = 'button';
+        card.addEventListener('click', () => this.dex.open(card, item.kidType));
+        return card;
       }
     }
   }

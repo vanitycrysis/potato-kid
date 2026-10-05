@@ -8,8 +8,11 @@ import type { GameEvent, RejectReason } from '../sim/game';
 export type FeedbackItem =
   /** A recipe's first discovery; `newKid` when the child type is new to the Dex too. */
   | { kind: 'discovery'; childType: KidId; kidId?: number; newKid: boolean; potatokens: number; milestone: number }
-  /** A kid type first seen from the Garden or Compendium (no recipe, no invented reward). */
-  | { kind: 'newKid'; childType: KidId; kidId?: number; milestone: number }
+  /**
+   * A kid type first seen from the Garden, Compendium or a plot (no recipe, no invented
+   * reward); `variant`: it came up as a rare variant also new to the Dex (§15.5).
+   */
+  | { kind: 'newKid'; childType: KidId; kidId?: number; milestone: number; variant?: string }
   /** A discovery award with no matching fusion in the batch. */
   | { kind: 'recipeReward'; potatokens: number }
   | { kind: 'milestone'; potatokens: number; kids: number }
@@ -20,8 +23,11 @@ export type FeedbackItem =
   | { kind: 'planted'; kidType: KidId; kidId: number; plot: number; count: number; added: number }
   /** A plot started growing (§15.6). */
   | { kind: 'growing'; plot: number }
-  /** A known type sprouted from a plot (§15.5); a new type gets the discovery card instead. */
-  | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number; variant: string | null };
+  /**
+   * A known type sprouted from a plot (§15.5); a new type gets the discovery card instead.
+   * `found`: its variant is new to the Dex, so it reads as a discovery.
+   */
+  | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number; variant: string | null; found?: boolean };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -88,6 +94,21 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
       case 'growing':
         out.push({ kind: 'growing', plot: e.plot });
         break;
+      case 'variantFound': {
+        // The card for that very kid says so: one card, never a second (§15.5).
+        for (let i = out.length - 1; i >= 0; i--) {
+          const c = out[i]!;
+          if (c.kind === 'sprouted' && c.kidType === e.kidType && c.variant === e.variant) {
+            c.found = true;
+            break;
+          }
+          if (c.kind === 'newKid' && c.childType === e.kidType) {
+            c.variant = e.variant;
+            break;
+          }
+        }
+        break;
+      }
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });
         break;

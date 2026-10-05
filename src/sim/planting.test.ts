@@ -390,3 +390,54 @@ describe('planting while away (D-053, D-061)', () => {
     expect(r.materials).toBeCloseTo(expected, 6);
   });
 });
+
+describe('rare variants (D-062, GUI_MVP §16)', () => {
+  /** A ready seed that sprouts `type` with `variant` at the next step. */
+  function sproutNow(g: Game, type: string, variant: string | null): GameEvent[] {
+    g.state.plots[0] = { seed: started(type, 100, variant) };
+    return g.step([], 1);
+  }
+
+  it('there are ten, in the Dex order', () => {
+    expect(p.rareVariants).toEqual(['rainbow', 'mini', 'orbit', 'prism', 'ribbon', 'ripple', 'comet', 'petal', 'echo', 'zigzag']);
+  });
+
+  it('a Mini is smaller all through: its saved look and its box, about the ground point', () => {
+    const g = game();
+    const ordinary = sprouts(sproutNow(g, 'fire', null))[0]!;
+    const mini = sprouts(sproutNow(game(), 'fire', 'mini'))[0]!;
+    if (ordinary.type !== 'spawned' || mini.type !== 'spawned') throw new Error('no sprout');
+    // Same seed, same cosmetic roll: the Mini is the ordinary kid at miniScale.
+    expect(mini.kid.variant).toBe('mini');
+    expect(mini.kid.look.scale).toBeCloseTo(ordinary.kid.look.scale * p.miniScale, 12);
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) expect(mini.kid.box[side]).toBeCloseTo(ordinary.kid.box[side] * p.miniScale, 12);
+    // Another rare keeps its size.
+    const rainbow = sprouts(sproutNow(game(), 'fire', 'rainbow'))[0]!;
+    if (rainbow.type !== 'spawned') throw new Error('no sprout');
+    expect(rainbow.kid.look.scale).toBe(ordinary.kid.look.scale);
+  });
+
+  it('a variant is found once per type: recorded in order, and an event the first time only', () => {
+    const g = game();
+    const found = (events: GameEvent[]) => events.filter((e) => e.type === 'variantFound');
+    expect(found(sproutNow(g, 'fire', 'comet'))).toEqual([{ type: 'variantFound', kidType: 'fire', variant: 'comet' }]);
+    expect(found(sproutNow(g, 'fire', 'comet'))).toEqual([]);
+    expect(found(sproutNow(g, 'fire', 'mini'))).toHaveLength(1);
+    expect(found(sproutNow(g, 'water', 'comet'))).toHaveLength(1);
+    expect(found(sproutNow(g, 'water', null))).toEqual([]);
+    expect(g.state.discoveredVariants).toEqual({ fire: ['comet', 'mini'], water: ['comet'] });
+  });
+
+  it('a rare fused away makes an ordinary kid, and its variant stays found', () => {
+    const g = game();
+    const [e] = sprouts(sproutNow(g, 'fire', 'prism'));
+    if (e?.type !== 'spawned') throw new Error('no sprout');
+    const water = place(g, 'water', 0, 0);
+    // Drop the water kid onto the rare fire kid: they fuse.
+    const events = g.step([{ type: 'drop', kidId: water.id, x: e.kid.x, y: e.kid.y, touching: [e.kid.id] }], 0);
+    const fused = events.find((x) => x.type === 'fused');
+    if (fused?.type !== 'fused') throw new Error('no fusion');
+    expect(fused.child.variant).toBeUndefined();
+    expect(g.state.discoveredVariants).toEqual({ fire: ['prism'] });
+  });
+});
