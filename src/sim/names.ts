@@ -8,12 +8,25 @@ export type NameCheck =
   | { ok: true; name: string; length: number }
   | { ok: false; name: string; length: number; reason: 'empty' | 'chars' | 'long' };
 
-/** Grapheme clusters, as the platform segments them; code points where it can't. */
+/** Grapheme clusters, as the platform segments them (Unicode's extended clusters). */
 export function graphemes(s: string): string[] {
   const Segmenter = (Intl as unknown as { Segmenter?: new (l?: string, o?: { granularity: 'grapheme' }) => { segment(s: string): Iterable<{ segment: string }> } }).Segmenter;
   if (Segmenter) return [...new Segmenter(undefined, { granularity: 'grapheme' }).segment(s)].map((x) => x.segment);
-  // Fallback: a code point plus any combining marks after it.
-  return s.match(/\P{M}\p{M}*|\p{M}+/gu) ?? [];
+  return graphemesFallback(s);
+}
+
+/** The six Indic Conjunct Break linkers (viramas) of Unicode 15.1: Devanagari, Bengali, Gujarati, Oriya, Telugu, Malayalam. */
+const LINKERS = String.fromCodePoint(0x094d, 0x09cd, 0x0acd, 0x0b4d, 0x0c4d, 0x0d4d);
+const CLUSTER = new RegExp(String.raw`\P{M}(?:\p{M}|(?<=[${LINKERS}]\p{M}*)\p{L})*|\p{M}+`, 'gu');
+
+/**
+ * Extended grapheme clusters without `Intl.Segmenter`, for the characters a name allows
+ * (letters, marks, digits, spaces, apostrophes, hyphens): a base, its marks (GB9, GB9a), and
+ * a consonant joined across one of the six Indic Conjunct Break linkers (GB9c, Unicode 15.1),
+ * so "नमस्ते" is three clusters, as the platform counts it (Codex review, FEED-NAME).
+ */
+export function graphemesFallback(s: string): string[] {
+  return s.match(CLUSTER) ?? [];
 }
 
 /** NFC, trimmed, with every run of spaces made one. */

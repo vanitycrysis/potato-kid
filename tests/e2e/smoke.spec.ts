@@ -3048,6 +3048,40 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(page.locator('.feedback')).toContainText(`${fav.name} is Fire Kid’s favourite!`);
   });
 
+  test('Back from Feed returns to the card as it was: its scroll and the plot being chosen (Codex review round 5, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Choose a plot' }).click();
+    await card(page).getByRole('button', { name: /^Plot 1 ·/ }).click();
+    await expect(card(page).getByText('Add Fire Kid to Plot 1?')).toBeVisible();
+    const scroller = await card(page).evaluate((s) => (s.dataset.tight === 'true' ? 'sheet' : 'body'));
+    const scrollTop = () => card(page).evaluate((s, which) => (which === 'sheet' ? s : s.querySelector('.sheet-body')!).scrollTop, scroller);
+    const before = await scrollTop();
+    expect(before).toBeGreaterThan(0);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    await card(page).getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(card(page).getByText('Add Fire Kid to Plot 1?')).toBeVisible();
+    expect(Math.abs((await scrollTop()) - before)).toBeLessThan(2);
+    await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toBeFocused();
+  });
+
+  test('a refusal stays until the player moves on; a success goes after 2.5 s (Codex review round 5, FEED-NAME)', async ({ page }) => {
+    await open(page);
+    await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
+    const fav = foods.foods.find((f) => f.id === fire.favouriteFood)!;
+    // Feed, and lose the Materials before the sim applies it: refused for cost.
+    await page.evaluate((label) => {
+      document.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!.click();
+      window.__PK__!.debugGive!({ materials: -1e6 });
+    }, `Feed ${fav.name}, ${fav.price} Materials`);
+    const status = card(page).locator('.kid-status');
+    await expect(status).toContainText('Not enough Materials.');
+    await page.waitForTimeout(3500);
+    await expect(status).toContainText('Not enough Materials.');
+    // Moving on clears it.
+    await card(page).getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(status).toBeHidden();
+  });
+
   test('Enter right after typing a valid name saves it, with no frame in between (Codex review round 2, FEED-NAME)', async ({ page }) => {
     await open(page);
     await card(page).getByRole('button', { name: 'Name', exact: true }).click();

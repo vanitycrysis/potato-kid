@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkName, graphemes, normalizeName } from './names';
+import { checkName, graphemes, graphemesFallback, normalizeName } from './names';
 
 describe('kid names (D-057, GUI_MVP §18.2)', () => {
   it('normalizes: NFC, ends trimmed, inner runs of spaces made one', () => {
@@ -29,5 +29,20 @@ describe('kid names (D-057, GUI_MVP §18.2)', () => {
     expect(checkName(decomposed + 'x', 24)).toMatchObject({ ok: false, reason: 'long', length: 25 });
     // Devanagari clusters: several code points each.
     expect(graphemes('नमस्ते').length).toBeLessThan('नमस्ते'.length);
+  });
+});
+
+describe('grapheme clusters without Intl.Segmenter (Codex review, FEED-NAME)', () => {
+  it('counts Indic conjuncts as one cluster, as the platform does', () => {
+    expect(graphemesFallback('नमस्ते')).toEqual(['न', 'म', 'स्ते']);
+    expect(graphemesFallback('नमस्ते'.repeat(8))).toHaveLength(24);
+    expect(graphemesFallback('ক্ষমা')).toEqual(['ক্ষ', 'মা']);
+  });
+
+  it('agrees with the platform on every kind of name it allows', () => {
+    const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+    for (const s of ['Sir Spud', 'Amélie', 'Zoë', "O'Brien-2", 'Ποτάτο', 'じゃがいも', 'नमस्ते', 'ক্ষমা', 'ਸ੍ਰੀ', 'கற்க', 'ಕನ್ನಡ', 'മലയാളം', 'ગુજરાતી', 'ଓଡ଼ିଆ', 'తెలుగు', 'é̂x', '٣٤']) {
+      expect(graphemesFallback(s), s).toEqual([...seg.segment(s)].map((x) => x.segment));
+    }
   });
 });

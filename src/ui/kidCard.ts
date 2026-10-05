@@ -157,6 +157,7 @@ export class KidCard {
     this.backTo = back ?? null;
     this.seen = kid ? { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant } : seen!;
     this.view = 'card';
+    this.kept = null;
     // An action still waiting for its result stays waiting: it answers here, or in the world.
     this.status = null;
     this.draft = null;
@@ -183,10 +184,32 @@ export class KidCard {
     this.show('card');
   }
 
+  /**
+   * The card as it was while Feed or Name is open: its nodes, scroll and planting steps,
+   * put back on return rather than rebuilt (GUI_MVP §17.2; Codex review, FEED-NAME).
+   */
+  private kept: { body: Node[]; footer: Node[]; current: { update(): void }; scroll: number } | null = null;
+
   private show(view: View): void {
     const from = this.view;
-    this.view = view;
     const s = this.sheet!;
+    // A refusal holds until the player moves on: another page is moving on (§9).
+    if (this.status?.warn) this.status = null;
+    if (from === 'card' && view !== 'card' && this.current) {
+      this.kept = { body: [...s.body.childNodes], footer: [...s.footer.childNodes], current: this.current, scroll: this.sheets.snapshot()?.scrollTop ?? 0 };
+    }
+    this.view = view;
+    const kept = view === 'card' ? this.kept : null;
+    if (view === 'card') this.kept = null;
+    if (kept) {
+      s.body.replaceChildren(...kept.body);
+      s.footer.replaceChildren(...kept.footer);
+      this.current = kept.current;
+      this.current.update();
+      s.scrollTo(kept.scroll);
+      s.footer.querySelector<HTMLElement>(`[data-action="${from}"]`)?.focus({ preventScroll: true });
+      return;
+    }
     s.footer.replaceChildren();
     this.current = view === 'card' ? this.card() : view === 'feed' ? this.feedPage() : this.namePage();
     this.current.update();
@@ -270,8 +293,9 @@ export class KidCard {
     this.say([refusalText(reason, p.type, 'materials')], true);
   }
 
+  /** A success shows 2.5 s; a refusal holds until the player acts, moves on or closes (§9). */
   private say(lines: string[], warn: boolean): void {
-    this.status = { lines, warn, until: performance.now() + STATUS_MS };
+    this.status = { lines, warn, until: warn ? Infinity : performance.now() + STATUS_MS };
   }
 
   private send(p: Action): void {
