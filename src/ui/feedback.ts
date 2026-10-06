@@ -153,12 +153,15 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
     case 'gone':
       return 'This kid has already left the map.';
     case 'plotsBusy':
-      return 'All plots are growing. Try again when one is empty.';
+      return command === 'unplant' ? 'This plot is growing. Cancel it to take its kids out.' : 'All plots are growing. Try again when one is empty.';
     // GUI_MVP §15.1 and §15.4.
     case 'plotFull':
       return 'All plots are full. Start growing a filled plot first.';
     case 'tooFewKids':
       return 'Add at least 3 kids to Start growing.';
+    // D-074: interim copy until LAYOUT-DESIGN settles taking kids out of plots.
+    case 'ready':
+      return 'This plot’s kid is ready to sprout. It can’t be cancelled now.';
     // GUI_MVP §17.2, §18.2: the sheets say these with the kid's name and the food.
     case 'hated':
       return 'This kid won’t eat that. Nothing was spent.';

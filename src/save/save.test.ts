@@ -392,9 +392,12 @@ describe('schema 3: plots (D-061)', () => {
   });
 
   it('a schema-3 save must carry valid plots (D-061)', () => {
-    const state = newGame().persisted() as unknown as Record<string, unknown>;
+    const fresh = newGame().persisted();
+    // Planted kids carry ids no live kid has (D-074), below nextKidId.
+    const state = { ...fresh, world: { ...fresh.world, nextKidId: 10_000 } } as unknown as Record<string, unknown>;
     const plan = content.balance.planting;
-    const kid = (type: string, extra: Record<string, unknown> = {}) => ({ type, look: { body: 'default', face: 'default', scale: 1 }, ...extra });
+    let id = 5_000;
+    const kid = (type: string, extra: Record<string, unknown> = {}) => ({ id: id++, type, look: { body: 'default', face: 'default', scale: 1 }, ...extra });
     const three = [kid('plain'), kid('fire'), kid('water')];
     const bad: unknown[] = [
       undefined,
@@ -404,7 +407,7 @@ describe('schema 3: plots (D-061)', () => {
       [{ seed: { planted: [], sprout: null, grown: 0 } }],
       [{ seed: { planted: ['plain'], sprout: null, grown: 0 } }], // a bare type, not a snapshot
       [{ seed: { planted: [kid('nobody')], sprout: null, grown: 0 } }],
-      [{ seed: { planted: [{ type: 'plain' }], sprout: null, grown: 0 } }], // no look
+      [{ seed: { planted: [{ id: id++, type: 'plain' }], sprout: null, grown: 0 } }], // no look
       [{ seed: { planted: [kid('plain', { variant: 'sparkly' })], sprout: null, grown: 0 } }],
       [{ seed: { planted: Array.from({ length: plan.maxKids + 1 }, () => kid('plain')), sprout: null, grown: 0 } }],
       [{ seed: { planted: three, sprout: null, grown: 5 } }], // grew before it started
@@ -457,7 +460,7 @@ describe('schema 4: rare variants found (D-062)', () => {
     const kid = old.world.kids[0]!;
     kid.variant = 'rainbow';
     const look = { body: 'default', face: 'default', scale: 1 };
-    old.plots = [{ seed: { planted: [{ type: kid.type, look, variant: 'rainbow' }, { type: 'fire', look, variant: 'mini' }], sprout: null, grown: 0 } }];
+    old.plots = [{ seed: { planted: [{ id: 900, type: kid.type, look, variant: 'rainbow' }, { id: 901, type: 'fire', look, variant: 'mini' }], sprout: null, grown: 0 } }];
     const storage = new TestStorage();
     storage.data.set('slotA', encode(3, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
@@ -473,7 +476,7 @@ describe('schema 4: rare variants found (D-062)', () => {
     other!.variant = 'comet';
     const scale = mini!.look.scale;
     const look = { body: 'default', face: 'default', scale: 1 };
-    old.plots = [{ seed: { planted: [{ type: 'fire', look, variant: 'mini' }, { type: 'fire', look }], sprout: null, grown: 0 }, }];
+    old.plots = [{ seed: { planted: [{ id: 900, type: 'fire', look, variant: 'mini' }, { id: 901, type: 'fire', look }], sprout: null, grown: 0 }, }];
     const storage = new TestStorage();
     storage.data.set('slotA', encode(3, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
@@ -499,7 +502,7 @@ describe('schema 4: rare variants found (D-062)', () => {
 
 describe('schema 5: names and happiness (D-056, D-057)', () => {
   it('a schema-4 save loads as it was', async () => {
-    expect(SAVE_SCHEMA).toBe(5);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(5);
     const old = newGame().persisted();
     const storage = new TestStorage();
     storage.data.set('slotA', encode(4, 4, 1, old));
@@ -526,8 +529,53 @@ describe('schema 5: names and happiness (D-056, D-057)', () => {
       expect(check({ happy: bad }), JSON.stringify(bad)).toContain(`kid ${String(kid.id)} happy is invalid`);
     }
     const look = { body: 'default', face: 'default', scale: 1 };
-    const plots = (happy: unknown) => [{ seed: { planted: [{ type: 'plain', look, happy }], sprout: null, grown: 0 } }];
+    const world = state.world as unknown as { nextKidId: number };
+    const id = world.nextKidId++;
+    const plots = (happy: unknown) => [{ seed: { planted: [{ id, type: 'plain', look, happy }], sprout: null, grown: 0 } }];
     expect(validateState({ ...state, plots: plots(true) }, content)).toEqual([]);
     expect(validateState({ ...state, plots: plots('yes') }, content)).not.toEqual([]);
+  });
+});
+
+describe('schema 6: planted kids keep their ids (D-074)', () => {
+  it('a schema-5 save gives its planted kids new ids, past every id in use', async () => {
+    const g = newGame();
+    const old = g.persisted() as PersistedState & Record<string, unknown>;
+    const look = { body: 'default', face: 'default', scale: 1 };
+    const next = old.world.nextKidId;
+    const plain = { type: 'plain', look };
+    old.plots = [{ seed: { planted: [plain, { ...plain, happy: true }], sprout: null, grown: 0 } }, { seed: { planted: [plain, plain, plain], sprout: { type: 'fire', variant: null }, grown: 3 } }] as unknown as PersistedState['plots'];
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(5, 4, 1, old));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state!.plots.flatMap((p) => p.seed?.planted.map((k) => k.id) ?? [])).toEqual([next, next + 1, next + 2, next + 3, next + 4]);
+    expect(r.state!.world.nextKidId).toBe(next + 5);
+    expect(r.state!.plots[0]!.seed!.planted[1]).toEqual({ id: next + 1, type: 'plain', look, happy: true });
+  });
+
+  it('a planted kid needs an id no live or planted kid has, and may carry a name and happiness', () => {
+    const fresh = newGame().persisted();
+    const live = fresh.world.kids[0]!.id;
+    const state = { ...fresh, world: { ...fresh.world, nextKidId: 10_000 } };
+    const look = { body: 'default', face: 'default', scale: 1 };
+    const plot = (...planted: Record<string, unknown>[]) => [{ seed: { planted: planted.map((k) => ({ type: 'plain', look, ...k })), sprout: null, grown: 0 } }];
+    const ok = (plots: unknown) => validateState({ ...state, plots }, content);
+    expect(ok(plot({ id: 500 }, { id: 501, name: 'Sir Spud', happy: true, happiness: { left: 60, favourite: false } }))).toEqual([]);
+    for (const bad of [
+      plot({}), // no id
+      plot({ id: -1 }),
+      plot({ id: 1.5 }),
+      plot({ id: 10_000 }), // not below nextKidId
+      plot({ id: live }), // a live kid's
+      plot({ id: 500 }, { id: 500 }), // twice
+      plot({ id: 500, name: ' Spud' }),
+      plot({ id: 500, happy: true, happiness: { left: 0, favourite: true } }),
+      plot({ id: 500, happy: true, happiness: { left: content.balance.feeding.favouriteSeconds + 1, favourite: true } }),
+      plot({ id: 500, happiness: { left: 60, favourite: true } }), // happiness without having been happy when added
+    ]) {
+      expect(ok(bad), JSON.stringify(bad)).not.toEqual([]);
+    }
+    // Two plots can't share an id either.
+    expect(ok([...plot({ id: 500 }), ...plot({ id: 500 })])).not.toEqual([]);
   });
 });

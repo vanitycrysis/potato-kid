@@ -100,9 +100,11 @@ export function addKid(
   grace = 0,
   box: Box = defaultBox(60),
   look: Look = DEFAULT_LOOK,
+  /** An id the kid had before, coming back from a plot (D-074); otherwise the next one. */
+  id?: number,
 ): Kid {
   const kid: Kid = {
-    id: world.nextKidId++,
+    id: id ?? world.nextKidId++,
     type,
     x,
     y,

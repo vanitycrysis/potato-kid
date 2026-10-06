@@ -148,11 +148,11 @@ describe('naming (D-057, GUI_MVP §18.2)', () => {
     expect(g.state.materials).toBe(after);
   });
 
-  it('a name ends when its kid is planted or fuses: no seed or child carries it', () => {
+  it('a name waits in the plot with its kid (D-074), and ends when it fuses: no child carries it', () => {
     const { g, kid } = setup();
     g.step([{ type: 'name', kidId: kid.id, name: 'Spud' }], 0);
     g.step([{ type: 'plant', kidIds: [kid.id], plot: 0 }], 0);
-    expect(g.state.plots[0]!.seed!.planted[0]).not.toHaveProperty('name');
+    expect(g.state.plots[0]!.seed!.planted[0]).toHaveProperty('name', 'Spud');
     const a = addKid(g.state.world, 'plain', 200, 1000, createRng(0), 0, defaultBox(content.balance.body.radius));
     const b = addKid(g.state.world, 'fire', 900, 1000, createRng(0), 0, defaultBox(content.balance.body.radius));
     g.step([{ type: 'name', kidId: a.id, name: 'Spud' }], 0);
