@@ -1,4 +1,4 @@
-# Session handoff (2026-10-05, for the next Claude session)
+# Session handoff (2026-10-05, second session, for the next Claude session)
 
 **To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**) and `docs/TASKS.md`. Pull `main` first.
 
@@ -15,10 +15,23 @@
 
 ## Open work at handoff
 
-1. **The owner's second gate-4 feedback came in on 2026-10-05: D-068..D-074** (farming instead of buying food, a less busy screen, a 4 x 4 map with pinch-zoom, ten rare kids instead of variants, wild specials, taking kids out of plots). The order of work is in `TASKS.md` ("Where things stand"). D-067's happiness numbers and name price stay proposed; its food price is gone with farming.
-2. **PR #76, SPECIALS:** the owner settled both open questions with D-073 (specials go wild too). Codex redesigns the held and plain-looking specials as part of WILD-ART, with Claude's third round-1 finding (box-shaped props). After the art is settled: the 20 `kids.json` entries (`"special": true`, 12 at T5, 8 at T6), the Dex's Ordinary/Specials segments (Sec. 16.4), the T6 tier text (no badge past T5), and a check that the specials' personalities load.
-3. The variant-glyph question from #77 is moot: D-072 retires the variants.
-4. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
+1. **Codex is out of usage until 2026-10-09 17:13** (its error, 2026-10-05). The owner chose to wait rather than buy credits or switch back to ChatGPT sessions. Until then nothing merges and no Codex task can start. **At the reset, in this order:**
+   - **Run Codex's reviews** on #81 (docs: D-068..D-074 and this board), #82 (PLOT-REMOVE), #83 (MAP-ZOOM) and #84 (RARE-KIDS, stacked on #82: merge #82 first, then retarget #84 to `main`). Each PR notes the limit in a comment.
+   - **Hand Codex LAYOUT-DESIGN** (D-070's less busy screen, D-071's 4 × 4 map composition and how zoom looks, D-074's take-out and cancel controls), then FARM-DESIGN (D-069), then WILD-ART (D-072's ten rare kids and D-073's special redesigns, on PR #76 with Claude's third round-1 finding). The `TASKS.md` rows say what "done" means.
+2. **The owner's second gate-4 feedback is D-068..D-074** (2026-10-05). They also said the build "looks alright for an early build", and that visual polish waits for the polish phase. The owner picked the recommended option on all four questions: fields on the map; two sets that both go wild; take kids out any time; a 4 × 4 map.
+3. **Built on branches this session** (each fully tested and mutation-checked; details in the PRs):
+   - **#82 PLOT-REMOVE**: `unplant` and `emptyPlot`, schema 6 (planted kids keep ids). Kids come back clear of recipe partners.
+   - **#83 MAP-ZOOM**: pinch 0.5×–2×, wheel zoom, the zoom survives resizes. Still open: whether far zoom wants more (LAYOUT-DESIGN).
+   - **#84 RARE-KIDS**: `rare: true` types, the rare roll wins over the special roll, schema 7 retires the variants. It also adds `?debug=1&rare=a,b` stand-ins for tests, fixes the Compendium to list ordinary kids only, and gives every small kid the 44 px pickup target.
+4. **Still to build after the designs:**
+   - the plot take-out UI and the layout (LAYOUT);
+   - FARMING (sim, save, balance, UI; the food shop goes);
+   - the 20 specials' and the ten rares' content entries;
+   - the Dex's Ordinary/Specials segments (§16.4);
+   - the T6 tier text;
+   - the simulator on the 4 × 4 world, with rares (their tier).
+5. **D-067:** the happiness numbers and the name price (50) stay proposed; the food price is gone with farming.
+6. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
