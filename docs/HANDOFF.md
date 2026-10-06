@@ -4,14 +4,10 @@
 
 ## Where we are
 
-- **Everything gate 4 asked for is on `main`** (D-050..D-067), ready for the owner's device:
-  - PLANTING (#72): plots, the drag target, plot taps, the picker, Start growing with its review, the Dex and card route, offline growth.
-  - VARIANTS (#77): ten rare looks, their map marks and six-glint sleeve, the birth burst, Mini's size and pickup target, the Dex's rare rows, rare list portraits.
-  - FEED-NAME (#78): feeding, happiness (+1 tier in planting odds), naming, the kid card (a tap on a kid, or a Dex row), the happy sun, personality in the card and the Dex.
-  - **D-067 (proposed, tunable):** 100 Materials a bite; 20 min at ×1.5 for an ordinary food, 60 min at ×2 for a favourite; names cost 50. The owner hasn't confirmed these.
-- **Save schema is 5** (4: found variants; 5: names and happiness), with migrations from 1.
-- **The owner reached this session through another session** ("session 03", over cross-session messages; its pipe is in the transcript). If no relay is around, ask the owner directly.
-- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates.
+- **`main`** has everything from the first gate-4 round (D-050..D-067): planting (#72), rare variants (#77), feeding and naming (#78). Its save schema is 5.
+- **The owner's second round (D-068..D-074)** is recorded in #81, not yet merged. The engine work for it is in #82, #83 and #84, which take the save schema to 6 and then 7. All four wait for Codex's review.
+- **The owner now talks to Claude directly** (this session); the earlier relay through "session 03" is no longer used.
+- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
 
 ## Open work at handoff
 
