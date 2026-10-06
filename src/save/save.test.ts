@@ -346,12 +346,11 @@ describe("Codex's round-3 trace (plan §4)", () => {
 
 describe('schema 2: the tutorial counter (D-052)', () => {
   /** A schema-1 state: today's state without the fields schemas 2 and 3 added. */
-  function schema1(): Omit<PersistedState, 'gardenSpawns' | 'plots' | 'discoveredVariants'> {
+  function schema1(): Omit<PersistedState, 'gardenSpawns' | 'plots'> {
     const rest: Partial<PersistedState> = newGame().persisted();
     delete rest.gardenSpawns;
     delete rest.plots;
-    delete rest.discoveredVariants;
-    return rest as Omit<PersistedState, 'gardenSpawns' | 'plots' | 'discoveredVariants'>;
+    return rest as Omit<PersistedState, 'gardenSpawns' | 'plots'>;
   }
 
   it('a new game starts at the beginning of the tutorial', () => {
@@ -385,10 +384,10 @@ describe('schema 3: plots (D-061)', () => {
     const storage = new TestStorage();
     const old: Partial<PersistedState> = newGame().persisted();
     delete old.plots;
-    delete old.discoveredVariants;
     storage.data.set('slotA', encode(2, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })), discoveredVariants: {} });
+    // Schema 4 added the variants found, and schema 7 retired them (D-072).
+    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
   });
 
   it('a schema-3 save must carry valid plots (D-061)', () => {
@@ -408,20 +407,20 @@ describe('schema 3: plots (D-061)', () => {
       [{ seed: { planted: ['plain'], sprout: null, grown: 0 } }], // a bare type, not a snapshot
       [{ seed: { planted: [kid('nobody')], sprout: null, grown: 0 } }],
       [{ seed: { planted: [{ id: id++, type: 'plain' }], sprout: null, grown: 0 } }], // no look
-      [{ seed: { planted: [kid('plain', { variant: 'sparkly' })], sprout: null, grown: 0 } }],
+      [{ seed: { planted: [kid('plain', { variant: 'rainbow' })], sprout: null, grown: 0 } }], // variants are retired (D-072)
       [{ seed: { planted: Array.from({ length: plan.maxKids + 1 }, () => kid('plain')), sprout: null, grown: 0 } }],
       [{ seed: { planted: three, sprout: null, grown: 5 } }], // grew before it started
-      [{ seed: { planted: [kid('plain')], sprout: { type: 'plain', variant: null }, grown: 0 } }], // started with too few
-      [{ seed: { planted: three, sprout: { type: 'nobody', variant: null }, grown: 0 } }],
-      [{ seed: { planted: three, sprout: { type: 'plain', variant: 'sparkly' }, grown: 0 } }],
-      [{ seed: { planted: three, sprout: { type: 'plain', variant: null }, grown: plan.growSeconds + 1 } }],
-      [{ seed: { planted: three, sprout: { type: 'plain', variant: null }, grown: Number.NaN } }],
+      [{ seed: { planted: [kid('plain')], sprout: { type: 'plain' }, grown: 0 } }], // started with too few
+      [{ seed: { planted: three, sprout: { type: 'nobody' }, grown: 0 } }],
+      [{ seed: { planted: three, sprout: { type: 'plain', variant: 'rainbow' }, grown: 0 } }],
+      [{ seed: { planted: three, sprout: { type: 'plain' }, grown: plan.growSeconds + 1 } }],
+      [{ seed: { planted: three, sprout: { type: 'plain' }, grown: Number.NaN } }],
     ];
     for (const plots of bad) expect(validateState({ ...state, plots }, content), JSON.stringify(plots)).not.toEqual([]);
     const good = [
       { seed: null },
-      { seed: { planted: [kid('plain', { variant: plan.rareVariants[0] })], sprout: null, grown: 0 } },
-      { seed: { planted: three, sprout: { type: 'hero', variant: plan.rareVariants[0] }, grown: plan.growSeconds } },
+      { seed: { planted: [kid('plain')], sprout: null, grown: 0 } },
+      { seed: { planted: three, sprout: { type: 'hero' }, grown: plan.growSeconds } },
     ];
     expect(validateState({ ...state, plots: good }, content)).toEqual([]);
   });
@@ -441,62 +440,67 @@ describe('schema 3: plots (D-061)', () => {
     expect(r.state).toEqual(g.persisted());
   });
 
-  it('a kid may carry a known rare variant, nothing else (D-062)', () => {
-    const state = newGame().persisted() as unknown as { world: { kids: Record<string, unknown>[] } };
-    const kid = state.world.kids[0]!;
-    const withVariant = (variant: unknown) => ({ ...state, world: { ...state.world, kids: [{ ...kid, variant }, ...state.world.kids.slice(1)] } });
-    expect(validateState(withVariant(content.balance.planting.rareVariants[0]), content)).toEqual([]);
-    for (const v of ['sparkly', '', 3, null]) expect(validateState(withVariant(v), content)).not.toEqual([]);
-  });
-
 });
 
-describe('schema 4: rare variants found (D-062)', () => {
-  it('a schema-3 save counts the rares it already holds, on the map or planted, as found', async () => {
-    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(4);
+describe('schema 7: rare variants retired (D-072)', () => {
+  /** A schema-6 state: today's, plus the variant fields D-072 retired. */
+  function schema6(): { old: PersistedState & Record<string, unknown>; mini: number; comet: number } {
     const g = newGame();
     const old = g.persisted() as PersistedState & Record<string, unknown>;
-    delete (old as Partial<PersistedState>).discoveredVariants;
-    const kid = old.world.kids[0]!;
-    kid.variant = 'rainbow';
-    const look = { body: 'default', face: 'default', scale: 1 };
-    old.plots = [{ seed: { planted: [{ id: 900, type: kid.type, look, variant: 'rainbow' }, { id: 901, type: 'fire', look, variant: 'mini' }], sprout: null, grown: 0 } }];
-    const storage = new TestStorage();
-    storage.data.set('slotA', encode(3, 4, 1, old));
-    const r = await new SaveManager(storage, content).load();
-    expect(r.state!.discoveredVariants).toEqual({ [kid.type]: ['rainbow'], fire: ['mini'] });
-  });
-
-  it("a schema-3 Mini shrinks once, like a new one, on the map and planted (Codex review, PR #77)", async () => {
-    const g = newGame();
-    const old = g.persisted() as PersistedState & Record<string, unknown>;
-    delete (old as Partial<PersistedState>).discoveredVariants;
-    const [mini, other] = old.world.kids;
+    const [mini, comet] = old.world.kids as (PersistedState['world']['kids'][number] & { variant?: string })[];
     mini!.variant = 'mini';
-    other!.variant = 'comet';
-    const scale = mini!.look.scale;
+    comet!.variant = 'comet';
+    old.discoveredVariants = { [mini!.type]: ['mini'], [comet!.type]: ['comet'] };
     const look = { body: 'default', face: 'default', scale: 1 };
-    old.plots = [{ seed: { planted: [{ id: 900, type: 'fire', look, variant: 'mini' }, { id: 901, type: 'fire', look }], sprout: null, grown: 0 }, }];
+    const next = old.world.nextKidId;
+    old.world.nextKidId += 5;
+    old.plots = [
+      { seed: { planted: [{ id: next, type: 'fire', look: { ...look, scale: 0.72 }, variant: 'mini' }, { id: next + 1, type: 'fire', look, variant: 'prism' }], sprout: null, grown: 0 } },
+      { seed: { planted: [0, 1, 2].map((i) => ({ id: next + 2 + i, type: 'plain', look })), sprout: { type: 'hero', variant: 'rainbow' }, grown: 3 } },
+    ] as unknown as PersistedState['plots'];
+    return { old, mini: mini!.look.scale, comet: comet!.look.scale };
+  }
+
+  it('a schema-6 save loads with every variant kid ordinary, a Mini back at its normal size, and no variants found', async () => {
+    expect(SAVE_SCHEMA).toBe(7);
+    const { old, mini, comet } = schema6();
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(6, 4, 1, old));
+    const r = await new SaveManager(storage, content).load();
+    const state = r.state! as PersistedState & Record<string, unknown>;
+    expect(state).not.toHaveProperty('discoveredVariants');
+    expect(state.world.kids.every((k) => !('variant' in k))).toBe(true);
+    expect(state.world.kids[0]!.look.scale).toBeCloseTo(mini / 0.72, 12);
+    expect(state.world.kids[1]!.look.scale).toBe(comet);
+    expect(state.plots[0]!.seed!.planted).toEqual([
+      { id: old.world.nextKidId - 5, type: 'fire', look: { body: 'default', face: 'default', scale: 1 } },
+      { id: old.world.nextKidId - 4, type: 'fire', look: { body: 'default', face: 'default', scale: 1 } },
+    ]);
+    // A seed decided as a variant sprouts its type, ordinary.
+    expect(state.plots[1]!.seed!.sprout).toEqual({ type: 'hero' });
+    // What the Dex knows of the types themselves stays.
+    expect(state.discoveredKids).toEqual(old.discoveredKids);
+  });
+
+  it('a schema-3 Mini comes through every step at its normal size', async () => {
+    const g = newGame();
+    const old = g.persisted() as PersistedState & Record<string, unknown>;
+    const kid = old.world.kids[0]! as PersistedState['world']['kids'][number] & { variant?: string };
+    kid.variant = 'mini';
+    const scale = kid.look.scale;
     const storage = new TestStorage();
     storage.data.set('slotA', encode(3, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
-    const m = content.balance.planting.miniScale;
-    expect(r.state!.world.kids[0]!.look.scale).toBeCloseTo(scale * m, 12);
-    expect(r.state!.world.kids[1]!.look.scale).toBe(other!.look.scale);
-    expect(r.state!.plots[0]!.seed!.planted.map((k) => k.look.scale)).toEqual([m, 1]);
-    // Loaded, its box follows the smaller look.
-    const game = new Game(structuredClone(content), options, 5, r.state!);
-    const box = game.state.world.kids[0]!.box;
-    const full = new Game(structuredClone(content), options, 5, old as PersistedState).state.world.kids[0]!.box;
-    expect(box.right - box.left).toBeCloseTo((full.right - full.left) * m, 9);
+    expect(r.state!.world.kids[0]!.look.scale).toBeCloseTo(scale, 12);
+    expect(r.state!.world.kids[0]).not.toHaveProperty('variant');
   });
 
-  it('a schema-4 save must name known types and variants, each once', () => {
-    const state = newGame().persisted() as unknown as Record<string, unknown>;
-    for (const bad of [undefined, null, [], { nobody: ['rainbow'] }, { fire: ['sparkly'] }, { fire: 'rainbow' }, { fire: ['rainbow', 'rainbow'] }]) {
-      expect(validateState({ ...state, discoveredVariants: bad }, content), JSON.stringify(bad)).not.toEqual([]);
-    }
-    expect(validateState({ ...state, discoveredVariants: { fire: ['rainbow', 'mini'] } }, content)).toEqual([]);
+  it('a schema-7 save may not carry variants, on a kid, a planted kid, a sprout, or as found', () => {
+    const state = newGame().persisted() as unknown as { world: { kids: Record<string, unknown>[] } } & Record<string, unknown>;
+    expect(validateState(state, content)).toEqual([]);
+    const kid = state.world.kids[0]!;
+    expect(validateState({ ...state, world: { ...state.world, kids: [{ ...kid, variant: 'rainbow' }, ...state.world.kids.slice(1)] } }, content)).toContain(`kid ${String(kid.id)} variant is retired`);
+    expect(validateState({ ...state, discoveredVariants: {} }, content)).toContain('discoveredVariants is retired');
   });
 });
 

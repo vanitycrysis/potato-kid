@@ -1,11 +1,10 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import { trimOf } from './art';
 
-// Rare kids on the map (D-062, docs/GUI_MVP.md §16.1-16.2, §15.5, Codex's art): each rare's
-// variant mark above its box (Mini's at its right foot instead), the shared six-glint
-// sleeve around it, and the birth burst for a rare or special newborn. All of it is drawn
-// in one layer beneath every kid, so neighbours cover it rather than receive its paint; it
-// takes no input and never changes a kid's box.
+// Rare kids on the map (D-072, docs/GUI_MVP.md §16.2, §15.5, Codex's art): the shared
+// six-glint sleeve around each rare kid, the birth burst for a rare or special newborn, and
+// a happy kid's sun. All of it is drawn in one layer beneath every kid, so neighbours cover
+// it rather than receive its paint; it takes no input and never changes a kid's box. The
+// variant marks retired with the variants (D-072).
 
 export type Box = { left: number; top: number; right: number; bottom: number };
 
@@ -26,18 +25,6 @@ const REDUCED_SPECIAL_MS = 1200;
 export function sleeveAt(box: Box, zoom: number): { x: number; y: number; scale: number } {
   const css = Math.max(0.24, ((box.right - box.left) * zoom + 8) / 140);
   return { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2, scale: css / zoom };
-}
-
-/**
- * A variant mark above a lifetime box (§16.1): its visible trim centred on the box, its
- * visible bottom 4 CSS px above the box's top, its visible width clamp(24, canvas × 36/55,
- * 36) CSS px, where `canvasCss` is the kid's normal (un-Mini) canvas width on screen.
- * `trim` is the mark's visible rect in its source canvas [x, y, w, h].
- */
-export function markAt(box: Box, zoom: number, canvasCss: number, trim: [number, number, number, number]): { x: number; y: number; scale: number; anchor: [number, number]; widthCss: number } {
-  const widthCss = Math.min(36, Math.max(24, (canvasCss * 36) / 55));
-  const [tx, ty, tw, th] = trim;
-  return { x: (box.left + box.right) / 2, y: box.top - 4 / zoom, scale: widthCss / tw / zoom, anchor: [tx + tw / 2, ty + th], widthCss };
 }
 
 /** The idle sleeve's opacity: .8 → 1 → .8 over 2.4 s, phase fixed by kid id; reduced motion holds at 1. */
@@ -63,22 +50,22 @@ export function burstAt(ms: number, reduced: boolean, rare: boolean): { scale: n
 /** What the layer needs of a kid this frame. */
 export interface RareKid {
   id: number;
-  variant: string | undefined;
+  /** One of the rare kid types (D-072): it sparkles for as long as it lives. */
+  rare: boolean;
   special: boolean;
   /** Where it is drawn now (the held spot while held). */
   x: number;
   y: number;
-  /** Its lifetime box about its ground point, as the sim keeps it (Mini already scaled). */
+  /** Its lifetime box about its ground point, as the sim keeps it. */
   box: Box;
-  /** Its normal (un-Mini) look scale. */
-  normalScale: number;
+  /** Its look scale. */
+  scale: number;
   /** Happy from food (D-056): the sun at its left foot, until it wears off (GUI_MVP §17.2). */
   happy?: boolean;
 }
 
 interface Item {
   sleeve: Sprite | null;
-  mark: Sprite | null;
   happy: Sprite | null;
 }
 
@@ -121,29 +108,27 @@ export class RareLayer {
     for (const k of kids) {
       if (this.births.get(k.id) === null) this.births.set(k.id, now);
       const birth = this.births.get(k.id) ?? undefined;
-      const burst = birth === undefined ? null : burstAt(now - birth, this.reducedMotion, !!k.variant);
+      const burst = birth === undefined ? null : burstAt(now - birth, this.reducedMotion, k.rare);
       if (birth !== undefined && !burst) this.births.delete(k.id);
-      if (!k.variant && !burst && !k.happy) continue;
+      if (!k.rare && !burst && !k.happy) continue;
       seen.add(k.id);
       let item = this.items.get(k.id);
       if (!item) {
-        item = { sleeve: null, mark: null, happy: null };
+        item = { sleeve: null, happy: null };
         this.items.set(k.id, item);
       }
-      // Happy: a still sun at the left foot, at normal size (a Mini's too), no motion.
+      // Happy: a still sun at the left foot, at the kid's size, no motion.
       if (k.happy) {
         item.happy ??= this.sprite('fx_happy', this.rig.groundAnchor);
         item.happy.position.set(k.x, k.y);
-        item.happy.scale.set((k.normalScale * this.rig.worldCanvasSize) / this.rig.canvas[0]);
+        item.happy.scale.set((k.scale * this.rig.worldCanvasSize) / this.rig.canvas[0]);
       } else if (item.happy) {
         item.happy.destroy();
         item.happy = null;
       }
-      if (!k.variant && !burst) {
+      if (!k.rare && !burst) {
         item.sleeve?.destroy();
         item.sleeve = null;
-        item.mark?.destroy();
-        item.mark = null;
         continue;
       }
       const box = { left: k.x + k.box.left, top: k.y + k.box.top, right: k.x + k.box.right, bottom: k.y + k.box.bottom };
@@ -156,34 +141,10 @@ export class RareLayer {
       item.sleeve.scale.set(s.scale * grow);
       item.sleeve.alpha = burst ? burst.alpha : sleeveAlpha(now, k.id, this.reducedMotion);
 
-      // The mark: above the box, or Mini's at the right foot at normal size (§16.1).
-      if (k.variant) {
-        const name = `fx_variant_${k.variant}`;
-        if (!item.mark || item.mark.texture !== this.textures.get(name)) {
-          item.mark?.destroy();
-          item.mark = k.variant === 'mini' ? this.sprite(name, this.rig.groundAnchor) : this.sprite(name, [0, 0]);
-        }
-        if (k.variant === 'mini') {
-          // Drawn in a normal kid canvas about the ground point: it does not shrink twice.
-          item.mark.position.set(k.x, k.y);
-          item.mark.scale.set((k.normalScale * this.rig.worldCanvasSize) / this.rig.canvas[0]);
-        } else {
-          const t = trimOf(name);
-          const trim: [number, number, number, number] = t ? [t[0], t[1], t[2], t[3]] : [0, 0, this.rig.canvas[0], this.rig.canvas[1]];
-          const m = markAt(box, zoom, k.normalScale * this.rig.worldCanvasSize * zoom, trim);
-          item.mark.anchor.set(m.anchor[0] / this.rig.canvas[0], m.anchor[1] / this.rig.canvas[1]);
-          item.mark.position.set(m.x, m.y);
-          item.mark.scale.set(m.scale);
-        }
-      } else if (item.mark) {
-        item.mark.destroy();
-        item.mark = null;
-      }
     }
     for (const [id, item] of this.items) {
       if (seen.has(id)) continue;
       item.sleeve?.destroy();
-      item.mark?.destroy();
       item.happy?.destroy();
       this.items.delete(id);
     }
@@ -191,19 +152,14 @@ export class RareLayer {
   }
 
   /** Test hook: what each drawn rare shows. */
-  shown(): { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null; happy: boolean }[] {
-    return [...this.items].map(([id, i]) => {
-      const b = i.mark?.getBounds();
-      return {
-        id,
-        happy: !!i.happy,
-        mark: i.mark ? ([...this.textures].find(([, t]) => t === i.mark!.texture)?.[0] ?? null) : null,
-        sleeve: !!i.sleeve,
-        sleeveAlpha: i.sleeve?.alpha ?? 0,
-        sleeveScale: i.sleeve?.scale.x ?? 0,
-        markBounds: b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null,
-      };
-    });
+  shown(): { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean }[] {
+    return [...this.items].map(([id, i]) => ({
+      id,
+      happy: !!i.happy,
+      sleeve: !!i.sleeve,
+      sleeveAlpha: i.sleeve?.alpha ?? 0,
+      sleeveScale: i.sleeve?.scale.x ?? 0,
+    }));
   }
 
   private sprite(name: string, anchorSource: readonly [number, number]): Sprite {

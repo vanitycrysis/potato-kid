@@ -42,7 +42,7 @@ function plantAll(g: Game, types: string[], plot?: number): GameEvent[] {
 }
 
 /** A started seed that sprouts `type`, `grown` seconds in. */
-const started = (type: string, grown: number, variant: string | null = null): Seed => ({ planted: P('plain', 'plain', 'plain'), sprout: { type, variant }, grown });
+const started = (type: string, grown: number): Seed => ({ planted: P('plain', 'plain', 'plain'), sprout: { type }, grown });
 
 /** Steps `seconds` in 1 s steps, collecting events. */
 function run(g: Game, seconds: number): GameEvent[] {
@@ -160,13 +160,12 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(g.state.world.kids.map((k) => k.id)).toEqual([a.id]);
   });
 
-  it('a plot keeps a snapshot of each kid planted: id, type, look, and rare variant', () => {
+  it('a plot keeps a snapshot of each kid planted: id, type and look', () => {
     const g = game();
     const k = place(g, 'hero', 300, 1500);
     k.look = { body: 'tall', face: 'sleepy', scale: 0.9 };
-    k.variant = 'rainbow';
     g.step([{ type: 'plant', kidIds: [k.id] }], 0);
-    expect(g.state.plots[0]!.seed!.planted).toEqual([{ id: k.id, type: 'hero', look: { body: 'tall', face: 'sleepy', scale: 0.9 }, variant: 'rainbow' }]);
+    expect(g.state.plots[0]!.seed!.planted).toEqual([{ id: k.id, type: 'hero', look: { body: 'tall', face: 'sleepy', scale: 0.9 } }]);
   });
 
   it('a kid already gone is answered with a refusal, changing nothing', () => {
@@ -183,7 +182,7 @@ describe('planting 3 to 5 kids (D-061)', () => {
     plantAll(g, ['water']);
     expect(g.step([{ type: 'startGrowing', plot: 0 }], 0)).toEqual([{ type: 'growing', plot: 0 }]);
     const sprout = g.state.plots[0]!.seed!.sprout!;
-    expect(sprout).toEqual({ type: expect.any(String), variant: null }); // no specials or rares at seed 7 here
+    expect(sprout).toEqual({ type: expect.any(String) }); // no specials or rares at seed 7 here
     // Started twice: the second is refused, and the sprout is unchanged.
     expect(g.step([{ type: 'startGrowing', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'startGrowing', reason: 'plotsBusy' }]);
     expect(g.state.plots[0]!.seed!.sprout).toEqual(sprout);
@@ -202,15 +201,15 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(Math.hypot(kid.x - garden.x, kid.y - garden.y)).toBeLessThan(300);
   });
 
-  it('a rare sprout comes up as a rare kid, which earns rareIncomeMultiplier times as much', () => {
-    const g = game();
-    g.state.plots = [{ seed: started('hero', 99, 'rainbow') }];
+  it('a rare kid sprouts like any kid and earns by its tier (D-072)', () => {
+    const g = game((c) => c.kids.push({ id: 'rare_a', tier: 6, name: 'Rare A', rare: true }));
+    g.state.plots = [{ seed: started('rare_a', 99) }];
     const events = sprouts(run(g, 1));
-    expect(events).toEqual([expect.objectContaining({ kid: expect.objectContaining({ type: 'hero', variant: 'rainbow' }) })]);
-    expect(g.income).toBeCloseTo(g.incomeOf('hero') * p.rareIncomeMultiplier, 12);
-    // It survives a save.
-    const back = new Game(testContent(), { bounds, spawnAt: garden }, 1, g.persisted());
-    expect(back.state.world.kids[0]!.variant).toBe('rainbow');
+    expect(events).toEqual([expect.objectContaining({ kid: expect.objectContaining({ type: 'rare_a' }) })]);
+    expect(g.isRare('rare_a')).toBe(true);
+    expect(g.isRare('hero')).toBe(false);
+    expect(g.income).toBeCloseTo(g.incomeOf('rare_a'), 12);
+    expect(g.incomeOf('rare_a')).toBeGreaterThan(g.incomeOf('hero'));
   });
 
   it('a ready seed waits while the map is full, then sprouts as soon as there is room', () => {
@@ -279,33 +278,29 @@ describe('the odds (D-061)', () => {
   it('over many plantings, specials and rares come at their chances, independently', () => {
     const c = testContent((x) => {
       x.kids.push({ id: 'special_a', tier: 5, name: 'Special A', special: true }, { id: 'special_b', tier: 6, name: 'Special B', special: true });
+      x.kids.push({ id: 'rare_a', tier: 6, name: 'Rare A', rare: true }, { id: 'rare_b', tier: 6, name: 'Rare B', rare: true });
       x.balance.planting.specialOdds = [0.3, 0.3];
       x.balance.planting.rareOdds = [0.2, 0.2];
     });
     const h = new Game(c, { bounds, spawnAt: garden }, 3);
-    let specials = 0;
-    let rares = 0;
-    let both = 0;
-    let ordinaryFromGarden = true;
-    let rareOfPlanted = true;
+    const seen = { special: 0, rare: 0, garden: 0, other: 0 };
+    const rareTypes = new Set<string>();
     const N = 4000;
     for (let i = 0; i < N; i++) {
       h.state.plots = [{ seed: { planted: P('hero', 'hero', 'chef'), sprout: null, grown: 0 } }];
       h.step([{ type: 'startGrowing', plot: 0 }], 0);
-      const s = h.state.plots[0]!.seed!.sprout!;
-      const special = s.type.startsWith('special_');
-      specials += special ? 1 : 0;
-      rares += s.variant ? 1 : 0;
-      both += special && s.variant ? 1 : 0;
-      if (!special && !s.variant && !pool.has(s.type)) ordinaryFromGarden = false;
-      if (!special && s.variant && !['hero', 'chef'].includes(s.type)) rareOfPlanted = false;
-      if (s.variant && !p.rareVariants.includes(s.variant)) rareOfPlanted = false;
+      const t = h.state.plots[0]!.seed!.sprout!.type;
+      if (t.startsWith('rare_')) rareTypes.add(t);
+      seen[t.startsWith('special_') ? 'special' : t.startsWith('rare_') ? 'rare' : pool.has(t) ? 'garden' : 'other']++;
     }
-    expect(specials / N).toBeCloseTo(0.3, 1);
-    expect(rares / N).toBeCloseTo(0.2, 1);
-    expect(both / N).toBeCloseTo(0.06, 1); // independent: 0.3 × 0.2
-    expect(ordinaryFromGarden).toBe(true);
-    expect(rareOfPlanted).toBe(true);
+    // The rare roll wins when both hit (D-072): rare 0.2; special only when the rare missed,
+    // 0.3 × 0.8; otherwise a Garden kid, never a planted one or anything else.
+    expect(seen.rare / N).toBeCloseTo(0.2, 1);
+    expect(seen.special / N).toBeCloseTo(0.24, 1);
+    expect(seen.garden / N).toBeCloseTo(0.56, 1);
+    expect(seen.other).toBe(0);
+    // Each rare kind comes up.
+    expect([...rareTypes].sort()).toEqual(['rare_a', 'rare_b']);
   });
 });
 
@@ -394,54 +389,37 @@ describe('planting while away (D-053, D-061)', () => {
   });
 });
 
-describe('rare variants (D-062, GUI_MVP §16)', () => {
-  /** A ready seed that sprouts `type` with `variant` at the next step. */
-  function sproutNow(g: Game, type: string, variant: string | null): GameEvent[] {
-    g.state.plots[0] = { seed: started(type, 100, variant) };
-    return g.step([], 1);
-  }
-
-  it('there are ten, in the Dex order', () => {
-    expect(p.rareVariants).toEqual(['rainbow', 'mini', 'orbit', 'prism', 'ribbon', 'ripple', 'comet', 'petal', 'echo', 'zigzag']);
+describe('rare kids (D-072)', () => {
+  it('with no rare kids in the content, the rare roll gives nothing: a Garden kid sprouts', () => {
+    const c = testContent((x) => {
+      x.balance.planting.specialOdds = [0, 0];
+      x.balance.planting.rareOdds = [1, 1];
+    });
+    const g = new Game(c, { bounds, spawnAt: garden }, 3);
+    for (let i = 0; i < 50; i++) {
+      g.state.plots = [{ seed: { planted: P('hero', 'hero', 'chef'), sprout: null, grown: 0 } }];
+      g.step([{ type: 'startGrowing', plot: 0 }], 0);
+      expect(pool.has(g.state.plots[0]!.seed!.sprout!.type)).toBe(true);
+    }
   });
 
-  it('a Mini is smaller all through: its saved look and its box, about the ground point', () => {
-    const g = game();
-    const ordinary = sprouts(sproutNow(g, 'fire', null))[0]!;
-    const mini = sprouts(sproutNow(game(), 'fire', 'mini'))[0]!;
-    if (ordinary.type !== 'spawned' || mini.type !== 'spawned') throw new Error('no sprout');
-    // Same seed, same cosmetic roll: the Mini is the ordinary kid at miniScale.
-    expect(mini.kid.variant).toBe('mini');
-    expect(mini.kid.look.scale).toBeCloseTo(ordinary.kid.look.scale * p.miniScale, 12);
-    for (const side of ['left', 'top', 'right', 'bottom'] as const) expect(mini.kid.box[side]).toBeCloseTo(ordinary.kid.box[side] * p.miniScale, 12);
-    // Another rare keeps its size.
-    const rainbow = sprouts(sproutNow(game(), 'fire', 'rainbow'))[0]!;
-    if (rainbow.type !== 'spawned') throw new Error('no sprout');
-    expect(rainbow.kid.look.scale).toBe(ordinary.kid.look.scale);
+  it('a rare kid can be planted, and counts by its tier', () => {
+    const g = game((c) => c.kids.push({ id: 'rare_a', tier: 6, name: 'Rare A', rare: true }));
+    const tier6 = g.oddsFor(['rare_a', 'rare_a', 'rare_a']);
+    const tier1 = g.oddsFor(['plain', 'plain', 'plain']);
+    expect(tier6.rare).toBeGreaterThan(tier1.rare);
+    const k = place(g, 'rare_a', 300, 1500);
+    g.step([{ type: 'plant', kidIds: [k.id] }], 0);
+    expect(g.state.plots[0]!.seed!.planted.map((x) => x.type)).toEqual(['rare_a']);
   });
 
-  it('a variant is found once per type: recorded in order, and an event the first time only', () => {
-    const g = game();
-    const found = (events: GameEvent[]) => events.filter((e) => e.type === 'variantFound');
-    expect(found(sproutNow(g, 'fire', 'comet'))).toEqual([{ type: 'variantFound', kidType: 'fire', variant: 'comet' }]);
-    expect(found(sproutNow(g, 'fire', 'comet'))).toEqual([]);
-    expect(found(sproutNow(g, 'fire', 'mini'))).toHaveLength(1);
-    expect(found(sproutNow(g, 'water', 'comet'))).toHaveLength(1);
-    expect(found(sproutNow(g, 'water', null))).toEqual([]);
-    expect(g.state.discoveredVariants).toEqual({ fire: ['comet', 'mini'], water: ['comet'] });
-  });
-
-  it('a rare fused away makes an ordinary kid, and its variant stays found', () => {
-    const g = game();
-    const [e] = sprouts(sproutNow(g, 'fire', 'prism'));
-    if (e?.type !== 'spawned') throw new Error('no sprout');
-    const water = place(g, 'water', 0, 0);
-    // Drop the water kid onto the rare fire kid: they fuse.
-    const events = g.step([{ type: 'drop', kidId: water.id, x: e.kid.x, y: e.kid.y, touching: [e.kid.id] }], 0);
-    const fused = events.find((x) => x.type === 'fused');
-    if (fused?.type !== 'fused') throw new Error('no fusion');
-    expect(fused.child.variant).toBeUndefined();
-    expect(g.state.discoveredVariants).toEqual({ fire: ['prism'] });
+  it('a rare kid is never in the Compendium: it cannot be bought', () => {
+    const g = game((c) => c.kids.push({ id: 'rare_a', tier: 6, name: 'Rare A', rare: true }));
+    g.state.discoveredKids.push('rare_a');
+    g.state.buildings.compendium = 1;
+    g.state.materials = 1e12;
+    g.state.potatokens = 1e6;
+    expect(g.step([{ type: 'respawn', kidType: 'rare_a', pay: 'materials' }], 0)).toEqual([{ type: 'rejected', command: 'respawn', reason: 'notSpawnable' }]);
   });
 });
 

@@ -2,7 +2,6 @@ import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import { el } from './dom';
-import { rareMark } from './plotRoute';
 import { portrait } from './portrait';
 
 // A kid's live copies in its Dex detail (D-061, docs/GUI_MVP.md §15.6, §18.1, Codex's design):
@@ -36,13 +35,12 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, open
   const makeRow = (kidId: number) => {
     const kid = live().find((k) => k.id === kidId)!;
     const ordinal = ordinals.get(kidId)!;
-    const rare = rareMark(kid.variant);
     const title = el('span', 'dex-home-row-name');
     const sub = el('span', 'sheet-helper');
     const row = el(
       'button',
       'ui-button dex-home-row',
-      portrait(kidRig!, type, 48, kid.look, kid.variant ? { variant: kid.variant, miniScale: content.balance.planting.miniScale } : undefined),
+      portrait(kidRig!, type, 48, kid.look),
       el('span', 'dex-home-row-text', title, sub),
     );
     row.type = 'button';
@@ -53,9 +51,9 @@ export function homeSection(type: KidId, content: Content, scene: MapScene, open
     const set = (name: string | undefined) => {
       if (name === shown) return;
       shown = name;
-      title.textContent = name ?? `Kid ${ordinal}${rare ? ` · ${rare}` : ''}`;
-      sub.textContent = name ? `${typeName} · Kid ${ordinal}${rare ? ` · ${rare}` : ''}` : 'Open its card';
-      row.setAttribute('aria-label', `${name ? `${name}, ` : ''}${typeName}, kid ${ordinal} on your map${rare ? `, ${rare}` : ''}`);
+      title.textContent = name ?? `Kid ${ordinal}`;
+      sub.textContent = name ? `${typeName} · Kid ${ordinal}` : 'Open its card';
+      row.setAttribute('aria-label', `${name ? `${name}, ` : ''}${typeName}, kid ${ordinal} on your map`);
     };
     set(kid.name);
     return { row, set };

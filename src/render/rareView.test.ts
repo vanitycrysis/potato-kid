@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { burstAt, markAt, sleeveAlpha, sleeveAt } from './rareView';
+import { burstAt, sleeveAlpha, sleeveAt } from './rareView';
 
-// Rare marks and sleeves (GUI_MVP §16.1-16.2, §15.5): Codex's numbers, as the spec gives them.
+// Rare sleeves (GUI_MVP §16.2, §15.5): Codex's numbers, as the spec gives them.
 describe('the rare sleeve (GUI_MVP §16.2)', () => {
   it('is centred on the lifetime box at max(.24, (width + 8) / 140) CSS px per source px', () => {
     // §16.2's worked example: a full Round at normal 55 px is 48.125 CSS px wide, so the
@@ -23,29 +23,6 @@ describe('the rare sleeve (GUI_MVP §16.2)', () => {
     expect(sleeveAlpha(1234, 7, false)).toBeCloseTo(sleeveAlpha(1234 + 2400, 7, false), 12);
     expect(sleeveAlpha(0, 7, false)).not.toBeCloseTo(sleeveAlpha(0, 8, false), 3);
     expect(sleeveAlpha(1234, 7, true)).toBe(1);
-  });
-});
-
-describe('the variant mark (GUI_MVP §16.1)', () => {
-  const trim: [number, number, number, number] = [23, 98, 210, 109];
-
-  it('sits centred, its visible bottom 4 CSS px above the box, 36 px wide at a 55 px kid', () => {
-    const zoom = 1.5;
-    const box = { left: 100, top: 50, right: 140, bottom: 90 };
-    const m = markAt(box, zoom, 55, trim);
-    expect(m.widthCss).toBe(36);
-    expect(m.x).toBe(120);
-    expect((box.top - m.y) * zoom).toBeCloseTo(4, 12);
-    // The anchor is the visible trim's bottom centre, so it is what lands there.
-    expect(m.anchor).toEqual([23 + 105, 98 + 109]);
-    expect(trim[2] * m.scale * zoom).toBeCloseTo(36, 12);
-  });
-
-  it('is never narrower than 24 nor wider than 36 CSS px', () => {
-    const box = { left: 0, top: 0, right: 10, bottom: 10 };
-    expect(markAt(box, 1, 20, trim).widthCss).toBe(24);
-    expect(markAt(box, 1, 40, trim).widthCss).toBeCloseTo(40 * (36 / 55), 12);
-    expect(markAt(box, 1, 200, trim).widthCss).toBe(36);
   });
 });
 

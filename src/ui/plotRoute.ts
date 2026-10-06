@@ -15,8 +15,8 @@ export function chosenPlotRefusal(reason: 'plotsBusy' | 'plotFull'): string {
   return reason === 'plotsBusy' ? 'This plot is already growing. Choose another plot.' : 'This plot is full. Review it to Start growing.';
 }
 
-/** A rare variant's label, "Rare: Rainbow" (GUI_MVP §15.3). */
-export const rareMark = (variant: string | undefined) => (variant ? `Rare: ${variant[0]!.toUpperCase()}${variant.slice(1)}` : null);
+/** A planting-only kind's mark (D-063, D-072), as GUI_MVP §15.3 marks specials; null for an ordinary kid. */
+export const kindMark = (def: { special?: boolean; rare?: boolean } | undefined): 'Rare' | 'Special' | null => (def?.rare ? 'Rare' : def?.special ? 'Special' : null);
 
 export interface PlotRouteOptions {
   scene: MapScene;
@@ -53,21 +53,20 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
   const title = el('h4', 'dex-home-confirm-title', `Add ${o.displayName()} to Plot ${plot + 1}?`);
   title.tabIndex = -1;
   const kid = live();
-  const rare = rareMark(kid?.variant);
-  const marks = [`Tier ${kidDef?.tier ?? 1}`, `Kid ${o.ordinal}`, ...(rare ? [rare] : []), ...(kidDef?.special ? ['Special'] : [])];
+  const kind = kindMark(kidDef);
+  const marks = [`Tier ${kidDef?.tier ?? 1}`, `Kid ${o.ordinal}`, ...(kind ? [kind] : [])];
   const whoName = el('span', 'dex-home-row-name', o.displayName());
   const who = el(
     'div',
     'dex-home-who',
-    portrait(kidRig!, type, 48, kid?.look, kid?.variant ? { variant: kid.variant, miniScale: content.balance.planting.miniScale } : undefined),
+    portrait(kidRig!, type, 48, kid?.look),
     el('span', 'dex-home-row-text', whoName, el('span', 'sheet-helper', marks.join(' · '))),
   );
   const odds = el('div', 'dex-home-odds');
   const notices = [
     el('p', 'sheet-body-text', 'This kid leaves the map. Its name, income and happy effect end here. No refund.'),
-    el('p', 'sheet-body-text', 'Its type and found variants stay in your Dex.'),
-    ...(rare ? [el('p', 'sheet-body-text', 'Rare variants cannot be bought back.')] : []),
-    ...(kidDef?.special ? [el('p', 'sheet-body-text', 'Special kids cannot be bought back.')] : []),
+    el('p', 'sheet-body-text', 'Its type stays in your Dex.'),
+    ...(kind ? [el('p', 'sheet-body-text', `${kind} kids cannot be bought back.`)] : []),
   ];
   const why = el('p', 'sheet-body-text dex-home-why');
   why.hidden = true;
