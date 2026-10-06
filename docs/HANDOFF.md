@@ -1,6 +1,8 @@
 # Session handoff (2026-10-05, second session, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**) and `docs/TASKS.md`. Pull `main` first.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**) and `docs/TASKS.md`.
+
+**Until PR #81 merges, this handoff and the current `DECISIONS.md` / `TASKS.md` live on the branch `claude/gate4-feedback-2`, not on `main`** (`main` still has the previous session's handoff). Run `git fetch && git checkout claude/gate4-feedback-2 && git pull` and read the docs there. Once #81 is merged, pull `main` as usual.
 
 ## Where we are
 
@@ -26,7 +28,7 @@
    - the Dex's Ordinary/Specials segments (§16.4);
    - the T6 tier text;
    - the simulator on the 4 × 4 world, with rares (their tier).
-5. **D-067:** the happiness numbers and the name price (50) stay proposed; the food price is gone with farming.
+5. **Open question for the owner (not urgent):** D-067's happiness durations (20 min ordinary food, 60 min favourite) and the name price (50 Materials). They stay proposed until the owner confirms or changes them. The food price is gone with farming (D-069).
 6. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
@@ -42,7 +44,7 @@
   - `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`;
   - post the output to the PR verbatim, labelled as Codex's, then a reply per finding;
   - merge only after a clean Codex round **and** green CI.
-- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). The scratchpad has a small `mutate_c1.py` runner.
+- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). Each session's scratchpad is new: write a small Python runner that applies each mutant, runs `tsc` and then `vitest` (or `npm run build` and a `playwright test -g` filter), restores the file in `finally`, and reports KILLED or SURVIVED. Run subprocesses with `encoding='utf-8', errors='replace'`, or Windows' cp1252 decoding crashes the reader threads.
 - **Art review:** judge at true game size (about 55 CSS px) in colour and grayscale, and in-engine after import (`npm run art:preview`).
   - Batch lessons so far: no shared torso mark as the main read; nothing on or under the mouth line; no kid-in-a-vessel; no faint cues; no stereotype-adjacent shapes; no medical or weapon reads; check against everyday objects too.
   - Codex's art PRs are gated by Claude's review.
@@ -83,12 +85,20 @@
 - **Commit messages with double quotes** break `git commit -m "…"` in a chain. Use `git commit -F - <<'EOF'`.
 - **A `SaveManager` saves only after it has loaded**, in tests too.
 - **Codex's reviews can't see PR replies.** When a finding is resolved by process (for example "this PR won't merge alone"), make it structural (a draft, one combined PR), or the next round repeats the finding.
+### Learned this session (2026-10-05, second)
+
+- **The Bash tool fails on some heredocs with apostrophes** ("unexpected EOF while looking for matching `''`"). For multi-line patches, write a Python script or a TS fragment to the scratchpad with the Write tool, then run it.
+- **Playwright emulates a Pixel 7** (mobile, touch), so `page.mouse.wheel` isn't delivered: dispatch a `WheelEvent` on the canvas. Multi-touch is tested by dispatching `PointerEvent`s with different `pointerId`s and `pointerType: 'touch'` in one `page.evaluate`.
+- **A mutant must compile.** Replacing a line with a bare `continue;` can make the rest unreachable, which fails `tsc`, so the mutant tests nothing. Use an always-true condition instead.
+- **No rare or special kids exist in the shipped content yet.** Tests use `?debug=1&rare=hero,lantern` (#84) to stand types in as rares. Unit tests add `{ id, tier, rare: true }` kids to a cloned content.
+- **The kid card's tap is timing-sensitive in e2e.** Prefer sim-level checks (unit tests) or debug hooks, such as `kids()`, which now includes `held`.
+
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout (on `claude/handoff-2026-10-05b` at handoff; switch to `main`).
+  - `potato-kid-claude`: Claude's main checkout (on `main` at handoff; the session's branches are `claude/gate4-feedback-2` (#81), `claude/plot-remove` (#82), `claude/map-zoom` (#83), `claude/rare-kids` (#84)).
   - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials` (PR #76).
-  - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached; check it out per review).
+  - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached at #81's first commit; check it out per review).
   - `potato-kid-docs`: docs branches.
 - **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
 - **Merged remote branches** were never deleted. That's harmless.
