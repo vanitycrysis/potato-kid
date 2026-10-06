@@ -1,6 +1,6 @@
 # Session handoff (2026-10-05, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-067**) and `docs/TASKS.md`. Pull `main` first.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**) and `docs/TASKS.md`. Pull `main` first.
 
 ## Where we are
 
@@ -15,20 +15,9 @@
 
 ## Open work at handoff
 
-1. **The gate-4 build is with the owner (sent 2026-10-05 through the relay).**
-   - The APK is `potato-kid-debug-apk` from `main`'s CI run 37269632535 (the #78 merge; #79 changed docs only): https://github.com/vanitycrysis/potato-kid/actions/runs/37269632535. CI artifacts expire, so rebuild from `main` if the owner asks again after that.
-   - The note listed what to try: planting 3–5 kids and Start growing, the rare looks and the Dex's rare rows, tapping a kid to feed, name or plant it, and D-067's numbers to confirm.
-   - **Next:** wait for the owner's gate-4 feedback. Turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building. If the owner confirms or changes D-067, update its status and `balance.json` (`feeding`, `naming`).
-2. **PR #76, SPECIALS (Codex's art and writing), open.** It waits on two **owner decisions**, sent through the relay on 2026-10-04:
-   - **The four D-066 holds** (Music Box, Marble Run, Puppet Theatre, Paper Town): keep, take Codex's simpler proposal, or swap for another keepsake. Claude's view: only Marble Run's proposal reads clearly better at 55 px.
-   - **How grand specials should look.** At game size they read plainer than ordinary T2–T4 kids with hats.
-   - Claude's review round 1 is on the PR. A third finding (seven box-shaped props at the same hand spot; Gift, Music Box and Treasure Chest merge in grayscale) goes to Codex together with the owner's answers.
-   - **After the art is settled:**
-     - add the 20 `kids.json` entries (`"special": true`, names "… Kid", 12 at T5, 8 at T6) on top of the merged art;
-     - build the Dex's Ordinary/Specials segments (§16.4);
-     - check the T6 tier text (no badge exists past T5);
-     - check the specials' personalities load. They're in Codex's `personality_v1.json`, and content validation requires one per kid.
-3. **Small, for Codex's design:** where a variant's glyph sits in a ≤48 px list portrait. Claude applied the map rule inside the box (§16.2) and asked Codex to confirm in #77.
+1. **The owner's second gate-4 feedback came in on 2026-10-05: D-068..D-074** (farming instead of buying food, a less busy screen, a 4 x 4 map with pinch-zoom, ten rare kids instead of variants, wild specials, taking kids out of plots). The order of work is in `TASKS.md` ("Where things stand"). D-067's happiness numbers and name price stay proposed; its food price is gone with farming.
+2. **PR #76, SPECIALS:** the owner settled both open questions with D-073 (specials go wild too). Codex redesigns the held and plain-looking specials as part of WILD-ART, with Claude's third round-1 finding (box-shaped props). After the art is settled: the 20 `kids.json` entries (`"special": true`, 12 at T5, 8 at T6), the Dex's Ordinary/Specials segments (Sec. 16.4), the T6 tier text (no badge past T5), and a check that the specials' personalities load.
+3. The variant-glyph question from #77 is moot: D-072 retires the variants.
 4. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
