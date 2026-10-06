@@ -65,6 +65,14 @@ const TAP_MS = 220;
 const TAP_SLOP = 8;
 /** The least a small kid's pickup target spans each way, in CSS px (GUI_MVP §16.1). */
 const TAP_TARGET = 44;
+/**
+ * Pinch-zoom range (D-071), as a factor on the fitted zoom (1080 units across a portrait
+ * screen). Farthest: twice as much map each way, kids at about half size; nearest: twice.
+ */
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2;
+/** Mouse-wheel zoom per wheel pixel (desktop and tests). */
+const WHEEL_ZOOM = 0.0015;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -110,6 +118,7 @@ export class MapScene {
     this.paused = on;
     if (on) {
       this.pan = undefined;
+      this.pinch = undefined;
       this.panVelocity = { x: 0, y: 0 };
     }
   }
@@ -152,6 +161,14 @@ export class MapScene {
   /** Screen size the camera was last laid out for, to keep the view centre across resizes. */
   private laidOut = { width: 0, height: 0 };
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
+  /**
+   * Two fingers on the map (D-071): where each is now, how far apart they started, the zoom
+   * then, and the world point under their midpoint then, which stays under it.
+   */
+  private pinch: { points: Map<number, { x: number; y: number }>; startDist: number; startFactor: number; anchor: { x: number; y: number } } | undefined;
+  /** The fitted zoom for this screen (`layout`), and the player's zoom on top of it. */
+  private fitZoom = 1;
+  private zoomFactor = 1;
   private panVelocity = { x: 0, y: 0 };
   /**
    * A ground press that may still be a tap on a plot (GUI_MVP §15.2): at most 220 ms and
@@ -249,7 +266,19 @@ export class MapScene {
     app.canvas.addEventListener('pointercancel', (e) => {
       if (this.drag && e.pointerId === this.drag.pointerId) this.cancelActiveDrag();
       if (this.pan && e.pointerId === this.pan.pointerId) this.pan = undefined;
+      if (this.pinch?.points.has(e.pointerId)) this.pinch = undefined;
     });
+    // A mouse wheel zooms about the pointer (desktop and tests; D-071).
+    app.canvas.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        if (this.inputPaused || this.drag || this.pinch) return;
+        const r = app.canvas.getBoundingClientRect();
+        this.zoomAt(e.clientX - r.left, e.clientY - r.top, this.zoomFactor * Math.exp(-e.deltaY * WHEEL_ZOOM));
+      },
+      { passive: false },
+    );
 
     this.layout();
     this.centerOn(art.map.camera.initialCentre[0], art.map.camera.initialCentre[1]);
@@ -463,7 +492,8 @@ export class MapScene {
       y: this.cam.y + this.laidOut.height / this.cam.zoom / 2,
     };
     this.laidOut = { width, height };
-    this.cam.zoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
+    this.fitZoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
     this.app.stage.hitArea = this.app.screen;
     this.centerOn(centre.x, centre.y);
   }
@@ -491,6 +521,7 @@ export class MapScene {
   // --- Panning -------------------------------------------------------------
 
   private startPan(e: FederatedPointerEvent): void {
+    if (this.startPinch(e)) return;
     // A second pointer is never a tap.
     if (this.pan) this.tap = null;
     if (this.drag) this.promoteToDrag();
@@ -535,6 +566,81 @@ export class MapScene {
       }
     }
     return best;
+  }
+
+  // --- Pinch-zoom (D-071) ---------------------------------------------------
+
+  /** The player's zoom on top of the fitted zoom, in [ZOOM_MIN, ZOOM_MAX]. */
+  get zoom(): number {
+    return this.zoomFactor;
+  }
+
+  /** Zooms to `factor` (clamped), keeping the world point under screen (sx, sy) where it is. */
+  zoomAt(sx: number, sy: number, factor: number): void {
+    const anchor = { x: this.cam.x + sx / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom };
+    this.zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor));
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
+    this.cam.x = anchor.x - sx / this.cam.zoom;
+    this.cam.y = anchor.y - sy / this.cam.zoom;
+    this.applyCamera();
+  }
+
+  /**
+   * A second finger starts a pinch (D-071) when the first is panning, or pressing a kid that
+   * is still only a press (within the tap window): that kid goes back untouched, never a tap
+   * or a drag. A kid already being dragged keeps its drag; a third finger is ignored.
+   * Returns whether `e` was taken.
+   */
+  private startPinch(e: FederatedPointerEvent): boolean {
+    if (this.inputPaused) return false;
+    if (this.pinch) return true;
+    let first: { id: number; x: number; y: number } | undefined;
+    if (this.pan && e.pointerId !== this.pan.pointerId) first = { id: this.pan.pointerId, x: this.pan.lastX, y: this.pan.lastY };
+    else if (this.drag && this.kidTap && e.pointerId !== this.drag.pointerId) {
+      first = { id: this.drag.pointerId, x: this.dragScreen.x, y: this.dragScreen.y };
+      this.cancelActiveDrag();
+    }
+    if (!first) return false;
+    this.tap = null;
+    this.pan = undefined;
+    this.panVelocity = { x: 0, y: 0 };
+    const points = new Map([
+      [first.id, { x: first.x, y: first.y }],
+      [e.pointerId, { x: e.global.x, y: e.global.y }],
+    ]);
+    const mid = { x: (first.x + e.global.x) / 2, y: (first.y + e.global.y) / 2 };
+    this.pinch = {
+      points,
+      startDist: Math.max(1, Math.hypot(e.global.x - first.x, e.global.y - first.y)),
+      startFactor: this.zoomFactor,
+      anchor: { x: this.cam.x + mid.x / this.cam.zoom, y: this.cam.y + mid.y / this.cam.zoom },
+    };
+    return true;
+  }
+
+  /** Spread or pinch zooms; both fingers moving together pan. The anchor stays under the midpoint. */
+  private movePinch(e: FederatedPointerEvent): void {
+    const pinch = this.pinch!;
+    pinch.points.set(e.pointerId, { x: e.global.x, y: e.global.y });
+    const [a, b] = [...pinch.points.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    const dist = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
+    this.zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, (pinch.startFactor * dist) / pinch.startDist));
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    this.cam.x = pinch.anchor.x - mid.x / this.cam.zoom;
+    this.cam.y = pinch.anchor.y - mid.y / this.cam.zoom;
+    this.applyCamera();
+  }
+
+  /** One finger lifts: the other pans on from where it is, with no fling and never a tap. */
+  private endPinch(pointerId: number): void {
+    const pinch = this.pinch!;
+    this.pinch = undefined;
+    pinch.points.delete(pointerId);
+    const [rest] = [...pinch.points];
+    if (!rest || this.inputPaused) return;
+    const [id, at] = rest;
+    this.pan = { pointerId: id, lastX: at.x, lastY: at.y, vx: 0, vy: 0, lastT: performance.now() };
   }
 
   private movePan(e: FederatedPointerEvent): void {
@@ -603,6 +709,8 @@ export class MapScene {
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
       e.stopPropagation(); // a kid press is a pickup, never a pan
+      // A second finger, on a kid or not, pinches instead (D-071).
+      if (this.startPinch(e)) return;
       // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72),
       // and a second finger cancels a kid tap.
       this.tap = null;
@@ -653,6 +761,10 @@ export class MapScene {
 
   private onPointerMove(e: FederatedPointerEvent): void {
     if (this.paused) return;
+    if (this.pinch?.points.has(e.pointerId)) {
+      this.movePinch(e);
+      return;
+    }
     if (this.pan && e.pointerId === this.pan.pointerId) {
       this.movePan(e);
       return;
@@ -667,6 +779,10 @@ export class MapScene {
   }
 
   private endPointer(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
+    if (this.pinch?.points.has(e.pointerId)) {
+      this.endPinch(e.pointerId);
+      return;
+    }
     if (this.pan && e.pointerId === this.pan.pointerId) {
       const tap = this.tap;
       this.tap = null;

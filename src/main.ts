@@ -30,6 +30,7 @@ declare global {
         box: { left: number; top: number; right: number; bottom: number };
         look: { body: string; face: string; scale: number };
         activity: string;
+        held: boolean;
       }[];
       discoveredRecipes: () => string[];
       wallet: () => { materials: number; potatokens: number };
@@ -42,6 +43,8 @@ declare global {
       /** The clip a kid is showing and its running effects. */
       presentationOf: (kidId: number) => { clip: string; effects: string[] } | undefined;
       centerOn: (x: number, y: number) => void;
+      /** The player's zoom on top of the fitted zoom (D-071). */
+      zoom: () => number;
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
       debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string) => number;
@@ -214,6 +217,7 @@ async function boot(): Promise<void> {
         box: { ...k.box },
         look: { ...k.look },
         activity: k.activity.kind,
+        held: k.held,
       })),
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     wallet: () => ({ materials: scene.game.state.materials, potatokens: scene.game.state.potatokens }),
@@ -235,6 +239,7 @@ async function boot(): Promise<void> {
     presentationOf: (id) => scene.presentationOf(id),
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
     centerOn: (x, y) => scene.centerOn(x, y),
+    zoom: () => scene.zoom,
     ...(params.get('debug') === '1'
       ? {
           debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string) => scene.debugAdd(t, x, y, look, variant),
