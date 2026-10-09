@@ -963,9 +963,10 @@ export class Game {
    * (`unplant`), or every kid in a filling or growing plot (`emptyPlot`), which loses the
    * growing time. Refused if the plot or kid is gone (`gone`), if the plot is growing and only
    * one kid was asked for (`plotsBusy`), if its sprout is ready (`ready`), if the map hasn't
-   * room for them all (`full`), or if no spot by the Garden is clear (`noRoom`). They come back
-   * by the Garden outlet with their id, look, name and remaining happiness, clear of recipe
-   * partners and with a newborn's grace, so they never fuse on the way back.
+   * room for them all (`full`), or if a kid finds no free spot by the Garden or none clear of
+   * recipe partners (`noRoom`). They come back by the Garden outlet with their id, look, name
+   * and remaining happiness, clear of recipe partners and with a newborn's grace, so they never
+   * fuse on the way back.
    */
   private unplant(c: Extract<Command, { type: 'unplant' | 'emptyPlot' }>, events: GameEvent[]): void {
     const reject = (reason: RejectReason): void => {
@@ -980,23 +981,26 @@ export class Game {
     const world = this.state.world;
     if (world.kids.length + leaving.length > this.capacity) return reject('full');
     const back: Kid[] = [];
+    // All or none: the ones already placed go back into the plot.
+    const rollBack = (): void => {
+      for (const b of back) world.kids.splice(world.kids.indexOf(b), 1);
+      reject('noRoom');
+    };
     for (const k of leaving) {
       const look = this.lookWithBox(k.look);
       const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
-      if (!p) {
-        // All or none: the ones already placed go back into the plot.
-        for (const b of back) world.kids.splice(world.kids.indexOf(b), 1);
-        return reject('noRoom');
-      }
+      if (!p) return rollBack();
       const kid = addKid(world, k.type, p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, look.box, { body: look.body, face: look.face, scale: look.scale }, k.id);
       if (k.variant) kid.variant = k.variant;
       if (k.name) kid.name = k.name;
       if (k.happiness) kid.happy = { ...k.happiness };
       // Clear of recipe partners, those already on the map and those coming back with it:
-      // taking kids out never fuses them, now or once their grace ends (as a refused planting).
-      const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (x, y) => this.recipes.has(pairKey(x.type, y.type)));
-      if (spot) [kid.x, kid.y] = [spot.x, spot.y];
+      // taking kids out never fuses them, now or once their grace ends. With no such spot, none
+      // comes back (Codex review, PR #82).
       back.push(kid);
+      const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (x, y) => this.recipes.has(pairKey(x.type, y.type)));
+      if (!spot) return rollBack();
+      [kid.x, kid.y] = [spot.x, spot.y];
     }
     const ids = new Set(leaving.map((k) => k.id));
     seed.planted = seed.planted.filter((k) => !ids.has(k.id));

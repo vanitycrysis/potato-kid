@@ -603,4 +603,18 @@ describe('kids back from a plot never fuse on the way (D-074)', () => {
     expect(run(g, 5).filter((e) => e.type === 'fused')).toEqual([]);
     expect(g.state.world.kids).toHaveLength(5);
   });
+
+  it('with room by the Garden but none clear of a partner, nothing comes back (Codex review, PR #82)', () => {
+    // A map two kids wide: a water fills one half; plain + water is a recipe (R1).
+    const g = new Game(testContent(), { bounds: { minX: 0, minY: 0, maxX: 240, maxY: 120 }, spawnAt: { x: 180, y: 60 } }, 7);
+    g.state.plots = [{ seed: { planted: P('plain'), sprout: null, grown: 0 } }];
+    g.state.world.nextKidId = 20_000;
+    place(g, 'water', 60, 60);
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    const kids = structuredClone(g.state.world.kids);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'noRoom' }]);
+    expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'noRoom' }]);
+    expect(g.state.plots[0]!.seed).toEqual(seed);
+    expect(g.state.world.kids).toEqual(kids);
+  });
 });
