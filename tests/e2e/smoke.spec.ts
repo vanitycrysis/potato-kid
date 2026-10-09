@@ -3736,4 +3736,26 @@ test.describe('pinch-to-zoom (D-071)', () => {
     expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(Math.exp(0.3), 5);
     expect(near(await page.evaluate((a) => window.__PK__!.worldToScreen(a.x, a.y), anchor), at)).toBe(true);
   });
+
+  test('a pinch cut short by the app going away leaves no gesture behind: one finger pans and the wheel zooms after', async ({ page }) => {
+    const { anchor, at } = await setup(page);
+    // Two fingers down, then the app is backgrounded; their pointerups never arrive.
+    await touches(page, [
+      ['pointerdown', 1, at.x - 40, at.y],
+      ['pointerdown', 2, at.x + 40, at.y],
+      ['pointermove', 2, at.x + 50, at.y],
+    ]);
+    await page.evaluate(() => window.__PK__!.debugAway!(1000));
+    const zoomed = await page.evaluate(() => window.__PK__!.zoom());
+    const before = await page.evaluate((a) => window.__PK__!.worldToScreen(a.x, a.y), anchor);
+    await touches(page, [
+      ['pointerdown', 3, at.x, at.y],
+      ['pointermove', 3, at.x, at.y + 30],
+    ]);
+    expect(near(await page.evaluate((a) => window.__PK__!.worldToScreen(a.x, a.y), anchor), { x: before.x, y: before.y + 30 })).toBe(true);
+    await touches(page, [['pointerup', 3, at.x, at.y + 30]]);
+    await page.waitForTimeout(500);
+    await page.evaluate((at) => document.querySelector('canvas')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -200, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true })), at);
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(zoomed * Math.exp(0.3), 5);
+  });
 });

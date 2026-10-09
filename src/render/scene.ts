@@ -386,6 +386,8 @@ export class MapScene {
     if (this.pending.length) this.stepOnce(0);
     // Panning is dropped too: its pointerup may never arrive (Codex review, PR #11).
     this.pan = undefined;
+    // So is a pinch, for the same reason, or it would swallow every press after (Codex review, PR #83).
+    this.pinch = undefined;
     // Hidden: any dwell starts over (§15.1).
     this.home?.reset();
     this.panVelocity = { x: 0, y: 0 };
