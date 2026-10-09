@@ -1,35 +1,35 @@
-# Session handoff (2026-10-05, for the next Claude session)
+# Session handoff (2026-10-05, second session, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-067**) and `docs/TASKS.md`. Pull `main` first.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**) and `docs/TASKS.md`.
+
+**Until PR #81 merges, this handoff and the current `DECISIONS.md` / `TASKS.md` live on the branch `claude/gate4-feedback-2`, not on `main`** (`main` still has the previous session's handoff). Run `git fetch && git checkout claude/gate4-feedback-2 && git pull` and read the docs there. Once #81 is merged, pull `main` as usual.
 
 ## Where we are
 
-- **Everything gate 4 asked for is on `main`** (D-050..D-067), ready for the owner's device:
-  - PLANTING (#72): plots, the drag target, plot taps, the picker, Start growing with its review, the Dex and card route, offline growth.
-  - VARIANTS (#77): ten rare looks, their map marks and six-glint sleeve, the birth burst, Mini's size and pickup target, the Dex's rare rows, rare list portraits.
-  - FEED-NAME (#78): feeding, happiness (+1 tier in planting odds), naming, the kid card (a tap on a kid, or a Dex row), the happy sun, personality in the card and the Dex.
-  - **D-067 (proposed, tunable):** 100 Materials a bite; 20 min at ×1.5 for an ordinary food, 60 min at ×2 for a favourite; names cost 50. The owner hasn't confirmed these.
-- **Save schema is 5** (4: found variants; 5: names and happiness), with migrations from 1.
-- **The owner reached this session through another session** ("session 03", over cross-session messages; its pipe is in the transcript). If no relay is around, ask the owner directly.
-- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates.
+- **`main`** has everything from the first gate-4 round (D-050..D-067): planting (#72), rare variants (#77), feeding and naming (#78). Its save schema is 5.
+- **The owner's second round (D-068..D-074)** is recorded in #81, not yet merged. The engine work for it is in #82, #83 and #84, which take the save schema to 6 and then 7. All four wait for Codex's review.
+- **The owner now talks to Claude directly** (this session); the earlier relay through "session 03" is no longer used.
+- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
 
 ## Open work at handoff
 
-1. **The gate-4 build is with the owner (sent 2026-10-05 through the relay).**
-   - The APK is `potato-kid-debug-apk` from `main`'s CI run 37269632535 (the #78 merge; #79 changed docs only): https://github.com/vanitycrysis/potato-kid/actions/runs/37269632535. CI artifacts expire, so rebuild from `main` if the owner asks again after that.
-   - The note listed what to try: planting 3–5 kids and Start growing, the rare looks and the Dex's rare rows, tapping a kid to feed, name or plant it, and D-067's numbers to confirm.
-   - **Next:** wait for the owner's gate-4 feedback. Turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building. If the owner confirms or changes D-067, update its status and `balance.json` (`feeding`, `naming`).
-2. **PR #76, SPECIALS (Codex's art and writing), open.** It waits on two **owner decisions**, sent through the relay on 2026-10-04:
-   - **The four D-066 holds** (Music Box, Marble Run, Puppet Theatre, Paper Town): keep, take Codex's simpler proposal, or swap for another keepsake. Claude's view: only Marble Run's proposal reads clearly better at 55 px.
-   - **How grand specials should look.** At game size they read plainer than ordinary T2–T4 kids with hats.
-   - Claude's review round 1 is on the PR. A third finding (seven box-shaped props at the same hand spot; Gift, Music Box and Treasure Chest merge in grayscale) goes to Codex together with the owner's answers.
-   - **After the art is settled:**
-     - add the 20 `kids.json` entries (`"special": true`, names "… Kid", 12 at T5, 8 at T6) on top of the merged art;
-     - build the Dex's Ordinary/Specials segments (§16.4);
-     - check the T6 tier text (no badge exists past T5);
-     - check the specials' personalities load. They're in Codex's `personality_v1.json`, and content validation requires one per kid.
-3. **Small, for Codex's design:** where a variant's glyph sits in a ≤48 px list portrait. Claude applied the map rule inside the box (§16.2) and asked Codex to confirm in #77.
-4. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
+1. **Codex is out of usage until 2026-10-09 17:13** (its error, 2026-10-05). The owner chose to wait rather than buy credits or switch back to ChatGPT sessions. Until then nothing merges and no Codex task can start. **At the reset, in this order:**
+   - **Run Codex's reviews** on #81 (docs: D-068..D-074 and this board), #82 (PLOT-REMOVE), #83 (MAP-ZOOM) and #84 (RARE-KIDS, stacked on #82: merge #82 first, then retarget #84 to `main`). Each PR notes the limit in a comment.
+   - **Hand Codex LAYOUT-DESIGN** (D-070's less busy screen, D-071's 4 × 4 map composition and how zoom looks, D-074's take-out and cancel controls), then FARM-DESIGN (D-069), then WILD-ART (D-072's ten rare kids and D-073's special redesigns, on PR #76 with Claude's third round-1 finding). The `TASKS.md` rows say what "done" means.
+2. **The owner's second gate-4 feedback is D-068..D-074** (2026-10-05). They also said the build "looks alright for an early build", and that visual polish waits for the polish phase. The owner picked the recommended option on all four questions: fields on the map; two sets that both go wild; take kids out any time; a 4 × 4 map.
+3. **Built on branches this session** (each fully tested and mutation-checked; details in the PRs):
+   - **#82 PLOT-REMOVE**: `unplant` and `emptyPlot`, schema 6 (planted kids keep ids). Kids come back clear of recipe partners.
+   - **#83 MAP-ZOOM**: pinch 0.5×–2×, wheel zoom, the zoom survives resizes. Still open: whether far zoom wants more (LAYOUT-DESIGN).
+   - **#84 RARE-KIDS**: `rare: true` types, the rare roll wins over the special roll, schema 7 retires the variants. It also adds `?debug=1&rare=a,b` stand-ins for tests, fixes the Compendium to list ordinary kids only, and gives every small kid the 44 px pickup target.
+4. **Still to build after the designs:**
+   - the plot take-out UI and the layout (LAYOUT);
+   - FARMING (sim, save, balance, UI; the food shop goes);
+   - the 20 specials' and the ten rares' content entries;
+   - the Dex's Ordinary/Specials segments (§16.4);
+   - the T6 tier text;
+   - the simulator on the 4 × 4 world, with rares (their tier).
+5. **Open question for the owner (not urgent):** D-067's happiness durations (20 min ordinary food, 60 min favourite) and the name price (50 Materials). They stay proposed until the owner confirms or changes them. The food price is gone with farming (D-069).
+6. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -44,7 +44,7 @@
   - `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`;
   - post the output to the PR verbatim, labelled as Codex's, then a reply per finding;
   - merge only after a clean Codex round **and** green CI.
-- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). The scratchpad has a small `mutate_c1.py` runner.
+- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). Each session's scratchpad is new: write a small Python runner that applies each mutant, runs `tsc` and then `vitest` (or `npm run build` and a `playwright test -g` filter), restores the file in `finally`, and reports KILLED or SURVIVED. Run subprocesses with `encoding='utf-8', errors='replace'`, or Windows' cp1252 decoding crashes the reader threads.
 - **Art review:** judge at true game size (about 55 CSS px) in colour and grayscale, and in-engine after import (`npm run art:preview`).
   - Batch lessons so far: no shared torso mark as the main read; nothing on or under the mouth line; no kid-in-a-vessel; no faint cues; no stereotype-adjacent shapes; no medical or weapon reads; check against everyday objects too.
   - Codex's art PRs are gated by Claude's review.
@@ -85,12 +85,20 @@
 - **Commit messages with double quotes** break `git commit -m "…"` in a chain. Use `git commit -F - <<'EOF'`.
 - **A `SaveManager` saves only after it has loaded**, in tests too.
 - **Codex's reviews can't see PR replies.** When a finding is resolved by process (for example "this PR won't merge alone"), make it structural (a draft, one combined PR), or the next round repeats the finding.
+### Learned this session (2026-10-05, second)
+
+- **The Bash tool fails on some heredocs with apostrophes** ("unexpected EOF while looking for matching `''`"). For multi-line patches, write a Python script or a TS fragment to the scratchpad with the Write tool, then run it.
+- **Playwright emulates a Pixel 7** (mobile, touch), so `page.mouse.wheel` isn't delivered: dispatch a `WheelEvent` on the canvas. Multi-touch is tested by dispatching `PointerEvent`s with different `pointerId`s and `pointerType: 'touch'` in one `page.evaluate`.
+- **A mutant must compile.** Replacing a line with a bare `continue;` can make the rest unreachable, which fails `tsc`, so the mutant tests nothing. Use an always-true condition instead.
+- **No rare or special kids exist in the shipped content yet.** Tests use `?debug=1&rare=hero,lantern` (#84) to stand types in as rares. Unit tests add `{ id, tier, rare: true }` kids to a cloned content.
+- **The kid card's tap is timing-sensitive in e2e.** Prefer sim-level checks (unit tests) or debug hooks, such as `kids()`, which now includes `held`.
+
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout (on `claude/handoff-2026-10-05b` at handoff; switch to `main`).
+  - `potato-kid-claude`: Claude's main checkout (on `main` at handoff; the session's branches are `claude/gate4-feedback-2` (#81), `claude/plot-remove` (#82), `claude/map-zoom` (#83), `claude/rare-kids` (#84)).
   - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials` (PR #76).
-  - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached; check it out per review).
+  - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached at #81's first commit; check it out per review).
   - `potato-kid-docs`: docs branches.
 - **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
 - **Merged remote branches** were never deleted. That's harmless.
