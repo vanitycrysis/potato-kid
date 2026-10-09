@@ -13,7 +13,9 @@ const S = 1000;
 const p = content.balance.planting;
 const pool = new Set(Object.keys(content.balance.spawnWeights));
 /** Kids as planted (snapshots), in the default look. */
-const P = (...types: string[]) => types.map((type) => ({ type, look: DEFAULT_LOOK }));
+/** Planted kids; their ids sit far above any test map's, as a real plot's never match a live kid's. */
+let plantedId = 10_000;
+const P = (...types: string[]) => types.map((type) => ({ id: plantedId++, type, look: DEFAULT_LOOK }));
 
 /** Frozen wander, no starting kids, no Garden spawns unless asked, a 100 s grow. */
 function testContent(edit: (c: Content) => void = () => {}): Content {
@@ -66,7 +68,7 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(g.state.world.kids).toEqual([]);
     expect(g.state.discoveredKids).toContain('hero');
     expect({ materials: g.state.materials, potatokens: g.state.potatokens }).toEqual(before);
-    expect(g.state.plots[0]!.seed).toEqual({ planted: P('hero'), sprout: null, grown: 0 });
+    expect(g.state.plots[0]!.seed).toEqual({ planted: [{ id: hero.id, type: 'hero', look: hero.look }], sprout: null, grown: 0 });
   });
 
   it('a filling plot never grows on its own, not even when full', () => {
@@ -158,13 +160,13 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(g.state.world.kids.map((k) => k.id)).toEqual([a.id]);
   });
 
-  it('a plot keeps a snapshot of each kid planted: type, look, and rare variant', () => {
+  it('a plot keeps a snapshot of each kid planted: id, type, look, and rare variant', () => {
     const g = game();
     const k = place(g, 'hero', 300, 1500);
     k.look = { body: 'tall', face: 'sleepy', scale: 0.9 };
     k.variant = 'rainbow';
     g.step([{ type: 'plant', kidIds: [k.id] }], 0);
-    expect(g.state.plots[0]!.seed!.planted).toEqual([{ type: 'hero', look: { body: 'tall', face: 'sleepy', scale: 0.9 }, variant: 'rainbow' }]);
+    expect(g.state.plots[0]!.seed!.planted).toEqual([{ id: k.id, type: 'hero', look: { body: 'tall', face: 'sleepy', scale: 0.9 }, variant: 'rainbow' }]);
   });
 
   it('a kid already gone is answered with a refusal, changing nothing', () => {
@@ -360,9 +362,10 @@ describe('planting while away (D-053, D-061)', () => {
 
   it('a filling plot does not grow offline', () => {
     const g = game();
-    g.state.plots = [{ seed: { planted: P('plain', 'fire', 'water'), sprout: null, grown: 0 } }];
+    const planted = P('plain', 'fire', 'water');
+    g.state.plots = [{ seed: { planted: structuredClone(planted), sprout: null, grown: 0 } }];
     expect(g.reconcile(T0 + 3600 * S).sprouted).toEqual([]);
-    expect(g.state.plots[0]!.seed).toEqual({ planted: P('plain', 'fire', 'water'), sprout: null, grown: 0 });
+    expect(g.state.plots[0]!.seed).toEqual({ planted, sprout: null, grown: 0 });
   });
 
   it('with the map full, ripe seeds wait and the report counts them', () => {
@@ -439,5 +442,179 @@ describe('rare variants (D-062, GUI_MVP §16)', () => {
     if (fused?.type !== 'fused') throw new Error('no fusion');
     expect(fused.child.variant).toBeUndefined();
     expect(g.state.discoveredVariants).toEqual({ fire: ['prism'] });
+  });
+});
+
+describe('taking kids back out of a plot (D-074)', () => {
+  /** A kid planted into plot 0, with a name and a favourite bite. */
+  function plantNamed(g: Game) {
+    const k = place(g, 'hero', 300, 1500);
+    k.look = { body: 'tall', face: 'sleepy', scale: 0.9 };
+    k.name = 'Spud';
+    k.happy = { left: 500, favourite: true };
+    g.step([{ type: 'plant', kidIds: [k.id], plot: 0 }], 0);
+    return k;
+  }
+
+  it('a kid comes out of a filling plot as it went in: id, type, look, name, and what is left of its happiness', () => {
+    const r = content.balance.body.radius;
+    const looks = {
+      bodies: [{ id: 'default', weight: 1, box: defaultBox(r) }, { id: 'tall', weight: 1, box: { left: -r, top: -2 * r, right: r, bottom: r } }],
+      faces: [{ id: 'default', weight: 1 }, { id: 'sleepy', weight: 1 }],
+      sizes: [{ scale: 1, weight: 1 }],
+    };
+    const g = new Game(testContent((c) => (c.balance.spawn.newbornGraceSeconds = 5)), { bounds, spawnAt: garden, now: T0, looks }, 7);
+    const k = plantNamed(g);
+    plantAll(g, ['plain']);
+    run(g, 30);
+    const events = g.step([{ type: 'unplant', plot: 0, kidId: k.id }], 0);
+    const back = g.state.world.kids.find((x) => x.id === k.id)!;
+    expect(events).toEqual([{ type: 'unplanted', kid: back, plot: 0, count: 1 }]);
+    expect(back).toMatchObject({ type: 'hero', look: { body: 'tall', face: 'sleepy', scale: 0.9 }, name: 'Spud', happy: { left: 470, favourite: true }, grace: 5 });
+    // Its box follows its look, as a loaded kid's does.
+    expect(back.box).toEqual({ left: -r * 0.9, top: -2 * r * 0.9, right: r * 0.9, bottom: r * 0.9 });
+    // It comes up by the Garden, where sprouts do.
+    expect(Math.hypot(back.x - garden.x, back.y - garden.y)).toBeLessThan(300);
+    expect(g.state.plots[0]!.seed!.planted.map((x) => x.type)).toEqual(['plain']);
+  });
+
+  it('nothing is charged or refunded, and the last kid out empties the plot', () => {
+    const g = game();
+    const k = plantNamed(g);
+    const before = { materials: g.state.materials, potatokens: g.state.potatokens };
+    g.step([{ type: 'unplant', plot: 0, kidId: k.id }], 0);
+    expect({ materials: g.state.materials, potatokens: g.state.potatokens }).toEqual(before);
+    expect(g.state.plots[0]!.seed).toBeNull();
+  });
+
+  it('happiness keeps counting down in the plot, online and offline; whether it was happy when added stays', () => {
+    const g = game();
+    const k = plantNamed(g);
+    run(g, 100);
+    expect(g.state.plots[0]!.seed!.planted[0]).toMatchObject({ happy: true, happiness: { left: 400, favourite: true } });
+    g.reconcile(T0 + 100 * S + 350 * S);
+    expect(g.state.plots[0]!.seed!.planted[0]).toMatchObject({ happy: true, happiness: { left: 50, favourite: true } });
+    g.reconcile(T0 + 100 * S + 500 * S);
+    const snap = g.state.plots[0]!.seed!.planted[0]!;
+    expect(snap.happy).toBe(true);
+    expect(snap).not.toHaveProperty('happiness');
+    g.step([{ type: 'unplant', plot: 0, kidId: k.id }], 0);
+    expect(g.state.world.kids.find((x) => x.id === k.id)).not.toHaveProperty('happy');
+  });
+
+  it('a growing plot keeps its kids: one alone is refused, but cancelling brings them all back and loses the time', () => {
+    const g = game();
+    plantAll(g, ['plain', 'fire', 'water']);
+    g.step([{ type: 'startGrowing', plot: 0 }], 0);
+    run(g, 40);
+    const ids = g.state.plots[0]!.seed!.planted.map((x) => x.id);
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: ids[0]! }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'plotsBusy' }]);
+    expect(g.state.plots[0]!.seed).toEqual(seed);
+    const events = g.step([{ type: 'emptyPlot', plot: 0 }], 0);
+    expect(events.map((e) => (e.type === 'unplanted' ? [e.kid.id, e.count] : e.type))).toEqual(ids.map((id) => [id, 0]));
+    expect(g.state.plots[0]!.seed).toBeNull();
+    expect(g.state.world.kids.map((x) => x.type).sort()).toEqual(['fire', 'plain', 'water']);
+    // The next growing starts from nothing.
+    g.step(g.state.world.kids.map((x) => ({ type: 'plant' as const, kidIds: [x.id], plot: 0 })), 0);
+    g.step([{ type: 'startGrowing', plot: 0 }], 0);
+    expect(g.state.plots[0]!.seed!.grown).toBe(0);
+  });
+
+  it('a filling plot can be emptied at once too', () => {
+    const g = game();
+    plantAll(g, ['plain', 'fire']);
+    g.step([{ type: 'emptyPlot', plot: 0 }], 0);
+    expect(g.state.plots[0]!.seed).toBeNull();
+    expect(g.state.world.kids).toHaveLength(2);
+  });
+
+  it('a ready sprout can be neither cancelled nor emptied, even while it waits for room', () => {
+    const g = game((c) => (c.balance.spawn.capacity = 1));
+    place(g, 'plain', 300, 1500);
+    g.state.plots = [{ seed: started('water', 100) }];
+    run(g, 1);
+    expect(g.plotWaiting(0)).toBe('full');
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'ready' }]);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'ready' }]);
+    expect(g.state.plots[0]!.seed).toEqual(seed);
+  });
+
+  it('a kid comes back only if the map has room: cancelling needs room for all of them', () => {
+    const g = game((c) => (c.balance.spawn.capacity = 4));
+    plantAll(g, ['plain', 'fire', 'water']);
+    place(g, 'snow', 300, 1000);
+    place(g, 'snow', 600, 1000);
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    // Two live, three planted, room for four: one fits, three don't.
+    expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'full' }]);
+    expect(g.state.plots[0]!.seed).toEqual(seed);
+    expect(g.state.world.kids).toHaveLength(2);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0)[0]).toMatchObject({ type: 'unplanted' });
+    place(g, 'snow', 900, 1000);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[1]!.id }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'full' }]);
+  });
+
+  it('with no clear spot for every kid by the Garden, none comes back', () => {
+    const c = testContent((x) => (x.balance.spawn.capacity = 40));
+    const tiny = { minX: 0, minY: 0, maxX: 250, maxY: 250 };
+    const g = new Game(c, { bounds: tiny, spawnAt: { x: 125, y: 125 } }, 7);
+    g.state.plots = [{ seed: { planted: P('plain', 'fire', 'water'), sprout: null, grown: 0 } }];
+    g.state.world.nextKidId = 20_000;
+    for (const [x, y] of [[60, 60], [190, 60], [60, 190]]) place(g, 'plain', x!, y!);
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    const kids = structuredClone(g.state.world.kids);
+    expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'noRoom' }]);
+    expect(g.state.plots[0]!.seed).toEqual(seed);
+    expect(g.state.world.kids).toEqual(kids);
+    // One alone fits.
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0)[0]).toMatchObject({ type: 'unplanted' });
+  });
+
+  it('a kid or plot already gone is refused, changing nothing', () => {
+    const g = game();
+    plantAll(g, ['plain']);
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: 999 }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'gone' }]);
+    expect(g.step([{ type: 'unplant', plot: 3, kidId: seed!.planted[0]!.id }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'gone' }]);
+    g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0);
+    expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'gone' }]);
+  });
+
+  it('a kid back from a plot keeps its id when planted again, and the save holds it', () => {
+    const g = game();
+    const k = plantNamed(g);
+    g.step([{ type: 'unplant', plot: 0, kidId: k.id }], 0);
+    g.step([{ type: 'plant', kidIds: [k.id], plot: 0 }], 0);
+    expect(g.state.plots[0]!.seed!.planted[0]).toMatchObject({ id: k.id, name: 'Spud' });
+    expect(g.persisted().plots[0]!.seed!.planted[0]!.id).toBe(k.id);
+  });
+});
+
+describe('kids back from a plot never fuse on the way (D-074)', () => {
+  it('recipe partners come back clear of each other and of partners on the map, even with no grace', () => {
+    const g = game();
+    // plain + water is a recipe (R1); a water waits by the Garden.
+    place(g, 'water', garden.x, garden.y);
+    plantAll(g, ['plain', 'water', 'plain', 'water']);
+    const events = g.step([{ type: 'emptyPlot', plot: 0 }], 0);
+    expect(events.filter((e) => e.type === 'unplanted')).toHaveLength(4);
+    expect(run(g, 5).filter((e) => e.type === 'fused')).toEqual([]);
+    expect(g.state.world.kids).toHaveLength(5);
+  });
+
+  it('with room by the Garden but none clear of a partner, nothing comes back (Codex review, PR #82)', () => {
+    // A map two kids wide: a water fills one half; plain + water is a recipe (R1).
+    const g = new Game(testContent(), { bounds: { minX: 0, minY: 0, maxX: 240, maxY: 120 }, spawnAt: { x: 180, y: 60 } }, 7);
+    g.state.plots = [{ seed: { planted: P('plain'), sprout: null, grown: 0 } }];
+    g.state.world.nextKidId = 20_000;
+    place(g, 'water', 60, 60);
+    const seed = structuredClone(g.state.plots[0]!.seed);
+    const kids = structuredClone(g.state.world.kids);
+    expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'noRoom' }]);
+    expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'noRoom' }]);
+    expect(g.state.plots[0]!.seed).toEqual(seed);
+    expect(g.state.world.kids).toEqual(kids);
   });
 });

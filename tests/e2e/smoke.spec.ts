@@ -1866,6 +1866,24 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a cancelled plot gives its kids back to the map with their ids, drawn (D-074)', async ({ page }) => {
+    const { errors } = await setup(page);
+    const ids = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const ids = [0, 1, 2].map((i) => pk.debugAdd!('plain', 1400 + i * 250, 2600));
+      pk.debugCommand!({ type: 'plant', kidIds: ids, plot: 0 });
+      pk.debugCommand!({ type: 'startGrowing', plot: 0 });
+      return ids;
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'emptyPlot', plot: 0 }));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+    // Back on the map with their ids, each drawn (it has a view).
+    const back = await page.evaluate((list) => list.map((i) => ({ live: window.__PK__!.kids().some((k) => k.id === i), drawn: window.__PK__!.screenPointOf(i) !== undefined })), ids);
+    expect(back).toEqual(ids.map(() => ({ live: true, drawn: true })));
+    expect(errors).toEqual([]);
+  });
+
   test('releasing before the 400 ms dwell places the kid normally', async ({ page }) => {
     const { id } = await setup(page);
     // Straight in and straight out: a stepped move can itself take 400 ms on a slow runner.
@@ -3536,6 +3554,9 @@ test('starting a plot growing is saved at once, with its decided sprout (Codex r
   await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
   // Well inside the 10 s periodic save: only the immediate save can have stored it.
   await expect.poll(async () => (await savedPlot())?.sprout?.type ?? null, { timeout: 1500 }).not.toBeNull();
+  // Cancelling it is saved at once too, or a crash could bring the growing back (Codex review, PR #82).
+  await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'emptyPlot', plot: 0 }));
+  await expect.poll(savedPlot, { timeout: 1500 }).toBeNull();
   expect(errors).toEqual([]);
 });
 

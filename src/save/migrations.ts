@@ -31,5 +31,12 @@ export function migrations(content: Content): Record<number, Migration> {
     // it was happy. Nothing to add: a schema-4 save has none. The bump keeps an older build
     // from loading a save it can't read.
     4: (state) => state,
+    // Schema 6 (D-074): a planted kid can come back to the map, so it keeps an id. Kids
+    // planted before had theirs dropped: they get new ones, past every id in use.
+    5: (state) => {
+      const s = structuredClone(state) as { world?: { nextKidId?: number }; plots?: { seed: { planted: { id?: number }[] } | null }[] };
+      for (const plot of s.plots ?? []) for (const k of plot.seed?.planted ?? []) if (s.world && typeof s.world.nextKidId === 'number') k.id = s.world.nextKidId++;
+      return s;
+    },
   };
 }

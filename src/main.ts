@@ -51,7 +51,7 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => void;
       /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
       debugReadySeed?: (plot: number, type: string, variant: string | null) => void;
       /**
@@ -199,7 +199,7 @@ async function boot(): Promise<void> {
   }, SAVE_EVERY_MS);
   // Also after every fusion, purchase and upgrade (plan §4).
   const saveAfter = (e: GameEvent) =>
-    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden');
+    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'unplanted' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden');
   scene.listen((e) => {
     if (saveAfter(e)) void save();
   });
@@ -261,7 +261,7 @@ async function boot(): Promise<void> {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => scene.command(cmd),
         }
       : {}),
     };
