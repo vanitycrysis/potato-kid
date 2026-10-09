@@ -1,5 +1,13 @@
 # Art and audio plan
 
+## LAYOUT-DESIGN addendum (2026-10-09; Claude review pending)
+
+GUI_MVP §§19–21 and `ui_v2.json.mvp.layoutDesign` supersede the historical HUD/tray coordinates and accepted-plot irreversibility/name-loss copy. One60 px status strip and one60 px labelled navigation row leave78.20% unobscured world at390×844 and57.78% at640×360; banners/short/text-zoom fallbacks are explicitly measured. Notebook folds upgrades, Settings and zoom controls into sheets. D-074 adds Take out and confirmed Empty/Cancel with exact refusals and retained names/look/elapsed happiness. D-072 retires the old variant-outcome promises; WILD-ART supplies the new rare/special art later. Palette, Patrick Hand, all surfaces and D-045 face remain unchanged.
+
+`art/data/map_garden_v3.json` replaces v2 for the next engineering integration:4320×7680,510 ground cells,59 connected path cells,85 scenery instances (Garden+8 reused low landmarks+76 accents), no new textures. Garden/outlet/plot grounds and initial centre remain fixed. This supersedes the historical2160×3840 composition and44-small-decor cap below; world size/instance counts are authored data, not texture allocations. Claude must switch runtime/simulator readers from v2 explicitly. Keep0.5×…2× zoom,44 px input targets for every kid, candidate chooser/non-drag route, and proposed compact-landscape fitted-zoom floor65/180 to preserve about55 px visible kids at1×. That fit change is engineering work, shown against a legacy-fit review screen.
+
+Before and after: **218 runtime PNGs /12,815,892 decoded RGBA bytes (12.22219 MiB), delta0**. Native UI uses existing SVGs, no extra Pixi raster/portrait cache/world render target. More visible tiles/decor require Claude's culling/frame-time/device checks under the unchanged32 MiB actual-allocation ceiling. Export287 sources/six sidecars passes; independent geometry/preservation audit and38 self-contained SVG/native PNG review screens accompany the handoff. [Gallery](../art/previews/ui/layout_review.html); [notes and conflicts](../.codex-out/layout-design-notes.md); [audit](../.codex-out/layout-audit.json). No gate4 acceptance or polish is claimed.
+
 ## PLANT-V2-DESIGN addendum (2026-10-04; Claude review pending)
 
 D-061–D-063 replace the historical one-kid planting and two-variant contract below. The current design is GUI_MVP §§15–16 with collection/profile/feeding amendments in §§7/17/18 and `art/data/gate4_v2.json`, revision `plant-v2-design-2`. Round 2 changes only B1/B2 and settled-rule copy; the approved flow, ten variant identities, Dex and concepts remain.
