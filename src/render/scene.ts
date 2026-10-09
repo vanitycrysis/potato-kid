@@ -73,6 +73,8 @@ export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 2;
 /** Mouse-wheel zoom per wheel pixel (desktop and tests). */
 const WHEEL_ZOOM = 0.0015;
+/** CSS px a wheel line counts for. */
+const WHEEL_LINE_PX = 16;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -275,7 +277,9 @@ export class MapScene {
         e.preventDefault();
         if (this.inputPaused || this.drag || this.pinch) return;
         const r = app.canvas.getBoundingClientRect();
-        this.zoomAt(e.clientX - r.left, e.clientY - r.top, this.zoomFactor * Math.exp(-e.deltaY * WHEEL_ZOOM));
+        // Lines and pages to CSS px, or a line-counting wheel (Firefox's) barely zooms (Codex review, PR #83).
+        const dy = e.deltaY * (e.deltaMode === WheelEvent.DOM_DELTA_LINE ? WHEEL_LINE_PX : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? r.height : 1);
+        this.zoomAt(e.clientX - r.left, e.clientY - r.top, this.zoomFactor * Math.exp(-dy * WHEEL_ZOOM));
       },
       { passive: false },
     );
@@ -596,6 +600,8 @@ export class MapScene {
   private startPinch(e: FederatedPointerEvent): boolean {
     if (this.inputPaused) return false;
     if (this.pinch) return true;
+    // A press past its tap window is a drag even if no frame has promoted it yet (Codex review, PR #83).
+    this.promoteExpiredTap();
     let first: { id: number; x: number; y: number } | undefined;
     if (this.pan && e.pointerId !== this.pan.pointerId) first = { id: this.pan.pointerId, x: this.pan.lastX, y: this.pan.lastY };
     else if (this.drag && this.kidTap && e.pointerId !== this.drag.pointerId) {
@@ -1044,10 +1050,14 @@ export class MapScene {
 
   // --- Frame loop --------------------------------------------------------
 
+  /** A kid press held past 220 ms, or under a view that changed, is a drag (§18.1). */
+  private promoteExpiredTap(): void {
+    if (this.kidTap && (performance.now() - this.kidTap.t > TAP_MS || this.viewKey() !== this.kidTap.view)) this.promoteToDrag();
+  }
+
   private frame(dt: number): void {
     this.clock += dt * 1000;
-    // A kid press held past 220 ms, or under a view that changed, is a drag (§18.1).
-    if (this.kidTap && (performance.now() - this.kidTap.t > TAP_MS || this.viewKey() !== this.kidTap.view)) this.promoteToDrag();
+    this.promoteExpiredTap();
     this.updateCamera(dt);
     this.releaseUnused(performance.now());
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are

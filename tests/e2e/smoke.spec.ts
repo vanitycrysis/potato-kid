@@ -3693,6 +3693,33 @@ test.describe('pinch-to-zoom (D-071)', () => {
     expect(await page.evaluate((i) => window.__PK__!.kids().find((x) => x.id === i)!.held, id)).toBe(false);
   });
 
+  test('a second finger after the 220 ms tap window, before any frame has seen it pass, leaves the kid dragged', async ({ page }) => {
+    await setup(page);
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 2200));
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    // One page task: no frame runs between the press and the second finger (Codex review, PR #83).
+    await page.evaluate((k) => {
+      const canvas = document.querySelector('canvas')!;
+      const send = (type: string, id: number, x: number, y: number) =>
+        canvas.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', isPrimary: id === 1, clientX: x, clientY: y, buttons: 1, bubbles: true }));
+      send('pointerdown', 1, k.x, k.y - 20);
+      const t = performance.now();
+      while (performance.now() - t < 260) {
+        // Held past the tap window.
+      }
+      send('pointerdown', 2, k.x + 120, k.y - 20);
+      send('pointermove', 2, k.x + 180, k.y - 20);
+    }, k);
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBe(1);
+    expect(await page.evaluate((i) => window.__PK__!.kids().find((x) => x.id === i)!.held, id)).toBe(true);
+    await touches(page, [
+      ['pointermove', 1, k.x + 60, k.y - 20],
+      ['pointerup', 1, k.x + 60, k.y - 20],
+      ['pointerup', 2, k.x + 180, k.y - 20],
+    ]);
+  });
+
   test('a second finger while a kid is being dragged is ignored: the drag goes on and nothing zooms', async ({ page }) => {
     await setup(page);
     const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 2200));
@@ -3735,6 +3762,18 @@ test.describe('pinch-to-zoom (D-071)', () => {
     await page.evaluate((at) => document.querySelector('canvas')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -200, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true })), at);
     expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(Math.exp(0.3), 5);
     expect(near(await page.evaluate((a) => window.__PK__!.worldToScreen(a.x, a.y), anchor), at)).toBe(true);
+  });
+
+  test('a wheel counting lines or pages zooms as much as one counting pixels', async ({ page }) => {
+    const { at } = await setup(page);
+    const wheel = (deltaY: number, deltaMode: number) =>
+      page.evaluate(([at, deltaY, deltaMode]) => document.querySelector('canvas')!.dispatchEvent(new WheelEvent('wheel', { deltaY, deltaMode, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true })), [at, deltaY, deltaMode] as const);
+    // Firefox's mouse wheel: three lines a notch, a line taken as 16 px (Codex review, PR #83).
+    await wheel(-3, 1); // DOM_DELTA_LINE
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(Math.exp(48 * 0.0015), 5);
+    // A page zooms out a long way: clamped at the farthest zoom.
+    await wheel(1, 2); // DOM_DELTA_PAGE
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBe(0.5);
   });
 
   test('a pinch cut short by the app going away leaves no gesture behind: one finger pans and the wheel zooms after', async ({ page }) => {
