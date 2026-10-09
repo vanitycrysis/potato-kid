@@ -7,7 +7,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 5;
+export const SAVE_SCHEMA = 6;
 
 export interface SaveRecord {
   schema: number;
@@ -77,6 +77,8 @@ export function validateState(state: unknown, content: Content): string[] {
   // Plots (D-061): one to maxPlots, each empty or a seed: the kids planted (known types, at
   // most maxKids) and, once started, its sprout and how long it has grown.
   const plan = content.balance.planting;
+  /** Planted kids' ids (D-074), checked against the map's below. */
+  const plantedIds: unknown[] = [];
   if (!Array.isArray(s.plots) || s.plots.length < 1 || s.plots.length > plan.maxPlots) p.push('plots is invalid');
   else {
     s.plots.forEach((raw: unknown, i) => {
@@ -85,10 +87,13 @@ export function validateState(state: unknown, content: Content): string[] {
       const seed = plot.seed as Record<string, unknown> | null;
       if (seed === null) return;
       if (typeof seed !== 'object') return void p.push(`plot ${i} seed is invalid`);
-      // Each kid as planted: a known type, a look, and maybe a known rare variant.
+      // Each kid as planted: its id, a known type, a look, maybe a known rare variant, and the
+      // name and happiness it takes back to the map if it comes out (D-074).
       const plantedOk = (k: unknown) => {
         const o = k as Record<string, unknown> | null;
         const look = o?.look as Record<string, unknown> | undefined;
+        const h = o?.happiness as Record<string, unknown> | undefined;
+        if (typeof o === 'object' && o !== null) plantedIds.push(o.id);
         return (
           typeof o === 'object' &&
           o !== null &&
@@ -101,7 +106,10 @@ export function validateState(state: unknown, content: Content): string[] {
           finite(look.scale) &&
           (look.scale as number) > 0 &&
           (!('variant' in o) || (typeof o.variant === 'string' && plan.rareVariants.includes(o.variant))) &&
-          (!('happy' in o) || o.happy === true)
+          (!('happy' in o) || o.happy === true) &&
+          (!('name' in o) || (typeof o.name === 'string' && storedNameOk(o.name, content.balance.naming.maxLength))) &&
+          (!('happiness' in o) ||
+            (o.happy === true && typeof h === 'object' && h !== null && finite(h.left) && (h.left as number) > 0 && (h.left as number) <= content.balance.feeding.favouriteSeconds && typeof h.favourite === 'boolean'))
         );
       };
       const planted = seed.planted;
@@ -183,6 +191,11 @@ export function validateState(state: unknown, content: Content): string[] {
     if (typeof box !== 'object' || box === null || !(['left', 'top', 'right', 'bottom'] as const).every((f) => finite(box[f]))) {
       p.push(`kid ${String(id)} box is invalid`);
     }
+  }
+  // A planted kid keeps its id to come back with (D-074): one no live or planted kid has.
+  for (const id of plantedIds) {
+    if (!whole(id) || (id as number) >= next || seen.has(id as number)) p.push(`planted kid id ${String(id)} is invalid or duplicated`);
+    else seen.add(id as number);
   }
   return p;
 }

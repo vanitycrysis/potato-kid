@@ -340,7 +340,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unlockPlot' | 'feed' | 'name' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' }>): void {
     this.pending.push(cmd);
   }
 
@@ -1058,6 +1058,10 @@ export class MapScene {
         this.removeView(e.kid.id);
         break;
       }
+      case 'unplanted':
+        // Back from a plot by the Garden (D-074), as a sprout comes up; no burst.
+        this.addView(e.kid).play('spawn');
+        break;
       case 'fused': {
         // Parents are consumed at once, never fading or converging (rig: fusion onStart);
         // the child is born where the sim resolved it, with the fusion effect behind it.

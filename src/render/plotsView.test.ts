@@ -8,7 +8,7 @@ import { plotAssets, plotAt, plotRect } from './plotsView';
 // What each plot shows (GUI_MVP §15.2): Codex's shipped tokens, so a token change shows up here.
 const art = gate4Data!.planting as PlantingArt;
 const grow = 100;
-const kid = { type: 'plain', look: DEFAULT_LOOK };
+const kid = { id: 1, type: 'plain', look: DEFAULT_LOOK };
 const filling = (n: number): Plot => ({ seed: { planted: Array.from({ length: n }, () => kid), sprout: null, grown: 0 } });
 const growing = (grown: number): Plot => ({ seed: { planted: [kid, kid, kid], sprout: { type: 'fire', variant: null }, grown } });
 

@@ -49,6 +49,13 @@ export type Command =
   | { type: 'plant'; kidIds: number[]; plot?: number }
   /** Start a plot growing (D-061): it needs `minKids` kids; never automatic. */
   | { type: 'startGrowing'; plot: number }
+  /** Take one kid back out of a plot still filling (D-074): it comes back to the map as it went in. */
+  | { type: 'unplant'; plot: number; kidId: number }
+  /**
+   * Empty a plot (D-074): every kid in it comes back to the map, all or none. A growing plot
+   * is cancelled and its growing time lost; a ready one can't be emptied.
+   */
+  | { type: 'emptyPlot'; plot: number }
   /** Unlock the next plot with Materials (GUI_MVP §15.4). */
   | { type: 'unlockPlot' }
   /** Feed a kid one bite for Materials (D-056): happy for a while. A hated food is refused, free. */
@@ -69,6 +76,8 @@ export type RejectReason =
   | 'plotsBusy'
   | 'plotFull'
   | 'tooFewKids'
+  /** The plot's sprout is ready: it can't be cancelled (D-074). */
+  | 'ready'
   /** The kid won't eat that food (D-056). Nothing is spent. */
   | 'hated'
   /** Not a food, or not an allowed name (GUI_MVP §18.2). */
@@ -87,11 +96,17 @@ export interface Sprout {
 
 /** A kid as it was planted (GUI_MVP §15.4: the plot detail still shows it). */
 export interface PlantedKid {
+  /** The kid's id on the map; it keeps it if it comes back (D-074). */
+  id: number;
   type: KidId;
   look: Look;
   variant?: string;
+  /** Its name, which comes back with it (D-074) and ends when the seed sprouts (D-057). */
+  name?: string;
   /** Happy when added (D-056): it counts one tier higher in the odds, for good (GUI_MVP §15.3). */
   happy?: boolean;
+  /** Happiness it still has: it keeps counting down in the plot, and comes back with the kid (D-074). */
+  happiness?: { left: number; favourite: boolean };
 }
 
 /** A plot's seed (D-061): the kids planted in it, then, once started, its sprout. */
@@ -141,6 +156,8 @@ export type GameEvent =
   | { type: 'dropped'; kidId: number }
   /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
   | { type: 'planted'; kid: Kid; plot: number; count: number }
+  /** A kid came back out of `plot` to the map (D-074); `count`: the kids left in it. */
+  | { type: 'unplanted'; kid: Kid; plot: number; count: number }
   /** A bite accepted (D-056): the kid is happy from now, replacing any earlier happiness. */
   | { type: 'fed'; kid: Kid; food: string; favourite: boolean }
   /** A name given, or cleared (`null`) (D-057). */
@@ -315,11 +332,9 @@ export class Game {
       kid.held = false;
       // Appearance is cosmetic: a body or face the current art doesn't have (e.g. retired
       // in a later version) maps to the first one rather than failing to draw (Codex review, PR #30).
-      const body = this.looks.bodies.find((b) => b.id === kid.look.body) ?? this.looks.bodies[0]!;
-      if (!this.looks.faces.some((f) => f.id === kid.look.face)) kid.look.face = this.looks.faces[0]!.id;
-      kid.look.body = body.id;
-      const k = kid.look.scale;
-      kid.box = { left: body.box.left * k, top: body.box.top * k, right: body.box.right * k, bottom: body.box.bottom * k };
+      const { box, ...look } = this.lookWithBox(kid.look);
+      kid.look = look;
+      kid.box = box;
     }
     this.rng.setState(copy.rngState);
     this.cosmetic.setState(copy.cosmeticRngState);
@@ -452,6 +467,7 @@ export class Game {
       kid.happy.left -= dt;
       if (kid.happy.left <= 0) delete kid.happy;
     }
+    this.wearOffPlanted(dt);
     stepWander(
       world,
       this.rng,
@@ -502,6 +518,7 @@ export class Game {
         if (kid.happy.left <= 0) delete kid.happy;
       }
     }
+    this.wearOffPlanted(away);
     const admit = (kid: Kid, at: number, into: Kid[]) => {
       kid.grace = 0; // it has been around for a while
       into.push(kid);
@@ -601,6 +618,10 @@ export class Game {
       }
       if (c.type === 'plant') {
         this.plant(c, events);
+        continue;
+      }
+      if (c.type === 'unplant' || c.type === 'emptyPlot') {
+        this.unplant(c, events);
         continue;
       }
       const kid = world.kids.find((k) => k.id === c.kidId);
@@ -921,12 +942,91 @@ export class Game {
     }
     for (const kid of kids as Kid[]) {
       world.kids.splice(world.kids.indexOf(kid), 1);
-      // Its name and happiness end here; whether it was happy stays with the seed (D-056).
-      const snapshot: PlantedKid = { type: kid.type, look: { ...kid.look }, ...(kid.variant ? { variant: kid.variant } : {}), ...(kid.happy ? { happy: true } : {}) };
+      // Whether it was happy stays with the seed for good (D-056). Its name and what is left
+      // of its happiness come back with it if it is taken out (D-074).
+      const snapshot: PlantedKid = {
+        id: kid.id,
+        type: kid.type,
+        look: { ...kid.look },
+        ...(kid.variant ? { variant: kid.variant } : {}),
+        ...(kid.name ? { name: kid.name } : {}),
+        ...(kid.happy ? { happy: true, happiness: { ...kid.happy } } : {}),
+      };
       if (target.seed) target.seed.planted.push(snapshot);
       else target.seed = { planted: [snapshot], sprout: null, grown: 0 };
       events.push({ type: 'planted', kid, plot, count: target.seed.planted.length });
     }
+  }
+
+  /**
+   * Taking kids back out of a plot (D-074), all or none: one kid from a plot still filling
+   * (`unplant`), or every kid in a filling or growing plot (`emptyPlot`), which loses the
+   * growing time. Refused if the plot or kid is gone (`gone`), if the plot is growing and only
+   * one kid was asked for (`plotsBusy`), if its sprout is ready (`ready`), if the map hasn't
+   * room for them all (`full`), or if a kid finds no free spot by the Garden or none clear of
+   * recipe partners (`noRoom`). They come back by the Garden outlet with their id, look, name
+   * and remaining happiness, clear of recipe partners and with a newborn's grace, so they never
+   * fuse on the way back.
+   */
+  private unplant(c: Extract<Command, { type: 'unplant' | 'emptyPlot' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: c.type, reason });
+    };
+    const seed = this.state.plots[c.plot]?.seed;
+    if (!seed) return reject('gone');
+    if (seed.sprout && seed.grown >= this.content.balance.planting.growSeconds) return reject('ready');
+    if (c.type === 'unplant' && seed.sprout) return reject('plotsBusy');
+    const leaving = c.type === 'unplant' ? seed.planted.filter((k) => k.id === c.kidId) : [...seed.planted];
+    if (leaving.length === 0) return reject('gone');
+    const world = this.state.world;
+    if (world.kids.length + leaving.length > this.capacity) return reject('full');
+    const back: Kid[] = [];
+    // All or none: the ones already placed go back into the plot.
+    const rollBack = (): void => {
+      for (const b of back) world.kids.splice(world.kids.indexOf(b), 1);
+      reject('noRoom');
+    };
+    for (const k of leaving) {
+      const look = this.lookWithBox(k.look);
+      const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
+      if (!p) return rollBack();
+      const kid = addKid(world, k.type, p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, look.box, { body: look.body, face: look.face, scale: look.scale }, k.id);
+      if (k.variant) kid.variant = k.variant;
+      if (k.name) kid.name = k.name;
+      if (k.happiness) kid.happy = { ...k.happiness };
+      // Clear of recipe partners, those already on the map and those coming back with it:
+      // taking kids out never fuses them, now or once their grace ends. With no such spot, none
+      // comes back (Codex review, PR #82).
+      back.push(kid);
+      const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (x, y) => this.recipes.has(pairKey(x.type, y.type)));
+      if (!spot) return rollBack();
+      [kid.x, kid.y] = [spot.x, spot.y];
+    }
+    const ids = new Set(leaving.map((k) => k.id));
+    seed.planted = seed.planted.filter((k) => !ids.has(k.id));
+    if (seed.planted.length === 0) this.state.plots[c.plot]!.seed = null;
+    const left = this.state.plots[c.plot]!.seed?.planted.length ?? 0;
+    for (const kid of back) events.push({ type: 'unplanted', kid, plot: c.plot, count: left });
+  }
+
+  /** Planted kids' happiness keeps counting down (D-074); `happy`, for the odds, stays. */
+  private wearOffPlanted(dt: number): void {
+    for (const plot of this.state.plots) {
+      for (const k of plot.seed?.planted ?? []) {
+        if (!k.happiness) continue;
+        k.happiness.left -= dt;
+        if (k.happiness.left <= 0) delete k.happiness;
+      }
+    }
+  }
+
+  /** A look with its box from the current art; a body or face it doesn't have maps to the first. */
+  private lookWithBox(look: Look): Look & { box: Box } {
+    const body = this.looks.bodies.find((b) => b.id === look.body) ?? this.looks.bodies[0]!;
+    const face = this.looks.faces.some((f) => f.id === look.face) ? look.face : this.looks.faces[0]!.id;
+    const k = look.scale;
+    const b = body.box;
+    return { body: body.id, face, scale: k, box: { left: b.left * k, top: b.top * k, right: b.right * k, bottom: b.bottom * k } };
   }
 
   /**
@@ -1029,7 +1129,8 @@ export class Game {
   debugReadySeed(plot: number, sprout: Sprout): void {
     const p = this.state.plots[plot];
     if (!p) return;
-    p.seed = { planted: Array.from({ length: this.content.balance.planting.minKids }, () => ({ type: 'plain', look: { ...DEFAULT_LOOK } })), sprout, grown: this.growSeconds };
+    const world = this.state.world;
+    p.seed = { planted: Array.from({ length: this.content.balance.planting.minKids }, () => ({ id: world.nextKidId++, type: 'plain', look: { ...DEFAULT_LOOK } })), sprout, grown: this.growSeconds };
   }
 
   debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>, variant?: string): Kid {
