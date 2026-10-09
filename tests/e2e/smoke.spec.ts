@@ -3554,6 +3554,9 @@ test('starting a plot growing is saved at once, with its decided sprout (Codex r
   await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
   // Well inside the 10 s periodic save: only the immediate save can have stored it.
   await expect.poll(async () => (await savedPlot())?.sprout?.type ?? null, { timeout: 1500 }).not.toBeNull();
+  // Cancelling it is saved at once too, or a crash could bring the growing back (Codex review, PR #82).
+  await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'emptyPlot', plot: 0 }));
+  await expect.poll(savedPlot, { timeout: 1500 }).toBeNull();
   expect(errors).toEqual([]);
 });
 
