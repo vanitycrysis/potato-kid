@@ -97,6 +97,18 @@
   position: static;
 }
 
+/* A Notebook page's way back (GUI_MVP §19.2), above the page's own bar and body. */
+.sheet-page-nav {
+  flex: none;
+  padding: 0 8px 8px;
+}
+.ui-button.sheet-page-back {
+  width: 100%;
+  min-height: 44px;
+  font-size: 18px;
+  line-height: 24px;
+}
+
 /* Fixed region above the body (Compendium toolbar and message, GUI_MVP §6). */
 .sheet-bar {
   flex: none;
@@ -812,8 +824,7 @@
    navigation below the banner, at its natural height, in the scrolling page. */
 :root[data-hud-fit='page'][data-sheet-open] .sheet-scrim,
 :root[data-hud-fit='page'][data-sheet-open] .top-stack,
-:root[data-hud-fit='page'][data-sheet-open] .tray,
-:root[data-hud-fit='page'][data-sheet-open] .dex-button {
+:root[data-hud-fit='page'][data-sheet-open] .tray {
   display: none;
 }
 :root[data-hud-fit='page'] .sheet {
@@ -1275,4 +1286,21 @@
 }
 .dex-personality p {
   margin: 0;
+}
+
+/* --- Notebook and Map view (GUI_MVP §§19.2, 20.1) ---------------------------------------- */
+.ui-button.notebook-row {
+  width: 100%;
+  min-height: 44px;
+  font-size: 18px;
+  line-height: 24px;
+}
+.mapview-level {
+  margin: 0;
+}
+.ui-button.mapview-button {
+  width: 100%;
+  min-height: 48px;
+  font-size: 18px;
+  line-height: 24px;
 }
