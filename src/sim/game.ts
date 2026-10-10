@@ -395,6 +395,12 @@ export class Game {
       kid.look = look;
       kid.box = box;
     }
+    // Farming kids are drawn too: the same fallback for a body or face the art no longer has
+    // (Codex review, #90).
+    for (const worker of this.state.fields.flatMap((f) => f.workers)) {
+      const { body, face, scale } = this.lookWithBox(worker.look);
+      worker.look = { body, face, scale };
+    }
     // A save from another map (schema 8 moved kids beside the v3 Garden, D-071), or a box
     // grown with new art, may leave a kid in scenery or another kid: it moves to the nearest
     // free spot clear of recipe partners, so loading never fuses it.

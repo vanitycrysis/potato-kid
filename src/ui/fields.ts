@@ -261,6 +261,7 @@ export class FieldSheets {
     const foodLine = el('div', 'field-food');
     const changeFood = this.button('Choose food', 'plot-action-full field-change-food', () => this.openChooseFood(i, launcher));
     const kidsHeading = el('h4', 'dex-home-confirm-title', 'Kids farming');
+    kidsHeading.tabIndex = -1;
     const count = el('p', 'sheet-body-text');
     const rules = [el('p', 'sheet-helper', 'Favourite food grows faster. Hated food cannot be farmed.'), el('p', 'sheet-helper', 'No Materials earned while farming.')];
     const rate = el('p', 'sheet-body-text field-rate');
@@ -298,6 +299,14 @@ export class FieldSheets {
       const key = `${f.food}|${f.workers.map((w) => `${w.id}:${w.name ?? ''}`).join(',')}|${review}`;
       if (key !== built) {
         built = key;
+        // A rebuilt roster loses its focused button (Take back accepted): focus moves on, as
+        // in a plot's detail (Codex review, #90).
+        const focusWasInside = roster.contains(document.activeElement) || reviewBox.contains(document.activeElement);
+        const restoreFocus = () => {
+          if (!focusWasInside || sheet.body.contains(document.activeElement)) return;
+          (roster.querySelector<HTMLElement>('.field-take-back') ?? (assign.getAttribute('aria-disabled') === 'true' ? null : assign) ?? kidsHeading).focus();
+        };
+        queueMicrotask(restoreFocus);
         foodLine.replaceChildren(...(f.food ? [icon(`icon_food_${f.food}`, '', 'ui-icon-32'), el('span', 'feed-name', this.foodName(f.food))] : [el('span', 'feed-name', 'Choose a food')]));
         changeFood.textContent = f.food ? 'Change food' : 'Choose food';
         takeBack.clear();

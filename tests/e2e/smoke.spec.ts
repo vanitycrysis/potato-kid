@@ -4609,6 +4609,41 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await expect(card.getByRole('button', { name: 'View field' })).toBeHidden();
   });
 
+  test('field changes are saved at once, not at the next autosave (Codex review, #90)', async ({ page }) => {
+    const id = await setup(page);
+    const newest = () =>
+      page.evaluate(() => {
+        const slots = ['A', 'B'].map((s) => localStorage.getItem(`CapacitorStorage.potato-kid/slot${s}`)).filter((x): x is string => !!x).map((x) => JSON.parse(x));
+        const s = slots.sort((a, b) => b.revision - a.revision)[0]?.state;
+        return s ? `${s.fields?.length ?? 0}|${s.fields?.[0]?.food ?? ''}|${(s.fields?.[0]?.workers ?? []).map((w: { id: number }) => w.id).join(',')}` : '';
+      });
+    // Bought, given a food and farmed in setup: all saved well inside the 10 s autosave.
+    await expect.poll(newest, { timeout: 2000 }).toBe(`1|apple|${id}`);
+    await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'unfarm', field: 0, kidId: i }), id);
+    await expect.poll(newest, { timeout: 2000 }).toBe('1|apple|');
+  });
+
+  test('taking a kid back from the keyboard: focus moves to the next Take back (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugCommand!({ type: 'farm', field: 0, kidIds: [pk.debugAdd!('plain', 2300, 4900)] });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]!.kids.length)).toBe(2);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    await field.locator('.field-take-back').first().focus();
+    await page.keyboard.press('Enter');
+    await expect(field.locator('.field-take-back')).toHaveCount(1);
+    await expect(field.locator('.field-take-back')).toBeFocused();
+    // The last one: focus goes to Assign kids.
+    await page.keyboard.press('Enter');
+    await expect(field.locator('.field-take-back')).toHaveCount(0);
+    await expect(field.getByRole('button', { name: 'Assign kids' })).toBeFocused();
+  });
+
   test('the return summary says how much food grew, and of what', async ({ page }) => {
     await setup(page, 'apple', {});
     await page.evaluate(() => window.__PK__!.debugAway!(1800_000));
