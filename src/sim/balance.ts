@@ -69,6 +69,9 @@ export interface Report {
     specialsOnMap: number;
     capacity: number;
     specialsFound: number;
+    /** Rare kids on the map at the end, and rare types found (D-072). */
+    raresOnMap: number;
+    raresFound: number;
     recipesFound: number;
     levels: Record<BuildingId, number>;
     materials: number;
@@ -83,9 +86,11 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const farm = scenario.farm ?? true;
   const tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
-  // The roster: the recipe kids; planting-only specials are counted apart.
+  // The roster: the recipe kids; planting-only specials and rares are counted apart.
   const specials = new Set(content.kids.filter((k) => k.special).map((k) => k.id));
-  const roster = content.kids.length - specials.size;
+  const rares = new Set(content.kids.filter((k) => k.rare).map((k) => k.id));
+  const apex = new Set([...specials, ...rares]);
+  const roster = content.kids.length - apex.size;
   const firstOfTier: Record<number, number | null> = {};
   for (const k of content.kids) firstOfTier[k.tier] = null;
   const discovered: Report['discovered'] = { '25': null, '50': null, '75': null, '100': null };
@@ -112,9 +117,9 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const note = () => {
     const s = game.state;
     if (firstRecipe === null && s.discoveredRecipes.length > 0) firstRecipe = play;
-    const found = s.discoveredKids.filter((t) => !specials.has(t)).length;
+    const found = s.discoveredKids.filter((t) => !apex.has(t)).length;
     for (const t of s.discoveredKids) {
-      if (specials.has(t)) continue;
+      if (apex.has(t)) continue;
       const tier = tiers.get(t)!;
       if (firstOfTier[tier] === null) firstOfTier[tier] = play;
     }
@@ -206,10 +211,12 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     deadlocked: turns ? deadTurns / turns : 0,
     end: {
       playSeconds: play,
-      kidsDiscovered: s.discoveredKids.filter((t) => !specials.has(t)).length,
+      kidsDiscovered: s.discoveredKids.filter((t) => !apex.has(t)).length,
       specialsOnMap: s.world.kids.filter((k) => specials.has(k.type)).length,
       capacity: game.capacity,
       specialsFound: s.discoveredKids.filter((t) => specials.has(t)).length,
+      raresOnMap: s.world.kids.filter((k) => rares.has(k.type)).length,
+      raresFound: s.discoveredKids.filter((t) => rares.has(t)).length,
       recipesFound: s.discoveredRecipes.length,
       levels: { ...s.buildings },
       materials: s.materials,
