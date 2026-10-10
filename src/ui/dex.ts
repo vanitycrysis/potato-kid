@@ -4,7 +4,7 @@ import type { Content, KidId, RecipeDef } from '../content/types';
 import { pairKey } from '../content/validate';
 import type { MapScene } from '../render/scene';
 import type { BuildingSheets } from './buildings';
-import { el, icon, shortName } from './dom';
+import { el, icon, shortName, tierBadge } from './dom';
 import { homeSection, type HomeSection } from './dexHome';
 import { formatRate } from './format';
 import { LazyPortraits, portrait } from './portrait';
@@ -261,7 +261,7 @@ export class Dex {
   }
 
   private tierMark(tier: number, size: 20 | 24, text: string): HTMLElement {
-    return el('span', `tier dex-tier-${size}`, icon(`badge_tier_${tier}`, '', `ui-icon-${size}`), text);
+    return el('span', `tier dex-tier-${size}`, ...tierBadge(tier, `ui-icon-${size}`), text);
   }
 
   // --- Kids -------------------------------------------------------------------------------

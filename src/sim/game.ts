@@ -1362,12 +1362,17 @@ export class Game {
     return { body: body.id, face, scale: k, box: { left: b.left * k, top: b.top * k, right: b.right * k, bottom: b.bottom * k } };
   }
 
-  /** `look` with the box `type` has: a wild type's own, else its body's (unchanged). */
-  private typed(type: KidId, look: Look & { box: Box }): Look & { box: Box } {
+  /**
+   * A newborn's `look` for `type`: a wild type's own box, and the Classic face (new wild births
+   * use Classic, kid_wild_v1 renderer.appearance; Codex review, #93). Others unchanged. Saved
+   * kids keep their faces: they never come through here.
+   */
+  private typed(type: KidId, look: Look & { box: Box }, face?: string): Look & { box: Box } {
     const own = this.looks.types?.[type];
     if (!own) return look;
     const k = look.scale;
-    return { ...look, box: { left: own.left * k, top: own.top * k, right: own.right * k, bottom: own.bottom * k } };
+    const classic = this.looks.faces.some((f) => f.id === 'classic') ? 'classic' : look.face;
+    return { ...look, face: face ?? classic, box: { left: own.left * k, top: own.top * k, right: own.right * k, bottom: own.bottom * k } };
   }
 
   /**
@@ -1482,7 +1487,7 @@ export class Game {
   }
 
   debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
-    const look = this.typed(type, this.forceLook(this.rollLook(), force));
+    const look = this.typed(type, this.forceLook(this.rollLook(), force), force?.face);
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
     this.discover(type);

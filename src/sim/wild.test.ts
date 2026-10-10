@@ -53,6 +53,18 @@ describe('a wild kid is its own box (kid_wild_v1 renderer.collision)', () => {
     expect(g.boxOf(blimp.look, 'blimp')).toEqual(blimp.box);
   });
 
+  it('a wild kid keeps its saved face through a plot and back; only newborns are Classic', () => {
+    const c = structuredClone(content);
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, intervalSeconds: 1e9 };
+    const g = new Game(c, options, 3);
+    const k = g.debugAddKid('rainbow', 1000, 1000, { face: 'wide' });
+    expect(k.look.face).toBe('wide');
+    g.step([{ type: 'plant', kidIds: [k.id] }], 0);
+    g.step([{ type: 'unplant', plot: 0, kidId: k.id }], 0);
+    expect(g.state.world.kids.find((x) => x.id === k.id)!.look.face).toBe('wide');
+    expect(g.debugAddKid('rainbow', 1500, 1000).look.face).toBe('classic');
+  });
+
   it('a saved wild kid gets its own box back on load', () => {
     const g = new Game(content, options, 3);
     const k = g.debugAddKid('toy_castle', 1000, 1000);
@@ -74,6 +86,8 @@ describe('a wild kid is its own box (kid_wild_v1 renderer.collision)', () => {
     expect(c.kids.find((k) => k.id === sprout.type)?.special).toBe(true);
     g.step([], c.balance.planting.growSeconds + 1);
     const kid = g.state.world.kids.find((k) => k.type === sprout.type)!;
+    // Born Classic, whatever face the roll gave (kid_wild_v1 renderer.appearance).
+    expect(kid.look.face).toBe('classic');
     const own = wildBox(kidWild!, kidWild!.types[sprout.type]!.lifetimeBoundsPx);
     expect(kid.box.left).toBeCloseTo(own.left * kid.look.scale, 9);
     expect(kid.box.bottom).toBeCloseTo(own.bottom * kid.look.scale, 9);

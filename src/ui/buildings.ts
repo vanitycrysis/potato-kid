@@ -3,7 +3,7 @@ import type { BuildingId, Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { GameEvent } from '../sim/game';
 import type { Arrivals } from './arrivals';
-import { el, icon, shortName } from './dom';
+import { el, icon, shortName, tierBadge } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
 import { GardenPlots, type PlotsSnapshot } from './gardenPlots';
@@ -663,7 +663,7 @@ export class BuildingSheets {
       'article',
       'comp-card ui-surface',
       this.portraits!.add(type),
-      el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', icon(`badge_tier_${tier}`, '', 'ui-icon-24'), `Tier ${tier}`)),
+      el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', ...tierBadge(tier, 'ui-icon-24'), `Tier ${tier}`)),
       el('div', 'comp-buys', ...buttons.map((x) => x.b)),
       arrived,
     );

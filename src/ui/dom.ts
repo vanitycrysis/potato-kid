@@ -23,6 +23,15 @@ export function icon(name: string, label = '', className = 'ui-icon'): HTMLImage
   return img;
 }
 
+/**
+ * A tier's badge, if its art exists: tiers 1 to 5 have one; a higher tier (the specials' and
+ * rares' 6) is plain text, never an invented glyph (GUI_MVP §7, §18.1; Codex review, #93).
+ */
+export function tierBadge(tier: number, className: string): HTMLImageElement[] {
+  const name = `badge_tier_${tier}`;
+  return Object.keys(uiUrls).some((p) => p.endsWith(`/${name}.svg`)) ? [icon(name, '', className)] : [];
+}
+
 /** Display name without the trailing " Kid" (cards); Potato Kid stays "Potato" (GUI_MVP §7). */
 export function shortName(name: string): string {
   return name.replace(/ Kid$/, '');
