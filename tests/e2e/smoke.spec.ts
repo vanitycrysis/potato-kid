@@ -7,7 +7,7 @@ async function boot(page: Page, query: string): Promise<string[]> {
   await page.goto(`/${query}`);
   await page.waitForFunction(() => window.__PK__?.ready === true);
   // The world scrolls (D-040): debug tests place kids around world (540, 1100), so look there.
-  if (query.includes('debug=1')) await page.evaluate(() => window.__PK__!.centerOn(540, 1100));
+  if (query.includes('debug=1')) await page.evaluate(() => window.__PK__!.centerOn(1620, 3980));
   return errors;
 }
 
@@ -54,8 +54,8 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   // Place the pair far apart so they can't touch by wandering first.
   const { plain, water } = await page.evaluate(() => ({
-    plain: window.__PK__!.debugAdd!('plain', 250, 1500),
-    water: window.__PK__!.debugAdd!('water', 830, 700),
+    plain: window.__PK__!.debugAdd!('plain', 1330, 4380),
+    water: window.__PK__!.debugAdd!('water', 1910, 3580),
   }));
   await page.waitForTimeout(200);
 
@@ -66,8 +66,8 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   const to = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, water);
   // Held kids float above the finger, so put the finger below the target's feet.
   const lift = await page.evaluate(() => {
-    const a = window.__PK__!.worldToScreen(0, 0);
-    const b = window.__PK__!.worldToScreen(0, 70);
+    const a = window.__PK__!.worldToScreen(1080, 2880);
+    const b = window.__PK__!.worldToScreen(1080, 2950);
     return b.y - a.y;
   });
   await page.mouse.move(to.x, to.y + lift, { steps: 12 });
@@ -101,18 +101,18 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
 
 test('a released kid stays where it was dropped (no snap-back)', async ({ page }) => {
   const errors = await boot(page, '?seed=5&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 200, 1500));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1280, 4380));
   await page.waitForTimeout(150);
   const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-  // Open ground, clear of the Garden's scenery reserve (map v2), so nothing deflects it.
-  const to = await page.evaluate(() => window.__PK__!.worldToScreen(850, 1500));
+  // Open ground, clear of the Garden's scenery reserve, so nothing deflects it.
+  const to = await page.evaluate(() => window.__PK__!.worldToScreen(1930, 4380));
   await page.mouse.move(from.x, from.y - 20);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 10 });
   await page.waitForTimeout(100);
   // While held, the kid floats above the finger (smaller y), so the face isn't covered.
   const held = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-  const liftPx = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  const liftPx = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 2950).y - window.__PK__!.worldToScreen(1080, 2880).y);
   expect(held.y).toBeLessThan(to.y - liftPx * 0.8);
   await page.mouse.up();
   const landing = { x: to.x, y: to.y - liftPx };
@@ -132,11 +132,11 @@ test('a released kid stays where it was dropped (no snap-back)', async ({ page }
 
 test('a kid dropped outside the play area lands clamped without a jump', async ({ page }) => {
   const errors = await boot(page, '?seed=8&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('snow', 540, 1200));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('snow', 1620, 4080));
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   // Release up in the Garden's zone, above where kids may stand (world y 250).
-  const below = await page.evaluate(() => window.__PK__!.worldToScreen(540, 250));
+  const below = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3130));
   await page.mouse.move(p.x, p.y - 20);
   await page.mouse.down();
   await page.mouse.move(below.x, below.y, { steps: 8 });
@@ -156,7 +156,7 @@ test('a kid dropped outside the play area lands clamped without a jump', async (
 
 test('an OS-cancelled touch releases the kid and dragging still works', async ({ page }) => {
   const errors = await boot(page, '?seed=6&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 300, 1200));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1380, 4080));
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   // Start a drag, then deliver a native pointercancel straight to the canvas.
@@ -184,7 +184,7 @@ test('an OS-cancelled touch releases the kid and dragging still works', async ({
 test('40+ kids render without errors', async ({ page }) => {
   const errors = await boot(page, '?seed=7&debug=1');
   await page.evaluate(() => {
-    for (let i = 0; i < 40; i++) window.__PK__!.debugAdd!(['plain', 'fire', 'water', 'snow'][i % 4]!, 100 + (i % 8) * 120, 500 + Math.floor(i / 8) * 250);
+    for (let i = 0; i < 40; i++) window.__PK__!.debugAdd!(['plain', 'fire', 'water', 'snow'][i % 4]!, 1180 + (i % 8) * 120, 3380 + Math.floor(i / 8) * 250);
   });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: 'test-results/kids-40.png' });
@@ -198,14 +198,14 @@ test('40+ kids render without errors', async ({ page }) => {
 
 test('dragging empty ground pans the map (D-040)', async ({ page }) => {
   const errors = await boot(page, '?seed=9&debug=1&calm=1');
-  const before = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  const before = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980));
   // calm mode has no kids, so this press lands on empty ground.
   await page.mouse.move(200, 600);
   await page.mouse.down();
   await page.mouse.move(200, 300, { steps: 8 });
   await page.mouse.up();
   await frames(page, 2);
-  const after = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  const after = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980));
   // The map followed the finger up (at least most of the 300 px; inertia may add more).
   expect(before.y - after.y).toBeGreaterThan(250);
   expect(errors).toEqual([]);
@@ -213,7 +213,7 @@ test('dragging empty ground pans the map (D-040)', async ({ page }) => {
 
 test('holding a kid at the screen edge scrolls the map and carries the kid along', async ({ page }) => {
   const errors = await boot(page, '?seed=10&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1100));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1620, 3980));
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const size = page.viewportSize()!;
@@ -224,8 +224,8 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
   // Where the starting view ends, in world units.
   const viewEnd = await page.evaluate((t) => {
     const pk = window.__PK__!;
-    const y0 = pk.worldToScreen(0, 0).y;
-    return (t - y0) / ((pk.worldToScreen(0, 100).y - y0) / 100);
+    const y0 = pk.worldToScreen(1080, 2880).y;
+    return (t - y0) / ((pk.worldToScreen(1080, 2980).y - y0) / 100);
   }, trayTop);
   await page.mouse.move(size.width / 2, trayTop - 10, { steps: 8 });
   await page.waitForTimeout(700);
@@ -240,13 +240,13 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
 test('dropping a kid onto a non-partner never overlaps them (D-039, D-043)', async ({ page }) => {
   const errors = await boot(page, '?seed=12&debug=1&calm=1');
   const { fire, snow } = await page.evaluate(() => ({
-    fire: window.__PK__!.debugAdd!('fire', 540, 1100),
-    snow: window.__PK__!.debugAdd!('snow', 540, 1600),
+    fire: window.__PK__!.debugAdd!('fire', 1620, 3980),
+    snow: window.__PK__!.debugAdd!('snow', 1620, 4480),
   }));
   await page.waitForTimeout(150);
   const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, snow);
   const onto = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, fire);
-  const liftPx = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  const liftPx = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 2950).y - window.__PK__!.worldToScreen(1080, 2880).y);
   await page.mouse.move(from.x, from.y - 20);
   await page.mouse.down();
   await page.mouse.move(onto.x, onto.y + liftPx, { steps: 8 });
@@ -260,8 +260,8 @@ test('dropping a kid onto a non-partner never overlaps them (D-039, D-043)', asy
   const dy = Math.max(a.y + a.box.top - (b.y + b.box.bottom), b.y + b.box.top - (a.y + a.box.bottom));
   expect(Math.max(dx, dy)).toBeGreaterThanOrEqual(-0.01);
   // The kid already standing there wasn't shoved.
-  expect(a.x).toBeCloseTo(540, 0);
-  expect(a.y).toBeCloseTo(1100, 0);
+  expect(a.x).toBeCloseTo(1620, 0);
+  expect(a.y).toBeCloseTo(3980, 0);
   expect(errors).toEqual([]);
 });
 
@@ -271,20 +271,20 @@ test('a pan that pauses before release does not fling', async ({ page }) => {
   await page.mouse.down();
   await page.mouse.move(200, 400, { steps: 6 });
   await page.waitForTimeout(400); // finger rests
-  const rested = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  const rested = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980));
   await page.mouse.up();
   await page.waitForTimeout(400);
-  const after = await page.evaluate(() => window.__PK__!.worldToScreen(540, 1100));
+  const after = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980));
   expect(Math.abs(after.y - rested.y)).toBeLessThan(2);
   expect(errors).toEqual([]);
 });
 
 test('rotating the screen keeps the same world point centred', async ({ page }) => {
   const errors = await boot(page, '?seed=14&debug=1&calm=1');
-  await page.evaluate(() => window.__PK__!.centerOn(1080, 2000));
+  await page.evaluate(() => window.__PK__!.centerOn(2160, 4880));
   await page.setViewportSize({ width: 915, height: 413 });
   await page.waitForTimeout(300);
-  const c = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 2000));
+  const c = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 4880));
   expect(Math.abs(c.x - 915 / 2)).toBeLessThan(3);
   expect(Math.abs(c.y - 413 / 2)).toBeLessThan(3);
   expect(errors).toEqual([]);
@@ -292,7 +292,7 @@ test('rotating the screen keeps the same world point centred', async ({ page }) 
 
 test('backgrounding mid-pan does not lock input', async ({ page }) => {
   const errors = await boot(page, '?seed=15&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1100));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1620, 3980));
   await page.mouse.move(200, 700);
   await page.mouse.down();
   await page.mouse.move(200, 650, { steps: 3 });
@@ -319,8 +319,8 @@ test('backgrounding mid-pan does not lock input', async ({ page }) => {
 
 test('a kid at the bottom edge of the world can be scrolled out from under the tray', async ({ page }) => {
   const errors = await boot(page, '?seed=16&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 3830));
-  await page.evaluate(() => window.__PK__!.centerOn(1080, 99999)); // scroll as far down as allowed
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2160, 7670));
+  await page.evaluate(() => window.__PK__!.centerOn(2160, 99999)); // scroll as far down as allowed
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
@@ -328,9 +328,10 @@ test('a kid at the bottom edge of the world can be scrolled out from under the t
   expect(errors).toEqual([]);
 });
 
-test('a kid in the bottom-right corner can be scrolled out from under the Dex button', async ({ page }) => {
+test('a kid in the bottom-right corner can be scrolled out from under the navigation', async ({ page }) => {
   const errors = await boot(page, '?seed=17&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2080, 3830));
+  // The v3 world's corner (4320 × 7680).
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 4240, 7670));
   await page.evaluate(() => window.__PK__!.centerOn(99999, 99999)); // as far down-right as allowed
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
@@ -342,8 +343,8 @@ test('a kid in the bottom-right corner can be scrolled out from under the Dex bu
 test('on a short landscape screen, holding a kid still in the middle does not scroll', async ({ page }) => {
   await page.setViewportSize({ width: 915, height: 413 });
   const errors = await boot(page, '?seed=18&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1080, 1500));
-  await page.evaluate(() => window.__PK__!.centerOn(1080, 1460));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 2160, 4380));
+  await page.evaluate(() => window.__PK__!.centerOn(2160, 4340));
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const top = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
@@ -355,13 +356,13 @@ test('on a short landscape screen, holding a kid still in the middle does not sc
   await page.waitForTimeout(100);
   // Centre the held kid's silhouette in the usable band between the HUD and the tray/Dex.
   const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
-  const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(0, 100).y - window.__PK__!.worldToScreen(0, 0).y) / 100);
+  const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(1080, 2980).y - window.__PK__!.worldToScreen(1080, 2880).y) / 100);
   const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const centre = at.y + ((kid.box.top + kid.box.bottom) / 2) * zoom;
   await page.mouse.move(p.x, p.y - 10 + ((top + bottom) / 2 - centre), { steps: 2 });
-  const before = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1460));
+  const before = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 4340));
   await page.waitForTimeout(600);
-  const during = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1460));
+  const during = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 4340));
   await page.mouse.up();
   expect(Math.abs(during.y - before.y)).toBeLessThan(2);
   expect(errors).toEqual([]);
@@ -369,8 +370,8 @@ test('on a short landscape screen, holding a kid still in the middle does not sc
 
 test('a held kid never disappears behind the HUD while scrolling up', async ({ page }) => {
   const errors = await boot(page, '?seed=19&debug=1&calm=1');
-  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1080, 2600));
-  await page.evaluate(() => window.__PK__!.centerOn(1080, 2400));
+  const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 2160, 5480));
+  await page.evaluate(() => window.__PK__!.centerOn(2160, 5280));
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const hudBottom = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
@@ -381,7 +382,7 @@ test('a held kid never disappears behind the HUD while scrolling up', async ({ p
     await page.waitForTimeout(120);
     const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
     const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-    const top = await page.evaluate(([y, t]) => window.__PK__!.worldToScreen(0, y + t).y - window.__PK__!.worldToScreen(0, y).y, [0, kid.box.top] as const);
+    const top = await page.evaluate(([y, t]) => window.__PK__!.worldToScreen(1080, y + t).y - window.__PK__!.worldToScreen(1080, y).y, [0, kid.box.top] as const);
     // The silhouette's top edge stays at or below the HUD.
     expect(at.y + top).toBeGreaterThanOrEqual(hudBottom - 1);
   }
@@ -393,14 +394,14 @@ for (const [w, h] of [[640, 360], [568, 320]] as const) {
   test(`on a ${w}x${h} screen a held kid stays visible below the HUD`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     const errors = await boot(page, '?seed=20&debug=1&calm=1');
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1080, 1500));
-    await page.evaluate(() => window.__PK__!.centerOn(1080, 1500));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 2160, 4380));
+    await page.evaluate(() => window.__PK__!.centerOn(2160, 4380));
     await page.waitForTimeout(150);
     const hudBottom = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
     const bottom = await page.evaluate(() =>
       Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('[data-nav=dex]')!.getBoundingClientRect().top),
     );
-    const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(0, 100).y - window.__PK__!.worldToScreen(0, 0).y) / 100);
+    const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(1080, 2980).y - window.__PK__!.worldToScreen(1080, 2880).y) / 100);
     const kid0 = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
     // The compact layout leaves room for at least one kid between HUD and tray.
     expect(bottom - hudBottom).toBeGreaterThan((kid0.box.bottom - kid0.box.top) * zoom);
@@ -427,8 +428,8 @@ test('the build ships the bundled font with its full licence (SIL OFL condition 
 test('a reloaded game continues from its save (plan §4)', async ({ page }) => {
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   await page.evaluate(() => {
-    window.__PK__!.debugAdd!('plain', 250, 1500);
-    window.__PK__!.debugAdd!('fire', 830, 1500);
+    window.__PK__!.debugAdd!('plain', 1330, 4380);
+    window.__PK__!.debugAdd!('fire', 1910, 4380);
   });
   // Saves land on load, then every 10 s and on events; wait for one that includes the kids.
   await page.evaluate(() => window.__PK__!.debugAway!(0));
@@ -445,7 +446,7 @@ test('a reloaded game continues from its save (plan §4)', async ({ page }) => {
 
 test('time away is credited once: Garden spawns and income (plan §3)', async ({ page }) => {
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
-  await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
+  await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1330, 4380));
   const before = await page.evaluate(() => window.__PK__!.wallet().materials);
   await page.evaluate(() => window.__PK__!.debugAway!(300_000));
   const report = await page.evaluate(() => window.__PK__!.lastOffline());
@@ -519,7 +520,7 @@ async function dropOnto(page: Page, a: number, b: number, release = true): Promi
   await page.mouse.move(from.x, from.y - 20);
   await page.mouse.down();
   const to = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, b);
-  const lift = await page.evaluate(() => window.__PK__!.worldToScreen(0, 70).y - window.__PK__!.worldToScreen(0, 0).y);
+  const lift = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 2950).y - window.__PK__!.worldToScreen(1080, 2880).y);
   await page.mouse.move(to.x, to.y + lift, { steps: 10 });
   if (release) await page.mouse.up();
 }
@@ -531,8 +532,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     // The pair is placed touching, so it fuses on the next step: this test is about the
     // play band, not dragging (a drag in so short a band would edge-scroll).
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 500, 1150);
-      window.__PK__!.debugAdd!('water', 560, 1150);
+      window.__PK__!.debugAdd!('plain', 1580, 4030);
+      window.__PK__!.debugAdd!('water', 1640, 4030);
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
     for (let i = 0; i < 8; i++) {
@@ -545,10 +546,10 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a visible card keeps its time while a kid is held', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     const { a, b, c } = await page.evaluate(() => ({
-      a: window.__PK__!.debugAdd!('plain', 250, 1500),
-      b: window.__PK__!.debugAdd!('water', 830, 700),
+      a: window.__PK__!.debugAdd!('plain', 1330, 4380),
+      b: window.__PK__!.debugAdd!('water', 1910, 3580),
       // Well below the feedback card, so pressing it starts a real drag.
-      c: window.__PK__!.debugAdd!('fire', 300, 1650),
+      c: window.__PK__!.debugAdd!('fire', 1380, 4530),
     }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
@@ -566,7 +567,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
 
   test('a save banner settles a held kid before the HUD shifts', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 300, 1500));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1380, 4380));
     await page.waitForTimeout(150);
     const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
     await page.mouse.move(p.x, p.y - 20);
@@ -598,7 +599,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('the play band counts the Dex button too (320x568)', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await boot(page, '?seed=3&debug=1&calm=1');
-    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 400, 1300), b: window.__PK__!.debugAdd!('water', 700, 1300) }));
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 1480, 4180), b: window.__PK__!.debugAdd!('water', 1780, 4180) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
@@ -626,7 +627,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a visible card that stops fitting goes back to the queue (640x360 + banner)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
-    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 300, 1150), b: window.__PK__!.debugAdd!('water', 800, 1150) }));
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 1380, 4030), b: window.__PK__!.debugAdd!('water', 1880, 4030) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
     await expect(page.locator('.feedback')).toContainText('New discovery');
@@ -641,16 +642,24 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
     const { a, b, c } = await page.evaluate(() => ({
-      a: window.__PK__!.debugAdd!('plain', 300, 1150),
-      b: window.__PK__!.debugAdd!('water', 800, 1150),
-      // Low on screen, well clear of the feedback card, so pressing it really holds it.
-      c: window.__PK__!.debugAdd!('fire', 1300, 1700),
+      a: window.__PK__!.debugAdd!('plain', 1700, 4030),
+      b: window.__PK__!.debugAdd!('water', 2100, 4030),
+      c: window.__PK__!.debugAdd!('fire', 2700, 4060),
     }));
+    // The pair mid-band, so the drag never edge-scrolls (the landscape fit floor shows about
+    // 1770 × 576 world units of play band, §20.1).
+    await page.evaluate(() => window.__PK__!.centerOn(1900, 4000));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
     await expect(page.locator('.feedback')).toContainText('New discovery');
     // Hold a kid (feedback freezes), queue a refusal, then a banner that settles the drag
-    // and leaves room for the short refusal but not the reward card.
+    // and leaves room for the short refusal but not the reward card. The camera may have
+    // moved since (the narrow landscape view): bring the kid back, low in the play band.
+    await page.evaluate((id) => {
+      const k = window.__PK__!.kids().find((x) => x.id === id)!;
+      window.__PK__!.centerOn(k.x, k.y - 150);
+    }, c);
+    await frames(page, 2);
     const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
     await page.mouse.move(p.x, p.y - 20);
     await page.mouse.down();
@@ -686,9 +695,9 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page, '?seed=3&debug=1&calm=1');
     const { a, b, c } = await page.evaluate(() => ({
-      a: window.__PK__!.debugAdd!('plain', 250, 1500),
-      b: window.__PK__!.debugAdd!('water', 830, 700),
-      c: window.__PK__!.debugAdd!('fire', 300, 1650),
+      a: window.__PK__!.debugAdd!('plain', 1330, 4380),
+      b: window.__PK__!.debugAdd!('water', 1910, 3580),
+      c: window.__PK__!.debugAdd!('fire', 1380, 4530),
     }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
@@ -710,7 +719,7 @@ test('costumes load when a type appears and are released after it leaves (ROSTER
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   // Hero and Glassblower aren't in the spawn pool, so their costumes start unloaded.
   expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).not.toContain('hero');
-  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 1380, 4380), glass: window.__PK__!.debugAdd!('glassblower', 1910, 3580) }));
   // Both parents are drawn (their costumes loaded) before any drag (Codex review, PR #35).
   for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
   expect(await page.evaluate(() => window.__PK__!.debugLoadedCostumes!())).toEqual(expect.arrayContaining(['hero', 'glassblower']));
@@ -738,7 +747,7 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
     await route.continue();
   });
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
-  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
+  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 1380, 4380), glass: window.__PK__!.debugAdd!('glassblower', 1910, 3580) }));
   for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
   await dropOnto(page, hero, glass);
   await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
@@ -916,7 +925,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
   test('Escape, the scrim and the X close; focus returns; the world ignores input meanwhile', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 540, 1300));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1620, 4180));
     await page.waitForTimeout(200);
     await garden(page).click();
     await expect(page.locator('.sheet')).toBeVisible();
@@ -940,7 +949,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
   test('a card visible when a sheet opens keeps its time until the sheet closes (Codex review, PR #39)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 250, 1500), b: window.__PK__!.debugAdd!('water', 830, 700) }));
+    const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 1330, 4380), b: window.__PK__!.debugAdd!('water', 1910, 3580) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
     await expect(page.locator('.feedback')).toContainText('New discovery');
@@ -958,10 +967,10 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     await page.mouse.move(220, 560, { steps: 3 });
     await page.evaluate(() => (document.querySelector('[data-nav=garden]') as HTMLButtonElement).click());
     await expect(page.locator('.sheet')).toBeVisible();
-    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000));
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(2080, 3880));
     await page.mouse.move(300, 300, { steps: 5 });
     await page.waitForTimeout(300);
-    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000))).toEqual(before);
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(2080, 3880))).toEqual(before);
     await page.mouse.up();
   });
 
@@ -1059,8 +1068,8 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
   async function built(page: Page): Promise<string[]> {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate((m) => {
-      window.__PK__!.debugAdd!('plain', 250, 1500);
-      window.__PK__!.debugAdd!('fire', 830, 1500);
+      window.__PK__!.debugAdd!('plain', 1330, 4380);
+      window.__PK__!.debugAdd!('fire', 1910, 4380);
       window.__PK__!.debugGive!({ materials: m });
       window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
     }, price('compendium', 0));
@@ -1072,8 +1081,8 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     // Hero stands in for a rare kid until the rares' content exists.
     await boot(page, '?seed=3&debug=1&calm=1&rare=hero');
     await page.evaluate((m) => {
-      window.__PK__!.debugAdd!('plain', 250, 1500);
-      window.__PK__!.debugAdd!('hero', 830, 1500);
+      window.__PK__!.debugAdd!('plain', 1330, 4380);
+      window.__PK__!.debugAdd!('hero', 1910, 4380);
       window.__PK__!.debugGive!({ materials: m });
       window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
     }, price('compendium', 0));
@@ -1085,7 +1094,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 
   test('the Compendium builds in place, then brings a kid back for either currency', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1330, 4380));
     await openTool(page, 'Compendium');
     await expect(page.locator('.sheet-subtitle')).toHaveText('Level 0 / 1');
     const build = page.locator('.sheet-action');
@@ -1151,7 +1160,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       .poll(
         async () => {
           await page.evaluate(() => {
-            for (let i = 0; window.__PK__!.kids().length < 12 && i < 40; i++) window.__PK__!.debugAdd!('plain', 150 + (i % 5) * 200, 1900 + Math.floor(i / 5) * 250);
+            for (let i = 0; window.__PK__!.kids().length < 12 && i < 40; i++) window.__PK__!.debugAdd!('plain', 1230 + (i % 5) * 200, 4780 + Math.floor(i / 5) * 250);
           });
           await page.waitForTimeout(300);
           return page.evaluate(() => window.__PK__!.kids().length);
@@ -1185,7 +1194,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 
   test('the return summary shows one report, and the sheet it interrupted comes back', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1330, 4380));
     await garden(page).click();
     await page.evaluate(() => window.__PK__!.debugAway!(60_000));
     const summary = page.getByRole('dialog', { name: 'Welcome back' });
@@ -1206,7 +1215,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 
   test('a short absence credits its rewards but shows no summary (D-049)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1330, 4380));
     const before = await page.evaluate(() => window.__PK__!.wallet().materials);
     await page.evaluate(() => window.__PK__!.debugAway!(59_000));
     expect(await page.evaluate(() => window.__PK__!.lastOffline()!.seconds)).toBeCloseTo(59, 0);
@@ -1322,7 +1331,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await built(page);
     await page.evaluate(() => {
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
-      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 1230 + (i % 4) * 260, 3180 + Math.floor(i / 4) * 300));
     });
     await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(14);
@@ -1368,7 +1377,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await built(page);
     await page.evaluate(() => {
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite'];
-      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 1230 + (i % 4) * 260, 3180 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
@@ -1403,7 +1412,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.setViewportSize({ width: 568, height: 200 });
     await built(page);
     await page.evaluate(() => {
-      ['water', 'snow', 'wind', 'stone', 'chef', 'sprout'].forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+      ['water', 'snow', 'wind', 'stone', 'chef', 'sprout'].forEach((t, i) => window.__PK__!.debugAdd!(t, 1230 + (i % 4) * 260, 3180 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
@@ -1420,7 +1429,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.setViewportSize({ width: 568, height: 320 });
     await page.evaluate(() => {
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
-      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 1230 + (i % 4) * 260, 3180 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await openTool(page, 'Compendium');
@@ -1449,8 +1458,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   async function twoKnown(page: Page): Promise<string[]> {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 250, 1500);
-      window.__PK__!.debugAdd!('water', 830, 1500);
+      window.__PK__!.debugAdd!('plain', 1330, 4380);
+      window.__PK__!.debugAdd!('water', 1910, 4380);
     });
     return errors;
   }
@@ -1494,7 +1503,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('recipes are revealed by being made, not by knowing their kids', async ({ page }) => {
     await twoKnown(page);
     // Firefighter discovered too, but Potato + Water was never fused: still unknown.
-    await page.evaluate(() => window.__PK__!.debugAdd!('firefighter', 540, 2200));
+    await page.evaluate(() => window.__PK__!.debugAdd!('firefighter', 1620, 5080));
     await dexButton(page).click();
     await dialog(page).getByRole('tab', { name: 'Recipes' }).click();
     await expect(dialog(page).getByText(`0 / ${totals.recipes} recipes found`)).toBeVisible();
@@ -1508,8 +1517,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
     // Fuse Potato and Water: two kids placed on one spot end up touching.
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
     await dexButton(page).click();
@@ -1526,8 +1535,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('a kid’s detail: income and found recipes; Back returns to its tile', async ({ page }) => {
     await twoKnown(page);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
     await dexButton(page).click();
@@ -1542,7 +1551,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dialog(page).getByRole('button', { name: 'Firefighter Kid, Tier 2' }).click();
     await expect(dialog(page).getByText(`Earns ${Math.round(balance.economy.materialsPerSecond * 3600 * 2)} Materials / h`)).toBeVisible();
     await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
-    await page.evaluate(() => window.__PK__!.debugAdd!('snow', 830, 2200));
+    await page.evaluate(() => window.__PK__!.debugAdd!('snow', 1910, 5080));
     await dialog(page).getByRole('button', { name: 'Snow Kid, Tier 1' }).click();
     await expect(dialog(page).getByText('No recipes found for this kid yet.')).toBeVisible();
   });
@@ -1606,8 +1615,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('a discovery card opens that kid in the Dex', async ({ page }) => {
     await twoKnown(page);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     const card = page.locator('.feedback .toast-button');
     await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
@@ -1635,8 +1644,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' }).click();
     await expect(dialog(page).getByText('No recipes found for this kid yet.')).toBeVisible();
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     await expect(dialog(page).locator('.dex-detail .dex-recipe')).toHaveAttribute('aria-label', 'Potato Kid plus Water Kid makes Firefighter Kid');
     await expect(dialog(page).getByRole('button', { name: 'Back to kids' })).toBeFocused();
@@ -1646,7 +1655,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await twoKnown(page);
     await page.evaluate((m) => {
       ['snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero', 'fire'].forEach((t, i) =>
-        window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300),
+        window.__PK__!.debugAdd!(t, 1230 + (i % 4) * 260, 3180 + Math.floor(i / 4) * 300),
       );
       window.__PK__!.debugGive!({ materials: m });
       window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
@@ -1670,8 +1679,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dialog(page).getByLabel('Find a discovered kid').fill('wat');
     await page.keyboard.press('Escape');
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     const card = page.locator('.feedback .toast-button');
     await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
@@ -1697,8 +1706,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('closing a Dex opened from a discovery card returns focus to the card (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     const card = page.locator('.feedback .toast-button');
     await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
@@ -1746,8 +1755,8 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     // A first discovery plays the discovery cue (it replaces the fusion cue).
     await page.waitForTimeout(500); // cue buffers decode after the unlock
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 540, 2600);
-      window.__PK__!.debugAdd!('water', 540, 2600);
+      window.__PK__!.debugAdd!('plain', 1620, 5480);
+      window.__PK__!.debugAdd!('water', 1620, 5480);
     });
     await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_discovery');
     // Hiding the app stops it, rather than freezing it to finish later (Codex review, PR #53).
@@ -1813,8 +1822,8 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     await page.mouse.click(200, 600);
     await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
     const id = await page.evaluate(() => {
-      window.__PK__!.centerOn(800, 1500);
-      return window.__PK__!.debugAdd!('fire', 800, 1500);
+      window.__PK__!.centerOn(1880, 4380);
+      return window.__PK__!.debugAdd!('fire', 1880, 4380);
     });
     await page.waitForTimeout(400);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
@@ -1838,8 +1847,8 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     await page.mouse.click(200, 600);
     await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
     const id = await page.evaluate(() => {
-      window.__PK__!.centerOn(800, 1500);
-      return window.__PK__!.debugAdd!('fire', 800, 1500);
+      window.__PK__!.centerOn(1880, 4380);
+      return window.__PK__!.debugAdd!('fire', 1880, 4380);
     });
     await page.waitForTimeout(400);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
@@ -1880,7 +1889,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
   /** Picks a kid up and holds it over the Garden target for `ms`, then releases. */
   async function holdOverHome(page: Page, id: number, ms: number): Promise<void> {
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308));
     await page.mouse.move(k.x, k.y - 20);
     await page.mouse.down();
     await page.mouse.move(t.x, t.y, { steps: 8 });
@@ -1890,8 +1899,8 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
 
   async function setup(page: Page): Promise<{ id: number; errors: string[] }> {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 760, 1000));
+    await page.evaluate(() => window.__PK__!.centerOn(2160, 3640));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1840, 3880));
     await page.waitForTimeout(200);
     return { id, errors };
   }
@@ -1917,7 +1926,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     const { errors } = await setup(page);
     const ids = await page.evaluate(() => {
       const pk = window.__PK__!;
-      const ids = [0, 1, 2].map((i) => pk.debugAdd!('plain', 1400 + i * 250, 2600));
+      const ids = [0, 1, 2].map((i) => pk.debugAdd!('plain', 2480 + i * 250, 5480));
       pk.debugCommand!({ type: 'plant', kidIds: ids, plot: 0 });
       pk.debugCommand!({ type: 'startGrowing', plot: 0 });
       return ids;
@@ -1935,7 +1944,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     const { id } = await setup(page);
     // Straight in and straight out: a stepped move can itself take 400 ms on a slow runner.
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308));
     await page.mouse.move(k.x, k.y - 20);
     await page.mouse.down();
     await page.mouse.move(t.x, t.y);
@@ -1948,7 +1957,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
   test('the target labels each state, and hides when no kid is held', async ({ page }) => {
     const { id } = await setup(page);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308));
     await expect(page.locator('.home-label:not(.home-probe)')).toBeHidden();
     await page.mouse.move(k.x, k.y - 20);
     await page.mouse.down();
@@ -1972,21 +1981,21 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     // Fill the only plot (five kids, not started).
     await page.evaluate(() => {
       const pk = window.__PK__!;
-      const ids = Array.from({ length: 5 }, (_, i) => pk.debugAdd!('plain', 300 + i * 250, 2600));
+      const ids = Array.from({ length: 5 }, (_, i) => pk.debugAdd!('plain', 1380 + i * 250, 5480));
       pk.debugCommand!({ type: 'plant', kidIds: ids });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(5);
     // The first-time explanation for that add goes first.
     await page.locator('.toast-home').getByRole('button', { name: 'Dismiss' }).click();
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308));
     await page.mouse.move(k.x, k.y - 20);
     await page.mouse.down();
     await page.mouse.move(t.x, t.y, { steps: 8 });
     await expect(page.locator('.home-label:not(.home-probe) .home-heading')).toHaveText('All plots are full.');
     await page.waitForTimeout(600); // well past the 400 ms dwell
     // The map held still under the finger, though the target never armed.
-    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428))).toEqual(t);
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308))).toEqual(t);
     await expect(page.locator('.home-target')).not.toHaveAttribute('data-state', 'ready');
     await page.mouse.up();
     await expect(page.locator('.feedback')).toContainText('All plots are full.');
@@ -1997,7 +2006,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
   test('a view change just before release restarts the dwell (Codex review, PR #50)', async ({ page }) => {
     const { id } = await setup(page);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308));
     await page.mouse.move(k.x, k.y - 20);
     await page.mouse.down();
     await page.mouse.move(t.x, t.y, { steps: 8 });
@@ -2005,7 +2014,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     // In one task, with no frame between: the camera moves a world unit, then release.
     // Sideways: vertically the view is clamped at the world's top edge here.
     await page.evaluate(([x, y]) => {
-      window.__PK__!.centerOn(1081, 760);
+      window.__PK__!.centerOn(2161, 3640);
       document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: x, clientY: y, bubbles: true }));
     }, [t.x, t.y] as const);
     await page.waitForTimeout(300);
@@ -2016,7 +2025,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     const { id } = await setup(page);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     // Just below the target's bottom edge (world y 556): outside, however long it is held.
-    const below = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 640));
+    const below = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3520));
     await page.mouse.move(k.x, k.y - 20);
     await page.mouse.down();
     await page.mouse.move(below.x, below.y, { steps: 8 });
@@ -2045,7 +2054,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
   async function fireDetail(page: Page): Promise<number[]> {
     await boot(page, '?seed=3&debug=1&calm=1');
     await allPlots(page);
-    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 300, 1500), window.__PK__!.debugAdd!('fire', 800, 1500)]);
+    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 1380, 4380), window.__PK__!.debugAdd!('fire', 1880, 4380)]);
     await page.locator('[data-nav=dex]').click();
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
     return ids;
@@ -2081,7 +2090,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     // Plot 1 growing, Plot 2 holding three kids, not started.
     await page.evaluate(() => {
       const pk = window.__PK__!;
-      const plant = (plot: number) => pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('plain', 1400 + i * 250, 2600 + plot * 250)), plot });
+      const plant = (plot: number) => pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('plain', 2480 + i * 250, 5480 + plot * 250)), plot });
       plant(0);
       plant(1);
       pk.debugCommand!({ type: 'startGrowing', plot: 0 });
@@ -2111,7 +2120,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     // Discovered, then planted away: none left on the map.
     await page.evaluate(() => {
       const pk = window.__PK__!;
-      pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!('fire', 800, 1500)], plot: 0 });
+      pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!('fire', 1880, 4380)], plot: 0 });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(0);
     await page.locator('[data-nav=dex]').click();
@@ -2167,7 +2176,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await sheet(page).getByRole('button', { name: 'Name', exact: true }).click();
     await sheet(page).getByLabel('Kid name').fill('Sir Sp');
     // Fire + Water make Steam: the kid fuses away, then the app is away a while.
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1380, 4380));
     await expect(sheet(page).locator('.kid-status')).toContainText('This kid has already left the map.');
     await page.evaluate(() => window.__PK__!.debugAway!(60_000));
     await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
@@ -2182,7 +2191,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await dialog(page).getByRole('button', { name: 'Fire Kid, kid 2 on your map' }).click();
     await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
     // Kid 1 fuses away (Fire + Water make Steam).
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1380, 4380));
     await expect.poll(() => page.evaluate(() => window.__PK__!.kids().filter((k) => k.type === 'fire').length)).toBe(1);
     await page.waitForTimeout(200);
     await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
@@ -2191,7 +2200,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
   test("a Dex row's number carries into the card it opens, even after a lower copy left (Codex review round 9, FEED-NAME)", async ({ page }) => {
     await fireDetail(page);
     // Kid 1 fuses away while the detail is open; the row for kid 2 keeps its number.
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1380, 4380));
     await expect(dialog(page).getByRole('button', { name: /kid 1 on your map/ })).toHaveCount(0);
     await dialog(page).getByRole('button', { name: 'Fire Kid, kid 2 on your map' }).click();
     await expect(sheet(page).locator('.sheet-subtitle')).toHaveText('On your map · Kid 2');
@@ -2208,7 +2217,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     // In one task: Plot 1 fills, then Add, before any frame redraws it.
     await page.evaluate(() => {
       const pk = window.__PK__!;
-      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2, 3, 4].map((i) => pk.debugAdd!('plain', 1400 + i * 200, 2700)), plot: 0 });
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2, 3, 4].map((i) => pk.debugAdd!('plain', 2480 + i * 200, 5580)), plot: 0 });
       [...document.querySelectorAll<HTMLButtonElement>('.sheet button')].find((b) => b.textContent === 'Add this kid')!.click();
     });
     await expect(sheet(page).locator('.kid-status')).toContainText('This plot is full. Review it to Start growing.');
@@ -2232,26 +2241,26 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
   test('focus on a copy that fuses away moves to the section heading (Codex review, PR #54)', async ({ page }) => {
     await fireDetail(page);
     await dialog(page).getByRole('button', { name: /kid 1 on your map/ }).focus();
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1380, 4380));
     await expect(dialog(page).locator('.dex-home-heading')).toBeFocused();
   });
 
   test('a drag send gets a world card: the first explains, later ones are short', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await allPlots(page);
-    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    await page.evaluate(() => window.__PK__!.centerOn(2160, 3640));
     const send = async (x: number) => {
-      const id = await page.evaluate((px) => window.__PK__!.debugAdd!('fire', px, 1000), x);
+      const id = await page.evaluate((px) => window.__PK__!.debugAdd!('fire', px, 3880), x);
       await page.waitForTimeout(200);
       const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
-      const t = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 428));
+      const t = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3308));
       await page.mouse.move(k.x, k.y - 20);
       await page.mouse.down();
       await page.mouse.move(t.x, t.y, { steps: 8 });
       await page.waitForTimeout(450);
       await page.mouse.up();
     };
-    await send(760);
+    await send(1840);
     const card = page.locator('.feedback .toast-home');
     await expect(card).toContainText('Fire Kid added to Plot 1.');
     await expect(card).toContainText('Their types stay in your Potato-Dex.');
@@ -2259,7 +2268,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     expect(await page.evaluate(() => window.__PK__!.settings().plantV2Explained)).toBe(true);
     await card.getByRole('button', { name: 'Dismiss' }).click();
     await expect(card).toHaveCount(0);
-    await send(1400);
+    await send(2480);
     await expect(card).toContainText('Start growing at 3–5.');
     await expect(card.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
   });
@@ -2273,7 +2282,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
   /** The Garden open on its overview, with Tier 1 kids of these types on the map. */
   async function garden(page: Page, kids: string[] = []): Promise<number[]> {
     await boot(page, '?seed=3&debug=1&calm=1');
-    const ids = await page.evaluate((types) => types.map((t, i) => window.__PK__!.debugAdd!(t, 300 + (i % 4) * 300, 1500 + Math.floor(i / 4) * 300)), kids);
+    const ids = await page.evaluate((types) => types.map((t, i) => window.__PK__!.debugAdd!(t, 1380 + (i % 4) * 300, 4380 + Math.floor(i / 4) * 300)), kids);
     await page.locator('[data-nav=garden]').click();
     return ids;
   }
@@ -2284,7 +2293,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await page.evaluate(
       ([n, plot]) => {
         const pk = window.__PK__!;
-        pk.debugCommand!({ type: 'plant', kidIds: Array.from({ length: n }, (_, i) => pk.debugAdd!('plain', 1400 + i * 200, 2700 + plot * 200)), plot });
+        pk.debugCommand!({ type: 'plant', kidIds: Array.from({ length: n }, (_, i) => pk.debugAdd!('plain', 2480 + i * 200, 5580 + plot * 200)), plot });
       },
       [n, plot] as const,
     );
@@ -2367,7 +2376,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(rows.nth(1).locator('input')).toBeEnabled();
     await expect(sheet(page).locator('.picker-add')).toHaveText('Add 2 kids');
     // Fire Kid (the first chosen) fuses away: unchecked, said once, nothing chosen instead.
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 300, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1380, 4380));
     await expect(sheet(page).locator('.picker-blocked')).toContainText('The map changed. Check these kids and try Add again.');
     await expect(sheet(page).locator('.picker-add')).toHaveText('Add 1 kid');
     await expect(rows.locator('input:checked')).toHaveCount(1);
@@ -2526,7 +2535,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
     const box = sheet(page).locator('.picker-row').nth(1).locator('input');
     await box.focus();
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1400, 2400));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 2480, 5280));
     await expect(sheet(page).locator('.picker-row')).toHaveCount(3);
     await expect(box).toBeFocused();
     await page.keyboard.press('Space');
@@ -2539,7 +2548,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await page.evaluate(() => {
       const pk = window.__PK__!;
       pk.debugGive!({ materials: 1000 });
-      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('chef', 1400 + i * 200, 2700)), plot: 0 });
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('chef', 2480 + i * 200, 5580)), plot: 0 });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
     await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }), chef!);
@@ -2618,16 +2627,16 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
 });
 
 test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
-  // Plot n's soil centre: the Garden's ground (1080, 620) plus its offset, then the soil's middle.
+  // Plot n's soil centre: the Garden's ground (2160, 3500, map v3) plus its offset, then the soil's middle.
   const offsets = [
     [-96, 88],
     [96, 88],
   ] as const;
-  const soil = (n: number) => ({ x: 1080 + offsets[n - 1]![0], y: 620 + offsets[n - 1]![1] - 37.5 });
+  const soil = (n: number) => ({ x: 2160 + offsets[n - 1]![0], y: 3500 + offsets[n - 1]![1] - 37.5 });
 
   async function setup(page: Page): Promise<{ x: number; y: number }> {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.centerOn(1080, 760));
+    await page.evaluate(() => window.__PK__!.centerOn(2160, 3640));
     await page.waitForTimeout(100);
     return page.evaluate((p) => window.__PK__!.worldToScreen(p.x, p.y), soil(1));
   }
@@ -2662,7 +2671,7 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.evaluate(() => {
       const pk = window.__PK__!;
-      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('plain', 300 + i * 250, 2600)), plot: 0 });
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('plain', 1380 + i * 250, 5480)), plot: 0 });
       pk.debugCommand!({ type: 'startGrowing', plot: 0 });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
@@ -2719,7 +2728,7 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     await tap(page, locked);
     await page.waitForTimeout(300);
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    const bare = await page.evaluate(() => window.__PK__!.worldToScreen(1080, 1000));
+    const bare = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 3880));
     await tap(page, bare);
     await page.waitForTimeout(300);
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -2727,7 +2736,7 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
 
   test('a second finger on a kid cancels a tap on a plot (Codex review, PR #72)', async ({ page }) => {
     const at = await setup(page);
-    const kid = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 1000));
+    const kid = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2160, 3880));
     await page.waitForTimeout(200);
     const k = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, kid);
     // Touch 1 on the plot, touch 2 on the kid, touch 1 lifts at once: no tap.
@@ -2765,9 +2774,9 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     await boot(page, RARE);
     const ids = await page.evaluate(() => {
       const pk = window.__PK__!;
-      const out = [pk.debugAdd!('hero', 560, 1250, { body: 'round', scale: 1 }), pk.debugAdd!('hero', 790, 1250, { body: 'round', scale: 1 })];
-      out.push(pk.debugAdd!('fire', 1020, 1250, { body: 'round', scale: 1 }));
-      pk.centerOn(800, 1300);
+      const out = [pk.debugAdd!('hero', 1640, 4130, { body: 'round', scale: 1 }), pk.debugAdd!('hero', 1870, 4130, { body: 'round', scale: 1 })];
+      out.push(pk.debugAdd!('fire', 2100, 4130, { body: 'round', scale: 1 }));
+      pk.centerOn(1880, 4180);
       return out;
     });
     await page.waitForTimeout(300);
@@ -2819,8 +2828,8 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
   test('a rare kid is marked Rare in the picker, its card and the Dex has no variant rows', async ({ page }) => {
     await boot(page, RARE);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('hero', 600, 1400);
-      window.__PK__!.debugAdd!('fire', 900, 1400);
+      window.__PK__!.debugAdd!('hero', 1680, 4280);
+      window.__PK__!.debugAdd!('fire', 1980, 4280);
     });
     await page.locator('[data-nav=garden]').click();
     await page.getByRole('button', { name: 'Add kids' }).first().click();
@@ -2858,9 +2867,9 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
   test("a press just outside a small kid's body, within 44 CSS px, picks it up (§16.1, any kid; Codex review, PR #77)", async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     const id = await page.evaluate(() => {
-      window.__PK__!.centerOn(800, 1500);
+      window.__PK__!.centerOn(1880, 4380);
       // Smaller than any rolled look (test only), so the target reaches well past its sprites.
-      return window.__PK__!.debugAdd!('fire', 800, 1500, { scale: 0.36 });
+      return window.__PK__!.debugAdd!('fire', 1880, 4380, { scale: 0.36 });
     });
     await page.waitForTimeout(200);
     const at = await page.evaluate((i) => {
@@ -2965,8 +2974,8 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await boot(page, '?seed=3&debug=1&calm=1');
     const id = await page.evaluate((m) => {
       window.__PK__!.debugGive!({ materials: m });
-      window.__PK__!.centerOn(800, 1500);
-      return window.__PK__!.debugAdd!('fire', 800, 1500);
+      window.__PK__!.centerOn(1880, 4380);
+      return window.__PK__!.debugAdd!('fire', 1880, 4380);
     }, materials);
     await page.waitForTimeout(200);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
@@ -3020,7 +3029,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
 
   test("the Dex detail shows the type's personality too, before the live copies (§18.1)", async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1880, 4380));
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.locator('[data-kid="fire"]').click();
@@ -3083,7 +3092,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
   test('a kid that leaves while its card is open: the card stays, read-only, and says so (§18.3)', async ({ page }) => {
     await open(page);
     // Fire + Water make Steam: the kid fuses away.
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1880, 4380));
     await expect(card(page).locator('.kid-status')).toContainText('This kid has already left the map.');
     await expect(card(page).locator('.sheet-title')).toHaveText('Fire Kid');
     await expect(card(page).getByRole('button', { name: 'Feed', exact: true })).toHaveAttribute('aria-disabled', 'true');
@@ -3166,7 +3175,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
       const canvas = document.querySelector('canvas')!;
       const fire = (type: string) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: p.x, clientY: p.y - 20, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
       fire('pointerdown');
-      window.__PK__!.centerOn(820, 1500);
+      window.__PK__!.centerOn(1900, 4380);
       fire('pointerup');
     }, k);
     await page.waitForTimeout(300);
@@ -3216,18 +3225,18 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
 
   test('a tap on a kid near the edge never moves the map (Codex review round 6, FEED-NAME)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1880, 4380));
     // The kid just below the HUD: a held kid there sits in the top edge zone.
     const top = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
     await page.evaluate(([y]) => {
       const pk = window.__PK__!;
-      pk.centerOn(800, 1500);
-      const at = pk.worldToScreen(800, 1500);
-      const zoom = (pk.worldToScreen(0, 100).y - pk.worldToScreen(0, 0).y) / 100;
-      pk.centerOn(800, 1500 + (at.y - (y! + 70)) / zoom);
+      pk.centerOn(1880, 4380);
+      const at = pk.worldToScreen(1880, 4380);
+      const zoom = (pk.worldToScreen(1080, 2980).y - pk.worldToScreen(1080, 2880).y) / 100;
+      pk.centerOn(1880, 4380 + (at.y - (y! + 70)) / zoom);
     }, [top] as const);
     await page.waitForTimeout(200);
-    const before = await page.evaluate(() => window.__PK__!.worldToScreen(800, 1500));
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1880, 4380));
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     // Down, two frames (edge scrolling would act in them), up: in the page, so a slow
     // runner can't stretch the press past the 220 ms a tap allows.
@@ -3239,7 +3248,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
           fire('pointerdown');
           requestAnimationFrame(() =>
             requestAnimationFrame(() => {
-              const at = window.__PK__!.worldToScreen(800, 1500);
+              const at = window.__PK__!.worldToScreen(1880, 4380);
               fire('pointerup');
               done(at);
             }),
@@ -3249,7 +3258,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     );
     expect(during).toEqual(before);
     await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Fire Kid');
-    expect(await page.evaluate(() => window.__PK__!.worldToScreen(800, 1500))).toEqual(before);
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1880, 4380))).toEqual(before);
   });
 
   test('a refusal stays until the player moves on; a success goes after 2.5 s (Codex review round 5, FEED-NAME)', async ({ page }) => {
@@ -3312,7 +3321,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     const input = card(page).getByLabel('Kid name');
     await input.fill('Spud');
     await expect(input).toBeFocused();
-    await page.evaluate(() => window.__PK__!.debugAdd!('water', 800, 1500));
+    await page.evaluate(() => window.__PK__!.debugAdd!('water', 1880, 4380));
     await expect(card(page).locator('.kid-status')).toBeFocused();
     await expect(card(page).locator('.kid-status')).toContainText('This kid has already left the map.');
     await expect(input).toBeDisabled();
@@ -3342,7 +3351,7 @@ test.describe('forgiving drop (D-051)', () => {
     return page.evaluate(([held, centre]) => {
       const pk = window.__PK__!;
       const look = { body: 'round', scale: 1 };
-      const water = pk.debugAdd!(centre, 540, 1100, look);
+      const water = pk.debugAdd!(centre, 1620, 3980, look);
       const w = pk.kids().find((k) => k.id === water)!;
       const dx = w.box.right - w.box.left + 6;
       const dy = w.box.bottom - w.box.top + 6;
@@ -3351,7 +3360,7 @@ test.describe('forgiving drop (D-051)', () => {
       let i = 0;
       for (const sx of [-1, 0, 1])
         for (const sy of [-1, 0, 1]) if (sx || sy) ring.push(pk.debugAdd!(types[i++ % 3]!, w.x + sx * dx, w.y + sy * dy, look));
-      const plain = pk.debugAdd!(held, 250, 1500, look);
+      const plain = pk.debugAdd!(held, 1330, 4380, look);
       return { plain, water, ring };
     }, [held, centre] as const);
   }
@@ -3442,11 +3451,11 @@ test.describe('the world lives on while away (D-053)', () => {
     const { placed, before, out } = await page.evaluate(async () => {
       const pk = window.__PK__!;
       const look = { body: 'round', scale: 1 };
-      const first = pk.debugAdd!('plain', 300, 1000, look);
+      const first = pk.debugAdd!('plain', 1380, 3880, look);
       const box = pk.kids().find((k) => k.id === first)!.box;
       const ids = [first];
       for (let i = 1; i < 12; i++) {
-        const [x, y] = [300 + (i % 4) * (box.right - box.left + 4), 1000 + Math.floor(i / 4) * (box.bottom - box.top + 4)];
+        const [x, y] = [1380 + (i % 4) * (box.right - box.left + 4), 3880 + Math.floor(i / 4) * (box.bottom - box.top + 4)];
         ids.push(pk.debugAdd!(['plain', 'water', 'fire', 'snow'][i % 4]!, x, y, look));
       }
       const before = pk.kids();
@@ -3494,7 +3503,7 @@ test('a sprout that comes up while away is drawn like any arrival (Codex review,
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   const sprouted = await page.evaluate(async () => {
     const pk = window.__PK__!;
-    const ids = [pk.debugAdd!('plain', 250, 1500), pk.debugAdd!('fire', 600, 1500), pk.debugAdd!('snow', 950, 1500)];
+    const ids = [pk.debugAdd!('plain', 1330, 4380), pk.debugAdd!('fire', 1680, 4380), pk.debugAdd!('snow', 2030, 4380)];
     for (const id of ids) pk.debugCommand!({ type: 'plant', kidIds: [id] });
     await pk.debugAway!(0); // a step: the three are planted
     pk.debugCommand!({ type: 'startGrowing', plot: 0 });
@@ -3519,7 +3528,7 @@ test('starting a plot growing is saved at once, with its decided sprout (Codex r
     });
   await page.evaluate(() => {
     const pk = window.__PK__!;
-    for (const [t, x] of [['plain', 250], ['fire', 600], ['snow', 950]] as const) pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!(t, x, 1500)] });
+    for (const [t, x] of [['plain', 1330], ['fire', 1680], ['snow', 2030]] as const) pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!(t, x, 4380)] });
   });
   // Planting saves at once too, with the sprout still undecided.
   await expect.poll(async () => (await savedPlot())?.planted?.length, { timeout: 3000 }).toBe(3);
@@ -3543,7 +3552,7 @@ test.describe('plots on the map (D-061, GUI_MVP §15.2)', () => {
     await page.evaluate(() => {
       const pk = window.__PK__!;
       const ids: number[] = [];
-      for (let i = 0; i < 12; i++) ids.push(pk.debugAdd!(['plain', 'plain', 'plain', 'fire'][i % 4]!, 200 + (i % 4) * 260, 1700 + Math.floor(i / 4) * 300));
+      for (let i = 0; i < 12; i++) ids.push(pk.debugAdd!(['plain', 'plain', 'plain', 'fire'][i % 4]!, 1280 + (i % 4) * 260, 4580 + Math.floor(i / 4) * 300));
       pk.debugCommand!({ type: 'plant', kidIds: ids.slice(0, 3) });
     });
     await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_filling', 'fx_plant_slot_filled', 'fx_plant_slot_filled', 'fx_plant_slot_filled']);
@@ -3557,7 +3566,7 @@ test.describe('plots on the map (D-061, GUI_MVP §15.2)', () => {
     await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_leaves']);
     // Fill the three free places, so the ripe seed has to wait.
     await page.evaluate(() => {
-      for (let i = 0; i < 3; i++) window.__PK__!.debugAdd!('plain', 300 + i * 260, 2700);
+      for (let i = 0; i < 3; i++) window.__PK__!.debugAdd!('plain', 1380 + i * 260, 5580);
     });
     await page.evaluate((s) => window.__PK__!.debugAway!(s * 1000), grow * 0.3);
     await expect.poll(async () => (await plot0(page)).waiting).toBe('full');
@@ -3581,7 +3590,7 @@ test.describe('pinch-to-zoom (D-071)', () => {
   async function setup(page: Page): Promise<{ errors: string[]; anchor: Pt; at: Pt }> {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     // An open stretch of map, away from the edges, with no kid under the fingers.
-    const anchor = { x: 1080, y: 2200 };
+    const anchor = { x: 2160, y: 5080 };
     await page.evaluate((a) => window.__PK__!.centerOn(a.x, a.y), anchor);
     await page.waitForTimeout(100);
     const at = await page.evaluate((a) => window.__PK__!.worldToScreen(a.x, a.y), anchor);
@@ -3652,7 +3661,7 @@ test.describe('pinch-to-zoom (D-071)', () => {
 
   test('a second finger on a kid just pressed pinches instead: the kid is put back, with no card and no drag', async ({ page }) => {
     await setup(page);
-    const id = await page.evaluate((a) => window.__PK__!.debugAdd!('plain', a.x, a.y), { x: 1080, y: 2200 });
+    const id = await page.evaluate((a) => window.__PK__!.debugAdd!('plain', a.x, a.y), { x: 2160, y: 5080 });
     await page.waitForTimeout(200);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     const before = await page.evaluate((i) => window.__PK__!.kids().find((x) => x.id === i)!, id);
@@ -3672,7 +3681,7 @@ test.describe('pinch-to-zoom (D-071)', () => {
 
   test('a second finger landing on a kid while the first pans pinches too, and picks nothing up', async ({ page }) => {
     await setup(page);
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 2200));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2160, 5080));
     await page.waitForTimeout(200);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     const ground = { x: k.x - 150, y: k.y + 150 };
@@ -3689,7 +3698,7 @@ test.describe('pinch-to-zoom (D-071)', () => {
 
   test('a second finger after the 220 ms tap window, before any frame has seen it pass, leaves the kid dragged', async ({ page }) => {
     await setup(page);
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 2200));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2160, 5080));
     await page.waitForTimeout(200);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     // One page task: no frame runs between the press and the second finger (Codex review, PR #83).
@@ -3716,7 +3725,7 @@ test.describe('pinch-to-zoom (D-071)', () => {
 
   test('a second finger while a kid is being dragged is ignored: the drag goes on and nothing zooms', async ({ page }) => {
     await setup(page);
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1080, 2200));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2160, 5080));
     await page.waitForTimeout(200);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     await touches(page, [
@@ -3734,7 +3743,7 @@ test.describe('pinch-to-zoom (D-071)', () => {
 
   test('the zoom stays the same when the screen changes size', async ({ page }) => {
     const { at } = await setup(page);
-    const span = () => page.evaluate(() => { const pk = window.__PK__!; return pk.worldToScreen(1300, 2200).x - pk.worldToScreen(1000, 2200).x; });
+    const span = () => page.evaluate(() => { const pk = window.__PK__!; return pk.worldToScreen(2380, 5080).x - pk.worldToScreen(2080, 5080).x; });
     const fitted = await span();
     await touches(page, [
       ['pointerdown', 1, at.x - 40, at.y],
@@ -3861,7 +3870,10 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
       await openTool(page, 'Map view');
       await page.getByRole('button', { name: 'Find Garden' }).click();
       expect(await y(frame.top)).toBeGreaterThanOrEqual(band.top - 0.5);
-      expect(await y(frame.bottom)).toBeLessThanOrEqual(band.bottom + 0.5);
+      // The whole frame when it fits the band (portrait); else the building first, its top
+      // at the band's top (a compact landscape at its fitted zoom, §20.1).
+      if ((await y(frame.bottom)) - (await y(frame.top)) <= band.bottom - band.top) expect(await y(frame.bottom)).toBeLessThanOrEqual(band.bottom + 0.5);
+      else expect(await y(frame.top)).toBeLessThan(band.top + 2);
       // At 200 % the frame no longer fits: the building's top is at the band's top.
       await page.evaluate(() => window.__PK__!.centerOn(99999, 99999));
       await openTool(page, 'Map view');
@@ -3884,7 +3896,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     // Nothing in the strip is a control (§19.1).
     await expect(page.locator('.hud button')).toHaveCount(0);
     await page.evaluate((n) => {
-      for (let i = n; i < 12; i++) window.__PK__!.debugAdd!('plain', 200 + (i % 6) * 280, 1500 + Math.floor(i / 6) * 300);
+      for (let i = n; i < 12; i++) window.__PK__!.debugAdd!('plain', 1280 + (i % 6) * 280, 4380 + Math.floor(i / 6) * 300);
     }, n);
     await expect(pop).toHaveAttribute('aria-label', 'Map is full: 12 of 12 kids');
     await expect(pop.locator('img')).toHaveAttribute('src', /title%3eAttention/);
@@ -3932,7 +3944,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
 
   test('Map view zooms in √2 steps about the play band, stops at its limits, resets, and finds the Garden', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.centerOn(1080, 2400));
+    await page.evaluate(() => window.__PK__!.centerOn(2160, 5280));
     await openTool(page, 'Map view');
     const sheet = page.getByRole('dialog', { name: 'Map view' });
     await expect(sheet).toContainText('Pinch the map with two fingers.');
@@ -3959,7 +3971,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     // Find Garden keeps the zoom, brings the Garden (off screen at 100 % from here) into the
     // play band, and closes.
     await sheet.getByRole('button', { name: 'Reset · 100%' }).click();
-    const garden = () => page.evaluate(() => window.__PK__!.worldToScreen(1080, 870));
+    const garden = () => page.evaluate(() => window.__PK__!.worldToScreen(2160, 3750));
     const band = await page.evaluate(() => ({
       top: document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
       bottom: document.querySelector('.tray')!.getBoundingClientRect().top,
