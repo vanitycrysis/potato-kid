@@ -189,6 +189,8 @@ export class Dex {
     if (!s) return;
     const at = this.sheets.snapshot()?.scrollTop ?? 0;
     if (this.tab === 'kids' && s.kids?.showing) this.detail = { kid: s.kids.showing, scroll: at };
+    // The Kids tab's place is its segment's own (§16.4; Codex review, #94).
+    else if (this.tab === 'kids') this.segmentScroll[this.segment] = at;
     else this.scroll[this.tab] = at;
   }
 
@@ -216,7 +218,7 @@ export class Dex {
       s.panel.append(s.kids.root);
       s.kids.update();
       // The grid's place first, so a detail opened over it returns there.
-      s.sheet.scrollTo(this.scroll.kids);
+      s.sheet.scrollTo(this.segmentScroll[this.segment]);
       // A discovery card's kid, else the detail that was open (e.g. before the offline
       // summary interrupted it; Codex review, PR #43).
       const back = kid !== undefined ? { kid, scroll: 0 } : this.detail;
@@ -357,7 +359,8 @@ export class Dex {
       for (const c of unknownCells) c.hidden = q !== '';
       for (const t of knownCells.values()) {
         t.cell.hidden = q !== '' && !t.name.toLowerCase().includes(q);
-        if (!t.cell.hidden) matches++;
+        // Only this segment's tiles, the ones in the grid, count (Codex review, #94).
+        if (!t.cell.hidden && grid.contains(t.cell)) matches++;
       }
       summary.hidden = q === '' || unknown === 0;
       summary.textContent = `${unknown} still undiscovered`;
@@ -454,7 +457,7 @@ export class Dex {
   private showDetail(type: KidId): void {
     const p = this.shown?.kids;
     if (!p) return;
-    if (!p.showing) this.scroll.kids = this.sheets.snapshot()?.scrollTop ?? 0;
+    if (!p.showing) this.segmentScroll[this.segment] = this.sheets.snapshot()?.scrollTop ?? 0;
     p.showing = type;
     const k = this.kid(type);
     const back = el('button', 'ui-button dex-back', 'Back to kids');
@@ -525,7 +528,7 @@ export class Dex {
     p.detail.hidden = true;
     p.detail.replaceChildren();
     for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid, p.root.querySelector('.dex-segments') as HTMLElement]) node.hidden = false;
-    this.shown!.sheet.scrollTo(this.scroll.kids);
+    this.shown!.sheet.scrollTo(this.segmentScroll[this.segment]);
     // Its tile, unless the kept search hides it: then the search field, so focus stays in
     // the sheet (Codex review, PR #43).
     const tile = p.grid.querySelector<HTMLElement>(`[data-kid="${type}"]`);

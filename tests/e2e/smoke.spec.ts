@@ -1572,6 +1572,28 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
     await expect(dialog(page).getByRole('button', { name: 'Specials', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(dialog(page).locator('[data-kid="gift"]')).toBeFocused();
+    // A search here counts only this segment's kids: Water is Ordinary (Codex review, #94).
+    await field.fill('wat');
+    await expect(dialog(page).getByText('No discovered kids match.')).toBeVisible();
+  });
+
+  test('each segment keeps its scroll, also when a discovery card opens another (Codex review, #94)', async ({ page }) => {
+    await twoKnown(page);
+    await dexButton(page).click();
+    const body = dialog(page).locator('.sheet-body');
+    await body.evaluate((e) => (e.scrollTop = 300));
+    const kept = await body.evaluate((e) => e.scrollTop);
+    expect(kept).toBeGreaterThan(100);
+    await page.keyboard.press('Escape');
+    // A special sprouts; its card opens the Dex at it, in Specials.
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'gift'));
+    await page.locator('.feedback').getByRole('button', { name: /found/ }).click();
+    await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Gift Kid');
+    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    await expect(dialog(page).getByRole('button', { name: 'Specials', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    // Ordinary is where it was left.
+    await dialog(page).getByRole('button', { name: 'Ordinary', exact: true }).click();
+    expect(await body.evaluate((e) => e.scrollTop)).toBe(kept);
   });
 
   test('search finds discovered names only', async ({ page }) => {
