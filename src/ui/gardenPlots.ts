@@ -17,7 +17,13 @@ import type { OpenSheet } from './sheet';
 // and footer, and Back returns to the overview. Every change goes to the sim as a command
 // and shows only once the sim has answered: nothing is optimistic (GUI_MVP §4).
 
-type Pending = { type: 'unlockPlot' } | { type: 'startGrowing'; plot: number } | { type: 'plant'; plot: number; kidIds: number[] };
+type Pending =
+  | { type: 'unlockPlot' }
+  | { type: 'startGrowing'; plot: number }
+  | { type: 'plant'; plot: number; kidIds: number[] }
+  // Taking kids back out (D-074, GUI_MVP §21): one from a filling plot, or all of them.
+  | { type: 'unplant'; plot: number; kidId: number }
+  | { type: 'emptyPlot'; plot: number; count: number; growing: boolean };
 
 type PlotState = 'locked' | 'empty' | 'filling' | 'growing' | 'ready';
 
@@ -47,6 +53,24 @@ interface Note {
 }
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+
+/** Codex's exact refusals for Take out, Empty and Cancel (GUI_MVP §21.3). */
+function takeOutRefusal(p: { type: 'unplant' } | { type: 'emptyPlot'; count: number; growing: boolean }, reason: RejectReason): string {
+  switch (reason) {
+    case 'full':
+      return p.type === 'unplant' ? 'The map is full. Make room for 1 kid, then try Take out again.' : `There isn't room on the map for all ${p.count} kids. Make room, then try again.`;
+    case 'noRoom':
+      return "There's no clear spot by the Garden. Move nearby kids aside, then try again.";
+    case 'ready':
+      return 'This sprout has finished growing and cannot be cancelled.';
+    case 'plotsBusy':
+      return 'This plot is growing. Choose Cancel growing to bring all its kids back.';
+    case 'gone':
+      return p.type === 'unplant' ? 'This kid is no longer in this plot. Check the plot and try again.' : p.growing ? 'This plot changed. Review it again before cancelling.' : 'This plot changed. Review it again before emptying it.';
+    default:
+      return refusalText(reason, p.type);
+  }
+}
 
 export class GardenPlots {
   private view: { kind: 'overview' } | { kind: 'detail'; plot: number } | { kind: 'picker'; plot: number } = { kind: 'overview' };
@@ -157,7 +181,8 @@ export class GardenPlots {
   openPlot(i: number): void {
     const p = this.info(i);
     if (p.state === 'locked') return;
-    this.show(p.state === 'empty' || (p.state === 'filling' && p.count < this.planting.maxKids) ? { kind: 'picker', plot: i } : { kind: 'detail', plot: i });
+    // An empty plot opens its picker; a filling one its detail, where Take out is (§21.1).
+    this.show(p.state === 'empty' ? { kind: 'picker', plot: i } : { kind: 'detail', plot: i });
   }
 
   private show(view: GardenPlots['view'], focusPlots = false): void {
@@ -216,6 +241,18 @@ export class GardenPlots {
         this.sheet.body.closest('.sheet')?.querySelector<HTMLElement>('.sheet-title')?.focus();
         // Drawn now, in the open sheet: seen.
         if (first) this.notes.markShown();
+      } else if ((p.type === 'unplant' || p.type === 'emptyPlot') && e.type === 'unplanted' && e.plot === p.plot) {
+        // All of an Empty or a Cancel lands in one step (the sim's take-out is all or none).
+        handled.push(e);
+        this.pending = null;
+        const n = p.plot + 1;
+        const lines =
+          p.type === 'unplant'
+            ? [`${e.kid.name ?? this.name(e.kid.type)} is back by the Garden.`]
+            : p.growing
+              ? [`Plot ${n} was cancelled. ${p.count} ${plural(p.count, 'kid is', 'kids are')} back by the Garden.`, 'Growing time was lost.']
+              : [`Plot ${n} is empty. ${p.count} ${plural(p.count, 'kid is', 'kids are')} back by the Garden.`];
+        this.note = { plot: p.plot, note: { lines, warn: false } };
       } else if (e.type === 'rejected' && e.command === p.type) {
         this.pending = null;
         this.refused(p, e.reason);
@@ -230,6 +267,10 @@ export class GardenPlots {
   private pickerRefusal: ((reason: RejectReason) => void) | null = null;
 
   private refused(p: Pending, reason: RejectReason): void {
+    if (p.type === 'unplant' || p.type === 'emptyPlot') {
+      this.note = { plot: p.plot, note: { lines: [takeOutRefusal(p, reason)], warn: true } };
+      return;
+    }
     if (p.type === 'unlockPlot') this.unlockRefusal = refusalText(reason, 'unlockPlot', 'materials');
     else if (p.type === 'startGrowing') {
       const lines = reason === 'plotsBusy' ? ['This plot is already growing.'] : [refusalText(reason, 'startGrowing')];
@@ -479,17 +520,21 @@ export class GardenPlots {
   }
 
   /** The kids in a plot, in admission order, then each empty space by number (§15.4). */
-  private kidRows(planted: readonly PlantedKid[], withEmpty: boolean): HTMLElement {
+  private kidRows(planted: readonly PlantedKid[], withEmpty: boolean, takeOut?: (k: PlantedKid) => HTMLButtonElement): HTMLElement {
     const list = el('div', 'plot-kids');
-    for (const k of planted)
-      list.append(
-        el(
-          'div',
-          'plot-kid',
-          portrait(kidRig!, k.type, 48, k.look),
-          el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', this.name(k.type)), el('span', 'sheet-helper', this.marks(k.type, [], k.happy ? 'added' : null))),
-        ),
+    for (const k of planted) {
+      // A name comes back with its kid (D-074): rows show it, with the type beside.
+      const title = k.name ?? this.name(k.type);
+      const marks = this.marks(k.type, [], k.happy ? 'added' : null);
+      const row = el(
+        'div',
+        'plot-kid',
+        portrait(kidRig!, k.type, 48, k.look),
+        el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', title), el('span', 'sheet-helper', k.name ? `${this.name(k.type)} · ${marks}` : marks)),
       );
+      if (takeOut) row.append(takeOut(k));
+      list.append(row);
+    }
     if (withEmpty) for (let i = planted.length; i < this.planting.maxKids; i++) list.append(el('p', 'sheet-helper plot-space', `Space ${i + 1} · Empty`));
     return list;
   }
@@ -515,6 +560,8 @@ export class GardenPlots {
     body.replaceChildren(back, note.node, content);
     /** The Start growing review is open, for this exact plot (its kids when opened). */
     let review: string | null = null;
+    /** An Empty or Cancel review is open, for this exact plot as it was then (§§21.1-21.2). */
+    let confirm: { kind: 'empty' | 'cancel'; sig: string } | null = null;
     let built = '';
     let start: HTMLButtonElement | null = null;
     let left: HTMLElement | null = null;
@@ -529,11 +576,47 @@ export class GardenPlots {
         rail = this.rail();
         parts.push(left, rail.node);
       }
-      parts.push(el('h4', 'dex-home-confirm-title', 'Kids in this plot'), this.kidRows(p.planted, !started));
+      const busy = () => this.pending !== null;
+      const takeOut =
+        p.state === 'filling' && !confirm
+          ? (k: PlantedKid) => {
+              const b = this.button('Take out', 'plot-take-out', () => {
+                if (busy()) return;
+                b.textContent = 'Taking out…';
+                this.send({ type: 'unplant', plot: i, kidId: k.id });
+              });
+              b.dataset.kid = String(k.id);
+              b.setAttribute('aria-label', `Take out ${k.name ?? this.name(k.type)}`);
+              return b;
+            }
+          : undefined;
+      parts.push(el('h4', 'dex-home-confirm-title', 'Kids in this plot'), this.kidRows(p.planted, !started, takeOut));
+      if (p.state === 'filling') parts.push(el('p', 'sheet-helper', 'Take kids out before growing, or cancel while growing.'));
       footer.replaceChildren();
       start = null;
-      if (started) {
+      const openConfirm = (kind: 'empty' | 'cancel') => {
+        confirm = { kind, sig };
+        built = '';
+        refresh();
+        const h = body.querySelector<HTMLElement>('.plot-confirm-heading');
+        h?.scrollIntoView({ block: 'start' });
+        h?.focus({ preventScroll: true });
+      };
+      if (p.state === 'ready') {
+        parts.push(el('p', 'sheet-helper', 'This sprout has finished growing and cannot be cancelled.'));
         footer.append(this.button('Back to plots', 'sheet-action', () => this.show({ kind: 'overview' }, true)));
+      } else if (p.state === 'growing') {
+        if (confirm?.kind === 'cancel') {
+          parts.push(this.confirmBlock(i, p, 'cancel'));
+          // Two separate controls; the activation that opened the review can't also confirm.
+          footer.append(
+            this.button('Keep growing', 'sheet-action', () => closeConfirm(true)),
+            this.confirmButton(`Cancel growing · ${p.count} ${plural(p.count, 'kid', 'kids')}`, () => this.send({ type: 'emptyPlot', plot: i, count: p.count, growing: true })),
+          );
+        } else {
+          parts.push(this.button('Cancel growing', 'plot-action-full plot-cancel', () => openConfirm('cancel')));
+          footer.append(this.button('Back to plots', 'sheet-action', () => this.show({ kind: 'overview' }, true)));
+        }
       } else {
         parts.push(
           el('div', 'plot-odds', ...this.rolls(p.planted).map((l) => el('p', 'sheet-body-text', l))),
@@ -541,6 +624,19 @@ export class GardenPlots {
           el('p', 'sheet-helper', `One kid sprouts after ${formatDuration(this.game.growSeconds)}.`),
         );
         if (p.count < max) parts.push(this.button('Add kids', 'plot-action-full', () => this.show({ kind: 'picker', plot: i })));
+        if (p.count > 0) {
+          if (confirm?.kind === 'empty') {
+            parts.push(
+              this.confirmBlock(i, p, 'empty'),
+              el(
+                'div',
+                'plot-confirm-actions',
+                this.button('Keep filling', 'plot-action-full', () => closeConfirm(true)),
+                this.confirmButton(`Empty plot · ${p.count} ${plural(p.count, 'kid', 'kids')}`, () => this.send({ type: 'emptyPlot', plot: i, count: p.count, growing: false })),
+              ),
+            );
+          } else parts.push(this.button('Empty plot', 'plot-action-full plot-empty', () => openConfirm('empty')));
+        }
         const min = this.planting.minKids;
         const ready = p.count >= min;
         const helper =
@@ -586,6 +682,14 @@ export class GardenPlots {
       if (focusStart) start?.focus();
     };
 
+    const closeConfirm = (focusOpener: boolean) => {
+      const kind = confirm?.kind;
+      confirm = null;
+      built = '';
+      refresh();
+      if (focusOpener) body.querySelector<HTMLElement>(kind === 'cancel' ? '.plot-cancel' : '.plot-empty')?.focus();
+    };
+
     const refresh = () => {
       const p = this.info(i);
       const sig = `${p.state}|${p.planted.map((k) => k.type).join(',')}`;
@@ -596,7 +700,19 @@ export class GardenPlots {
         if (!(this.note?.plot === i && !this.note.note.warn)) this.note = { plot: i, note: { lines, warn: true } };
       }
       if (review !== null && p.state !== 'filling') review = null;
-      const key = `${sig}|${review !== null}`;
+      // An Empty or Cancel review closes if the plot changed under it, and says so; a growing
+      // plot turning ready says it can't be cancelled (§21.2).
+      const sending = this.pending?.type === 'emptyPlot' && this.pending.plot === i;
+      if (confirm && confirm.sig !== sig && !sending) {
+        const lines =
+          p.state === 'ready'
+            ? ['This sprout has finished growing and cannot be cancelled.']
+            : [confirm.kind === 'cancel' ? 'This plot changed. Review it again before cancelling.' : 'This plot changed. Review it again before emptying it.'];
+        confirm = null;
+        if (!(this.note?.plot === i && !this.note.note.warn)) this.note = { plot: i, note: { lines, warn: true } };
+      }
+      if (confirm && p.state === 'empty') confirm = null;
+      const key = `${sig}|${review !== null}|${confirm?.kind ?? ''}|${this.pending !== null}`;
       if (key !== built) {
         built = key;
         build(p, sig);
@@ -624,11 +740,51 @@ export class GardenPlots {
     return {
       update: refresh,
       escape: () => {
+        if (confirm) {
+          closeConfirm(true);
+          return true;
+        }
         if (review === null) return false;
         collapse(true);
         return true;
       },
     };
+  }
+
+  /** "Empty Plot n?" or "Cancel Plot n?": exactly what it does, before it does it (§§21.1-21.2). */
+  private confirmBlock(i: number, p: PlotInfo, kind: 'empty' | 'cancel'): HTMLElement {
+    const n = i + 1;
+    const heading = el('h4', 'dex-home-confirm-title plot-confirm-heading', kind === 'cancel' ? `Cancel Plot ${n}?` : `Empty Plot ${n}?`);
+    heading.tabIndex = -1;
+    const kids = `${p.count} ${plural(p.count, 'kid', 'kids')}`;
+    const room = Math.max(0, this.game.capacity - this.game.state.world.kids.length);
+    const lines =
+      kind === 'cancel'
+        ? [
+            `All ${kids} will return by the Garden.`,
+            'Growing time will be lost. Start again from the beginning if you plant them again.',
+            'Nothing is charged or refunded.',
+            `Grown for ${formatDuration(this.game.growSeconds - p.left)}.`,
+          ]
+        : [`All ${kids} will return by the Garden. Nothing is charged.`];
+    return el(
+      'div',
+      'plot-review plot-confirm ui-surface',
+      heading,
+      ...(kind === 'cancel' ? [this.kidRows(p.planted, false)] : []),
+      ...lines.map((l) => el('p', 'sheet-body-text', l)),
+      el('p', 'sheet-helper', `Room needed: ${p.count}. Room on map: ${room}.`),
+    );
+  }
+
+  /** A confirming action: ink text, the danger only in its border (§21.2, LAYOUT-DESIGN B2). */
+  private confirmButton(label: string, onClick: () => void): HTMLButtonElement {
+    const b = this.button(label, 'sheet-action plot-confirm-action', () => {
+      if (this.pending) return;
+      b.textContent = label.startsWith('Cancel') ? 'Cancelling…' : 'Emptying…';
+      onClick();
+    });
+    return b;
   }
 
   /** "Start Plot {n} growing?": exactly what starting does, before it does it (§15.4). */
@@ -638,8 +794,7 @@ export class GardenPlots {
     const lines = [
       ...this.rolls(p.planted),
       `One kid sprouts after ${formatDuration(this.game.growSeconds)}.`,
-      'These kids have already left your map. No refund.',
-      'Their names and happy effects have ended. One new kid will sprout.',
+      'One new kid will sprout. Cancelling before it is ready returns these kids and loses the growing time.',
       ...(p.planted.some((k) => this.kind(k.type) === 'Special') ? ['Special kids cannot be bought back.'] : []),
       ...(p.planted.some((k) => this.kind(k.type) === 'Rare') ? ['Rare kids cannot be bought back.'] : []),
     ];
@@ -679,8 +834,8 @@ export class GardenPlots {
     const helpers = el(
       'div',
       'picker-helpers',
-      el('p', 'sheet-helper', 'Added kids leave the map right away. They cannot be taken back.'),
-      el('p', 'sheet-helper', 'Their names, income and happy effects end when you press Add.'),
+      el('p', 'sheet-helper', 'Added kids leave the map. You can take them out while filling, or cancel while growing.'),
+      el('p', 'sheet-helper', 'They earn no Materials in a plot. Happiness keeps counting down.'),
       el('p', 'sheet-helper', 'Selections stay on the map until Add.'),
       el('p', 'sheet-helper', 'Two separate rolls. If both hit, the sprout is the rare kid.'),
     );
@@ -863,7 +1018,7 @@ export class GardenPlots {
         blocked.replaceChildren(...(why ? [icon('icon_warning', '', 'ui-icon-24'), el('span', 'card-line', why)] : []));
       }
 
-      const text = [...projection(), 'Added kids leave now. No refund.'];
+      const text = [...projection(), 'Leaves map now. Take out before growing.'];
       if (lines.dataset.text !== text.join('\n')) {
         lines.dataset.text = text.join('\n');
         lines.replaceChildren(...text.map((t) => el('p', 'picker-line', t)));

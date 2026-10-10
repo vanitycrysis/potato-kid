@@ -2384,7 +2384,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(footer).toContainText('Plot 1: 0 → 3 / 5');
     await expect(footer).toContainText('Special roll: Need 3 more → 10%');
     await expect(footer).toContainText('Rare roll: Need 3 more → 5%');
-    await expect(footer).toContainText('Added kids leave now. No refund.');
+    await expect(footer).toContainText('Leaves map now. Take out before growing.');
     await expect(sheet(page).locator('.picker-helpers')).toContainText('Two separate rolls. If both hit, the sprout is the rare kid.');
     await add.click();
     // One step: the three are planted together, and the detail shows what happened.
@@ -2443,7 +2443,8 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     // The review: exactly what starting does. Nothing was sent.
     await expect(sheet(page).locator('.plot-review-heading')).toHaveText('Start Plot 1 growing?');
     await expect(sheet(page).locator('.plot-review-heading')).toBeFocused();
-    await expect(sheet(page).locator('.plot-review')).toContainText('These kids have already left your map. No refund.');
+    // D-074: kids can come back, so the review says what cancelling costs (GUI_MVP §21.3).
+    await expect(sheet(page).locator('.plot-review')).toContainText('One new kid will sprout. Cancelling before it is ready returns these kids and loses the growing time.');
     await expect(sheet(page).locator('.plot-start')).toHaveText('Start growing · 3 kids');
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
@@ -4216,5 +4217,113 @@ test.describe('every kid on the map, and Which kid? (GUI_MVP §§19.2, 20.1)', (
     await expect(page.getByRole('dialog', { name: 'Kids on map' })).toBeVisible();
     await page.getByRole('button', { name: 'Back to Potato-Dex' }).click();
     await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
+  });
+});
+
+test.describe('taking kids out of a plot, and cancelling a growing one (D-074, GUI_MVP §21)', () => {
+  /** Plants these kids into plot 1 and opens its detail from the Garden. Returns their ids. */
+  async function planted(page: Page, types: string[], name?: string): Promise<number[]> {
+    const ids = await page.evaluate(
+      ([types, name]) => {
+        const pk = window.__PK__!;
+        const ids = types.map((t, i) => pk.debugAdd!(t, 1500 + i * 260, 4500));
+        // A name costs Materials (D-067).
+        if (name) {
+          pk.debugGive!({ materials: 1000 });
+          pk.debugCommand!({ type: 'name', kidId: ids[0]!, name });
+        }
+        pk.debugCommand!({ type: 'plant', kidIds: ids, plot: 0 });
+        return ids;
+      },
+      [types, name ?? null] as const,
+    );
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('button', { name: 'Review plot' }).first().click();
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Plot 1');
+    return ids;
+  }
+  const note = (page: Page) => page.getByRole('dialog').locator('.plot-note');
+
+  test('Take out brings one kid back at once, with its name; the plot keeps the rest', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await planted(page, ['plain', 'fire', 'water'], 'Spud');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Take kids out before growing, or cancel while growing.');
+    await dialog.getByRole('button', { name: 'Take out Spud' }).click();
+    await expect(note(page)).toContainText('Spud is back by the Garden.');
+    await expect.poll(() => page.evaluate((id) => window.__PK__!.kids().some((k) => k.id === id), ids[0]!)).toBe(true);
+    await expect(dialog.locator('.plot-take-out')).toHaveCount(2);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+  });
+
+  test('Empty plot asks first; Keep filling sends nothing; then every kid comes back', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire']);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Empty plot', exact: true }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveText('Empty Plot 1?');
+    await expect(dialog).toContainText('All 2 kids will return by the Garden. Nothing is charged.');
+    await dialog.getByRole('button', { name: 'Keep filling' }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+    await dialog.getByRole('button', { name: 'Empty plot', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Empty plot · 2 kids' }).click();
+    await expect(note(page)).toContainText('Plot 1 is empty. 2 kids are back by the Garden.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+  });
+
+  test('a growing plot: Cancel growing reviews the loss, then brings every kid back', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('.plot-take-out')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveText('Cancel Plot 1?');
+    for (const line of ['All 3 kids will return by the Garden.', 'Growing time will be lost. Start again from the beginning if you plant them again.', 'Nothing is charged or refunded.', 'Room needed: 3.']) {
+      await expect(dialog).toContainText(line);
+    }
+    await expect(dialog.locator('.sheet-footer .ui-button')).toHaveText(['Keep growing', 'Cancel growing · 3 kids']);
+    await dialog.getByRole('button', { name: 'Cancel growing · 3 kids' }).click();
+    await expect(note(page)).toContainText('Plot 1 was cancelled. 3 kids are back by the Garden.');
+    await expect(note(page)).toContainText('Growing time was lost.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+  });
+
+  test('a full map: Take out is refused with its exact reason, and the kid stays in the plot', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    // Fill the map behind the sheet.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 12; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+    });
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('.plot-take-out').first().click();
+    await expect(note(page)).toContainText('The map is full. Make room for 1 kid, then try Take out again.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
+  });
+
+  test('a review that the plot outgrows closes and says why; a ready sprout offers no Cancel', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toBeVisible();
+    // The sprout finishes while the review is open (the map is kept full so it waits).
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 12; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+      pk.debugReadySeed!(0, 'plain');
+    });
+    await expect(note(page)).toContainText('This sprout has finished growing and cannot be cancelled.');
+    // The ready detail says so itself, with no Take out, Start or Cancel.
+    await expect(dialog.locator('.plot-detail')).toContainText('This sprout has finished growing and cannot be cancelled.');
+    await expect(dialog.getByRole('button', { name: /Start growing|Take out|Empty plot/ })).toHaveCount(0);
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: /Cancel growing/ })).toHaveCount(0);
   });
 });
