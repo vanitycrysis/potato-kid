@@ -73,7 +73,11 @@ export type Command =
    * Choose a field's food (D-069, GUI_MVP §22.3). Changing it loses the field's progress
    * toward its next bite; kids who hate the new food go back to the map, all or none.
    */
-  | { type: 'setFieldFood'; field: number; food: string }
+  /**
+   * `from`, `kidIds`: the food and roster the player reviewed; a field that has changed since
+   * refuses (`changed`, GUI_MVP §22.3).
+   */
+  | { type: 'setFieldFood'; field: number; food: string; from?: string | null; kidIds?: number[] }
   /** Kids on the map start farming a field (D-069): all or none. */
   /** `food`: the food the player saw; a field growing another refuses (`changed`, GUI_MVP §22.4). */
   | { type: 'farm'; field: number; kidIds: number[]; food?: string }
@@ -1181,6 +1185,9 @@ export class Game {
     if (!field) return reject('gone');
     if (!this.content.balance.feeding.foods.some((f) => f.id === c.food)) return reject('invalid');
     if (field.food === c.food) return reject('unchanged');
+    // The change confirms what was reviewed, or nothing (§22.3).
+    if (c.from !== undefined && field.food !== c.from) return reject('changed');
+    if (c.kidIds && (c.kidIds.length !== field.workers.length || field.workers.some((k) => !c.kidIds!.includes(k.id)))) return reject('changed');
     const haters = field.workers.filter((k) => this.content.personality[k.type]?.hatedFood === c.food);
     let back: Kid[] = [];
     if (haters.length) {

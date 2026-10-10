@@ -15,7 +15,7 @@ import type { Sheets } from './sheet';
 
 type Pending =
   | { type: 'unlockField'; field: number }
-  | { type: 'setFieldFood'; field: number; food: string; returning: number }
+  | { type: 'setFieldFood'; field: number; food: string; returning: number; from: string | null; kidIds: number[] }
   | { type: 'farm'; field: number; kidIds: number[]; food: string | null }
   | { type: 'unfarm'; field: number; kidId: number; name: string }
   | { type: 'emptyField'; field: number; count: number; kidIds: number[] };
@@ -103,7 +103,7 @@ export class FieldSheets {
     this.pending = cmd;
     const { field } = cmd;
     if (cmd.type === 'unlockField') this.scene.command({ type: 'unlockField' });
-    else if (cmd.type === 'setFieldFood') this.scene.command({ type: 'setFieldFood', field, food: cmd.food });
+    else if (cmd.type === 'setFieldFood') this.scene.command({ type: 'setFieldFood', field, food: cmd.food, from: cmd.from, kidIds: cmd.kidIds });
     else if (cmd.type === 'farm') this.scene.command({ type: 'farm', field, kidIds: cmd.kidIds, ...(cmd.food ? { food: cmd.food } : {}) });
     else if (cmd.type === 'unfarm') this.scene.command({ type: 'unfarm', field, kidId: cmd.kidId });
     else this.scene.command({ type: 'emptyField', field, kidIds: cmd.kidIds });
@@ -178,7 +178,8 @@ export class FieldSheets {
       case 'noRoom':
         return "There's no clear spot by the Garden. Move nearby kids aside, then try again.";
       case 'changed':
-        return p.type === 'farm' ? "This field's food changed. Review the field before assigning kids." : 'This field changed. Review it again before taking all kids back.';
+        if (p.type === 'farm') return "This field's food changed. Review the field before assigning kids.";
+        return p.type === 'setFieldFood' ? 'This field changed. Review it again before changing food.' : 'This field changed. Review it again before taking all kids back.';
       case 'gone':
         if (p.type === 'farm') return 'The map changed. Check these kids and try Assign again.';
         if (p.type === 'unfarm') return 'This kid is no longer farming in this field. Check the field and try again.';
@@ -464,6 +465,8 @@ export class FieldSheets {
     const list = el('div', 'field-foods');
     sheet.body.append(note.node, reviewBox, list);
     let proposing: string | null = restore.proposing ?? null;
+    /** The field as the review shows it: the change confirms exactly this, or nothing (§22.3). */
+    let reviewed = { from: this.game.state.fields[i]?.food ?? null, kidIds: this.game.state.fields[i]?.workers.map((w) => w.id) ?? [] };
     const rows = this.content.balance.feeding.foods.map((food) => {
       const stock = el('span', 'feed-stock');
       const choose = this.button('Choose', 'feed-button field-choose', () => {
@@ -471,11 +474,12 @@ export class FieldSheets {
         if (!f) return;
         // No review when nothing is lost: no kids and no progress (§22.3).
         if (f.workers.length === 0 && f.progress === 0) {
-          this.send({ type: 'setFieldFood', field: i, food: food.id, returning: 0 });
+          this.send({ type: 'setFieldFood', field: i, food: food.id, returning: 0, from: f.food, kidIds: [] });
           sent = true;
           return;
         }
         proposing = food.id;
+        reviewed = { from: f.food, kidIds: f.workers.map((w) => w.id) };
         shown = '';
         update();
         reviewBox.querySelector<HTMLElement>('.field-review-heading')?.focus();
@@ -509,6 +513,13 @@ export class FieldSheets {
           return;
         }
       }
+      // The field changed under the review (a queued assignment, another page): it no longer
+      // confirms anything; review again (§22.3).
+      const ids = f.workers.map((w) => w.id);
+      if (proposing !== null && !this.pending && (f.food !== reviewed.from || ids.length !== reviewed.kidIds.length || ids.some((id) => !reviewed.kidIds.includes(id)))) {
+        proposing = null;
+        this.notes.set(i, { lines: ['This field changed. Review it again before changing food.'], warn: true });
+      }
       const key = `${proposing}|${f.food}|${f.workers.map((w) => w.id).join(',')}`;
       if (key !== shown) {
         shown = key;
@@ -525,7 +536,7 @@ export class FieldSheets {
             update();
           });
           const change = this.button('Change food', 'sheet-action plot-confirm-action field-change-go', () => {
-            this.send({ type: 'setFieldFood', field: i, food: to, returning: haters.length });
+            this.send({ type: 'setFieldFood', field: i, food: to, returning: haters.length, from: reviewed.from, kidIds: [...reviewed.kidIds] });
             sent = true;
           });
           reviewBox.replaceChildren(
@@ -588,6 +599,19 @@ export class FieldSheets {
     });
     sheet.footer.append(lines, go);
     const rows = new Map<number, { node: HTMLElement; box: HTMLInputElement; text: string; hated: boolean }>();
+    // Kid n among its type's copies on the map, by id, fixed while the page is open; newcomers
+    // are numbered on (as Kids on map, §19.2).
+    const ordinals = new Map<number, number>();
+    const nextOf = new Map<string, number>();
+    const number = (k: { id: number; type: string }) => {
+      if (!ordinals.has(k.id)) {
+        const n = (nextOf.get(k.type) ?? 0) + 1;
+        nextOf.set(k.type, n);
+        ordinals.set(k.id, n);
+      }
+      return ordinals.get(k.id)!;
+    };
+    for (const k of [...this.game.state.world.kids].sort((a, b) => a.id - b.id)) number(k);
     /** Kids were sent from this page: when it's answered, back to the field (which says so). */
     let sent = false;
     const update = () => {
@@ -622,7 +646,7 @@ export class FieldSheets {
           'label',
           `ui-surface picker-row${hated ? ' is-warning' : ''}`,
           portrait(kidRig!, k.type, 48, k.look),
-          el('span', 'picker-row-text', el('span', 'picker-row-name', k.name ?? this.kidName(k.type)), el('span', 'sheet-helper', `${k.name ? `${this.kidName(k.type)} · ` : ''}Tier ${this.tier(k.type)}`), el('span', 'sheet-helper', relation)),
+          el('span', 'picker-row-text', el('span', 'picker-row-name', k.name ?? this.kidName(k.type)), el('span', 'sheet-helper', `${k.name ? `${this.kidName(k.type)} · ` : ''}Tier ${this.tier(k.type)} · Kid ${number(k)}`), el('span', 'sheet-helper', relation)),
           box,
         );
         box.addEventListener('change', () => {

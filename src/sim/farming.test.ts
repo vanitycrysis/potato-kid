@@ -168,6 +168,25 @@ describe('farming kids (D-069, GUI_MVP §22.4-22.5)', () => {
     expect(g.state.fields[0]!.workers).toEqual([]);
   });
 
+  it('a food change confirms the food and roster that were reviewed, or nothing (Codex review, #90)', () => {
+    const g = withField();
+    const a = place(g, 'plain', 500, 1500);
+    const b = place(g, 'plain', 800, 1500);
+    g.step([{ type: 'farm', field: 0, kidIds: [a.id] }], 0);
+    g.step([], fm.biteSeconds * 0.5);
+    const other = content.balance.feeding.foods.find((f) => f.id !== ordinary && f.id !== likes.hatedFood)!.id;
+    // Reviewed with [a]; b joined since: refused, progress kept.
+    g.step([{ type: 'farm', field: 0, kidIds: [b.id] }], 0);
+    expect(rejected(g.step([{ type: 'setFieldFood', field: 0, food: other, from: ordinary, kidIds: [a.id] }], 0))).toEqual({ type: 'rejected', command: 'setFieldFood', reason: 'changed' });
+    // Reviewed as growing something else: refused.
+    expect(rejected(g.step([{ type: 'setFieldFood', field: 0, food: other, from: likes.favouriteFood, kidIds: [a.id, b.id] }], 0))).toEqual({ type: 'rejected', command: 'setFieldFood', reason: 'changed' });
+    expect(g.state.fields[0]!.food).toBe(ordinary);
+    expect(g.state.fields[0]!.progress).toBeGreaterThan(0);
+    // As it is: accepted.
+    g.step([{ type: 'setFieldFood', field: 0, food: other, from: ordinary, kidIds: [b.id, a.id] }], 0);
+    expect(g.state.fields[0]!.food).toBe(other);
+  });
+
   it('a food change that would send a hater home to a full map changes nothing', () => {
     const g = withField();
     g.state.materials = 1e6;

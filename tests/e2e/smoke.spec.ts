@@ -4804,6 +4804,29 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     expect(await page.evaluate((i) => window.__PK__!.fields()[0]!.kids.some((k) => k.id === i), spare)).toBe(false);
   });
 
+  test('Change food’s review closes when the field changes under it; Pick kids numbers each copy (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    const others = await page.evaluate(() => [window.__PK__!.debugAdd!('plain', 2300, 4300), window.__PK__!.debugAdd!('plain', 2500, 4300)]);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'Change food' }).click();
+    const choose = page.getByRole('dialog', { name: 'Food for Field 1' });
+    await choose.locator('.field-choose[data-food="corn"]').click();
+    await expect(choose.locator('.field-review-heading')).toBeVisible();
+    // A kid joins the field: the review no longer confirms anything.
+    await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'farm', field: 0, kidIds: [i] }), others[0]!);
+    await expect(choose.locator('.field-review-heading')).toBeHidden();
+    await expect(choose.locator('.plot-note')).toContainText('This field changed. Review it again before changing food.');
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.food)).toBe('apple');
+    // Pick kids: the unnamed Potato Kid left on the map shows its number.
+    await page.getByRole('button', { name: 'Back to field' }).click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'Assign kids' }).click();
+    const pick = page.getByRole('dialog', { name: 'Pick kids for Field 1' });
+    const row = pick.locator('.picker-row', { has: page.locator(`.picker-check[data-kid="${others[1]}"]`) });
+    await expect(row).toContainText(/Tier 1 · Kid \d/);
+  });
+
   test('a kid taken back is the same kid by the Garden: no birth animation (Codex review, #90)', async ({ page }) => {
     const id = await setup(page);
     await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'unfarm', field: 0, kidId: i }), id);
