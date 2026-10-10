@@ -1,5 +1,15 @@
 # Art and audio plan
 
+## FARM-DESIGN addendum (2026-10-09; Claude review pending)
+
+GUI_MVP §22 and additive art/data/farm_v1.json replace food shop/prices with four map-field sites, 400 ms raw-pointer drag or tap-and-pick assignment, visible retained workers, one/all original-instance returns, reviewed food changes, Notebook Pantry and one-bite feeding. Numbers remain Claude's named simulator placeholders. Progress/food-change/capacity/feeding-farmer rules are explicit review proposals; recommend no MVP pantry cap.
+
+Sixteen original sources in art/src/farm: a 512 × 512 bed, 256 × 256 paper lock sign, twelve 256 × 256 crop looks reusing approved food silhouettes on stems/leaves, two native SVG icons. Existing stand/step body frames and costume/face attachments provide in-place tending with long pauses; reduced motion stand/open. No rig changes, per-type tools, filters, portrait caches, render target or new audio. Accepted farm/feed/return actions reuse quiet UI tap once; refusal/offline replay silent. HUD/navigation/world shares remain unchanged.
+
+The byte-identical v3 map gains an explicit overlay of four reserves below the Garden cross-path and twenty scenery relocations. All 250 accents, twelve landmarks, paths and Garden/outlet/camera stay; historic per-screen accent counts change. Four visible worker pads per field are an art-space support ceiling, not chosen balance; layout must be revised if the simulator requires more.
+
+**224 → 238 runtime PNGs; 14,745,012 → 16,481,264 decoded RGBA bytes (14.06194 → 15.71776 MiB), +1,736,252 bytes / +1.65582 MiB**. Native icons add zero Pixi bytes; DOM-used lock PNG is included conservatively. Physical 32 MiB ceiling still includes atlas/surface slack; decoded headroom 16.28224 MiB is not GPU residency. Existing sources/exports and src/tests are preserved; generated trim only gains entries. Export passes 309 sources/seven sidecars; placement/preservation/UTF-8/contrast audit passes. **264 native PNG/HTML review screens across 42 states** cover both viewports, 1×/0.5× maps, 1–4 fields, all crops, assignments/refusals, changes/returns, pantry/feed and scroll pages/reduced motion. [Gallery](../art/previews/ui/farm_review.html), [notes](../.codex-out/farm-design-notes.md), [audit](../.codex-out/farm-audit.json). Static art is not runtime/accessibility/device acceptance; gate 4 remains pending.
+
 ## LAYOUT-DESIGN addendum (2026-10-09; round 2, Claude review pending)
 
 GUI_MVP §§19–21, revision `layout-design-2`, preserves the accepted one 60 px status strip and one 60 px Garden/Dex/Notebook navigation row: 78.20% unobscured world at 390 × 844 and 57.78% at 640 × 360. HUD, sheet geometry, folding timer/upgrades/Settings, D-074 removal/cancellation flow and N1–N6 are unchanged. Cancel action text now uses existing ink `#1a1a1a` (15.58:1 on paper, 13.86:1 on sage); danger remains a border accent. The exact D-074 copy, identity/look/name/happiness restoration, independent D-072 rolls and D-069 farming scope remain as accepted. The GUI contract is plain UTF-8; number/unit spacing is corrected.

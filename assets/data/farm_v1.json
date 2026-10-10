@@ -1,0 +1,548 @@
+{
+  "schemaVersion": 1,
+  "revision": "farm-design-1",
+  "status": "review_pending",
+  "delivery": {
+    "scope": "D-069 MVP design; not runtime rules",
+    "note": "Claude consumes fields/relocations explicitly, migrates scenery clearance, supplies all named numbers. map_garden_v3 remains unchanged."
+  },
+  "mapRevision": "layout-design-map-3-round2",
+  "fields": [
+    {
+      "id": "field_1",
+      "index": 1,
+      "worldGround": [
+        1790,
+        4740
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -280
+        ],
+        [
+          108,
+          -280
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          80
+        ],
+        [
+          140,
+          80
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    },
+    {
+      "id": "field_2",
+      "index": 2,
+      "worldGround": [
+        2530,
+        4740
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -280
+        ],
+        [
+          108,
+          -280
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          80
+        ],
+        [
+          140,
+          80
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    },
+    {
+      "id": "field_3",
+      "index": 3,
+      "worldGround": [
+        1790,
+        5340
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -280
+        ],
+        [
+          108,
+          -280
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          80
+        ],
+        [
+          140,
+          80
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    },
+    {
+      "id": "field_4",
+      "index": 4,
+      "worldGround": [
+        2530,
+        5340
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -280
+        ],
+        [
+          108,
+          -280
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          80
+        ],
+        [
+          140,
+          80
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    }
+  ],
+  "sceneryRelocations": [
+    {
+      "instanceId": "accent_1_2_3",
+      "from": [
+        1765,
+        4520
+      ],
+      "to": [
+        3190,
+        2140
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_4",
+      "from": [
+        2025,
+        4540
+      ],
+      "to": [
+        3190,
+        2460
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_6",
+      "from": [
+        1745,
+        4780
+      ],
+      "to": [
+        3190,
+        2700
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_7",
+      "from": [
+        2005,
+        4800
+      ],
+      "to": [
+        3190,
+        2980
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_9",
+      "from": [
+        1765,
+        5040
+      ],
+      "to": [
+        2470,
+        3060
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_10",
+      "from": [
+        2025,
+        5060
+      ],
+      "to": [
+        1670,
+        3100
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_12",
+      "from": [
+        1745,
+        5300
+      ],
+      "to": [
+        3190,
+        3220
+      ]
+    },
+    {
+      "instanceId": "accent_1_2_13",
+      "from": [
+        2005,
+        5320
+      ],
+      "to": [
+        2590,
+        3260
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_1",
+      "from": [
+        2305,
+        4520
+      ],
+      "to": [
+        1670,
+        3340
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_2",
+      "from": [
+        2565,
+        4540
+      ],
+      "to": [
+        430,
+        3420
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_3",
+      "from": [
+        2825,
+        4520
+      ],
+      "to": [
+        2590,
+        3500
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_4",
+      "from": [
+        2325,
+        4780
+      ],
+      "to": [
+        3190,
+        3500
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_5",
+      "from": [
+        2585,
+        4800
+      ],
+      "to": [
+        1670,
+        3580
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_6",
+      "from": [
+        2845,
+        4780
+      ],
+      "to": [
+        2550,
+        3740
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_7",
+      "from": [
+        2305,
+        5040
+      ],
+      "to": [
+        3190,
+        3740
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_8",
+      "from": [
+        2565,
+        5060
+      ],
+      "to": [
+        1790,
+        3780
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_9",
+      "from": [
+        2825,
+        5040
+      ],
+      "to": [
+        1670,
+        3980
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_10",
+      "from": [
+        2325,
+        5300
+      ],
+      "to": [
+        2510,
+        3980
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_11",
+      "from": [
+        2585,
+        5320
+      ],
+      "to": [
+        3190,
+        4380
+      ]
+    },
+    {
+      "instanceId": "accent_2_2_12",
+      "from": [
+        2845,
+        5300
+      ],
+      "to": [
+        2150,
+        4420
+      ]
+    }
+  ],
+  "findFieldsCentre": [
+    2160,
+    4860
+  ],
+  "render": {
+    "fieldAsset": "building_food_field",
+    "lockedAsset": "fx_farm_locked",
+    "cropAssets": {
+      "toast": "fx_crop_toast",
+      "berry_jam": "fx_crop_berry_jam",
+      "berries": "fx_crop_berries",
+      "apple": "fx_crop_apple",
+      "carrot": "fx_crop_carrot",
+      "corn": "fx_crop_corn",
+      "mushroom": "fx_crop_mushroom",
+      "pickle": "fx_crop_pickle",
+      "cheese": "fx_crop_cheese",
+      "soup": "fx_crop_soup",
+      "cocoa": "fx_crop_cocoa",
+      "cracker": "fx_crop_cracker"
+    },
+    "cropSourcePivot": [
+      128,
+      224
+    ],
+    "cropScale": 0.5,
+    "workerWorldCanvas": 180,
+    "preserveSavedAppearanceScale": true,
+    "maxExistingWorkerWorldCanvas": 198,
+    "workerPadLimit": 4,
+    "workerLoop": {
+      "bodyFrames": [
+        "stand",
+        "step_left",
+        "stand",
+        "step_right"
+      ],
+      "frameMs": [
+        600,
+        160,
+        600,
+        160
+      ],
+      "motion": "In-place existing feet only. Keep face, costume attachments and root stable. Pause between cycles 3000–5000 ms; stable ID phase.",
+      "reducedMotion": "stand / open, normal blink; no step cycle"
+    },
+    "zOrder": [
+      "soil",
+      "crops",
+      "workers by foot y"
+    ],
+    "noMaterialIncome": true
+  },
+  "balancePlaceholders": {
+    "fieldCount": "FARM_FIELD_COUNT (1–4)",
+    "kidsPerField": "FARM_KIDS_PER_FIELD (authored pads support up to 4; review layout if more)",
+    "unlockPrices": "FARM_UNLOCK_PRICE[n] and FARM_UNLOCK_CURRENCY[n]",
+    "biteRate": "FARM_BITE_RATE",
+    "favouriteFactor": "FARM_FAVOURITE_FACTOR",
+    "pantryCap": "Recommend none for MVP; simulator confirms",
+    "offlineLimit": "FARM_OFFLINE_LIMIT"
+  },
+  "rulesProposed": {
+    "unlockBay": "Only unlocked bays exclude ordinary wander/spawn. Before paid unlock, require the reserve clear of ordinary kids plus 16-unit gap; reject without charge or displacement if occupied.",
+    "progress": "One fractional bite accumulator per field. Removing kids preserves it. Switching food resets it only after explicit review.",
+    "foodChange": "Keep compatible workers; return haters atomically by Garden. Block if any returning kid cannot fit. Never consume stock.",
+    "return": "Atomic one/all; preserve identity/name/look and original happiness expiry.",
+    "pantry": "Shared integer bites per food, no manual harvest; zero stock still listed.",
+    "feeding": "Atomic decrement one bite + replace happiness on captured instance. No Materials charge."
+  }
+}

@@ -1,5 +1,13 @@
 # Decisions
 
+## FARM-DESIGN choices (ChatGPT, 2026-10-09; Claude review pending)
+
+Under D-069, GUI_MVP §22 supersedes §17.2 food shop/prices and §17.1 no-inventory statement. Preserve twelve foods, approved face/palette/Patrick Hand, bite effects, §19 layout, §20 picking and §21 restoration/refusals. Choose field food, assign by 400 ms raw-pointer dwell or tap detail/pick, show retained original workers with existing feet/static reduced motion, take one/all back and feed one pantry bite. Fields follows Plots in Garden; Pantry is Notebook's first row. Reviewed food change keeps compatible workers, returns haters atomically and discards fractional progress; ordinary returns preserve it. These rules, capacity accounting and feeding farmers are explicit proposals for Claude review, not silent owner decisions. Recommend no pantry cap; balance remains named placeholders.
+
+Additive farm_v1.json supplies four lawn sites below the Garden cross-path and twenty scenery relocations over byte-identical v3; all 250 accents/twelve landmarks/paths and Garden/outlet/camera remain. Four visible worker pads are a spatial support limit requiring design revision if tuning needs more. Sixteen original vectors add fourteen cropped PNGs and two native icons; snack sprouts reuse food silhouettes. No engine/tests, rig, audio, per-type textures, filters or camera/HUD changes.
+
+Export passes 309 sources/seven sidecars. **224 → 238 runtime PNGs; 14,745,012 → 16,481,264 decoded RGBA bytes (14.06194 → 15.71776 MiB), +1,736,252 bytes / +1.65582 MiB**; device allocation remains Claude's check under 32 MiB. Preservation/16-unit geometry/ink contrast/UTF-8 counts 0 0 0 pass. [Gallery](../art/previews/ui/farm_review.html) has 264 native screens across 42 states at both requested sizes, including scroll pages. [Notes](../.codex-out/farm-design-notes.md) name rules/number questions and limits. Files remain uncommitted as instructed; no git/network, src/tests edits, sub-agents or gate-4 acceptance.
+
 ## LAYOUT-DESIGN choices (ChatGPT, 2026-10-09; round 2, Claude review pending)
 
 Address PR #85 B1–B3 only. Correct GUI_MVP §§19–21 to plain UTF-8 and restore spaces around numbers/units in the new prose. Use the existing ink for all §21 danger action text (15.58:1 on paper / 13.86:1 on sage), carrying danger in the border and explicit Cancel wording. Preserve accepted HUD, sheets, D-074 control/confirmation/refusal/restoration flow and N1–N6: 78.20% world at 390 × 844, 57.78% at 640 × 360, 0.5×…2× zoom, 44 px pickup targets/candidate chooser, compact-landscape fit floor 65/180, Filling tap to detail, Dex → Kids on map and Notebook → Map view. D-072 and D-069 overrides remain exact; UI and planting sidecars are byte-identical to round 1.
