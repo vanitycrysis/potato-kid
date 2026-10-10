@@ -103,6 +103,11 @@ export class KidCard {
     private readonly readOnly: () => boolean,
     /** Opens a field's page (View field on a farming kid's card, §22.6). */
     private readonly openField: (field: number, launcher: HTMLElement | null) => void,
+    /** The Pantry and Garden → Fields, each with a way back to this card's feeding page (§22.6). */
+    private readonly foodRoutes: {
+      openPantry: (launcher: HTMLElement | null, back: { label: string; run: () => void }) => void;
+      openFields: (launcher: HTMLElement | null, back: { label: string; run: () => void }) => void;
+    },
   ) {
     this.tierOf = new Map(content.kids.map((k) => [k.id, k.tier]));
   }
@@ -564,6 +569,16 @@ export class KidCard {
     const p = this.content.personality[type];
     const status = this.statusBox();
     const replaces = el('p', 'sheet-helper', 'Replaces the current happy effect; time does not add up.');
+    // Leaving for the Pantry or the Fields keeps the way back here: this kid, this page, its
+    // scroll (§22.6), as the return summary does.
+    const backToFeeding = () => {
+      const snap = this.snapshot();
+      const scroll = this.sheets.snapshot()?.scrollTop ?? 0;
+      const launcher = this.launcher;
+      return { label: 'Back to feeding', run: () => snap && this.restore(snap, launcher, scroll) };
+    };
+    const openPantry = this.button('Open pantry', 'plot-action-full feed-open-pantry', () => this.foodRoutes.openPantry(this.launcher, backToFeeding()));
+    const viewFields = this.button('View fields', 'plot-action-full feed-view-fields', () => this.foodRoutes.openFields(this.launcher, backToFeeding()));
     // Food comes from the pantry (D-069, GUI_MVP §22.6): each row says how much is stored.
     const empty = el('p', 'sheet-helper feed-empty', 'Your pantry is empty. Choose a food in a field and assign a kid to grow it.');
     const stockText = (n: number) => `${formatExact(n)} ${n === 1 ? 'bite' : 'bites'} stored`;
@@ -614,9 +629,11 @@ export class KidCard {
       : null;
     s.body.replaceChildren(
       this.back('card'),
+      openPantry,
       status.node,
       replaces,
       empty,
+      viewFields,
       ...(fav
         ? [
             el('h4', 'kid-card-trait', 'Favourite works best'),
@@ -640,6 +657,7 @@ export class KidCard {
         replaces.hidden = !(at && (at.field === null ? at.kid.happy : at.kid.happiness));
         const pantry = this.game.state.pantry;
         empty.hidden = Object.values(pantry).some((n) => n > 0);
+        viewFields.hidden = empty.hidden;
         const feeding = this.pending?.type === 'feed' ? this.pending.food : null;
         for (const r of rows) {
           const stock = pantry[r.food.id] ?? 0;

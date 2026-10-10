@@ -69,9 +69,12 @@ export class BuildingSheets {
   /** What opened the Garden: a field page's way back returns focus there in the end. */
   private gardenLauncher: HTMLElement | null = null;
 
-  /** Opens the Garden on its Fields section (D-069): Back from a field, View fields. */
-  openFields(launcher: HTMLElement | null): void {
-    this.sheets.asPage();
+  /**
+   * Opens the Garden on its Fields section (D-069): Back from a field, View fields. `back`:
+   * the way back to where View fields was (the Pantry, a kid's feeding page, §22.6).
+   */
+  openFields(launcher: HTMLElement | null, back: { label: string; run: () => void } | null = null): void {
+    this.sheets.asPage(back);
     this.open('garden', launcher);
     const h = document.querySelector<HTMLElement>('.sheet[role=dialog] #garden-fields');
     h?.scrollIntoView({ block: 'start' });

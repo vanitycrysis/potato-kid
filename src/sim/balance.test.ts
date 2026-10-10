@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { content } from '../content';
 import { pairKey } from '../content/validate';
-import { createBot, drag, learnFromDrop, simulate, type Scenario } from './balance';
+import { createBot, deadlocked, drag, learnFromDrop, simulate, type Scenario } from './balance';
 import { Game } from './game';
 import { createRng } from './rng';
 import { addKid, defaultBox } from './world';
@@ -232,6 +232,24 @@ describe('the bot farms (D-069)', () => {
     expect(createBot(g, content).decide()).toEqual([{ type: 'feed', kidId: id, food: first }]);
     g.state.world.kids[0]!.happy = { left: 100, favourite: true };
     expect(createBot(g, content).decide()?.some((x) => x.type === 'feed') ?? false).toBe(false);
+  });
+
+  it('a full map with no recipe and only a field to buy is a deadlock when the bot may not farm (Codex review, #90)', () => {
+    // Two copies of a type with no recipe with itself.
+    const loner = content.kids.find((k) => !k.special && !k.rare && !content.recipes.some((r) => r.a === k.id && r.b === k.id))!.id;
+    const g = quiet([loner, loner], (c) => {
+      c.balance.spawn.capacity = 2;
+      // Upgrades below keep the map full: Capacity's levels add no room here.
+      c.balance.economy.capacityPerLevel = 0;
+    });
+    g.state.materials = content.balance.farming.unlockPrices[0]!;
+    g.state.buildings.garden = 4;
+    g.state.buildings.capacity = 4;
+    g.state.buildings.compendium = 1;
+    while ((g.plotUnlockCost ?? Infinity) <= g.state.materials) g.state.plots.push({ seed: null });
+    const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
+    expect(deadlocked(g, recipes, true)).toBe(false);
+    expect(deadlocked(g, recipes, false)).toBe(true);
   });
 
   it('on a full map, a spare kid (every pairing tried) goes to a field that grows a food it doesn’t hate', () => {

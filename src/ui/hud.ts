@@ -134,7 +134,7 @@ export class Hud {
     this.notes = new PlantingNotes(settings);
     this.arrivals = new Arrivals(scene, content, () => this.save.readOnly);
     // Food fields and the pantry (D-069, GUI_MVP §22).
-    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher) => this.buildings.openFields(launcher), (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back));
+    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back));
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
     this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) =>
       this.fields.openPantry(launcher, {
@@ -148,7 +148,10 @@ export class Hud {
     this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly, (launcher, back) => this.kidsOnMap.open(launcher, { back }));
     // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex control
     // (world kids are no focus targets); a read-only save can still browse it.
-    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly, (field, launcher) => this.fields.openField(field, launcher));
+    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly, (field, launcher) => this.fields.openField(field, launcher), {
+      openPantry: (launcher, back) => this.fields.openPantry(launcher, back),
+      openFields: (launcher, back) => this.buildings.openFields(launcher, back),
+    });
     scene.listenKidTap((kidId) => this.kidCard.open(kidId, dex));
     // Every kid on the map, and a tap's candidates (GUI_MVP §§19.2, 20.1).
     this.kidsOnMap = new KidsOnMap(scene, content, this.sheets, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal));
@@ -580,6 +583,22 @@ export class Hud {
           ? [`${food} is ${who}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}.`]
           : [`${who} enjoyed ${food}.`, `Happy for ${formatDuration(f.happySeconds)}.`];
         return el('div', 'toast toast-short', icon('icon_happy', '', 'ui-icon-28'), el('div', 'card-text', el('span', 'card-heading', lines[0]!), el('span', 'card-line', lines[1]!)));
+      }
+      case 'farming': {
+        // Sent by drag: no sheet said it (GUI_MVP §22.4).
+        const food = this.scene.game.state.fields[item.field]?.food;
+        const foodName = food ? (this.content.balance.feeding.foods.find((x) => x.id === food)?.name ?? food) : '';
+        return el(
+          'div',
+          'toast toast-short',
+          icon('icon_fields', '', 'ui-icon-28'),
+          el(
+            'div',
+            'card-text',
+            el('span', 'card-heading', `${item.name ?? this.name(item.kidType)} is farming ${foodName} in Field ${item.field + 1}.`),
+            el('span', 'card-line', 'No Materials while farming. Take back from this field.'),
+          ),
+        );
       }
       case 'named':
         return el(

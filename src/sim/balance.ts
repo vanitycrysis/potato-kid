@@ -148,7 +148,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
         if (act) commands = act;
         else {
           stuckTurns++;
-          if (deadlocked(game, recipes)) deadTurns++;
+          if (deadlocked(game, recipes, farm)) deadTurns++;
         }
       }
       const events = game.step(commands);
@@ -345,13 +345,14 @@ export function createBot(
 }
 
 /** A full map on which no two kids make a recipe, and no upgrade is affordable. */
-function deadlocked(game: Game, recipes: Map<string, string>): boolean {
+export function deadlocked(game: Game, recipes: Map<string, string>, farm = true): boolean {
   const kids = game.state.world.kids;
   if (kids.length < game.capacity) return false;
   for (let i = 0; i < kids.length; i++) {
     for (let j = i + 1; j < kids.length; j++) if (recipes.has(pairKey(kids[i]!.type, kids[j]!.type))) return false;
   }
-  return purchase(game) === null;
+  // A field is an escape only when the bot may farm (Codex review, #90).
+  return purchase(game, farm) === null;
 }
 
 /** A drop the bot made: who moved, and whom the landing touched (with their grace then). */

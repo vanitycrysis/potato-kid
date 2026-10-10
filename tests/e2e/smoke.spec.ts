@@ -4609,6 +4609,40 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await expect(card.getByRole('button', { name: 'View field' })).toBeHidden();
   });
 
+  test('feeding: Open pantry and back, View fields when it is empty and back; Pantry → View fields and back (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'View kid: Potato Kid' }).click();
+    await page.getByRole('dialog', { name: 'Potato Kid' }).getByRole('button', { name: 'Feed', exact: true }).click();
+    const feeding = page.getByRole('dialog', { name: 'Feed Potato Kid' });
+    // Stock: no View fields here.
+    await expect(feeding.getByRole('button', { name: 'View fields' })).toBeHidden();
+    await feeding.getByRole('button', { name: 'Open pantry' }).click();
+    const pantry = page.getByRole('dialog', { name: 'Pantry' });
+    await expect(pantry.locator('.pantry-row[data-food="apple"]')).toContainText('3 bites');
+    // Pantry, scrolled down → View fields → Back to Pantry, where it was.
+    await pantry.locator('.sheet-body').evaluate((e) => (e.scrollTop = 200));
+    const scrolled = await pantry.locator('.sheet-body').evaluate((e) => e.scrollTop);
+    expect(scrolled).toBeGreaterThan(100);
+    await pantry.locator('.pantry-view-fields').evaluate((b) => (b as HTMLButtonElement).click());
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to Pantry' }).click();
+    await expect(page.getByRole('dialog', { name: 'Pantry' })).toBeVisible();
+    expect(await page.getByRole('dialog', { name: 'Pantry' }).locator('.sheet-body').evaluate((e) => e.scrollTop)).toBe(scrolled);
+    // Back to feeding: the same kid's feeding page.
+    await page.getByRole('button', { name: 'Back to feeding' }).click();
+    await expect(page.getByRole('dialog', { name: 'Feed Potato Kid' })).toBeVisible();
+    // Empty: View fields shows, and comes back here too.
+    await page.evaluate(() => window.__PK__!.debugGive!({ pantry: { apple: -3 } }));
+    await expect(feeding.getByRole('button', { name: 'View fields' })).toBeVisible();
+    await feeding.getByRole('button', { name: 'View fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to feeding' }).click();
+    await expect(page.getByRole('dialog', { name: 'Feed Potato Kid' })).toBeVisible();
+  });
+
   test('field changes are saved at once, not at the next autosave (Codex review, #90)', async ({ page }) => {
     const id = await setup(page);
     const newest = () =>
@@ -4707,6 +4741,9 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     await page.mouse.up();
     await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]?.kids.length ?? 0)).toBe(1);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(false);
+    // The world says it once: no sheet did (Codex review, #90).
+    await expect(page.locator('.toast')).toContainText('Potato Kid is farming Apple in Field 1.');
+    await expect(page.locator('.toast')).toContainText('No Materials while farming. Take back from this field.');
     // Its map figure goes with it; the field draws it now.
     expect(await page.evaluate((i) => window.__PK__!.presentationOf(i), id)).toBeUndefined();
     await expect.poll(() => page.evaluate((i) => window.__PK__!.fields()[0]!.kids.some((k) => k.id === i), id)).toBe(true);

@@ -39,8 +39,8 @@ export class FieldSheets {
     private readonly content: Content,
     private readonly sheets: Sheets,
     private readonly readOnly: () => boolean,
-    /** Opens the Garden scrolled to its Fields section (Back from a field page, View fields). */
-    private readonly openGardenFields: (launcher: HTMLElement | null) => void,
+    /** Opens the Garden scrolled to its Fields section (Back from a field page, View fields), with a way back. */
+    private readonly openGardenFields: (launcher: HTMLElement | null, back?: { label: string; run: () => void }) => void,
     /** Opens a farming kid's card, with its way back (View kid, §22.2). */
     private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }) => void,
   ) {}
@@ -604,11 +604,16 @@ export class FieldSheets {
 
   // --- the Pantry (§22.6) ---------------------------------------------------------------------
 
-  openPantry(launcher: HTMLElement | null, back: { label: string; run: () => void }): void {
+  /** The Pantry, with its way back; `scrollTop`: where it was, coming back from View fields. */
+  openPantry(launcher: HTMLElement | null, back: { label: string; run: () => void }, scrollTop = 0): void {
     this.sheets.asPage(back);
     const sheet = this.sheets.open({ key: 'pantry', icon: 'icon_pantry', title: 'Pantry', requestedHeight: 624, update: () => update() }, launcher);
     sheet.setSubtitle('Food grown in your fields.');
-    const viewFields = this.button('View fields', 'plot-action-full pantry-view-fields', () => this.openGardenFields(launcher));
+    // View fields keeps the way back here, and this page's own way back (§22.6).
+    const viewFields = this.button('View fields', 'plot-action-full pantry-view-fields', () => {
+      const scroll = this.sheets.snapshot()?.scrollTop ?? 0;
+      this.openGardenFields(launcher, { label: 'Back to Pantry', run: () => this.openPantry(launcher, back, scroll) });
+    });
     const helper = el('p', 'sheet-helper', 'Feed a kid from its card. Each Feed uses 1 bite.');
     const empty = el('p', 'sheet-body-text pantry-empty', 'Your pantry is empty. Choose a food in a field and assign a kid to grow it.');
     const total = el('h4', 'dex-home-confirm-title pantry-total');
@@ -632,5 +637,6 @@ export class FieldSheets {
       if (total.textContent !== t) total.textContent = t;
     };
     update();
+    sheet.scrollTo(scrollTop);
   }
 }

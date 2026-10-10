@@ -24,6 +24,8 @@ export type FeedbackItem =
   | { kind: 'fed'; kidType: KidId; kidId: number; name: string | undefined; food: string; favourite: boolean }
   /** A name given or cleared where no kid card showed it (§18.2). */
   | { kind: 'named'; kidType: KidId; kidId: number; name: string | null }
+  /** A kid started farming where no sheet said so (a drag, §22.4). */
+  | { kind: 'farming'; kidType: KidId; kidId: number; name: string | undefined; field: number }
   /** A known type sprouted from a plot (§15.5); a new type gets the discovery card instead. */
   | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number };
 
@@ -97,6 +99,9 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
         break;
       case 'named':
         out.push({ kind: 'named', kidType: e.kid.type, kidId: e.kid.id, name: e.name });
+        break;
+      case 'farming':
+        out.push({ kind: 'farming', kidType: e.kid.type, kidId: e.kid.id, name: e.kid.name, field: e.field });
         break;
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });
