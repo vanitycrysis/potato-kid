@@ -10,7 +10,7 @@
 
 ## Open work at handoff
 
-1. **#89, LAYOUT part 3** (Kids on map, Which kid?, taking kids out of plots, §21): Codex's round 2 was clean. **Merge it when CI is green** (it was running at handoff). It's on `claude/layout-plots`, built in the `potato-kid-hud` worktree.
+1. **LAYOUT is done:** #87, #88 and #89 (Kids on map, Which kid?, taking kids out of plots, §21) are all on `main`.
 2. **#90, FARMING, a draft that carries all of it.** Codex's P1: the sim alone would leave feeding with nothing to feed (the pantry fills only by farming), so the PR merges only when a player can farm through the shipped UI. Done on `claude/farming-sim`: the sim (fields, farming kids, the pantry, food changes, offline growth), save schema 9, the field bays from `farm_v1.json`, and the kid card's pantry feeding page (§22.6). **Next on the same branch:**
    - **The map:** beds, two crop stamps and working kids on their pads (Codex's step loop; static in reduced motion), with the twenty scenery relocations in `farm_v1.json` applied; a tap on a field; drag a kid onto a field with the 400 ms dwell and labels (§22.4).
    - **The sheets:** Garden → Fields (unlock, rows, Find fields), field detail, Choose food with its change review, Pick kids, Take back and Take all back, Pantry first in the Notebook, and the working kid's card (§§22.2–22.7).
