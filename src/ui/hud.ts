@@ -11,6 +11,7 @@ import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
 import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
+import { KidsOnMap } from './kidsOnMap';
 import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
 import { NOTEBOOK_KEYS, Notebook } from './notebook';
@@ -81,6 +82,7 @@ export class Hud {
   private readonly notes: PlantingNotes;
   private readonly kidCard: KidCard;
   private readonly notebook: Notebook;
+  private readonly kidsOnMap: KidsOnMap;
   private readonly arrivals: Arrivals;
   /** The navigation row: Garden, Dex, Notebook (GUI_MVP §19.1). */
   private readonly trayCells = new Map<'garden' | 'dex' | 'notebook', HTMLButtonElement>();
@@ -131,11 +133,14 @@ export class Hud {
     this.arrivals = new Arrivals(scene, content, () => this.save.readOnly);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals);
     this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly);
-    this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly);
+    this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly, (launcher, back) => this.kidsOnMap.open(launcher, { back }));
     // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex control
     // (world kids are no focus targets); a read-only save can still browse it.
     this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
     scene.listenKidTap((kidId) => this.kidCard.open(kidId, dex));
+    // Every kid on the map, and a tap's candidates (GUI_MVP §§19.2, 20.1).
+    this.kidsOnMap = new KidsOnMap(scene, content, this.sheets, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal));
+    scene.listenKidChoice((ids) => this.kidsOnMap.open(dex, { ids }));
     // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
     const gardenCell = this.trayCells.get('garden')!;
     scene.listenPlotTap((plot) => {
@@ -284,6 +289,7 @@ export class Hud {
       if (back.key === 'dex') this.dex.open(back.launcher);
       else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'notebook') this.notebook.open(back.launcher, undefined, back.scrollTop);
+      else if (KidsOnMap.isList(back.key)) this.kidsOnMap.reopen(back.scrollTop);
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
       else if (back.key === 'garden') this.buildings.open('garden', back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });

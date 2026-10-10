@@ -2384,7 +2384,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(footer).toContainText('Plot 1: 0 → 3 / 5');
     await expect(footer).toContainText('Special roll: Need 3 more → 10%');
     await expect(footer).toContainText('Rare roll: Need 3 more → 5%');
-    await expect(footer).toContainText('Added kids leave now. No refund.');
+    await expect(footer).toContainText('Leaves map now. Take out before growing.');
     await expect(sheet(page).locator('.picker-helpers')).toContainText('Two separate rolls. If both hit, the sprout is the rare kid.');
     await add.click();
     // One step: the three are planted together, and the detail shows what happened.
@@ -2443,7 +2443,8 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     // The review: exactly what starting does. Nothing was sent.
     await expect(sheet(page).locator('.plot-review-heading')).toHaveText('Start Plot 1 growing?');
     await expect(sheet(page).locator('.plot-review-heading')).toBeFocused();
-    await expect(sheet(page).locator('.plot-review')).toContainText('These kids have already left your map. No refund.');
+    // D-074: kids can come back, so the review says what cancelling costs (GUI_MVP §21.3).
+    await expect(sheet(page).locator('.plot-review')).toContainText('One new kid will sprout. Cancelling before it is ready returns these kids and loses the growing time.');
     await expect(sheet(page).locator('.plot-start')).toHaveText('Start growing · 3 kids');
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
@@ -4132,5 +4133,254 @@ test.describe('the 4 × 4 map and its fitted zoom (D-071, GUI_MVP §§20.1-20.2)
     await page.evaluate(() => window.__PK__!.centerOn(99999, 99999));
     const corner = await page.evaluate(() => window.__PK__!.worldToScreen(4320, 7680));
     expect(corner.x).toBeCloseTo(size.width, 0);
+  });
+});
+
+test.describe('every kid on the map, and Which kid? (GUI_MVP §§19.2, 20.1)', () => {
+  test('Dex → Kids on map lists every kid, even off screen; search narrows; a row opens its card, whose Back returns as it was', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      // One far off screen (the world's corner), two near the Garden.
+      return [pk.debugAdd!('plain', 4200, 7600), pk.debugAdd!('water', 1800, 4300), pk.debugAdd!('fire', 2500, 4300)];
+    });
+    await page.locator('[data-nav=dex]').click();
+    const onMap = page.getByRole('button', { name: 'Kids on map (3)' });
+    await expect(onMap).toBeVisible();
+    await onMap.click();
+    const list = page.getByRole('dialog', { name: 'Kids on map' });
+    await expect(list.locator('.kids-row')).toHaveCount(3);
+    await expect(list.locator('.kids-row').first()).toHaveAttribute('data-kid', String(ids[0]));
+    await list.getByLabel('Find a kid on your map').fill('water');
+    await expect(list.locator('.kids-row:visible')).toHaveCount(1);
+    await list.locator('.kids-row:visible').click();
+    const card = page.getByRole('dialog', { name: 'Water Kid' });
+    await expect(card).toBeVisible();
+    await card.getByRole('button', { name: 'Back to Kids on map' }).click();
+    await expect(list.getByLabel('Find a kid on your map')).toHaveValue('water');
+    await expect(list.locator(`.kids-row[data-kid="${ids[1]}"]`)).toBeFocused();
+    await list.getByRole('button', { name: 'Back to Potato-Dex' }).click();
+    await expect(page.getByRole('button', { name: 'Kids on map (3)' })).toBeFocused();
+  });
+
+  test('a tap between two small kids asks Which kid?; a drag from the same spot picks up the nearer', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // At the farthest zoom a kid is drawn under 44 px: its pickup target grows to 44 px.
+    const at = await page.evaluate(() => window.__PK__!.worldToScreen(2160, 4300));
+    await page.evaluate((at) => document.querySelector('canvas')!.dispatchEvent(new WheelEvent('wheel', { deltaY: 2000, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true })), at);
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBe(0.5);
+    const [a, b] = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const a = pk.debugAdd!('plain', 2000, 4300);
+      const box = pk.kids().find((k) => k.id === a)!.box;
+      // Bodies 50 world units apart (about 9 px at this zoom): both targets reach the middle.
+      return [a, pk.debugAdd!('fire', 2000 + box.right - box.left + 50, 4300)];
+    });
+    await frames(page, 3);
+    const mid = await page.evaluate(([a, b]) => {
+      const pk = window.__PK__!;
+      const ka = pk.kids().find((k) => k.id === a)!;
+      const kb = pk.kids().find((k) => k.id === b)!;
+      const left = pk.worldToScreen(ka.x + ka.box.right, ka.y + (ka.box.top + ka.box.bottom) / 2);
+      const right = pk.worldToScreen(kb.x + kb.box.left, kb.y + (kb.box.top + kb.box.bottom) / 2);
+      return { x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 + 1 };
+    }, [a, b] as const);
+    // A tap, timed in the page.
+    await page.evaluate((p) => {
+      const canvas = document.querySelector('canvas')!;
+      for (const type of ['pointerdown', 'pointerup']) canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: p.x, clientY: p.y, buttons: type === 'pointerdown' ? 1 : 0, bubbles: true }));
+    }, mid);
+    const which = page.getByRole('dialog', { name: 'Which kid?' });
+    await expect(which).toBeVisible();
+    await expect(which.locator('.kids-row')).toHaveCount(2);
+    await which.locator(`.kids-row[data-kid="${b}"]`).click();
+    await expect(page.getByRole('dialog', { name: 'Fire Kid' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    // A drag from the same spot takes one kid, never asks.
+    await page.mouse.move(mid.x, mid.y);
+    await page.mouse.down();
+    await page.mouse.move(mid.x, mid.y - 40, { steps: 4 });
+    const held = await page.evaluate(() => window.__PK__!.kids().filter((k) => k.held).map((k) => k.id));
+    expect(held).toHaveLength(1);
+    expect([a, b]).toContain(held[0]);
+    await page.mouse.up();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('Kids on map interrupted by the return summary comes back, still a page of the Dex', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1800, 4300));
+    await page.locator('[data-nav=dex]').click();
+    await page.getByRole('button', { name: /Kids on map/ }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog', { name: 'Kids on map' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to Potato-Dex' }).click();
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
+  });
+});
+
+test.describe('taking kids out of a plot, and cancelling a growing one (D-074, GUI_MVP §21)', () => {
+  /** Plants these kids into plot 1 and opens its detail from the Garden. Returns their ids. */
+  async function planted(page: Page, types: string[], name?: string): Promise<number[]> {
+    const ids = await page.evaluate(
+      ([types, name]) => {
+        const pk = window.__PK__!;
+        const ids = types.map((t, i) => pk.debugAdd!(t, 1500 + i * 260, 4500));
+        // A name costs Materials (D-067).
+        if (name) {
+          pk.debugGive!({ materials: 1000 });
+          pk.debugCommand!({ type: 'name', kidId: ids[0]!, name });
+        }
+        pk.debugCommand!({ type: 'plant', kidIds: ids, plot: 0 });
+        return ids;
+      },
+      [types, name ?? null] as const,
+    );
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('button', { name: 'Review plot' }).first().click();
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Plot 1');
+    return ids;
+  }
+  const note = (page: Page) => page.getByRole('dialog').locator('.plot-note');
+
+  test('Take out brings one kid back at once, with its name; the plot keeps the rest', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await planted(page, ['plain', 'fire', 'water'], 'Spud');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Take kids out before growing, or cancel while growing.');
+    await dialog.getByRole('button', { name: 'Take out Spud' }).click();
+    await expect(note(page)).toContainText('Spud is back by the Garden.');
+    await expect.poll(() => page.evaluate((id) => window.__PK__!.kids().some((k) => k.id === id), ids[0]!)).toBe(true);
+    await expect(dialog.locator('.plot-take-out')).toHaveCount(2);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+  });
+
+  test('Empty plot asks first; Keep filling sends nothing; then every kid comes back', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire']);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Empty plot', exact: true }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveText('Empty Plot 1?');
+    await expect(dialog).toContainText('All 2 kids will return by the Garden. Nothing is charged.');
+    await dialog.getByRole('button', { name: 'Keep filling' }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('filling');
+    await dialog.getByRole('button', { name: 'Empty plot', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Empty plot · 2 kids' }).click();
+    await expect(note(page)).toContainText('Plot 1 is empty. 2 kids are back by the Garden.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+  });
+
+  test('a growing plot: Cancel growing reviews the loss, then brings every kid back', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.locator('.plot-take-out')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveText('Cancel Plot 1?');
+    for (const line of ['All 3 kids will return by the Garden.', 'Growing time will be lost. Start again from the beginning if you plant them again.', 'Nothing is charged or refunded.', 'Room needed: 3.']) {
+      await expect(dialog).toContainText(line);
+    }
+    await expect(dialog.locator('.sheet-footer .ui-button')).toHaveText(['Keep growing', 'Cancel growing · 3 kids']);
+    await dialog.getByRole('button', { name: 'Cancel growing · 3 kids' }).click();
+    await expect(note(page)).toContainText('Plot 1 was cancelled. 3 kids are back by the Garden.');
+    await expect(note(page)).toContainText('Growing time was lost.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+  });
+
+  test('a full map: Take out is refused with its exact reason, and the kid stays in the plot', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    // Fill the map behind the sheet.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 12; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+    });
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('.plot-take-out').first().click();
+    await expect(note(page)).toContainText('The map is full. Make room for 1 kid, then try Take out again.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
+  });
+
+  test('an open Empty review holds Add kids and Start growing; Start review holds Empty (Codex review, PR #89)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Empty plot', exact: true }).click();
+    await expect(dialog.locator('.plot-add')).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.locator('.plot-start')).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.locator('.plot-take-out').first()).toHaveAttribute('aria-disabled', 'true');
+    await dialog.locator('.plot-start').click({ force: true }); // a deliberate tap on the held control
+    await expect(dialog.locator('.plot-review-heading')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Keep filling' }).click();
+    await expect(dialog.locator('.plot-start')).toHaveAttribute('aria-disabled', 'false');
+    await dialog.locator('.plot-start').click();
+    await expect(dialog.locator('.plot-review-heading')).toBeVisible();
+    await expect(dialog.locator('.plot-empty')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('the review shows the map’s room as it is now, and holds its action on a full map (Codex review, PR #89)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    const room = () => page.evaluate(() => 12 - window.__PK__!.kids().length);
+    await expect(dialog.locator('.plot-confirm-room')).toHaveText(`Room needed: 3. Room on map: ${await room()}.`);
+    const action = dialog.getByRole('button', { name: /Cancel growing · 3 kids/ });
+    await expect(action).toHaveAttribute('aria-disabled', 'false');
+    // Kids arrive while the review is open: the count follows, and with less room than
+    // needed the action waits, saying why.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 11; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+    });
+    await expect(dialog.locator('.plot-confirm-room')).toHaveText('Room needed: 3. Room on map: 1.');
+    await expect(action).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.locator('.plot-confirm-full')).toBeVisible();
+    await expect(dialog.locator('.plot-confirm-full')).toHaveText("There isn't room on the map for all 3 kids. Make room, then try again.");
+  });
+
+  test('a refused Cancel keeps focus on its action, for a keyboard retry (Codex review, PR #89)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    const action = dialog.getByRole('button', { name: /Cancel growing · 3 kids/ });
+    await action.focus();
+    // In one task: the action is sent, then the map fills before the engine answers.
+    await page.evaluate(() => {
+      (document.querySelector('.plot-confirm-action') as HTMLButtonElement).click();
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 12; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+    });
+    await expect(dialog.locator('.plot-note')).toContainText("There isn't room on the map for all 3 kids.");
+    await expect(dialog.locator('.plot-confirm-action')).toBeFocused();
+  });
+
+  test('a review that the plot outgrows closes and says why; a ready sprout offers no Cancel', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    await expect(dialog.locator('.plot-confirm-heading')).toBeVisible();
+    // The sprout finishes while the review is open (the map is kept full so it waits).
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 12; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+      pk.debugReadySeed!(0, 'plain');
+    });
+    await expect(note(page)).toContainText('This sprout has finished growing and cannot be cancelled.');
+    // The ready detail says so itself, with no Take out, Start or Cancel.
+    await expect(dialog.locator('.plot-detail')).toContainText('This sprout has finished growing and cannot be cancelled.');
+    await expect(dialog.getByRole('button', { name: /Start growing|Take out|Empty plot/ })).toHaveCount(0);
+    await expect(dialog.locator('.plot-confirm-heading')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: /Cancel growing/ })).toHaveCount(0);
   });
 });

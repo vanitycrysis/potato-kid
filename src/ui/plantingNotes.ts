@@ -26,7 +26,7 @@ export class PlantingNotes {
 
   /** The first explanation (§15.6). */
   firstLines(): string[] {
-    return ['Added kids leave the map. No refund.', 'Their types stay in your Potato-Dex.', 'Add 3–5 kids, then press Start growing.'];
+    return ['Added kids leave the map. You can take them out while filling, or cancel while growing.', 'Their types stay in your Potato-Dex.', 'Add 3–5 kids, then press Start growing.'];
   }
 
   /** A claimed first explanation will never be shown (its view went away): free it. */

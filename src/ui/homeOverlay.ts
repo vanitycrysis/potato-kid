@@ -28,7 +28,7 @@ export function plantLabel(v: Pick<HomeView, 'state' | 'plot' | 'busy'>): [strin
   const c = v.plot?.count ?? 0;
   if (v.state === 'ready') return ['Release to add this kid', `Plot ${n}: ${c} → ${c + 1} / ${MAX_KIDS}.`, 'Start growing separately at 3–5.'];
   if (v.state === 'waiting') return ['Keep holding…', 'Release early to place normally.', `Plot ${n}: ${c} / ${MAX_KIDS} kids.`];
-  return [`Add to Plot ${n}`, 'Hold here, then release.', 'Leaves the map. No refund.'];
+  return [`Add to Plot ${n}`, 'Hold here, then release.', 'Leaves map now. Take out before growing.'];
 }
 
 /** Every label the target can show, worst cases included, for sizing it once. */
