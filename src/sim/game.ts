@@ -90,8 +90,6 @@ export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline' | 'spr
 /** What a started seed sprouts (D-061): decided at Start growing, so saves never change it. */
 export interface Sprout {
   type: KidId;
-  /** A rare variant (D-062), or null for an ordinary kid. */
-  variant: string | null;
 }
 
 /** A kid as it was planted (GUI_MVP §15.4: the plot detail still shows it). */
@@ -100,7 +98,6 @@ export interface PlantedKid {
   id: number;
   type: KidId;
   look: Look;
-  variant?: string;
   /** Its name, which comes back with it (D-074) and ends when the seed sprouts (D-057). */
   name?: string;
   /** Happy when added (D-056): it counts one tier higher in the odds, for good (GUI_MVP §15.3). */
@@ -150,8 +147,6 @@ export type GameEvent =
   /** `plot`: the plot a sprout came up from (0-based). */
   | { type: 'spawned'; kid: Kid; source: SpawnSource; plot?: number }
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
-  /** A rare variant seen on this type for the first time (D-062). */
-  | { type: 'variantFound'; kidType: KidId; variant: string }
   | { type: 'pickedUp'; kidId: number }
   | { type: 'dropped'; kidId: number }
   /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
@@ -192,8 +187,6 @@ export interface GameState {
   plots: Plot[];
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
-  /** Rare variants found, by kid type, in the order found (D-062; GUI_MVP §16.4). */
-  discoveredVariants: Partial<Record<KidId, string[]>>;
   /** Recipe pair keys (`pairKey`) the player has triggered. */
   discoveredRecipes: string[];
   /** Soft currency, earned passively by every kid on the map (D-020). Fractional. */
@@ -291,7 +284,6 @@ export class Game {
       gardenSpawns: 0,
       plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })),
       discoveredKids: [],
-      discoveredVariants: {},
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,
       potatokens: content.balance.economy.startingPotatokens,
@@ -369,14 +361,14 @@ export class Game {
     return sum;
   }
 
-  /** What one kid earns per second: its type's rate, more if it is a rare (D-062) or happy (D-056). */
-  incomeOfKid(kid: Pick<Kid, 'type' | 'variant' | 'happy'>): number {
+  /** What one kid earns per second: its type's rate (a rare's through its tier, D-072), more if happy (D-056). */
+  incomeOfKid(kid: Pick<Kid, 'type' | 'happy'>): number {
     return this.baseIncomeOfKid(kid) * this.happyMultiplier(kid);
   }
 
-  /** What a kid earns when not happy: its type's rate, more if it is a rare. */
-  private baseIncomeOfKid(kid: Pick<Kid, 'type' | 'variant'>): number {
-    return this.incomeOf(kid.type) * (kid.variant ? this.content.balance.planting.rareIncomeMultiplier : 1);
+  /** What a kid earns when not happy: its type's rate. */
+  private baseIncomeOfKid(kid: Pick<Kid, 'type'>): number {
+    return this.incomeOf(kid.type);
   }
 
   /** How many times as much a kid earns while happy (D-056): 1 when it isn't. */
@@ -695,8 +687,9 @@ export class Game {
       }
       case 'respawn': {
         if (s.buildings.compendium < 1) return reject('locked');
-        // Specials come only from planting (owner, 2026-10-04).
-        if (this.content.kids.find((k) => k.id === c.kidType)?.special) return reject('notSpawnable');
+        // Specials and rares come only from planting (owner, 2026-10-04; D-072).
+        const def = this.content.kids.find((k) => k.id === c.kidType);
+        if (def?.special || def?.rare) return reject('notSpawnable');
         if (!s.discoveredKids.includes(c.kidType)) return reject('undiscovered');
         const cost = this.respawnCost(c.kidType);
         const price = c.pay === 'materials' ? cost.materials : cost.potatokens;
@@ -711,33 +704,15 @@ export class Game {
   }
 
   /** A newborn at the Garden outlet, if a spot is free; the type is drawn only then. */
-  private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[], variant: string | null = null): Kid | null {
-    // A Mini is smaller all through: its look and its box, before it looks for room (§16.1).
-    const look = variant === 'mini' ? this.mini(this.peekLook()) : this.peekLook();
+  private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[]): Kid | null {
+    const look = this.peekLook();
     const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
     if (!p) return null;
     this.rollLook(); // commit the peeked roll
     const kid = this.add(type(), p, this.content.balance.spawn.newbornGraceSeconds, look);
-    if (variant) kid.variant = variant;
     events.push({ type: 'spawned', kid, source });
     this.discover(kid.type, events);
-    if (variant) this.discoverVariant(kid.type, variant, events);
     return kid;
-  }
-
-  /** A look at Mini size: appearance and box scaled about the ground point (GUI_MVP §16.1). */
-  private mini(look: Look & { box: Box }): Look & { box: Box } {
-    const m = this.content.balance.planting.miniScale;
-    const b = look.box;
-    return { ...look, scale: look.scale * m, box: { left: b.left * m, top: b.top * m, right: b.right * m, bottom: b.bottom * m } };
-  }
-
-  /** Records a rare variant found on a type (D-062): a new one is an event. */
-  private discoverVariant(type: KidId, variant: string, events: GameEvent[]): void {
-    const found = (this.state.discoveredVariants[type] ??= []);
-    if (found.includes(variant)) return;
-    found.push(variant);
-    events.push({ type: 'variantFound', kidType: type, variant });
   }
 
   /**
@@ -843,11 +818,11 @@ export class Game {
     });
   }
 
-  /** A ready plot's kid comes up at the outlet, with its variant; the plot empties. Null if no spot. */
+  /** A ready plot's kid comes up at the outlet; the plot empties. Null if no spot. */
   private sproutFrom(index: number, events: GameEvent[]): Kid | null {
     const plot = this.state.plots[index]!;
     const sprout = plot.seed!.sprout!;
-    const kid = this.spawnAtOutlet(() => sprout.type, 'sprout', events, sprout.variant);
+    const kid = this.spawnAtOutlet(() => sprout.type, 'sprout', events);
     if (!kid) return null;
     plot.seed = null;
     for (const e of events) if (e.type === 'spawned' && e.kid === kid) e.plot = index;
@@ -885,20 +860,19 @@ export class Game {
   }
 
   /**
-   * What a seed sprouts (D-061): a random Garden kid; a special at its chance, and,
-   * independently, a rare variant, which is of a kid planted (picked weighted by how many of
-   * each went in) unless it is a special. Rolled on the spawn stream, so saves replay it.
+   * What a seed sprouts (D-061): a random Garden kid; a special (D-063) at its chance, and,
+   * independently, a rare kid (D-072) at its own. If both hit, the rare wins: the rarer roll.
+   * A roll with no kids of its kind in the content gives nothing. Both chances are always
+   * rolled, then the type, on the spawn stream, so saves replay it.
    */
   private rollSprout(kids: readonly PlantedKid[]): Sprout {
     const odds = this.oddsFor(kids);
-    const planted = kids.map((k) => k.type);
     const specials = this.content.kids.filter((k) => k.special);
+    const rares = this.content.kids.filter((k) => k.rare);
     const special = this.spawnRng.next() < odds.special && specials.length > 0;
-    const rare = this.spawnRng.next() < odds.rare;
-    const variants = this.content.balance.planting.rareVariants;
+    const rare = this.spawnRng.next() < odds.rare && rares.length > 0;
     const pick = <T>(list: readonly T[]) => list[Math.floor(this.spawnRng.next() * list.length)]!;
-    const type = special ? pick(specials).id : rare && planted.length ? pick(planted) : this.rollSpawnType();
-    return { type, variant: rare && variants.length ? pick(variants) : null };
+    return { type: rare ? pick(rares).id : special ? pick(specials).id : this.rollSpawnType() };
   }
 
   /**
@@ -948,7 +922,6 @@ export class Game {
         id: kid.id,
         type: kid.type,
         look: { ...kid.look },
-        ...(kid.variant ? { variant: kid.variant } : {}),
         ...(kid.name ? { name: kid.name } : {}),
         ...(kid.happy ? { happy: true, happiness: { ...kid.happy } } : {}),
       };
@@ -991,7 +964,6 @@ export class Game {
       const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
       if (!p) return rollBack();
       const kid = addKid(world, k.type, p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, look.box, { body: look.body, face: look.face, scale: look.scale }, k.id);
-      if (k.variant) kid.variant = k.variant;
       if (k.name) kid.name = k.name;
       if (k.happiness) kid.happy = { ...k.happiness };
       // Clear of recipe partners, those already on the map and those coming back with it:
@@ -1093,9 +1065,9 @@ export class Game {
     return !!this.content.kids.find((k) => k.id === type)?.special;
   }
 
-  /** A kid's look scale before any Mini shrink: its normal size (GUI_MVP §16.1). */
-  normalScale(kid: Pick<Kid, 'look' | 'variant'>): number {
-    return kid.variant === 'mini' ? kid.look.scale / this.content.balance.planting.miniScale : kid.look.scale;
+  /** One of the planting-only rare types (D-072). */
+  isRare(type: KidId): boolean {
+    return !!this.content.kids.find((k) => k.id === type)?.rare;
   }
 
   get growSeconds(): number {
@@ -1133,14 +1105,11 @@ export class Game {
     p.seed = { planted: Array.from({ length: this.content.balance.planting.minKids }, () => ({ id: world.nextKidId++, type: 'plain', look: { ...DEFAULT_LOOK } })), sprout, grown: this.growSeconds };
   }
 
-  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>, variant?: string): Kid {
-    const forced = this.forceLook(this.rollLook(), force);
-    const look = variant === 'mini' ? this.mini(forced) : forced;
+  debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
+    const look = this.forceLook(this.rollLook(), force);
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
-    if (variant) kid.variant = variant;
     this.discover(type);
-    if (variant) this.discoverVariant(type, variant, []);
     this.syncRngState();
     return kid;
   }

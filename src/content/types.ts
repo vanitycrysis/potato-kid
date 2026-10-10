@@ -7,6 +7,8 @@ export interface KidDef {
   name: string;
   /** A planting-only special kid (owner, 2026-10-04): in no recipe, not in the roster count. */
   special?: boolean;
+  /** One of the ten planting-only rare kids (D-072), from the rare roll: in no recipe either. */
+  rare?: boolean;
 }
 
 export interface RecipeDef {
@@ -102,15 +104,9 @@ export interface PlantingBalance {
   /** Kids a plot needs before it can start growing, and the most it takes. */
   minKids: number;
   maxKids: number;
-  /** [floor, ceiling] chance a sprout is a special kid (D-063), and a rare variant (D-062). */
+  /** [floor, ceiling] chance a sprout is a special kid (D-063), and a rare kid (D-072). */
   specialOdds: [number, number];
   rareOdds: [number, number];
-  /** The rare variants a sprout can be (D-062); one is picked at random. */
-  rareVariants: string[];
-  /** A rare kid earns this many times its type's Materials (D-062). */
-  rareIncomeMultiplier: number;
-  /** A Mini kid's size: its saved appearance and its box, times this (GUI_MVP §16.1). */
-  miniScale: number;
 }
 
 /** One food (D-056, GUI_MVP §17.1): a pinned id, its name, and its price in Materials. */

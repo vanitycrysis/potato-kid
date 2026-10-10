@@ -47,13 +47,13 @@ declare global {
       zoom: () => number;
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
-      debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string) => number;
+      debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
       debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => void;
       /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
-      debugReadySeed?: (plot: number, type: string, variant: string | null) => void;
+      debugReadySeed?: (plot: number, type: string) => void;
       /**
        * Only with `?debug=1`: calls `fn` with each sim step's event types, after the HUD has
        * answered them and before the next frame draws anything (timing tests).
@@ -78,8 +78,8 @@ declare global {
       dropTarget: () => number | null;
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
-      /** Rare marks and sleeves drawn now (GUI_MVP §16). */
-      rares: () => { id: number; mark: string | null; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; markBounds: { x: number; y: number; w: number; h: number } | null; happy: boolean }[];
+      /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
+      rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean }[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -114,6 +114,12 @@ async function boot(): Promise<void> {
 
   const params = new URLSearchParams(location.search);
   const seed = Number(params.get('seed') ?? Date.now() % 2 ** 32);
+  // Test-only `?debug=1&rare=a,b`: these types count as rare kids (D-072), everywhere, so the
+  // rare sleeve and marks can be tested before the rare kids' art and content exist.
+  if (params.get('debug') === '1') for (const id of params.get('rare')?.split(',') ?? []) {
+    const k = content.kids.find((x) => x.id === id);
+    if (k) k.rare = true;
+  }
   // Test-only `?calm=1`: no starting kids and no wandering, so e2e drags are deterministic
   // even on CI's slow software renderer.
   const gameContent = params.get('calm') === '1' ? calmed(content) : content;
@@ -242,7 +248,7 @@ async function boot(): Promise<void> {
     zoom: () => scene.zoom,
     ...(params.get('debug') === '1'
       ? {
-          debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string) => scene.debugAdd(t, x, y, look, variant),
+          debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => scene.debugAdd(t, x, y, look),
           debugAway: async (awayMs: number) => {
             scene.suspend();
             lastOffline = scene.resume(scene.game.state.accountedUntil + awayMs);
@@ -253,7 +259,7 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
-          debugReadySeed: (plot: number, type: string, variant: string | null) => scene.game.debugReadySeed(plot, { type, variant }),
+          debugReadySeed: (plot: number, type: string) => scene.game.debugReadySeed(plot, { type }),
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,

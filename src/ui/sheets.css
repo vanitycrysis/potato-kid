@@ -641,60 +641,6 @@
 .dex-tile .tier {
   margin-top: auto;
 }
-/* One 24 px line of rare progress under the tier, never ten small icons (GUI_MVP §16.4). */
-.dex-tile-rare {
-  min-height: 24px;
-  font-size: 16px;
-  line-height: 24px;
-}
-.dex-rare-heading {
-  margin: 0;
-}
-.dex-rare-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dex-rare-row {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 0 8px;
-}
-.dex-rare-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.dex-rare-label {
-  font-size: 18px;
-  line-height: 24px;
-}
-.dex-rare-text .sheet-helper {
-  margin: 0;
-}
-.dex-rare-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 16px;
-}
-.dex-rare-unfound {
-  width: 24px;
-  height: 24px;
-  box-sizing: border-box;
-  border: 2px solid var(--ui-ink);
-  border-radius: 4px;
-  flex: none;
-}
-.dex-rare-empty {
-  width: 20px;
-  height: 20px;
-  box-sizing: border-box;
-  border: 2px dashed var(--ui-ink);
-  border-radius: 3px;
-}
 .dex-tier-20 {
   min-height: 20px;
   line-height: 20px;

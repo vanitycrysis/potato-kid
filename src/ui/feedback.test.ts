@@ -92,7 +92,7 @@ describe('feedback cards (GUI_MVP §9)', () => {
 });
 
 describe('planting cards (GUI_MVP §15.5, §15.6)', () => {
-  const k = (id: number, type: string, variant?: string) => ({ id, type, ...(variant ? { variant } : {}) }) as never;
+  const k = (id: number, type: string) => ({ id, type }) as never;
 
   it('kids added to a plot in one step make one card, with the plot and its count', () => {
     const events: GameEvent[] = [
@@ -107,39 +107,13 @@ describe('planting cards (GUI_MVP §15.5, §15.6)', () => {
     expect(feedbackFor([{ type: 'growing', plot: 2 }], new Set(), 0)).toEqual([{ kind: 'growing', plot: 2 }]);
   });
 
-  it('a known type sprouting is revealed with its plot and variant; a new type gets the discovery card', () => {
+  it('a known type sprouting is revealed with its plot; a new type gets the discovery card', () => {
     const known = new Set(['fire']);
-    expect(feedbackFor([{ type: 'spawned', kid: k(9, 'fire', 'comet'), source: 'sprout', plot: 0 }], known, 1)).toEqual([
-      { kind: 'sprouted', kidType: 'fire', kidId: 9, plot: 0, variant: 'comet' },
-    ]);
+    expect(feedbackFor([{ type: 'spawned', kid: k(9, 'fire'), source: 'sprout', plot: 0 }], known, 1)).toEqual([{ kind: 'sprouted', kidType: 'fire', kidId: 9, plot: 0 }]);
     expect(feedbackFor([{ type: 'spawned', kid: k(10, 'hero'), source: 'sprout', plot: 0 }], known, 2)).toEqual([
       { kind: 'newKid', childType: 'hero', kidId: 10, milestone: 0 },
     ]);
     // Garden spawns of known types stay silent, as before.
     expect(feedbackFor([{ type: 'spawned', kid: k(11, 'fire'), source: 'garden' }], known, 2)).toEqual([]);
-  });
-
-  it('a variant new to the Dex marks its own sprout card, or joins its new type: one card, never two', () => {
-    const known = new Set(['fire']);
-    expect(
-      feedbackFor(
-        [
-          { type: 'spawned', kid: k(9, 'fire', 'comet'), source: 'sprout', plot: 1 },
-          { type: 'variantFound', kidType: 'fire', variant: 'comet' },
-        ],
-        known,
-        1,
-      ),
-    ).toEqual([{ kind: 'sprouted', kidType: 'fire', kidId: 9, plot: 1, variant: 'comet', found: true }]);
-    expect(
-      feedbackFor(
-        [
-          { type: 'spawned', kid: k(10, 'hero', 'mini'), source: 'sprout', plot: 0 },
-          { type: 'variantFound', kidType: 'hero', variant: 'mini' },
-        ],
-        known,
-        2,
-      ),
-    ).toEqual([{ kind: 'newKid', childType: 'hero', kidId: 10, milestone: 0, variant: 'mini' }]);
   });
 });

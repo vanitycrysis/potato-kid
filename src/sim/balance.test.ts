@@ -163,3 +163,20 @@ describe('what a drop tested (Codex review, PR #45)', () => {
     expect([...tried]).toEqual([]);
   });
 });
+
+describe('the bot never buys what the Compendium refuses (Codex review, PR #84)', () => {
+  it('a discovered rare is no Compendium choice, so the bot does something else', () => {
+    const c = structuredClone(content);
+    c.kids.push({ id: 'rare_a', tier: 6, name: 'Rare A', rare: true });
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, intervalSeconds: 1e9 };
+    const g = new Game(c, { ...options, now: 0 }, 1);
+    addKid(g.state.world, 'plain', 1000, 1500, createRng(1), 0, defaultBox(c.balance.body.radius));
+    g.state.discoveredKids = ['rare_a', 'plain'];
+    g.state.buildings.compendium = 1;
+    g.state.materials = 0;
+    g.state.potatokens = 1e6;
+    const act = createBot(g, c).decide();
+    expect(act).not.toBeNull();
+    expect(act!.some((x) => x.type === 'respawn' && x.kidType === 'rare_a')).toBe(false);
+  });
+});

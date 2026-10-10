@@ -113,12 +113,21 @@ describe('planting and special kids (D-061, D-063)', () => {
 
   it('checks the planting numbers', () => {
     const c = structuredClone(content);
-    c.balance.planting = { ...c.balance.planting, minKids: 6, specialOdds: [0.3, 0.2], rareOdds: [0, 1.5], rareVariants: ['a', 'a'], rareIncomeMultiplier: 0.5 };
+    c.balance.planting = { ...c.balance.planting, minKids: 6, specialOdds: [0.3, 0.2], rareOdds: [0, 1.5] };
     const errors = validateContent(c);
     expect(errors).toContain('balance.planting.minKids must not exceed maxKids');
     expect(errors).toContain('balance.planting.specialOdds must be [floor, ceiling] chances in 0..1, floor <= ceiling');
     expect(errors).toContain('balance.planting.rareOdds must be [floor, ceiling] chances in 0..1, floor <= ceiling');
-    expect(errors).toContain('balance.planting.rareVariants must be distinct, non-empty ids');
-    expect(errors).toContain('balance.planting.rareIncomeMultiplier must be a finite number >= 1');
+  });
+
+  it("holds rare kids (D-072) to the specials' rules, and a kid is never both", () => {
+    const rare = { id: 'rare_a', tier: 6, name: 'Rare A', rare: true };
+    expect(validateContent(withChanges({ kids: [...content.kids, rare] }))).toEqual([]);
+    expect(validateContent(withChanges({ kids: [...content.kids, { ...rare, tier: 4 }] }))).toContain('rare kid "rare_a" must be tier 5 or above');
+    expect(validateContent(withChanges({ kids: [...content.kids, rare], recipes: [...content.recipes, { a: 'plain', b: 'rare_a', result: 'fire' }] }))).toContain('rare kid "rare_a" must not be in a recipe');
+    const pooled = withChanges({ kids: [...content.kids, rare] });
+    pooled.balance.spawnWeights.rare_a = 1;
+    expect(validateContent(pooled)).toContain('rare kid "rare_a" must not be in the spawn pool');
+    expect(validateContent(withChanges({ kids: [...content.kids, { ...rare, special: true }] }))).toContain(`kid "rare_a" can't be both special and rare`);
   });
 });

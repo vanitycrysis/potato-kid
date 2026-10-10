@@ -16,7 +16,7 @@ async function boot(page: Page, query: string): Promise<string[]> {
 const balance = JSON.parse(readFileSync('src/content/balance.json', 'utf8')) as {
   buildings: Record<string, { costBase: number; costGrowth: number }>;
   economy: { respawnMaterials: number; materialsPerSecond: number };
-  planting: { growSeconds: number; unlockCostBase: number; unlockCostGrowth: number; startPlots: number; rareIncomeMultiplier: number };
+  planting: { growSeconds: number; unlockCostBase: number; unlockCostGrowth: number; startPlots: number };
 };
 /** Materials to unlock the plot after the `unlocked` ones. */
 const plotPrice = (unlocked: number) => Math.ceil(balance.planting.unlockCostBase * balance.planting.unlockCostGrowth ** (unlocked - balance.planting.startPlots));
@@ -727,29 +727,25 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
   expect(errors).toEqual([]);
 });
 
-test('a first-variant card waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77)', async ({ page }) => {
+test('a first rare card waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77)', async ({ page }) => {
   test.setTimeout(60_000);
   await page.route('**/kid_lantern_*', async (route) => {
     await new Promise((r) => setTimeout(r, 3000));
     await route.continue();
   });
-  await boot(page, '?seed=3&debug=1&calm=1');
-  const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 300, 1500), glass: window.__PK__!.debugAdd!('glassblower', 830, 700) }));
-  for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
-  // A Lantern Kid fuses: the type is known, its costume still downloading.
-  await dropOnto(page, hero, glass);
-  await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
-  // Per frame until its card shows: the Comet Lantern's card, and whether the kid is drawn.
+  // Lantern stands in for a rare kid (D-072) until the rares' content exists.
+  await boot(page, '?seed=3&debug=1&calm=1&rare=lantern');
+  // Per frame until its card shows: the Rare found card, and whether the kid is drawn.
   const log = await page.evaluate(
     () =>
       new Promise<[boolean, boolean][]>((done) => {
         const pk = window.__PK__!;
         const before = pk.kids().map((k) => k.id);
-        pk.debugReadySeed!(0, 'lantern', 'comet');
+        pk.debugReadySeed!(0, 'lantern');
         const out: [boolean, boolean][] = [];
         const end = performance.now() + 20_000;
         const frame = () => {
-          const card = (document.querySelector('.feedback')?.textContent ?? '').includes('Comet found');
+          const card = (document.querySelector('.feedback')?.textContent ?? '').includes('Rare found');
           const drawn = pk.rares().some((r) => !before.includes(r.id));
           out.push([card, drawn]);
           if (card || performance.now() > end) done(out);
@@ -1043,6 +1039,21 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().levels.compendium)).toBe(1);
     return errors;
   }
+
+  test('the Compendium sells ordinary kids only: a found rare kid is not listed (D-072, GUI_MVP §16.4)', async ({ page }) => {
+    // Hero stands in for a rare kid until the rares' content exists.
+    await boot(page, '?seed=3&debug=1&calm=1&rare=hero');
+    await page.evaluate((m) => {
+      window.__PK__!.debugAdd!('plain', 250, 1500);
+      window.__PK__!.debugAdd!('hero', 830, 1500);
+      window.__PK__!.debugGive!({ materials: m });
+      window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
+    }, price('compendium', 0));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().levels.compendium)).toBe(1);
+    await compendium(page).click();
+    await expect(page.locator('.comp-card')).toHaveCount(1);
+    await expect(page.locator('.comp-card')).toContainText('Potato Kid');
+  });
 
   test('the Compendium builds in place, then brings a kid back for either currency', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
@@ -1421,8 +1432,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(cells).toHaveCount(totals.kids);
     // Discovered first, in roster order, then packets: a packet's position says nothing.
     await expect(cells.nth(0)).toHaveAttribute('role', 'listitem');
-    await expect(cells.nth(0).locator('.dex-tile')).toHaveAttribute('aria-label', 'Potato Kid, Tier 1, 0 of 10 rare variants found');
-    await expect(cells.nth(1).locator('.dex-tile')).toHaveAttribute('aria-label', 'Water Kid, Tier 1, 0 of 10 rare variants found');
+    await expect(cells.nth(0).locator('.dex-tile')).toHaveAttribute('aria-label', 'Potato Kid, Tier 1');
+    await expect(cells.nth(1).locator('.dex-tile')).toHaveAttribute('aria-label', 'Water Kid, Tier 1');
     await expect(cells.nth(1).locator('.dex-tile-name')).toHaveText('Water');
     const packets = dialog(page).locator('.dex-unknown');
     await expect(packets).toHaveCount(totals.kids - 2);
@@ -2282,8 +2293,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(footer).toContainText('Special roll: Need 3 more → 10%');
     await expect(footer).toContainText('Rare roll: Need 3 more → 5%');
     await expect(footer).toContainText('Added kids leave now. No refund.');
-    await expect(sheet(page).locator('.picker-helpers')).toContainText('Two separate rolls. A sprout can be both special and rare.');
-    await expect(sheet(page).locator('.picker-helpers')).toContainText("A rare sprout can also take a planted special's type.");
+    await expect(sheet(page).locator('.picker-helpers')).toContainText('Two separate rolls. If both hit, the sprout is the rare kid.');
     await add.click();
     // One step: the three are planted together, and the detail shows what happened.
     await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.id))).toEqual([ids[3]]);
@@ -2709,83 +2719,44 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
   });
 });
 
-test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () => {
-  const variants = ['rainbow', 'mini', 'orbit', 'prism', 'ribbon', 'ripple', 'comet', 'petal', 'echo', 'zigzag'];
+test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
+  // The rare kids' art and content come with WILD-ART: until then Hero and Lantern stand in.
+  const RARE = '?seed=3&debug=1&calm=1&rare=hero,lantern';
 
-  /** Ten rare Fire Kids and one ordinary, spaced apart, in view. Returns their ids (ordinary last). */
+  /** Two rare Hero Kids and an ordinary Fire Kid, spaced apart, in view. Returns their ids (ordinary last). */
   async function rares(page: Page): Promise<number[]> {
-    await boot(page, '?seed=3&debug=1&calm=1');
-    const ids = await page.evaluate((v) => {
+    await boot(page, RARE);
+    const ids = await page.evaluate(() => {
       const pk = window.__PK__!;
-      const out = v.map((x, i) => pk.debugAdd!('fire', 560 + (i % 4) * 230, 1250 + Math.floor(i / 4) * 260, { body: 'round', scale: 1 }, x));
-      out.push(pk.debugAdd!('fire', 1250, 1770, { body: 'round', scale: 1 }));
-      pk.centerOn(900, 1520);
+      const out = [pk.debugAdd!('hero', 560, 1250, { body: 'round', scale: 1 }), pk.debugAdd!('hero', 790, 1250, { body: 'round', scale: 1 })];
+      out.push(pk.debugAdd!('fire', 1020, 1250, { body: 'round', scale: 1 }));
+      pk.centerOn(800, 1300);
       return out;
-    }, variants);
+    });
     await page.waitForTimeout(300);
     return ids;
   }
 
-  test('each rare shows its own mark and the sleeve; an ordinary kid shows neither', async ({ page }) => {
+  test('every rare kid shows the sleeve, and no mark; an ordinary kid shows neither', async ({ page }) => {
     const ids = await rares(page);
     const shown = await page.evaluate(() => window.__PK__!.rares());
-    expect(shown.map((r) => r.id).sort((a, b) => a - b)).toEqual(ids.slice(0, 10).sort((a, b) => a - b));
-    for (const [i, id] of ids.slice(0, 10).entries()) {
-      const r = shown.find((x) => x.id === id)!;
-      expect(r.mark).toBe(`fx_variant_${variants[i]}`);
+    expect(shown.map((r) => r.id).sort((a, b) => a - b)).toEqual(ids.slice(0, 2).sort((a, b) => a - b));
+    for (const r of shown) {
       expect(r.sleeve).toBe(true);
       expect(r.sleeveAlpha).toBeGreaterThanOrEqual(0.8 - 1e-9);
       expect(r.sleeveAlpha).toBeLessThanOrEqual(1);
     }
   });
 
-  test("a mark's visible bottom sits 4 CSS px above its kid's box, centred, 24 to 36 px wide (§16.1)", async ({ page }) => {
-    const ids = await rares(page);
-    // Rainbow's visible trim in its 256 px canvas: x 23, y 98, 210 × 109.
-    const at = await page.evaluate((id) => {
-      const pk = window.__PK__!;
-      const k = pk.kids().find((c) => c.id === id)!;
-      const top = pk.worldToScreen(k.x, k.y + k.box.top).y;
-      const centre = pk.worldToScreen(k.x + (k.box.left + k.box.right) / 2, k.y).x;
-      return { top, centre, mark: pk.rares().find((r) => r.id === id)!.markBounds! };
-    }, ids[0]!);
-    const px = at.mark.w / 256;
-    expect(at.mark.y + (98 + 109) * px).toBeCloseTo(at.top - 4, 0);
-    expect(at.mark.x + (23 + 105) * px).toBeCloseTo(at.centre, 0);
-    expect(210 * px).toBeGreaterThanOrEqual(24 - 0.01);
-    expect(210 * px).toBeLessThanOrEqual(36 + 0.01);
-  });
-
-  test('a Mini is 0.72 the size of its ordinary twin, box and all', async ({ page }) => {
-    const ids = await rares(page);
-    const [mini, ordinary] = await page.evaluate(
-      ([a, b]) => [a, b].map((id) => window.__PK__!.kids().find((k) => k.id === id)!),
-      [ids[1]!, ids[10]!] as const,
-    );
-    expect(mini!.look.scale).toBeCloseTo(ordinary!.look.scale * 0.72, 12);
-    expect(mini!.box.right - mini!.box.left).toBeCloseTo((ordinary!.box.right - ordinary!.box.left) * 0.72, 9);
-  });
-
-  test('fusing a rare makes an ordinary kid: no mark, no sleeve', async ({ page }) => {
-    const ids = await rares(page);
-    const water = await page.evaluate(() => window.__PK__!.debugAdd!('water', 1020, 1770));
-    await page.waitForTimeout(200);
-    await dropOnto(page, water, ids[0]!);
-    await expect.poll(() => page.evaluate((id) => window.__PK__!.kids().some((k) => k.id === id), ids[0]!)).toBe(false);
-    const shown = await page.evaluate(() => window.__PK__!.rares().map((r) => r.id));
-    expect(shown).toHaveLength(9);
-    expect(shown).not.toContain(ids[0]);
-  });
-
   test('a rare that sprouts live bursts, then settles into its idle sleeve (§15.5)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
+    await boot(page, RARE);
     const before = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
     // Per frame from the sprout's step: the newborn's sleeve opacity and scale.
     const log = await page.evaluate(
       (old) =>
         new Promise<[number, number][]>((done) => {
           const pk = window.__PK__!;
-          pk.debugReadySeed!(0, 'fire', 'comet');
+          pk.debugReadySeed!(0, 'hero');
           const out: [number, number][] = [];
           const end = performance.now() + 1200;
           const frame = () => {
@@ -2808,86 +2779,51 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
     expect(settled[0]).toBeGreaterThanOrEqual(0.8 - 1e-9);
   });
 
-  test("the Dex counts each type's rares and lists all ten, found or not, live (§16.4)", async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
+  test('a rare kid is marked Rare in the picker, its card and the Dex has no variant rows', async ({ page }) => {
+    await boot(page, RARE);
     await page.evaluate(() => {
-      const pk = window.__PK__!;
-      pk.debugAdd!('fire', 600, 1400, undefined, 'comet');
-      pk.debugAdd!('fire', 900, 1400, undefined, 'mini');
-      pk.debugAdd!('water', 1200, 1400);
-    });
-    await page.locator('.dex-button').click();
-    const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
-    await expect(dex.locator('[data-kid="fire"] .dex-tile-rare')).toHaveText('Rare 2 / 10');
-    await expect(dex.locator('[data-kid="water"] .dex-tile-rare')).toHaveText('Rare 0 / 10');
-    await expect(dex.locator('[data-kid="fire"]')).toHaveAttribute('aria-label', 'Fire Kid, Tier 1, 2 of 10 rare variants found');
-    await dex.locator('[data-kid="fire"]').click();
-    const rows = dex.locator('.dex-rare-row');
-    await expect(rows).toHaveCount(10);
-    // In the Dex's order, whatever order they were found in.
-    await expect(rows.locator('.dex-rare-label')).toHaveText(['Rainbow', 'Mini', 'Orbit', 'Prism', 'Ribbon', 'Ripple', 'Comet', 'Petal', 'Echo', 'Zigzag']);
-    await expect(rows.nth(1)).toHaveAttribute('aria-label', `Mini: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
-    await expect(rows.nth(6)).toContainText('Found');
-    await expect(rows.nth(0)).toHaveAttribute('aria-label', 'Rainbow: not found');
-    // An unfound row shows a plain square, not the variant's icon.
-    await expect(rows.nth(0).locator('img')).toHaveCount(0);
-    // Found while the detail is open: it follows.
-    await page.evaluate(() => window.__PK__!.debugAdd!('fire', 600, 1800, undefined, 'echo'));
-    await expect(rows.nth(8)).toHaveAttribute('aria-label', `Echo: found. Materials ×${balance.planting.rareIncomeMultiplier}`);
-  });
-
-  test("a rare's list portrait shows its look: a Mini smaller with its pebbles, others their mark (§16.2; Codex review, PR #77)", async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => {
-      window.__PK__!.debugAdd!('fire', 600, 1400, undefined, 'mini');
+      window.__PK__!.debugAdd!('hero', 600, 1400);
       window.__PK__!.debugAdd!('fire', 900, 1400);
-      window.__PK__!.debugAdd!('fire', 1200, 1400, undefined, 'comet');
     });
     await page.locator('.tray-cell').nth(0).click();
     await page.getByRole('button', { name: 'Add kids' }).first().click();
     const rows = page.getByRole('dialog').locator('.picker-row');
-    await expect(rows.nth(0)).toContainText('Rare: Mini');
-    await expect(rows.nth(0).locator('[data-asset="fx_variant_mini"]')).toHaveCount(1);
-    expect(await rows.nth(0).locator('.portrait-canvas > .portrait-layer').first().evaluate((e) => (e as HTMLElement).style.transform)).toContain(`scale(${0.72})`);
-    await expect(rows.nth(1).locator('[data-asset="fx_variant_mini"]')).toHaveCount(0);
-    // Any other rare shows its own mark there too, with no sleeve; an ordinary kid neither.
-    await expect(rows.nth(2).locator('[data-asset="fx_variant_comet"]')).toHaveCount(1);
+    await expect(rows.filter({ hasText: 'Hero' })).toContainText('Rare');
+    await expect(rows.filter({ hasText: 'Fire' })).not.toContainText('Rare');
+    // No variant marks anywhere, and no sleeve in a list portrait.
+    await expect(rows.locator('[data-asset^="fx_variant"]')).toHaveCount(0);
     await expect(rows.locator('[data-asset="fx_rare_sparkle"]')).toHaveCount(0);
-    await expect(rows.nth(1).locator('[data-asset^="fx_variant"]')).toHaveCount(0);
+    // Back out of the picker, then the Garden sheet.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.locator('.dex-button').click();
+    const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+    await dex.locator('[data-kid="hero"]').click();
+    await expect(dex.locator('.dex-detail-name')).toHaveText(/Hero/);
+    await expect(dex.getByText('Rare variants')).toHaveCount(0);
   });
 
-  test('a first Comet sprout reads as found; the next Comet just sprouts (§15.5)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
-    // An ordinary Fire Kid sprouts first: the Dex (and the HUD) now know the type.
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', null));
-    await expect(page.locator('.feedback')).toContainText('Fire Kid');
-    await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
-    // A discovery: the whole card opens the kid in the Dex (§9).
-    const found = page.locator('.feedback').getByRole('button', { name: /Comet found · Fire Kid/ });
-    await expect(found).toContainText('Rare variant · From Plot 1.');
-    await found.click();
-    await expect(page.getByRole('dialog', { name: 'Potato-Dex' }).locator('.dex-detail-name')).toHaveText('Fire Kid');
-    await page.keyboard.press('Escape');
-    // Focus came back to the card, and the pointer rests on it: either holds it on show.
-    // Move both on, and it goes.
-    await expect(found).toBeFocused();
-    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+  test('a rare type new to the Dex reads as Rare found; the next one just sprouts, as a rare kid (§15.5)', async ({ page }) => {
+    await boot(page, RARE);
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
+    const found = page.locator('.feedback').getByRole('button', { name: /Rare found/ });
+    await expect(found).toContainText('Hero');
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.mouse.move(5, 5);
     await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'fire', 'comet'));
-    // A repeat is a short card, nothing to open.
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
     const card = page.locator('.feedback .toast-short');
-    await expect(card).toContainText('Comet Fire Kid sprouted!');
-    await expect(page.locator('.feedback button.toast')).toHaveCount(0);
+    await expect(card).toContainText('sprouted!');
+    await expect(card).toContainText('Rare kid · From Plot 1.');
   });
 
-  test("a press just outside a small Mini's body, within 44 CSS px, picks it up (Codex review, PR #77)", async ({ page }) => {
+  test("a press just outside a small kid's body, within 44 CSS px, picks it up (§16.1, any kid; Codex review, PR #77)", async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     const id = await page.evaluate(() => {
       window.__PK__!.centerOn(800, 1500);
       // Smaller than any rolled look (test only), so the target reaches well past its sprites.
-      return window.__PK__!.debugAdd!('fire', 800, 1500, { scale: 0.5 }, 'mini');
+      return window.__PK__!.debugAdd!('fire', 800, 1500, { scale: 0.36 });
     });
     await page.waitForTimeout(200);
     const at = await page.evaluate((i) => {
@@ -2910,7 +2846,7 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
   });
 
   test('a rare whose costume is still loading bursts once it appears (Codex review, PR #77)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1');
+    await boot(page, RARE);
     const type = 'hero';
     expect(await page.evaluate((t) => window.__PK__!.debugLoadedCostumes!().includes(t), type)).toBe(false);
     const before = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
@@ -2918,7 +2854,7 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
       ([old, t]) =>
         new Promise<number[]>((done) => {
           const pk = window.__PK__!;
-          pk.debugReadySeed!(0, t, 'comet');
+          pk.debugReadySeed!(0, t);
           const out: number[] = [];
           const end = performance.now() + 3000;
           const frame = () => {
@@ -2956,13 +2892,13 @@ test.describe('Rare kids on the map (D-062, GUI_MVP §16.1-16.2, §15.5)', () =>
 
   test('reduced motion: the sleeve holds still at full opacity, and a newborn rare never bursts', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await boot(page, '?seed=3&debug=1&calm=1');
+    await boot(page, RARE);
     const before = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
     const alphas = await page.evaluate(
       (old) =>
         new Promise<number[]>((done) => {
           const pk = window.__PK__!;
-          pk.debugReadySeed!(0, 'fire', 'comet');
+          pk.debugReadySeed!(0, 'hero');
           const out: number[] = [];
           const end = performance.now() + 800;
           const frame = () => {
@@ -3045,7 +2981,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(card(page).locator('.kid-card-happy')).toContainText('Counts as Tier 2 when added to a plot; odds stay capped.');
   });
 
-  test("the Dex detail shows the type's personality too, after the rare rows (§18.1)", async ({ page }) => {
+  test("the Dex detail shows the type's personality too, before the live copies (§18.1)", async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
     await page.locator('.dex-button').click();
@@ -3054,8 +2990,8 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     const blocks = dex.locator('.dex-personality');
     await expect(blocks).toContainText(fire.description);
     await expect(blocks.locator('.kid-card-food').first()).toContainText(foodName(fire.favouriteFood));
-    // Order: rare rows, then personality, then the live copies.
-    const order = await dex.evaluate((d) => ['.dex-rare-rows', '.dex-personality', '.dex-home'].map((s) => d.querySelector(s)!.getBoundingClientRect().top));
+    // Order: personality, then the live copies.
+    const order = await dex.evaluate((d) => ['.dex-personality', '.dex-home'].map((s) => d.querySelector(s)!.getBoundingClientRect().top));
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 

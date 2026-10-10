@@ -10,7 +10,7 @@ const art = gate4Data!.planting as PlantingArt;
 const grow = 100;
 const kid = { id: 1, type: 'plain', look: DEFAULT_LOOK };
 const filling = (n: number): Plot => ({ seed: { planted: Array.from({ length: n }, () => kid), sprout: null, grown: 0 } });
-const growing = (grown: number): Plot => ({ seed: { planted: [kid, kid, kid], sprout: { type: 'fire', variant: null }, grown } });
+const growing = (grown: number): Plot => ({ seed: { planted: [kid, kid, kid], sprout: { type: 'fire' }, grown } });
 
 describe('what a plot shows (GUI_MVP §15.2)', () => {
   it('an empty plot: soil and its five holes', () => {
@@ -40,7 +40,7 @@ describe('what a plot shows (GUI_MVP §15.2)', () => {
 
   it('never shows what the seed will be', () => {
     const a = plotAssets(art, growing(50), grow, null);
-    const b = plotAssets(art, { seed: { planted: [kid, kid, kid], sprout: { type: 'hero', variant: 'rainbow' }, grown: 50 } }, grow, null);
+    const b = plotAssets(art, { seed: { planted: [kid, kid, kid], sprout: { type: 'hero' }, grown: 50 } }, grow, null);
     expect(a).toEqual(b);
   });
 });
