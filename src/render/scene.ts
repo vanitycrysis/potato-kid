@@ -601,11 +601,22 @@ export class MapScene {
     this.applyCamera();
   }
 
-  /** Between the Garden and its outlet: Find Garden centres the play band here (§20.1). */
-  get gardenPoint(): { x: number; y: number } {
-    const [gx, gy] = this.art.map.garden.worldGround;
-    const [ox, oy] = this.art.map.garden.spawnOutlet;
-    return { x: (gx + ox) / 2, y: (gy + oy) / 2 };
+  /** The Garden as Find Garden frames it: its building's drawn top down to its outlet (§20.1). */
+  get gardenFrame(): { x: number; top: number; bottom: number } {
+    const g = this.art.map.garden;
+    const building = this.art.map.instances.find((i) => i.asset === 'building_garden');
+    const [gx, gy] = g.worldGround;
+    return { x: gx, top: building ? gy + (building.boundsPx[1] - building.sourcePivot[1]) * building.scale : gy, bottom: g.spawnOutlet[1] };
+  }
+
+  /**
+   * Find Garden (§20.1), at the current zoom: the Garden's frame centred in the play band if
+   * it fits, else the building first (Codex review, PR #87).
+   */
+  findGarden(): void {
+    const { x, top, bottom } = this.gardenFrame;
+    const band = (this.app.screen.height - this.insets.top - this.insets.bottom) / this.cam.zoom;
+    this.zoomAround({ x, y: bottom - top <= band ? (top + bottom) / 2 : top + band / 2 }, this.zoomFactor);
   }
 
   /** Zooms to `factor` (clamped), keeping the world point under screen (sx, sy) where it is. */

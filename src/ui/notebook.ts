@@ -1,6 +1,6 @@
 import { ZOOM_MAX, ZOOM_MIN, type MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
-import type { BuildingSheets } from './buildings';
+import type { BuildingSheets, SheetRestore } from './buildings';
 import { el } from './dom';
 import { openSettings } from './settings';
 import type { Sheets } from './sheet';
@@ -52,16 +52,29 @@ export class Notebook {
         b.disabled = true;
         b.setAttribute('aria-label', `${r.label}: Update the game to continue.`);
       }
-      b.addEventListener('click', () => this.openRow(r.key, launcher, sheet.body.scrollTop));
+      // What scrolls may be the page, not the body (page mode): ask the sheets (Codex review, PR #87).
+      b.addEventListener('click', () => this.openRow(r.key, launcher, this.sheets.snapshot()?.scrollTop ?? 0));
       return b;
     });
     sheet.body.append(...rows);
     sheet.scrollTo(scrollTop);
-    if (from) rows.find((b) => b.dataset.row === from)?.focus({ preventScroll: true });
+    const back = from && rows.find((b) => b.dataset.row === from);
+    if (back) {
+      back.focus({ preventScroll: true });
+      back.scrollIntoView({ block: 'nearest' });
+    }
   }
 
-  /** A tool as a page of the Notebook (same shell, `Back to Notebook`). */
-  private openRow(row: Row, launcher: HTMLElement | null, scrollTop: number): void {
+  /** Whether an open sheet's key is one of the Notebook's tools (all of them are its pages). */
+  static isTool(key: string): key is Row {
+    return ROWS.some((r) => r.key === key);
+  }
+
+  /**
+   * A tool as a page of the Notebook (same shell, `Back to Notebook`). `restore` brings a
+   * tool back where it was after the offline summary, still a page (Codex review, PR #87).
+   */
+  openRow(row: Row, launcher: HTMLElement | null, scrollTop = 0, restore?: SheetRestore): void {
     this.sheets.asPage({
       label: 'Back to Notebook',
       run: () => {
@@ -69,9 +82,9 @@ export class Notebook {
         this.open(launcher, row, scrollTop);
       },
     });
-    if (row === 'settings') openSettings(this.sheets, this.settings, launcher);
-    else if (row === 'mapview') this.openMapView(launcher);
-    else this.buildings.open(row, launcher);
+    if (row === 'settings') openSettings(this.sheets, this.settings, launcher, restore?.scrollTop);
+    else if (row === 'mapview') this.openMapView(launcher, restore?.scrollTop);
+    else this.buildings.open(row, launcher, restore);
   }
 
   /**
@@ -79,7 +92,7 @@ export class Notebook {
    * Notebook opened it, and Find Garden. The world under the scrim follows; nothing closes
    * the sheet but Find Garden and Done.
    */
-  openMapView(launcher: HTMLElement | null): void {
+  openMapView(launcher: HTMLElement | null, scrollTop = 0): void {
     const at = this.scene.bandCentre();
     const sheet = this.sheets.open({ key: 'mapview', icon: 'icon_garden', title: 'Map view', requestedHeight: 480, update: () => render() }, launcher);
     sheet.setSubtitle('Pinch the map with two fingers.');
@@ -102,11 +115,12 @@ export class Notebook {
     const reset = button('Reset · 100%', () => zoomTo(1));
     const zin = button('Zoom in', () => zoomTo(this.scene.zoom * STEP));
     const find = button('Find Garden', () => {
-      this.scene.zoomAround(this.scene.gardenPoint, this.scene.zoom);
+      this.scene.findGarden();
       this.sheets.close();
     });
     const done = button('Done', () => this.sheets.close());
     sheet.body.append(level, out, reset, zin, find, done, far, near);
+    sheet.scrollTo(scrollTop);
     let shown = '';
     const render = () => {
       const z = this.scene.zoom;

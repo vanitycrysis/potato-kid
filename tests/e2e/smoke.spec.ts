@@ -3794,6 +3794,87 @@ test.describe('pinch-to-zoom (D-071)', () => {
 });
 
 test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', () => {
+  test('an engine refusal of Spawn now is said in the Garden, and nowhere else (Codex review, PR #87)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=garden]').click();
+    // In one task: the tap is valid when sent, then the Potatokens vanish before the engine answers.
+    await page.evaluate(() => {
+      (document.querySelector('.arrivals-spawn') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ potatokens: -window.__PK__!.wallet().potatokens });
+    });
+    await expect(page.locator('.arrivals-reason')).toContainText('Not enough Potatokens');
+    // Let the engine answer first (its step runs in a frame): that text could be the prediction.
+    await frames(page, 5);
+    // The engine's answer stands until the next tap, even once the button could work again.
+    await page.evaluate(() => window.__PK__!.debugGive!({ potatokens: 5 }));
+    await page.waitForTimeout(200);
+    await expect(page.locator('.arrivals-reason')).toContainText('Not enough Potatokens');
+    await page.keyboard.press('Escape');
+    // Sampled: the world never repeats it.
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(150);
+      expect(await page.locator('.feedback').textContent()).not.toContain('Not enough');
+    }
+  });
+
+  test('page mode: Back to Notebook returns to the Notebook where it was, its row in view (Codex review, PR #87)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.locator('[data-nav=notebook]').scrollIntoViewIfNeeded();
+    await page.locator('[data-nav=notebook]').click();
+    const settings = page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true });
+    await settings.scrollIntoViewIfNeeded();
+    const scrolled = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollTop);
+    expect(scrolled).toBeGreaterThan(0);
+    await settings.click();
+    await page.getByRole('button', { name: 'Back to Notebook' }).click();
+    const row = page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true });
+    await expect(row).toBeFocused();
+    await expect(row).toBeInViewport();
+    // Exactly where the page was, not merely scrolled to the row.
+    expect(await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollTop)).toBe(scrolled);
+  });
+
+  test('a Notebook tool interrupted by the return summary comes back as a Notebook page (Codex review, PR #87)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    for (const [row, title] of [['Capacity', 'Capacity'], ['Map view', 'Map view'], ['Settings', 'Settings']] as const) {
+      await openTool(page, row);
+      await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+      await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+      await expect(page.getByRole('dialog', { name: title })).toBeVisible();
+      await page.getByRole('button', { name: 'Back to Notebook' }).click();
+      await expect(page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: row, exact: true })).toBeFocused();
+      await page.keyboard.press('Escape');
+    }
+  });
+
+  for (const [w, h] of [[640, 360], [390, 844]] as const) {
+    test(`${w}x${h}: Find Garden frames the whole building down to its outlet, at 100 % and at 200 % the building first (Codex review, PR #87)`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await boot(page, '?seed=3&debug=1&calm=1');
+      const frame = await page.evaluate(() => window.__PK__!.gardenFrame());
+      const band = await page.evaluate(() => ({ top: document.querySelector('.top-stack')!.getBoundingClientRect().bottom, bottom: document.querySelector('.tray')!.getBoundingClientRect().top }));
+      const y = (wy: number) => page.evaluate(([x, wy]) => window.__PK__!.worldToScreen(x, wy).y, [frame.x, wy] as const);
+      await page.evaluate(() => window.__PK__!.centerOn(99999, 99999));
+      await openTool(page, 'Map view');
+      await page.getByRole('button', { name: 'Find Garden' }).click();
+      expect(await y(frame.top)).toBeGreaterThanOrEqual(band.top - 0.5);
+      expect(await y(frame.bottom)).toBeLessThanOrEqual(band.bottom + 0.5);
+      // At 200 % the frame no longer fits: the building's top is at the band's top.
+      await page.evaluate(() => window.__PK__!.centerOn(99999, 99999));
+      await openTool(page, 'Map view');
+      const sheet = page.getByRole('dialog', { name: 'Map view' });
+      await sheet.getByRole('button', { name: 'Zoom in' }).click();
+      await sheet.getByRole('button', { name: 'Zoom in' }).click();
+      await sheet.getByRole('button', { name: 'Find Garden' }).click();
+      const top = await y(frame.top);
+      expect(top).toBeGreaterThanOrEqual(band.top - 0.5);
+      expect(top).toBeLessThan(band.top + 2);
+    });
+  }
+
   test('the strip shows Materials, Potatokens and population; a full map swaps in a warning', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     const pop = page.locator('.hud-population');

@@ -17,7 +17,6 @@ import { NOTEBOOK_KEYS, Notebook } from './notebook';
 import { openOfflineSummary } from './offline';
 import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
-import { openSettings } from './settings';
 import { Sheets, type SheetSnapshot } from './sheet';
 import './hud.css';
 // Patrick Hand (D-031), chosen by Codex, bundled locally under the SIL OFL (assets/PROVENANCE.md).
@@ -281,11 +280,10 @@ export class Hud {
       if (!back) return;
       if (back.key === 'dex') this.dex.open(back.launcher);
       else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
-      else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
       else if (back.key === 'notebook') this.notebook.open(back.launcher, undefined, back.scrollTop);
-      else if (back.key === 'mapview') this.notebook.openMapView(back.launcher);
-      else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
-        this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
+      // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
+      else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, 0, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
+      else if (back.key === 'garden') this.buildings.open('garden', back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
     });
   }
 
@@ -360,13 +358,12 @@ export class Hud {
 
   private onStep(events: GameEvent[]): void {
     // A sheet shows its own command's refusal inline; the world never repeats it (GUI_MVP §9).
-    const inSheet = new Set([...this.buildings.onStep(events), ...this.kidCard.onStep(events)]);
+    const inSheet = new Set([...this.buildings.onStep(events), ...this.kidCard.onStep(events), ...this.arrivals.onStep(events)]);
     const items = feedbackFor(
       events.filter((e) => !inSheet.has(e)),
       this.known,
       this.scene.game.state.discoveredKids.length,
     );
-    this.arrivals.onStep(events);
     const now = performance.now();
     for (const item of items) {
       const notBefore = this.readyAt(item, now);

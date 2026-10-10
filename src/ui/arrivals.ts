@@ -22,6 +22,8 @@ export class Arrivals {
   private readonly reason = el('p', 'sheet-helper arrivals-reason');
   /** An instant spawn sent and not yet answered: one at a time. */
   private inflight = false;
+  /** The engine's last refusal of Spawn now, shown here until the next tap (Codex review, PR #87). */
+  private refusal: string | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -53,14 +55,27 @@ export class Arrivals {
     // A disabled control sends nothing; only a valid tap is dispatched, one at a time.
     if (!this.state().ok) return;
     this.inflight = true;
+    this.refusal = null;
     this.scene.command({ type: 'instantSpawn' });
   }
 
-  /** A step's events: an instant spawn's answer frees the button. */
-  onStep(events: GameEvent[]): void {
+  /**
+   * A step's events: an instant spawn's answer frees the button. While the Garden is open, a
+   * refusal is said here, and returned so the world shows no second card for it (§9).
+   */
+  onStep(events: GameEvent[]): GameEvent[] {
+    const handled: GameEvent[] = [];
     for (const e of events) {
-      if ((e.type === 'spawned' && e.source === 'instant') || (e.type === 'rejected' && e.command === 'instantSpawn')) this.inflight = false;
+      if (e.type === 'spawned' && e.source === 'instant') this.inflight = false;
+      if (e.type === 'rejected' && e.command === 'instantSpawn') {
+        this.inflight = false;
+        if (this.node.isConnected) {
+          this.refusal = refusalText(e.reason, 'instantSpawn', 'potatokens');
+          handled.push(e);
+        }
+      }
     }
+    return handled;
   }
 
   update(): void {
@@ -79,7 +94,9 @@ export class Arrivals {
     this.spawn.setAttribute('aria-disabled', String(!st.ok));
     this.spawn.classList.toggle('is-disabled', !st.ok);
     this.spawn.setAttribute('aria-label', st.reason ? `Spawn now: ${st.reason}` : `Spawn a random Garden kid for ${formatExact(cost)} Potatokens`);
-    this.reason.textContent = st.reason;
-    this.reason.hidden = !st.reason;
+    // The engine's refusal stands until the next tap; otherwise why the button is unavailable.
+    const reason = this.refusal ?? st.reason;
+    this.reason.textContent = reason;
+    this.reason.hidden = !reason;
   }
 }
