@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "farm-design-1",
+  "revision": "farm-design-2",
   "status": "review_pending",
   "delivery": {
     "scope": "D-069 MVP design; not runtime rules",
@@ -31,11 +31,11 @@
       "workerFeetRelative": [
         [
           -108,
-          -280
+          -275
         ],
         [
           108,
-          -280
+          -275
         ],
         [
           -108,
@@ -55,11 +55,11 @@
       "cropGroundsRelative": [
         [
           -140,
-          80
+          94
         ],
         [
           140,
-          80
+          94
         ]
       ],
       "dragRelative": [
@@ -92,11 +92,11 @@
       "workerFeetRelative": [
         [
           -108,
-          -280
+          -275
         ],
         [
           108,
-          -280
+          -275
         ],
         [
           -108,
@@ -116,11 +116,11 @@
       "cropGroundsRelative": [
         [
           -140,
-          80
+          94
         ],
         [
           140,
-          80
+          94
         ]
       ],
       "dragRelative": [
@@ -153,11 +153,11 @@
       "workerFeetRelative": [
         [
           -108,
-          -280
+          -275
         ],
         [
           108,
-          -280
+          -275
         ],
         [
           -108,
@@ -177,11 +177,11 @@
       "cropGroundsRelative": [
         [
           -140,
-          80
+          94
         ],
         [
           140,
-          80
+          94
         ]
       ],
       "dragRelative": [
@@ -214,11 +214,11 @@
       "workerFeetRelative": [
         [
           -108,
-          -280
+          -275
         ],
         [
           108,
-          -280
+          -275
         ],
         [
           -108,
@@ -238,11 +238,11 @@
       "cropGroundsRelative": [
         [
           -140,
-          80
+          94
         ],
         [
           140,
-          80
+          94
         ]
       ],
       "dragRelative": [
@@ -498,9 +498,9 @@
     },
     "cropSourcePivot": [
       128,
-      224
+      240
     ],
-    "cropScale": 0.5,
+    "cropScale": 0.9,
     "workerWorldCanvas": 180,
     "preserveSavedAppearanceScale": true,
     "maxExistingWorkerWorldCanvas": 198,
@@ -530,19 +530,21 @@
   },
   "balancePlaceholders": {
     "fieldCount": "FARM_FIELD_COUNT (1–4)",
-    "kidsPerField": "FARM_KIDS_PER_FIELD (authored pads support up to 4; review layout if more)",
+    "kidsPerField": "FARM_KIDS_PER_FIELD (at most 4; Claude accepted the authored ceiling)",
     "unlockPrices": "FARM_UNLOCK_PRICE[n] and FARM_UNLOCK_CURRENCY[n]",
     "biteRate": "FARM_BITE_RATE",
     "favouriteFactor": "FARM_FAVOURITE_FACTOR",
-    "pantryCap": "Recommend none for MVP; simulator confirms",
+    "pantryCap": "No cap in MVP; Claude accepted for now, subject to simulator review and visible redesign if needed",
     "offlineLimit": "FARM_OFFLINE_LIMIT"
   },
-  "rulesProposed": {
-    "unlockBay": "Only unlocked bays exclude ordinary wander/spawn. Before paid unlock, require the reserve clear of ordinary kids plus 16-unit gap; reject without charge or displacement if occupied.",
+  "rulesAccepted": {
+    "unlockBay": "Only unlocked bays exclude ordinary wander/spawn. Successful paid unlock moves ordinary kids inside the bay plus its 16-unit clearance to nearest clear spots, clear of recipe partners, without fusion, using refused-planting placement. All displacement and payment are atomic. Fail only for price, save state or noRoom anywhere; no charge or movement on failure.",
     "progress": "One fractional bite accumulator per field. Removing kids preserves it. Switching food resets it only after explicit review.",
     "foodChange": "Keep compatible workers; return haters atomically by Garden. Block if any returning kid cannot fit. Never consume stock.",
     "return": "Atomic one/all; preserve identity/name/look and original happiness expiry.",
-    "pantry": "Shared integer bites per food, no manual harvest; zero stock still listed.",
-    "feeding": "Atomic decrement one bite + replace happiness on captured instance. No Materials charge."
+    "pantry": "Shared integer bites per food, no manual harvest; zero stock still listed. No cap in the MVP for now; simulator hoarding review may require a new visible cap design.",
+    "feeding": "Atomic decrement one bite + replace happiness on captured instance. No Materials charge. Farming kids may be fed; happiness keeps counting down and the Materials boost applies only on return.",
+    "capacity": "Farmers are off the map count and capacity, do not wander or fuse, earn no Materials, and need room on the map to return.",
+    "workerLimit": "At most four workers per field."
   }
 }
