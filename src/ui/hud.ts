@@ -90,7 +90,7 @@ export class Hud {
   private readonly trayCells = new Map<'garden' | 'dex' | 'notebook', HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
-  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null }) | null = null;
+  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null; farm: ((scrollTop: number) => void) | null }) | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -134,7 +134,7 @@ export class Hud {
     this.notes = new PlantingNotes(settings);
     this.arrivals = new Arrivals(scene, content, () => this.save.readOnly);
     // Food fields and the pantry (D-069, GUI_MVP §22).
-    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back));
+    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back), () => this.buildings.fieldsBack);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
     this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) =>
       this.fields.openPantry(launcher, {
@@ -295,7 +295,7 @@ export class Hud {
     if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot() };
+      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot() };
     }
     this.summaryOpen = true;
     openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, this.content.balance.feeding.foods, (replaced) => {
@@ -304,7 +304,9 @@ export class Hud {
       const back = this.interrupted;
       this.interrupted = null;
       if (!back) return;
-      if (back.key === 'dex') this.dex.open(back.launcher);
+      // A farming page comes back as it was, with its way back (Codex review, #90).
+      if (back.farm) back.farm(back.scrollTop);
+      else if (back.key === 'dex') this.dex.open(back.launcher);
       else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'notebook') this.notebook.open(back.launcher, undefined, back.scrollTop);
       else if (KidsOnMap.isList(back.key)) this.kidsOnMap.reopen(back.scrollTop);
@@ -600,6 +602,19 @@ export class Hud {
           ),
         );
       }
+      case 'fieldUnlocked':
+        return el('div', 'toast toast-short', icon('icon_fields', '', 'ui-icon-28'), el('span', 'card-heading', `Field ${item.field + 1} unlocked. Choose a food to grow.`));
+      case 'fieldFood': {
+        const foodName = this.content.balance.feeding.foods.find((x) => x.id === item.food)?.name ?? item.food;
+        return el('div', 'toast toast-short', icon('icon_fields', '', 'ui-icon-28'), el('span', 'card-heading', `Field ${item.field + 1} now grows ${foodName}.`));
+      }
+      case 'unfarmed':
+        return el(
+          'div',
+          'toast toast-short',
+          icon('icon_fields', '', 'ui-icon-28'),
+          el('span', 'card-heading', item.count === 1 ? `${item.name ?? this.name(item.kidType)} is back by the Garden.` : `${item.count} kids are back by the Garden.`),
+        );
       case 'named':
         return el(
           'div',

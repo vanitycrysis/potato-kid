@@ -43,7 +43,26 @@ export class FieldSheets {
     private readonly openGardenFields: (launcher: HTMLElement | null, back?: { label: string; run: () => void }) => void,
     /** Opens a farming kid's card, with its way back (View kid, §22.2). */
     private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }) => void,
+    /** The way back the Garden's Fields were opened with, if any (kept through a field's pages). */
+    private readonly fieldsBack: () => { label: string; run: () => void } | null = () => null,
   ) {}
+
+  /**
+   * The farming page opened last: its sheet's key, its field (-1 for the Pantry), and how to
+   * bring it back as it is now (after the return summary, §8; Codex review, #90).
+   */
+  private page: { key: string; field: number; restore: (scrollTop: number) => void } | null = null;
+
+  /** Whether field `i`'s result would be seen: its page is the open sheet (the Garden for an unlock). */
+  private showing(p: Pending): boolean {
+    if (p.type === 'unlockField') return this.sheets.openKey === 'garden';
+    return !!this.page && this.page.field === p.field && this.sheets.openKey === this.page.key;
+  }
+
+  /** The open farming page's way back to itself, or null (the HUD keeps it over the summary). */
+  snapshot(): ((scrollTop: number) => void) | null {
+    return this.page && this.sheets.openKey === this.page.key ? this.page.restore : null;
+  }
 
   private get game() {
     return this.scene.game;
@@ -98,36 +117,43 @@ export class FieldSheets {
     const p = this.pending;
     if (!p) return [];
     const handled: GameEvent[] = [];
+    // Its page still shows: it says the result. Closed or replaced: the world does, as a kid
+    // card's result does (Codex review, #90).
+    const shown = this.showing(p);
+    const claim = (e: GameEvent) => {
+      if (shown) handled.push(e);
+    };
+    let farmed = 0;
     const n = p.field + 1;
     for (const e of events) {
       if (p.type === 'unlockField' && e.type === 'fieldUnlocked') {
         this.unlockNote = { lines: [`Field ${n} unlocked. Choose a food to grow.`], warn: false };
-        handled.push(e);
+        claim(e);
       } else if (p.type === 'setFieldFood' && e.type === 'fieldFood' && e.field === p.field) {
         const lines = [`Field ${n} now grows ${this.foodName(e.food)}.`];
         if (p.returning > 0) lines.push(`${p.returning} ${plural(p.returning, 'kid is', 'kids are')} back by the Garden.`);
         this.notes.set(p.field, { lines, warn: false });
-        handled.push(e);
+        claim(e);
       } else if (p.type === 'setFieldFood' && e.type === 'unfarmed' && e.field === p.field) {
-        handled.push(e);
+        claim(e);
         continue;
       } else if (p.type === 'farm' && e.type === 'farming' && e.field === p.field) {
-        handled.push(e);
-        if (handled.length < p.kidIds.length) continue;
+        claim(e);
+        if (++farmed < p.kidIds.length) continue;
         const food = this.game.state.fields[p.field]?.food;
         this.notes.set(p.field, { lines: [`${p.kidIds.length} ${plural(p.kidIds.length, 'kid is', 'kids are')} farming ${food ? this.foodName(food) : ''} in Field ${n}.`], warn: false });
       } else if (p.type === 'unfarm' && e.type === 'unfarmed' && e.field === p.field) {
         this.notes.set(p.field, { lines: [`${p.name} is back by the Garden.`], warn: false });
-        handled.push(e);
+        claim(e);
       } else if (p.type === 'emptyField' && e.type === 'unfarmed' && e.field === p.field) {
         // All of them come back in one step (all or none).
-        handled.push(e);
+        claim(e);
         this.notes.set(p.field, { lines: [`All ${p.count} kids are back by the Garden. Field ${n} has no kids farming.`], warn: false });
       } else if (e.type === 'rejected' && e.command === p.type) {
         const line = this.refusal(p, e.reason);
         if (p.type === 'unlockField') this.unlockNote = { lines: [line], warn: true };
         else this.notes.set(p.field, { lines: [line], warn: true });
-        handled.push(e);
+        claim(e);
       } else continue;
       this.pending = null;
     }
@@ -253,13 +279,21 @@ export class FieldSheets {
 
   // --- a field's page (§22.2, §22.5) --------------------------------------------------------
 
-  /** A field's page, in place of the Garden, with its way back. */
-  openField(i: number, launcher: HTMLElement | null): void {
-    this.sheets.asPage({ label: 'Back to fields', run: () => this.openGardenFields(launcher) });
+  /**
+   * A field's page, in place of the Garden, with its way back. `gardenBack`: the way back the
+   * Garden's Fields were opened with, kept through this field's pages (Codex review, #90).
+   * `review`, `scrollTop`: as it was, coming back after the return summary.
+   */
+  openField(i: number, launcher: HTMLElement | null, options: { gardenBack?: { label: string; run: () => void } | null; review?: boolean; scrollTop?: number } = {}): void {
+    const gardenBack = options.gardenBack === undefined ? this.fieldsBack() : options.gardenBack;
+    this.sheets.asPage({ label: 'Back to fields', run: () => this.openGardenFields(launcher, gardenBack ?? undefined) });
     const sheet = this.sheets.open({ key: 'field', icon: 'icon_fields', title: `Field ${i + 1}`, requestedHeight: 624, update: () => update() }, launcher);
+    /** This page's way back to itself, from its own pages. */
+    const self = () => this.openField(i, launcher, { gardenBack });
+    this.page = { key: 'field', field: i, restore: (scrollTop) => this.openField(i, launcher, { gardenBack, review, scrollTop }) };
     const note = this.noteBox();
     const foodLine = el('div', 'field-food');
-    const changeFood = this.button('Choose food', 'plot-action-full field-change-food', () => this.openChooseFood(i, launcher));
+    const changeFood = this.button('Choose food', 'plot-action-full field-change-food', () => this.openChooseFood(i, launcher, self));
     const kidsHeading = el('h4', 'dex-home-confirm-title', 'Kids farming');
     kidsHeading.tabIndex = -1;
     const count = el('p', 'sheet-body-text');
@@ -270,7 +304,7 @@ export class FieldSheets {
     rail.setAttribute('role', 'progressbar');
     rail.setAttribute('aria-valuemin', '0');
     rail.setAttribute('aria-valuemax', '100');
-    const assign = this.button('Assign kids', 'plot-action-full field-assign', () => this.openPicker(i, launcher));
+    const assign = this.button('Assign kids', 'plot-action-full field-assign', () => this.openPicker(i, launcher, self));
     const roster = el('div', 'plot-kids field-roster');
     const takeAll = this.button('Take all back', 'plot-action-full field-take-all', () => {
       review = true;
@@ -279,7 +313,7 @@ export class FieldSheets {
       body().querySelector<HTMLElement>('.field-review-heading')?.focus();
     });
     const reviewBox = el('div', 'plot-review ui-surface field-review');
-    const pantry = this.button('Open pantry', 'plot-action-full', () => this.openPantry(launcher, { label: `Back to Field ${i + 1}`, run: () => this.openField(i, launcher) }));
+    const pantry = this.button('Open pantry', 'plot-action-full', () => this.openPantry(launcher, { label: `Back to Field ${i + 1}`, run: self }));
     const find = this.button('Find this field', 'plot-action-full', () => {
       const site = this.scene.fieldSite(i);
       if (site) this.scene.zoomAround(site, this.scene.zoom);
@@ -288,7 +322,7 @@ export class FieldSheets {
     const body = () => sheet.body;
     sheet.body.append(note.node, foodLine, changeFood, kidsHeading, count, ...rules, rate, rail, assign, roster, takeAll, reviewBox, pantry, find);
 
-    let review = false;
+    let review = options.review ?? false;
     let built = '';
     const takeBack = new Map<number, HTMLButtonElement>();
     const update = () => {
@@ -366,7 +400,7 @@ export class FieldSheets {
       const c = `${f.workers.length} / ${this.fm.kidsPerField} kids farming`;
       if (count.textContent !== c) count.textContent = c;
       const perHour = this.game.fieldRate(i) * 3600;
-      const r = !f.food ? 'Choose a food to start.' : f.workers.length === 0 ? 'Paused · Assign a kid to keep farming.' : `${perHour % 1 === 0 ? perHour : perHour.toFixed(1)} bites per hour · Next bite in ${formatDuration(Math.ceil((1 - f.progress) / this.game.fieldRate(i)))}`;
+      const r = !f.food ? 'Choose a food to start.' : f.workers.length === 0 ? 'Paused · Assign a kid to keep farming.' : `${perHour % 1 === 0 ? perHour : perHour.toFixed(1)} ${perHour === 1 ? 'bite' : 'bites'} per hour · Next bite in ${formatDuration(Math.ceil((1 - f.progress) / this.game.fieldRate(i)))}`;
       if (rate.textContent !== r) rate.textContent = r;
       fill.style.width = `${100 * f.progress}%`;
       rail.setAttribute('aria-valuenow', String(Math.floor(100 * f.progress)));
@@ -399,20 +433,23 @@ export class FieldSheets {
       note.set(this.notes.get(i) ?? null);
     };
     update();
+    if (options.scrollTop) sheet.scrollTo(options.scrollTop);
   }
 
   // --- Choose food and change it (§22.3) ----------------------------------------------------
 
-  private openChooseFood(i: number, launcher: HTMLElement | null): void {
-    this.sheets.asPage({ label: 'Back to field', run: () => this.openField(i, launcher) });
+  /** `toField`: back to the field's page; `restore`: the food under review and scroll, as they were. */
+  private openChooseFood(i: number, launcher: HTMLElement | null, toField: () => void, restore: { proposing?: string | null; scrollTop?: number } = {}): void {
+    this.sheets.asPage({ label: 'Back to field', run: toField });
     const sheet = this.sheets.open({ key: 'field-food', icon: 'icon_fields', title: `Food for Field ${i + 1}`, requestedHeight: 624, update: () => update() }, launcher);
+    this.page = { key: 'field-food', field: i, restore: (scrollTop) => this.openChooseFood(i, launcher, toField, { proposing, scrollTop }) };
     sheet.setSubtitle('One food per field.');
     const note = this.noteBox();
     const reviewBox = el('div', 'plot-review ui-surface field-change-review');
     reviewBox.hidden = true;
     const list = el('div', 'field-foods');
     sheet.body.append(note.node, reviewBox, list);
-    let proposing: string | null = null;
+    let proposing: string | null = restore.proposing ?? null;
     const rows = this.content.balance.feeding.foods.map((food) => {
       const stock = el('span', 'feed-stock');
       const choose = this.button('Choose', 'feed-button field-choose', () => {
@@ -454,7 +491,7 @@ export class FieldSheets {
       if (sent && !this.pending) {
         sent = false;
         if (!this.notes.get(i)?.warn) {
-          this.openField(i, launcher);
+          toField();
           return;
         }
       }
@@ -498,19 +535,23 @@ export class FieldSheets {
       note.set(this.notes.get(i)?.warn ? this.notes.get(i)! : null);
     };
     update();
+    if (restore.scrollTop) sheet.scrollTo(restore.scrollTop);
   }
 
   // --- Pick kids (§22.4) ----------------------------------------------------------------------
 
-  private openPicker(i: number, launcher: HTMLElement | null): void {
-    this.sheets.asPage({ label: 'Back to field', run: () => this.openField(i, launcher) });
+  /** `toField`: back to the field's page; `restore`: the selections, search and scroll, as they were. */
+  private openPicker(i: number, launcher: HTMLElement | null, toField: () => void, restore: { draft?: number[]; search?: string; scrollTop?: number } = {}): void {
+    this.sheets.asPage({ label: 'Back to field', run: toField });
     const sheet = this.sheets.open({ key: 'field-pick', icon: 'icon_fields', title: `Pick kids for Field ${i + 1}`, requestedHeight: 624, update: () => update() }, launcher);
-    const draft: number[] = [];
+    const draft: number[] = [...(restore.draft ?? [])];
+    this.page = { key: 'field-pick', field: i, restore: (scrollTop) => this.openPicker(i, launcher, toField, { draft: [...draft], search: search.value, scrollTop }) };
     const helper = el('p', 'sheet-helper', 'They earn no Materials while farming. You can take them back any time.');
     const label = el('label', 'picker-search-label', 'Find a kid on your map');
     const search = el('input', 'picker-search') as HTMLInputElement;
     search.type = 'search';
     search.id = 'field-pick-search';
+    search.value = restore.search ?? '';
     (label as HTMLLabelElement).htmlFor = search.id;
     search.addEventListener('input', () => update());
     const limit = el('p', 'sheet-helper picker-limit');
@@ -539,7 +580,7 @@ export class FieldSheets {
       if (sent && !this.pending) {
         sent = false;
         if (!this.notes.get(i)?.warn) {
-          this.openField(i, launcher);
+          toField();
           return;
         }
       }
@@ -600,6 +641,7 @@ export class FieldSheets {
       note.set(this.notes.get(i)?.warn ? this.notes.get(i)! : null);
     };
     update();
+    if (restore.scrollTop) sheet.scrollTo(restore.scrollTop);
   }
 
   // --- the Pantry (§22.6) ---------------------------------------------------------------------
@@ -608,6 +650,7 @@ export class FieldSheets {
   openPantry(launcher: HTMLElement | null, back: { label: string; run: () => void }, scrollTop = 0): void {
     this.sheets.asPage(back);
     const sheet = this.sheets.open({ key: 'pantry', icon: 'icon_pantry', title: 'Pantry', requestedHeight: 624, update: () => update() }, launcher);
+    this.page = { key: 'pantry', field: -1, restore: (scroll) => this.openPantry(launcher, back, scroll) };
     sheet.setSubtitle('Food grown in your fields.');
     // View fields keeps the way back here, and this page's own way back (§22.6).
     const viewFields = this.button('View fields', 'plot-action-full pantry-view-fields', () => {

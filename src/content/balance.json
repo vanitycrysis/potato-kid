@@ -138,7 +138,7 @@
     "maxFields": 4,
     "unlockPrices": [300, 3000, 15000, 60000],
     "kidsPerField": 4,
-    "biteSeconds": 600,
+    "biteSeconds": 3600,
     "favouriteFactor": 2
   },
   "naming": { "price": 50, "maxLength": 24 }

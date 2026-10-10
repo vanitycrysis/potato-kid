@@ -4461,9 +4461,9 @@ test.describe('farming through the UI (D-069, GUI_MVP §22)', () => {
     await expect(field.locator('.plot-note')).toContainText('2 kids are farming Apple in Field 1.');
     await expect(field.locator('.field-take-back')).toHaveCount(2);
     expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
-    // Time passes (offline): bites go to the pantry.
+    // Time passes (offline, 3 h): bites go to the pantry.
     await page.keyboard.press('Escape');
-    await page.evaluate(() => window.__PK__!.debugAway!(1800_000));
+    await page.evaluate(() => window.__PK__!.debugAway!(3 * 3600_000));
     const summary = page.getByRole('dialog', { name: 'Welcome back' });
     if (await summary.isVisible()) await summary.getByRole('button', { name: 'Back to the garden' }).click();
     const apples = await page.evaluate(() => window.__PK__!.pantry().apple ?? 0);
@@ -4569,7 +4569,7 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     const card = page.getByRole('dialog', { name: 'Potato Kid' });
     await expect(card.locator('.sheet-subtitle')).toHaveText('Farming Apple · Field 1 · Kid 1');
     await expect(card.locator('.kid-card-income')).toHaveText('0 Materials while farming.');
-    await expect(card.locator('.kid-card-farming-lines')).toHaveText('Farms Apple · 6 bites per hour.');
+    await expect(card.locator('.kid-card-farming-lines')).toHaveText('Farms Apple · 1 bite per hour.');
     await expect(card.getByRole('button', { name: 'Choose a plot' })).toBeHidden();
     await expect(card.getByRole('button', { name: 'View field' })).toBeVisible();
     // Fed while farming: its happiness counts down; the boost waits for the map.
@@ -4592,7 +4592,7 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await page.mouse.click(feet.x, feet.y - 25);
     const card = page.getByRole('dialog', { name: 'Potato Kid' });
     await expect(card.locator('.sheet-subtitle')).toHaveText('Farming Toast · Field 1 · Kid 1');
-    await expect(card.locator('.kid-card-farming-lines')).toHaveText('Favourite · Farms Toast faster · 12 bites per hour.');
+    await expect(card.locator('.kid-card-farming-lines')).toHaveText('Favourite · Farms Toast faster · 2 bites per hour.');
   });
 
   test('taken back while its card is open, the card becomes a map kid’s again', async ({ page }) => {
@@ -4643,6 +4643,85 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await expect(page.getByRole('dialog', { name: 'Feed Potato Kid' })).toBeVisible();
   });
 
+  test('Pantry → View fields → a field → Back to fields keeps Back to Pantry (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Pantry', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Pantry' }).getByRole('button', { name: 'View fields' }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to Pantry' }).click();
+    await expect(page.getByRole('dialog', { name: 'Pantry' })).toBeVisible();
+    // The Garden opened from its button has no such way back, nor do its fields' pages.
+    await page.keyboard.press('Escape');
+    await page.locator('[data-nav=garden]').click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('button', { name: 'Back to fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
+  });
+
+  test('after the return summary, Pick kids comes back with its choices and search; the Pantry with Back to feeding (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('plain', 2300, 4300), window.__PK__!.debugAdd!('fire', 2500, 4300)]);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('button', { name: 'Assign kids' }).click();
+    const pick = page.getByRole('dialog', { name: 'Pick kids for Field 1' });
+    await pick.locator(`.picker-check[data-kid="${ids[1]}"]`).check();
+    await pick.locator('.picker-search').fill('Kid');
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    const back = page.getByRole('dialog', { name: 'Pick kids for Field 1' });
+    await expect(back).toBeVisible();
+    await expect(back.locator(`.picker-check[data-kid="${ids[1]}"]`)).toBeChecked();
+    await expect(back.locator('.picker-search')).toHaveValue('Kid');
+    await expect(back.locator('.field-pick-count')).toHaveText('1 selected · 3 spaces');
+    // The Pantry, opened from a kid's feeding page, comes back with its way back there.
+    await page.keyboard.press('Escape');
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'View kid: Potato Kid' }).click();
+    await page.getByRole('dialog', { name: 'Potato Kid' }).getByRole('button', { name: 'Feed', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Feed Potato Kid' }).getByRole('button', { name: 'Open pantry' }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog', { name: 'Pantry' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to feeding' }).click();
+    await expect(page.getByRole('dialog', { name: 'Feed Potato Kid' })).toBeVisible();
+  });
+
+  test('Assign sent, then the sheet closed before the answer: the world says the kid is farming (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    // Named, so its card can't be the setup's own farming card.
+    const id = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const id = pk.debugAdd!('plain', 2300, 4300);
+      pk.debugCommand!({ type: 'name', kidId: id, name: 'Spud' });
+      return id;
+    });
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('button', { name: 'Assign kids' }).click();
+    await page.locator(`.picker-check[data-kid="${id}"]`).check();
+    // Assign, and close the sheet before any frame can answer.
+    await page.evaluate(() => {
+      document.querySelector<HTMLButtonElement>('.field-pick-go')!.click();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // After the setup's own cards, one at a time.
+    await expect(page.locator('.toast', { hasText: 'Spud is farming Apple in Field 1.' })).toBeVisible({ timeout: 20_000 });
+  });
+
   test('field changes are saved at once, not at the next autosave (Codex review, #90)', async ({ page }) => {
     const id = await setup(page);
     const newest = () =>
@@ -4680,7 +4759,7 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
 
   test('the return summary says how much food grew, and of what', async ({ page }) => {
     await setup(page, 'apple', {});
-    await page.evaluate(() => window.__PK__!.debugAway!(1800_000));
+    await page.evaluate(() => window.__PK__!.debugAway!(4 * 3600_000));
     const summary = page.getByRole('dialog', { name: 'Welcome back' });
     await expect(summary.locator('.offline-food')).toHaveText(/^Food grown: \d+ bites?\.$/);
     const bites = await page.evaluate(() => window.__PK__!.pantry().apple ?? 0);
@@ -4742,8 +4821,10 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]?.kids.length ?? 0)).toBe(1);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(false);
     // The world says it once: no sheet did (Codex review, #90).
-    await expect(page.locator('.toast')).toContainText('Potato Kid is farming Apple in Field 1.');
-    await expect(page.locator('.toast')).toContainText('No Materials while farming. Take back from this field.');
+    // After the setup's own cards (unlocked, food chosen), one at a time.
+    const toast = page.locator('.toast', { hasText: 'Potato Kid is farming Apple in Field 1.' });
+    await expect(toast).toBeVisible({ timeout: 15_000 });
+    await expect(toast).toContainText('No Materials while farming. Take back from this field.');
     // Its map figure goes with it; the field draws it now.
     expect(await page.evaluate((i) => window.__PK__!.presentationOf(i), id)).toBeUndefined();
     await expect.poll(() => page.evaluate((i) => window.__PK__!.fields()[0]!.kids.some((k) => k.id === i), id)).toBe(true);

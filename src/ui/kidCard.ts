@@ -521,7 +521,7 @@ export class KidCard {
         // Its rate, and whether this food is its favourite (§22.6).
         const favourite = !!farm?.food && this.content.personality[type]?.favouriteFood === farm.food;
         const perHour = farm?.food ? this.game.farmRate(type, farm.food) * 3600 : 0;
-        const rate = `${perHour % 1 === 0 ? perHour : perHour.toFixed(1)} bites per hour`;
+        const rate = `${perHour % 1 === 0 ? perHour : perHour.toFixed(1)} ${perHour === 1 ? 'bite' : 'bites'} per hour`;
         const farmKey = farm ? `${favourite}|${foodName}|${rate}` : '';
         if (farmLines.dataset.key !== farmKey) {
           farmLines.dataset.key = farmKey;

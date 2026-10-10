@@ -70,12 +70,20 @@ export class BuildingSheets {
   private gardenLauncher: HTMLElement | null = null;
 
   /**
+   * The way back the Garden's Fields were opened with (the Pantry, a kid's feeding page),
+   * kept while the player goes into a field and back (Codex review, #90). None when the
+   * Garden was opened any other way.
+   */
+  fieldsBack: { label: string; run: () => void } | null = null;
+
+  /**
    * Opens the Garden on its Fields section (D-069): Back from a field, View fields. `back`:
    * the way back to where View fields was (the Pantry, a kid's feeding page, §22.6).
    */
   openFields(launcher: HTMLElement | null, back: { label: string; run: () => void } | null = null): void {
     this.sheets.asPage(back);
     this.open('garden', launcher);
+    this.fieldsBack = back;
     const h = document.querySelector<HTMLElement>('.sheet[role=dialog] #garden-fields');
     h?.scrollIntoView({ block: 'start' });
     h?.focus({ preventScroll: true });
@@ -84,6 +92,7 @@ export class BuildingSheets {
   /** Opens a building's sheet; `restore` brings back where it was (GUI_MVP §8). */
   open(building: BuildingId, launcher: HTMLElement | null, restore?: SheetRestore, onClose?: (replaced: boolean) => void): void {
     if (building === 'garden') this.gardenLauncher = launcher;
+    this.fieldsBack = null;
     this.pending = null;
     this.success = null;
     this.refusal = null;
