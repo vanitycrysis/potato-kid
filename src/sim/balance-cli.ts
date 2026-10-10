@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { ambientFrom, lookTable, obstaclesFrom } from '../content/artRules';
-import type { KidRig, MapData } from '../content/artData';
+import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom } from '../content/artRules';
+import type { FarmData, KidRig, MapData } from '../content/artData';
 import { content } from '../content';
 import { median, simulate, type Report, type Scenario } from './balance';
 import type { GameOptions } from './game';
@@ -11,11 +11,13 @@ import type { GameOptions } from './game';
 
 const map = JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData;
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
+const farm = JSON.parse(readFileSync('art/data/farm_v1.json', 'utf8')) as FarmData;
 const [w, h] = map.worldSize;
 const options: GameOptions = {
   bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
   spawnAt: { x: map.garden.spawnOutlet[0], y: map.garden.spawnOutlet[1] },
   obstacles: obstaclesFrom(map),
+  fieldBays: fieldBaysFrom(farm, map),
   looks: lookTable(rig),
   // The shipped rests (look, wave, sit, sleep), as main.ts sets up (Codex review, PR #45).
   ambient: ambientFrom(rig, content.balance.wander.ambientChance),

@@ -1,7 +1,7 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { gate4Data, kidRig, mapData, uiData } from './content/artData';
-import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
+import { farmData, gate4Data, kidRig, mapData, uiData } from './content/artData';
+import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
 import { Lifecycle } from './platform/lifecycle';
@@ -34,6 +34,8 @@ declare global {
       }[];
       discoveredRecipes: () => string[];
       wallet: () => { materials: number; potatokens: number };
+      /** Bites stored, by food (D-069). */
+      pantry: () => Record<string, number>;
       /** Building levels and the bias target. */
       buildings: () => { levels: Record<string, number>; biasTarget: string | null };
       save: () => { mode: SaveMode; failing: boolean; olderSaveLoaded: boolean };
@@ -62,7 +64,7 @@ declare global {
        */
       debugListenSteps?: (fn: (types: string[]) => void) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
-      debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
+      debugGive?: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => void;
       /** The audio runtime's state (tests). */
       audio: () => {
         unlocked: boolean;
@@ -152,6 +154,7 @@ async function boot(): Promise<void> {
       looks: lookTable(kidRig),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
       obstacles: obstaclesFrom(mapData),
+      fieldBays: farmData ? fieldBaysFrom(farmData, mapData) : [],
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       home: homeArt(),
       planting: gate4Data?.planting,
@@ -229,6 +232,7 @@ async function boot(): Promise<void> {
       })),
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     wallet: () => ({ materials: scene.game.state.materials, potatokens: scene.game.state.potatokens }),
+    pantry: () => ({ ...scene.game.state.pantry }),
     buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
@@ -266,9 +270,10 @@ async function boot(): Promise<void> {
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
-          debugGive: (amounts: { materials?: number; potatokens?: number }) => {
+          debugGive: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
+            for (const [food, n] of Object.entries(amounts.pantry ?? {})) scene.game.state.pantry[food] = (scene.game.state.pantry[food] ?? 0) + n;
           },
           debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => scene.command(cmd),
         }

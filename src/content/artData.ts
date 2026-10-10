@@ -163,6 +163,12 @@ function pick<T>(name: string): T | undefined {
 
 export const kidRig = pick<KidRig>('kid_rig_v2.json');
 export const mapData = pick<MapData>('map_garden_v3.json');
+
+/** Codex's food fields (farm_v1, GUI_MVP §22.1): where each field's bay is on the map. */
+export interface FarmData {
+  fields: { worldGround: Vec2; reserveRelative: [number, number, number, number] }[];
+}
+export const farmData = pick<FarmData>('farm_v1.json');
 export const uiData = pick<UiData>('ui_v2.json');
 
 /** Codex's planting tokens (GUI_MVP §15, `gate4_v2.json` → planting). */

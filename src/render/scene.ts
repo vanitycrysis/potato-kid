@@ -31,6 +31,8 @@ export interface SceneArt {
   looks: LookTable;
   ambient: Ambient;
   obstacles: Obstacle[];
+  /** Each food field's bay, in field order: scenery once bought (GUI_MVP §22.1). */
+  fieldBays?: Obstacle[];
   reducedMotion: boolean;
   /** The Garden's drop target (GUI_MVP §15.1, from Send home's §13): Codex's tokens and its ink. */
   home?: {
@@ -233,6 +235,7 @@ export class MapScene {
         bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
         spawnAt: { x: sx, y: sy },
         obstacles: art.obstacles,
+        fieldBays: art.fieldBays ?? [],
         looks: art.looks,
         ambient: art.ambient,
         // A new game is accounted up to now (plan §3), never from the epoch.

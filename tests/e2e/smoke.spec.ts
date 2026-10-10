@@ -2597,7 +2597,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
       pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('chef', 2480 + i * 200, 5580)), plot: 0 });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
-    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }), chef!);
+    await page.evaluate((id) => { window.__PK__!.debugGive!({ pantry: { apple: 1 } }); window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }); }, chef!);
     await row(page, 1).getByRole('button', { name: 'Add kids' }).click();
     await sheet(page).locator('.picker-row').nth(0).click();
     // 3 × T2 + one happy T2: mean tier 2.25 → 12.92 % / 6.46 % (§15.3), not 12.5 % / 6.25 %.
@@ -2634,7 +2634,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     const first = sheet(page).locator('.picker-row').nth(0);
     await expect(first.locator('.picker-row-detail')).toHaveText('Tier 2 · Kid 1');
     // Fed while the picker is open: the row says so at once.
-    await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }), a!);
+    await page.evaluate((id) => { window.__PK__!.debugGive!({ pantry: { apple: 1 } }); window.__PK__!.debugCommand!({ type: 'feed', kidId: id, food: 'apple' }); }, a!);
     await expect(first.locator('.picker-row-detail')).toHaveText('Tier 2 · Happy · Counts as Tier 3 · Kid 1');
     await expect(sheet(page).locator('.picker-row').nth(1).locator('.picker-row-detail')).toHaveText('Tier 2 · Kid 2');
     await first.click();
@@ -3016,13 +3016,14 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
   const fire = personality.fire!;
 
   /** A Fire Kid in view, Materials to spend, and its card open by a tap. */
-  async function open(page: Page, materials = 1000): Promise<number> {
+  /** Opens a Fire Kid's card, with Materials and `stock` bites of every food in the pantry (D-069). */
+  async function open(page: Page, materials = 1000, stock = 2): Promise<number> {
     await boot(page, '?seed=3&debug=1&calm=1');
-    const id = await page.evaluate((m) => {
-      window.__PK__!.debugGive!({ materials: m });
+    const id = await page.evaluate(([m, n]) => {
+      window.__PK__!.debugGive!({ materials: m, pantry: Object.fromEntries(['toast', 'berry_jam', 'berries', 'apple', 'carrot', 'corn', 'mushroom', 'pickle', 'cheese', 'soup', 'cocoa', 'cracker'].map((f) => [f, n])) });
       window.__PK__!.centerOn(1880, 4380);
       return window.__PK__!.debugAdd!('fire', 1880, 4380);
-    }, materials);
+    }, [materials, stock] as const);
     await page.waitForTimeout(200);
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     await page.mouse.click(k.x, k.y - 20);
@@ -3053,20 +3054,24 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('its favourite: charged, happy for longer, the sun at its foot; the hated food is refused for free', async ({ page }) => {
+  test('its favourite: one bite from the pantry, happy for longer, the sun at its foot; the hated food is refused, nothing used', async ({ page }) => {
     const id = await open(page);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
     await expect(card(page).locator('.sheet-title')).toHaveText('Feed Fire Kid');
     const fav = foods.foods.find((f) => f.id === fire.favouriteFood)!;
     // The favourite comes first, marked; the hated food last, refused.
-    await expect(card(page).locator('.feed-row').first()).toContainText(`${fav.name}Favourite`);
+    await expect(card(page).locator('.feed-row').first()).toContainText(`${fav.name}2 bites storedFavourite`);
     const refused = card(page).locator('.feed-row').last();
-    await expect(refused).toContainText(`This kid won’t eat ${foodName(fire.hatedFood)}. Nothing charged.`);
+    await expect(refused).toContainText(`Fire Kid won’t eat ${foodName(fire.hatedFood)}. No food is used.`);
     await expect(refused.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
     await expect(card(page).locator('.feed-row')).toHaveCount(12);
-    await card(page).getByRole('button', { name: `Feed ${fav.name}, ${fav.price} Materials` }).click();
+    await expect(card(page).locator('.feed-row').first()).toContainText('2 bites stored');
+    await card(page).getByRole('button', { name: `Feed ${fav.name} to Fire Kid, uses 1 pantry bite` }).click();
     await expect(card(page).locator('.kid-status')).toContainText(`${fav.name} is Fire Kid’s favourite!`);
-    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeLessThanOrEqual(1000 - fav.price + 1);
+    await expect(card(page).locator('.kid-status')).toContainText('1 bite used from the pantry.');
+    expect(await page.evaluate((f) => window.__PK__!.pantry()[f], fav.id)).toBe(1);
+    // Feeding costs no Materials (D-069).
+    expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeGreaterThanOrEqual(1000);
     await expect.poll(() => page.evaluate((i) => window.__PK__!.rares().find((r) => r.id === i)?.happy ?? false, id)).toBe(true);
     await card(page).getByRole('button', { name: 'Back' }).click();
     await expect(card(page).locator('.kid-card-happy')).toContainText(/Happy · (1:00:00|59:5\d)/);
@@ -3087,12 +3092,15 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  test('short of Materials, a food says how many more, and nothing is sent', async ({ page }) => {
-    await open(page, 40);
+  test('an empty pantry: every food says Empty, the favourite how to grow it, and nothing is sent (D-069)', async ({ page }) => {
+    await open(page, 1000, 0);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
-    const row = card(page).locator('.feed-row').nth(1);
-    await expect(row).toContainText(/Need \d+ more Materials\./);
-    await expect(row.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
+    await expect(card(page).locator('.feed-empty')).toBeVisible();
+    const fav = card(page).locator('.feed-row').first();
+    await expect(fav.getByRole('button')).toHaveText('Empty0 bites stored');
+    await expect(fav.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
+    await expect(fav).toContainText(`Grow ${foodName(fire.favouriteFood)} in a field to feed it.`);
+    await expect(card(page).locator('.feed-row').nth(1).getByRole('button')).toHaveAttribute('aria-disabled', 'true');
   });
 
   test('naming: saved for its price, unchanged is free, a bad name says why, and the name can go back free', async ({ page }) => {
@@ -3191,7 +3199,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await page.evaluate((label) => {
       document.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!.click();
       document.querySelector<HTMLButtonElement>('.sheet-close')!.click();
-    }, `Feed ${fav.name}, ${fav.price} Materials`);
+    }, `Feed ${fav.name} to Fire Kid, uses 1 pantry bite`);
     await expect(page.locator('.feedback')).toContainText(`${fav.name} is Fire Kid’s favourite!`);
   });
 
@@ -3311,15 +3319,16 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await open(page);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
     const fav = foods.foods.find((f) => f.id === fire.favouriteFood)!;
-    // Feed, and lose the Materials before the sim applies it: refused for cost.
-    await page.evaluate((label) => {
+    // Feed, and the pantry runs out before the sim applies it: refused, none left (D-069).
+    await page.evaluate(([label, food]) => {
       document.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!.click();
-      window.__PK__!.debugGive!({ materials: -1e6 });
-    }, `Feed ${fav.name}, ${fav.price} Materials`);
+      window.__PK__!.debugGive!({ pantry: { [food]: -2 } });
+    }, [`Feed ${fav.name} to Fire Kid, uses 1 pantry bite`, fav.id] as const);
     const status = card(page).locator('.kid-status');
-    await expect(status).toContainText('Not enough Materials.');
+    const none = `There are no ${fav.name} bites left. Grow more in a field.`;
+    await expect(status).toContainText(none);
     await page.waitForTimeout(3500);
-    await expect(status).toContainText('Not enough Materials.');
+    await expect(status).toContainText(none);
     // Moving on clears it.
     await card(page).getByRole('button', { name: 'Back', exact: true }).click();
     await expect(status).toBeHidden();
@@ -3343,6 +3352,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
   test('a bite or a name is saved at once, not at the next autosave (Codex review round 2, FEED-NAME)', async ({ page }) => {
     const id = await open(page);
     await page.evaluate((i) => {
+      window.__PK__!.debugGive!({ pantry: { apple: 1 } });
       window.__PK__!.debugCommand!({ type: 'feed', kidId: i, food: 'apple' });
       window.__PK__!.debugCommand!({ type: 'name', kidId: i, name: 'Spud' });
     }, id);
