@@ -1,7 +1,8 @@
+import { checkName } from './names';
 import { pairKey } from '../content/validate';
 import { BUILDING_IDS, type BuildingId, type Content, type KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
-import { wanderOffline } from './offlineWander';
+import { clearSpotFor, wanderOffline } from './offlineWander';
 import { blockedByScenery, findFreeSpot, gaps, kidRect, separate, touching } from './space';
 import {
   addKid,
@@ -41,15 +42,87 @@ export type Command =
   /** Compendium: spawn an already-discovered type, paid in Materials or Potatokens. */
   | { type: 'respawn'; kidType: KidId; pay: 'materials' | 'potatokens' }
   /**
-   * A kid dropped on the Garden goes home (D-048): it leaves the map for good, stays in the
-   * Dex, and can come back through the Compendium. No refund: Garden kids are free.
+   * Plant kids (D-061, replacing Send home): they leave the map into `plot` (the picker), or,
+   * by drag, into the plot still filling, else the lowest empty one. All or none: a kid gone,
+   * or more than the plot's free spaces, refuses the lot (GUI_MVP §15.3). They stay in the Dex.
    */
-  | { type: 'sendHome'; kidId: number };
+  | { type: 'plant'; kidIds: number[]; plot?: number }
+  /** Start a plot growing (D-061): it needs `minKids` kids; never automatic. */
+  | { type: 'startGrowing'; plot: number }
+  /** Take one kid back out of a plot still filling (D-074): it comes back to the map as it went in. */
+  | { type: 'unplant'; plot: number; kidId: number }
+  /**
+   * Empty a plot (D-074): every kid in it comes back to the map, all or none. A growing plot
+   * is cancelled and its growing time lost; a ready one can't be emptied.
+   */
+  | { type: 'emptyPlot'; plot: number }
+  /** Unlock the next plot with Materials (GUI_MVP §15.4). */
+  | { type: 'unlockPlot' }
+  /** Feed a kid one bite for Materials (D-056): happy for a while. A hated food is refused, free. */
+  | { type: 'feed'; kidId: number; food: string }
+  /** Name a kid for Materials (D-057), or clear its name (`null`), which is free. */
+  | { type: 'name'; kidId: number; name: string | null };
 
 /** Why a purchase or setting was refused; the UI explains it, and nothing changes. */
-export type RejectReason = 'cost' | 'maxLevel' | 'full' | 'noRoom' | 'locked' | 'undiscovered' | 'notSpawnable' | 'gone';
+export type RejectReason =
+  | 'cost'
+  | 'maxLevel'
+  | 'full'
+  | 'noRoom'
+  | 'locked'
+  | 'undiscovered'
+  | 'notSpawnable'
+  | 'gone'
+  | 'plotsBusy'
+  | 'plotFull'
+  | 'tooFewKids'
+  /** The plot's sprout is ready: it can't be cancelled (D-074). */
+  | 'ready'
+  /** The kid won't eat that food (D-056). Nothing is spent. */
+  | 'hated'
+  /** Not a food, or not an allowed name (GUI_MVP §18.2). */
+  | 'invalid'
+  /** The kid already has that name, or has none to clear. */
+  | 'unchanged';
 
-export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline';
+export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline' | 'sprout';
+
+/** What a started seed sprouts (D-061): decided at Start growing, so saves never change it. */
+export interface Sprout {
+  type: KidId;
+}
+
+/** A kid as it was planted (GUI_MVP §15.4: the plot detail still shows it). */
+export interface PlantedKid {
+  /** The kid's id on the map; it keeps it if it comes back (D-074). */
+  id: number;
+  type: KidId;
+  look: Look;
+  /** Its name, which comes back with it (D-074) and ends when the seed sprouts (D-057). */
+  name?: string;
+  /** Happy when added (D-056): it counts one tier higher in the odds, for good (GUI_MVP §15.3). */
+  happy?: boolean;
+  /** Happiness it still has: it keeps counting down in the plot, and comes back with the kid (D-074). */
+  happiness?: { left: number; favourite: boolean };
+}
+
+/** A plot's seed (D-061): the kids planted in it, then, once started, its sprout. */
+export interface Seed {
+  /** The kids planted, in order: `minKids` to `maxKids` before it can start. */
+  planted: PlantedKid[];
+  /** Null while the plot is still filling; set when the player starts it growing. */
+  sprout: Sprout | null;
+  /** Seconds grown since it started, online and offline; ready at `balance.planting.growSeconds`. */
+  grown: number;
+}
+
+/** One unlocked plot: empty, or growing a seed. */
+export interface Plot {
+  seed: Seed | null;
+}
+
+/** Why a ready plot hasn't sprouted (GUI_MVP §15.3): the map is full, or no spot by the Garden is clear. */
+export type PlotWaiting = 'full' | 'noRoom';
 
 /** What offline catch-up credited (plan §3); the return screen shows it. */
 export interface OfflineReport {
@@ -61,17 +134,32 @@ export interface OfflineReport {
   /** Potatokens from Dex milestones that offline spawns reached. */
   potatokens: number;
   spawned: Kid[];
+  /** Kids that sprouted from plots while away (D-054). */
+  sprouted: Kid[];
+  /** Plots ready on return but waiting for room. */
+  plotsWaiting: number;
 }
 
-type PurchaseCommand = Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' }>;
+type PurchaseCommand = Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'unlockPlot' }>;
 
 /** What happened during a step; rendering and audio react only to these. */
 export type GameEvent =
-  | { type: 'spawned'; kid: Kid; source: SpawnSource }
+  /** `plot`: the plot a sprout came up from (0-based). */
+  | { type: 'spawned'; kid: Kid; source: SpawnSource; plot?: number }
   | { type: 'fused'; parents: [Kid, Kid]; child: Kid; firstDiscovery: boolean }
   | { type: 'pickedUp'; kidId: number }
   | { type: 'dropped'; kidId: number }
-  | { type: 'sentHome'; kid: Kid }
+  /** A kid was planted in `plot` (0-based); `count`: the kids in it now. */
+  | { type: 'planted'; kid: Kid; plot: number; count: number }
+  /** A kid came back out of `plot` to the map (D-074); `count`: the kids left in it. */
+  | { type: 'unplanted'; kid: Kid; plot: number; count: number }
+  /** A bite accepted (D-056): the kid is happy from now, replacing any earlier happiness. */
+  | { type: 'fed'; kid: Kid; food: string; favourite: boolean }
+  /** A name given, or cleared (`null`) (D-057). */
+  | { type: 'named'; kid: Kid; name: string | null }
+  /** A plot started growing; its sprout is decided (not revealed until it comes up). */
+  | { type: 'growing'; plot: number }
+  | { type: 'plotUnlocked'; plots: number }
   | { type: 'upgraded'; building: BuildingId; level: number }
   | { type: 'biasSet'; kidType: KidId | null }
   | { type: 'rejected'; command: Command['type']; reason: RejectReason }
@@ -95,6 +183,8 @@ export interface GameState {
   spawnProgress: number;
   /** Garden spawns so far, online and offline: the first few make the tutorial (D-052). */
   gardenSpawns: number;
+  /** Unlocked plots, in order (D-054). */
+  plots: Plot[];
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
   /** Recipe pair keys (`pairKey`) the player has triggered. */
@@ -162,6 +252,8 @@ export class Game {
   private readonly ambient: Ambient | undefined;
   /** A due Garden spawn found no free spot near the outlet (shown as "Waiting for room"). */
   private blocked = false;
+  /** Ready plots that couldn't sprout in the last step, and why. */
+  private readonly plotWaits = new Map<number, PlotWaiting>();
 
   constructor(
     private readonly content: Content,
@@ -190,6 +282,7 @@ export class Game {
       spawnRngState: this.spawnRng.state,
       spawnProgress: 0,
       gardenSpawns: 0,
+      plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })),
       discoveredKids: [],
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,
@@ -231,11 +324,9 @@ export class Game {
       kid.held = false;
       // Appearance is cosmetic: a body or face the current art doesn't have (e.g. retired
       // in a later version) maps to the first one rather than failing to draw (Codex review, PR #30).
-      const body = this.looks.bodies.find((b) => b.id === kid.look.body) ?? this.looks.bodies[0]!;
-      if (!this.looks.faces.some((f) => f.id === kid.look.face)) kid.look.face = this.looks.faces[0]!.id;
-      kid.look.body = body.id;
-      const k = kid.look.scale;
-      kid.box = { left: body.box.left * k, top: body.box.top * k, right: body.box.right * k, bottom: body.box.bottom * k };
+      const { box, ...look } = this.lookWithBox(kid.look);
+      kid.look = look;
+      kid.box = box;
     }
     this.rng.setState(copy.rngState);
     this.cosmetic.setState(copy.cosmeticRngState);
@@ -266,8 +357,25 @@ export class Game {
   /** Materials per second from every kid on the map: the sum of `base · 2^(tier−1)` (D-020). */
   get income(): number {
     let sum = 0;
-    for (const k of this.state.world.kids) sum += this.incomeOf(k.type);
+    for (const k of this.state.world.kids) sum += this.incomeOfKid(k);
     return sum;
+  }
+
+  /** What one kid earns per second: its type's rate (a rare's through its tier, D-072), more if happy (D-056). */
+  incomeOfKid(kid: Pick<Kid, 'type' | 'happy'>): number {
+    return this.baseIncomeOfKid(kid) * this.happyMultiplier(kid);
+  }
+
+  /** What a kid earns when not happy: its type's rate. */
+  private baseIncomeOfKid(kid: Pick<Kid, 'type'>): number {
+    return this.incomeOf(kid.type);
+  }
+
+  /** How many times as much a kid earns while happy (D-056): 1 when it isn't. */
+  happyMultiplier(kid: Pick<Kid, 'happy'>): number {
+    if (!kid.happy || kid.happy.left <= 0) return 1;
+    const f = this.content.balance.feeding;
+    return kid.happy.favourite ? f.favouriteMultiplier : f.happyMultiplier;
   }
 
   incomeOf(type: KidId): number {
@@ -345,6 +453,13 @@ export class Game {
     for (const kid of world.kids) kid.grace = Math.max(0, kid.grace - dt);
     // Income for the step, from the kids present after commands (plan §3).
     this.state.materials += this.income * dt;
+    // Happiness wears off (D-056), after this step's income.
+    for (const kid of world.kids) {
+      if (!kid.happy) continue;
+      kid.happy.left -= dt;
+      if (kid.happy.left <= 0) delete kid.happy;
+    }
+    this.wearOffPlanted(dt);
     stepWander(
       world,
       this.rng,
@@ -356,6 +471,8 @@ export class Game {
     // Touching recipe pairs fuse first, so a kid dropped against its partner fuses.
     this.resolveFusions(events);
     separate(world);
+    // Ready sprouts come up before the Garden's own spawn (GUI_MVP §15.3).
+    this.advancePlots(dt, events);
     this.advanceSpawn(dt, events);
     // This step's time is now credited (plan §3): online time is never credited again offline.
     this.state.accountedUntil += dt * 1000;
@@ -379,23 +496,58 @@ export class Game {
 
     const events: GameEvent[] = [];
     const spawned: Kid[] = [];
-    /** Offline spawns' arrival, seconds into the absence. */
+    const sprouted: Kid[] = [];
+    /** Offline arrivals, seconds into the absence. */
     const arrived = new Map<number, number>();
-    let materials = this.income * away;
+    // Each kid earns its base rate for the whole absence, and its happy extra only until the
+    // happiness wears off (D-056), which it does offline too.
+    let materials = 0;
+    for (const kid of s.world.kids) {
+      const base = this.baseIncomeOfKid(kid);
+      materials += base * away + base * (this.happyMultiplier(kid) - 1) * Math.min(away, kid.happy?.left ?? 0);
+      if (kid.happy) {
+        kid.happy.left -= away;
+        if (kid.happy.left <= 0) delete kid.happy;
+      }
+    }
+    this.wearOffPlanted(away);
+    const admit = (kid: Kid, at: number, into: Kid[]) => {
+      kid.grace = 0; // it has been around for a while
+      into.push(kid);
+      arrived.set(kid.id, at);
+      materials += this.incomeOfKid(kid) * Math.max(0, away - at);
+    };
+    // Started seeds keep growing (D-061); those that ripen while away, in time then plot order.
+    const grow = this.content.balance.planting.growSeconds;
+    const ripening = s.plots
+      .flatMap((p, i) => (p.seed?.sprout ? [{ i, at: Math.max(0, grow - p.seed.grown) }] : []))
+      .filter((r) => r.at <= away + 1e-6)
+      .sort((a, b) => a.at - b.at || a.i - b.i);
+    for (const p of s.plots) if (p.seed?.sprout) p.seed.grown = Math.min(grow, p.seed.grown + away);
     // First spawn when the current interval completes; a banked spawn (progress at the
-    // interval) is due at once. At most `capacity` admissions, so the loop is bounded.
-    // The interval is read per spawn: the tutorial can end partway through (D-052).
+    // interval) is due at once. The interval is read per spawn: the tutorial can end
+    // partway through (D-052). Garden spawns and sprouts share one timeline, a sprout first
+    // on a tie, as online. Nothing leaves the map offline, so once it's full, or no spot
+    // near the outlet is free, nothing more arrives; each turn admits a kid or stops.
     let t = Math.max(0, this.interval - s.spawnProgress);
     let last: number | undefined;
     // Tolerance absorbs float drift, as in advanceSpawn.
-    while (t <= away + 1e-6 && s.world.kids.length < this.capacity) {
+    for (;;) {
+      const seed = ripening[0];
+      const gardenDue = t <= away + 1e-6;
+      if (s.world.kids.length >= this.capacity) break;
+      if (seed && (!gardenDue || seed.at <= t + 1e-9)) {
+        const kid = this.sproutFrom(seed.i, events);
+        if (!kid) break;
+        ripening.shift();
+        admit(kid, seed.at, sprouted);
+        continue;
+      }
+      if (!gardenDue) break;
       const kid = this.spawnAtOutlet(() => this.rollSpawnType(), 'offline', events);
-      if (!kid) break; // no free spot near the Garden: treat as full
+      if (!kid) break;
       s.gardenSpawns++;
-      kid.grace = 0; // it has been around for a while
-      spawned.push(kid);
-      arrived.set(kid.id, t);
-      materials += this.incomeOf(kid.type) * Math.max(0, away - t);
+      admit(kid, t, spawned);
       last = t;
       t += this.interval;
     }
@@ -420,7 +572,8 @@ export class Game {
     this.syncRngState();
     let potatokens = 0;
     for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;
-    return { seconds: away, discardedSeconds: elapsed - away, materials, potatokens, spawned };
+    const plotsWaiting = s.plots.filter((p) => p.seed && p.seed.grown >= grow).length;
+    return { seconds: away, discardedSeconds: elapsed - away, materials, potatokens, spawned, sprouted, plotsWaiting };
   }
 
   /**
@@ -432,20 +585,40 @@ export class Game {
     const seen: [number, number][] = [];
     const targeted: [number, number][] = [];
     for (const c of commands) {
-      if (c.type === 'upgrade' || c.type === 'setBias' || c.type === 'instantSpawn' || c.type === 'respawn') {
+      if (c.type === 'upgrade' || c.type === 'setBias' || c.type === 'instantSpawn' || c.type === 'respawn' || c.type === 'unlockPlot') {
         this.applyPurchase(c, events);
+        continue;
+      }
+      if (c.type === 'feed') {
+        this.feed(c, events);
+        continue;
+      }
+      if (c.type === 'name') {
+        this.name(c, events);
+        continue;
+      }
+      if (c.type === 'startGrowing') {
+        const seed = this.state.plots[c.plot]?.seed;
+        const reason: RejectReason | null = !seed || seed.sprout ? 'plotsBusy' : seed.planted.length < this.content.balance.planting.minKids ? 'tooFewKids' : null;
+        if (reason || !seed) {
+          events.push({ type: 'rejected', command: 'startGrowing', reason: reason ?? 'plotsBusy' });
+          continue;
+        }
+        seed.sprout = this.rollSprout(seed.planted);
+        events.push({ type: 'growing', plot: c.plot });
+        continue;
+      }
+      if (c.type === 'plant') {
+        this.plant(c, events);
+        continue;
+      }
+      if (c.type === 'unplant' || c.type === 'emptyPlot') {
+        this.unplant(c, events);
         continue;
       }
       const kid = world.kids.find((k) => k.id === c.kidId);
       if (!kid) {
-        // Consumed before the command arrived. A drag just ends; a send home is answered,
-        // so the player hears why nothing happened (GUI_MVP §13.3).
-        if (c.type === 'sendHome') events.push({ type: 'rejected', command: 'sendHome', reason: 'gone' });
-        continue;
-      }
-      if (c.type === 'sendHome') {
-        world.kids.splice(world.kids.indexOf(kid), 1);
-        events.push({ type: 'sentHome', kid });
+        // Consumed before the command arrived: a drag just ends.
         continue;
       }
       if (c.type === 'pickUp') {
@@ -497,19 +670,31 @@ export class Game {
       case 'instantSpawn': {
         const price = this.content.balance.economy.instantSpawnPotatokens;
         if (s.potatokens < price) return reject('cost');
-        if (s.world.kids.length >= this.capacity) return reject('full');
+        if (this.state.world.kids.length >= this.capacity) return reject('full');
         // The Garden's timer is untouched: an instant spawn is extra, not a skip.
         if (!this.spawnAtOutlet(() => this.rollSpawnType(), 'instant', events)) return reject('noRoom');
         s.potatokens -= price;
         return;
       }
+      case 'unlockPlot': {
+        const cost = this.plotUnlockCost;
+        if (cost === null) return reject('maxLevel');
+        if (s.materials < cost) return reject('cost');
+        s.materials -= cost;
+        s.plots.push({ seed: null });
+        events.push({ type: 'plotUnlocked', plots: s.plots.length });
+        return;
+      }
       case 'respawn': {
         if (s.buildings.compendium < 1) return reject('locked');
+        // Specials and rares come only from planting (owner, 2026-10-04; D-072).
+        const def = this.content.kids.find((k) => k.id === c.kidType);
+        if (def?.special || def?.rare) return reject('notSpawnable');
         if (!s.discoveredKids.includes(c.kidType)) return reject('undiscovered');
         const cost = this.respawnCost(c.kidType);
         const price = c.pay === 'materials' ? cost.materials : cost.potatokens;
         if ((c.pay === 'materials' ? s.materials : s.potatokens) < price) return reject('cost');
-        if (s.world.kids.length >= this.capacity) return reject('full');
+        if (this.state.world.kids.length >= this.capacity) return reject('full');
         if (!this.spawnAtOutlet(() => c.kidType, 'compendium', events)) return reject('noRoom');
         if (c.pay === 'materials') s.materials -= price;
         else s.potatokens -= price;
@@ -616,11 +801,284 @@ export class Game {
    * room. When the map is full, or no free spot exists, progress holds at the interval:
    * one spawn is banked and fires as soon as there is room.
    */
+  /**
+   * Started seeds grow; a ready one sprouts at the Garden outlet, in plot order, if the map
+   * has room and a spot there is clear. Otherwise it waits, ready, as long as it takes (D-061).
+   */
+  private advancePlots(dt: number, events: GameEvent[]): void {
+    const grow = this.content.balance.planting.growSeconds;
+    this.plotWaits.clear();
+    this.state.plots.forEach((plot, i) => {
+      const seed = plot.seed;
+      if (!seed?.sprout) return;
+      seed.grown = Math.min(grow, seed.grown + dt);
+      if (seed.grown < grow) return;
+      if (this.state.world.kids.length >= this.capacity) return void this.plotWaits.set(i, 'full');
+      if (!this.sproutFrom(i, events)) return void this.plotWaits.set(i, 'noRoom');
+    });
+  }
+
+  /** A ready plot's kid comes up at the outlet; the plot empties. Null if no spot. */
+  private sproutFrom(index: number, events: GameEvent[]): Kid | null {
+    const plot = this.state.plots[index]!;
+    const sprout = plot.seed!.sprout!;
+    const kid = this.spawnAtOutlet(() => sprout.type, 'sprout', events);
+    if (!kid) return null;
+    plot.seed = null;
+    for (const e of events) if (e.type === 'spawned' && e.kid === kid) e.plot = index;
+    return kid;
+  }
+
+  /** Why plot `i` is ready but hasn't sprouted, as of the last step; null if it isn't waiting. */
+  plotWaiting(i: number): PlotWaiting | null {
+    return this.plotWaits.get(i) ?? null;
+  }
+
+  /** Materials to unlock the next plot, or null when every plot is unlocked. */
+  get plotUnlockCost(): number | null {
+    const p = this.content.balance.planting;
+    const n = this.state.plots.length;
+    if (n >= p.maxPlots) return null;
+    return Math.ceil(p.unlockCostBase * p.unlockCostGrowth ** (n - p.startPlots));
+  }
+
+  /**
+   * The chances a seed of these kids sprouts a special (D-063) and a rare (D-062) (D-061):
+   * from the floor (minKids kids, all below tier 3) to the ceiling (maxKids kids of tier 5
+   * or above), at x = the average of a count factor and a tier factor, each clamped to 0..1.
+   */
+  oddsFor(planted: readonly (KidId | Pick<PlantedKid, 'type' | 'happy'>)[]): { special: number; rare: number } {
+    const p = this.content.balance.planting;
+    const n = planted.length;
+    // A kid happy when added counts one tier higher; the curve's caps still hold (D-056, §15.3).
+    const tierOf = (k: KidId | Pick<PlantedKid, 'type' | 'happy'>) => (typeof k === 'string' ? (this.tiers.get(k) ?? 1) : (this.tiers.get(k.type) ?? 1) + (k.happy ? 1 : 0));
+    const meanTier = n ? planted.reduce((t, k) => t + tierOf(k), 0) / n : 1;
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    const x = (clamp((n - p.minKids) / Math.max(1, p.maxKids - p.minKids)) + clamp((meanTier - 2) / 3)) / 2;
+    const at = ([lo, hi]: readonly [number, number]) => lo + (hi - lo) * x;
+    return { special: at(p.specialOdds), rare: at(p.rareOdds) };
+  }
+
+  /**
+   * What a seed sprouts (D-061): a random Garden kid; a special (D-063) at its chance, and,
+   * independently, a rare kid (D-072) at its own. If both hit, the rare wins: the rarer roll.
+   * A roll with no kids of its kind in the content gives nothing. Both chances are always
+   * rolled, then the type, on the spawn stream, so saves replay it.
+   */
+  private rollSprout(kids: readonly PlantedKid[]): Sprout {
+    const odds = this.oddsFor(kids);
+    const specials = this.content.kids.filter((k) => k.special);
+    const rares = this.content.kids.filter((k) => k.rare);
+    const special = this.spawnRng.next() < odds.special && specials.length > 0;
+    const rare = this.spawnRng.next() < odds.rare && rares.length > 0;
+    const pick = <T>(list: readonly T[]) => list[Math.floor(this.spawnRng.next() * list.length)]!;
+    return { type: rare ? pick(rares).id : special ? pick(specials).id : this.rollSpawnType() };
+  }
+
+  /**
+   * Planting (D-061), all or none. Refused if a kid is gone (`gone`), if no plot takes kids
+   * (`plotFull` when filled plots only wait to be started, else `plotsBusy`), or if the plot is
+   * growing (`plotsBusy`) or lacks the spaces (`plotFull`). Refused kids are put down clear of
+   * recipe partners, with a newborn's grace: a refusal never fuses (GUI_MVP §15.1; Codex
+   * review, PR #72).
+   */
+  private plant(c: Extract<Command, { type: 'plant' }>, events: GameEvent[]): void {
+    const world = this.state.world;
+    const max = this.content.balance.planting.maxKids;
+    const kids = c.kidIds.map((id) => world.kids.find((k) => k.id === id));
+    const plot = c.plot ?? this.plotForDrop();
+    const target = plot === null ? undefined : this.state.plots[plot];
+    const filled = target?.seed?.planted.length ?? 0;
+    const reason: RejectReason | null = kids.some((k) => !k)
+      ? 'gone'
+      : new Set(c.kidIds).size !== c.kidIds.length || c.kidIds.length === 0
+        ? 'gone'
+        : plot === null || !target
+          ? this.state.plots.some((p) => p.seed && !p.seed.sprout) ? 'plotFull' : 'plotsBusy'
+          : target.seed?.sprout
+            ? 'plotsBusy'
+            : filled + c.kidIds.length > max
+              ? 'plotFull'
+              : null;
+    if (reason || plot === null || !target) {
+      const recipes = this.recipes;
+      for (const kid of kids) {
+        if (!kid) continue;
+        kid.held = false;
+        const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => recipes.has(pairKey(a.type, b.type)));
+        if (spot) [kid.x, kid.y] = [spot.x, spot.y];
+        // "Release to keep this kid": it can't fuse for a newborn's grace either, so a
+        // partner walking up later this step can't take it (Codex review, PR #72).
+        kid.grace = Math.max(kid.grace, this.content.balance.spawn.newbornGraceSeconds);
+      }
+      events.push({ type: 'rejected', command: 'plant', reason: reason ?? 'plotsBusy' });
+      return;
+    }
+    for (const kid of kids as Kid[]) {
+      world.kids.splice(world.kids.indexOf(kid), 1);
+      // Whether it was happy stays with the seed for good (D-056). Its name and what is left
+      // of its happiness come back with it if it is taken out (D-074).
+      const snapshot: PlantedKid = {
+        id: kid.id,
+        type: kid.type,
+        look: { ...kid.look },
+        ...(kid.name ? { name: kid.name } : {}),
+        ...(kid.happy ? { happy: true, happiness: { ...kid.happy } } : {}),
+      };
+      if (target.seed) target.seed.planted.push(snapshot);
+      else target.seed = { planted: [snapshot], sprout: null, grown: 0 };
+      events.push({ type: 'planted', kid, plot, count: target.seed.planted.length });
+    }
+  }
+
+  /**
+   * Taking kids back out of a plot (D-074), all or none: one kid from a plot still filling
+   * (`unplant`), or every kid in a filling or growing plot (`emptyPlot`), which loses the
+   * growing time. Refused if the plot or kid is gone (`gone`), if the plot is growing and only
+   * one kid was asked for (`plotsBusy`), if its sprout is ready (`ready`), if the map hasn't
+   * room for them all (`full`), or if a kid finds no free spot by the Garden or none clear of
+   * recipe partners (`noRoom`). They come back by the Garden outlet with their id, look, name
+   * and remaining happiness, clear of recipe partners and with a newborn's grace, so they never
+   * fuse on the way back.
+   */
+  private unplant(c: Extract<Command, { type: 'unplant' | 'emptyPlot' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: c.type, reason });
+    };
+    const seed = this.state.plots[c.plot]?.seed;
+    if (!seed) return reject('gone');
+    if (seed.sprout && seed.grown >= this.content.balance.planting.growSeconds) return reject('ready');
+    if (c.type === 'unplant' && seed.sprout) return reject('plotsBusy');
+    const leaving = c.type === 'unplant' ? seed.planted.filter((k) => k.id === c.kidId) : [...seed.planted];
+    if (leaving.length === 0) return reject('gone');
+    const world = this.state.world;
+    if (world.kids.length + leaving.length > this.capacity) return reject('full');
+    const back: Kid[] = [];
+    // All or none: the ones already placed go back into the plot.
+    const rollBack = (): void => {
+      for (const b of back) world.kids.splice(world.kids.indexOf(b), 1);
+      reject('noRoom');
+    };
+    for (const k of leaving) {
+      const look = this.lookWithBox(k.look);
+      const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
+      if (!p) return rollBack();
+      const kid = addKid(world, k.type, p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, look.box, { body: look.body, face: look.face, scale: look.scale }, k.id);
+      if (k.name) kid.name = k.name;
+      if (k.happiness) kid.happy = { ...k.happiness };
+      // Clear of recipe partners, those already on the map and those coming back with it:
+      // taking kids out never fuses them, now or once their grace ends. With no such spot, none
+      // comes back (Codex review, PR #82).
+      back.push(kid);
+      const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (x, y) => this.recipes.has(pairKey(x.type, y.type)));
+      if (!spot) return rollBack();
+      [kid.x, kid.y] = [spot.x, spot.y];
+    }
+    const ids = new Set(leaving.map((k) => k.id));
+    seed.planted = seed.planted.filter((k) => !ids.has(k.id));
+    if (seed.planted.length === 0) this.state.plots[c.plot]!.seed = null;
+    const left = this.state.plots[c.plot]!.seed?.planted.length ?? 0;
+    for (const kid of back) events.push({ type: 'unplanted', kid, plot: c.plot, count: left });
+  }
+
+  /** Planted kids' happiness keeps counting down (D-074); `happy`, for the odds, stays. */
+  private wearOffPlanted(dt: number): void {
+    for (const plot of this.state.plots) {
+      for (const k of plot.seed?.planted ?? []) {
+        if (!k.happiness) continue;
+        k.happiness.left -= dt;
+        if (k.happiness.left <= 0) delete k.happiness;
+      }
+    }
+  }
+
+  /** A look with its box from the current art; a body or face it doesn't have maps to the first. */
+  private lookWithBox(look: Look): Look & { box: Box } {
+    const body = this.looks.bodies.find((b) => b.id === look.body) ?? this.looks.bodies[0]!;
+    const face = this.looks.faces.some((f) => f.id === look.face) ? look.face : this.looks.faces[0]!.id;
+    const k = look.scale;
+    const b = body.box;
+    return { body: body.id, face, scale: k, box: { left: b.left * k, top: b.top * k, right: b.right * k, bottom: b.bottom * k } };
+  }
+
+  /**
+   * One bite (D-056). Refused if the kid is gone, the food unknown (`invalid`), hated
+   * (`hated`, nothing spent) or unaffordable. Accepted, the kid is happy from now: a
+   * favourite for longer and more, and a new bite replaces the old happiness, never adds.
+   */
+  private feed(c: Extract<Command, { type: 'feed' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: 'feed', reason });
+    };
+    const kid = this.state.world.kids.find((k) => k.id === c.kidId);
+    if (!kid) return reject('gone');
+    const f = this.content.balance.feeding;
+    const food = f.foods.find((x) => x.id === c.food);
+    if (!food) return reject('invalid');
+    const likes = this.content.personality[kid.type];
+    if (likes?.hatedFood === food.id) return reject('hated');
+    if (this.state.materials < food.price) return reject('cost');
+    this.state.materials -= food.price;
+    const favourite = likes?.favouriteFood === food.id;
+    kid.happy = { left: favourite ? f.favouriteSeconds : f.happySeconds, favourite };
+    events.push({ type: 'fed', kid, food: food.id, favourite });
+  }
+
+  /**
+   * A name (D-057): normalized and checked (GUI_MVP §18.2), then charged; the same name is
+   * refused, never charged. `null` clears a name for free.
+   */
+  private name(c: Extract<Command, { type: 'name' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: 'name', reason });
+    };
+    const kid = this.state.world.kids.find((k) => k.id === c.kidId);
+    if (!kid) return reject('gone');
+    if (c.name === null) {
+      if (kid.name === undefined) return reject('unchanged');
+      delete kid.name;
+      events.push({ type: 'named', kid, name: null });
+      return;
+    }
+    const n = this.content.balance.naming;
+    const check = checkName(c.name, n.maxLength);
+    if (!check.ok) return reject('invalid');
+    if (check.name === kid.name) return reject('unchanged');
+    if (this.state.materials < n.price) return reject('cost');
+    this.state.materials -= n.price;
+    kid.name = check.name;
+    events.push({ type: 'named', kid, name: check.name });
+  }
+
+  /** The plot a dragged kid goes into: the one still filling with room, else the lowest empty; null if none. */
+  plotForDrop(): number | null {
+    const max = this.content.balance.planting.maxKids;
+    const filling = this.state.plots.findIndex((p) => p.seed && !p.seed.sprout && p.seed.planted.length < max);
+    if (filling >= 0) return filling;
+    const empty = this.state.plots.findIndex((p) => !p.seed);
+    return empty >= 0 ? empty : null;
+  }
+
+  /** Seconds a seed takes to grow. */
+  /** A planting-only special type (D-063). */
+  isSpecial(type: KidId): boolean {
+    return !!this.content.kids.find((k) => k.id === type)?.special;
+  }
+
+  /** One of the planting-only rare types (D-072). */
+  isRare(type: KidId): boolean {
+    return !!this.content.kids.find((k) => k.id === type)?.rare;
+  }
+
+  get growSeconds(): number {
+    return this.content.balance.planting.growSeconds;
+  }
+
   private advanceSpawn(dt: number, events: GameEvent[]): void {
     const s = this.state;
     const raw = s.spawnProgress + dt;
     // Tolerance absorbs float drift from summing 0.1 s steps (120 × 0.1 ≠ 12 exactly).
-    if (raw < this.interval - 1e-6 || s.world.kids.length >= this.capacity) {
+    if (raw < this.interval - 1e-6 || this.state.world.kids.length >= this.capacity) {
       s.spawnProgress = Math.min(this.interval, raw);
       this.blocked = false;
       return;
@@ -639,6 +1097,14 @@ export class Game {
   }
 
   /** Debug/test only: place a kid directly, bypassing the Garden and capacity; optionally fix its look. */
+  /** Debug only: a plot ready to sprout `sprout` at the next step (three Potato Kids in it). */
+  debugReadySeed(plot: number, sprout: Sprout): void {
+    const p = this.state.plots[plot];
+    if (!p) return;
+    const world = this.state.world;
+    p.seed = { planted: Array.from({ length: this.content.balance.planting.minKids }, () => ({ id: world.nextKidId++, type: 'plain', look: { ...DEFAULT_LOOK } })), sprout, grown: this.growSeconds };
+  }
+
   debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
     const look = this.forceLook(this.rollLook(), force);
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);

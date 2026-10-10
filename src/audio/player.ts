@@ -12,7 +12,7 @@ import { cueFor, SpawnLimiter, type Cue } from './cues';
 
 const urls = import.meta.glob<string>('../../assets/audio/*.{ogg,m4a}', { query: '?url', import: 'default', eager: true });
 
-const CUES: Cue[] = ['sfx_ui_tap', 'sfx_pick_up', 'sfx_place', 'sfx_spawn', 'sfx_fusion', 'sfx_discovery', 'sfx_upgrade', 'sfx_spend'];
+const CUES: Cue[] = ['sfx_ui_tap', 'sfx_pick_up', 'sfx_place', 'sfx_spawn', 'sfx_fusion', 'sfx_discovery', 'sfx_upgrade', 'sfx_spend', 'sfx_plant'];
 
 /** Ogg Vorbis where supported (Android WebView, Chromium, Firefox), else AAC. */
 function pickExt(): 'ogg' | 'm4a' {
@@ -86,6 +86,11 @@ export class AudioPlayer {
       played: [...this.played],
       active: this.active.size,
     };
+  }
+
+  /** A kid press resolved (the scene's gesture): a drag picks up, a tap is a UI tap. */
+  gesture(kind: 'drag' | 'tap'): void {
+    this.play(kind === 'drag' ? 'sfx_pick_up' : 'sfx_ui_tap');
   }
 
   /** A sim step: its one cue (see cueFor). */

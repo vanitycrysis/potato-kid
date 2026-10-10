@@ -15,6 +15,8 @@ const FACE = 'classic';
 function layer(name: string, src: string, at: Attachment | undefined, pivot: [number, number], fit: [number, number] = [1, 1]): HTMLElement {
   const holder = document.createElement('div');
   holder.className = 'portrait-layer';
+  // Which asset, by name: a small one may be inlined, so its URL won't say (tests, debugging).
+  holder.dataset.asset = name;
   const p = at?.position ?? [0, 0];
   const s = at?.scale ?? [1, 1];
   holder.style.transform = `translate(${p[0]}px, ${p[1]}px) rotate(${at?.rotationDeg ?? 0}deg) scale(${s[0]}, ${s[1]})`;

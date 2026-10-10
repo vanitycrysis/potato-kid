@@ -229,5 +229,11 @@
 "kid_winter_market_front_apron":[105,185,45,30,256,256],
 "kid_winter_market_front_awning":[74,18,108,38,256,256],
 "kid_yo_yo_front_toy":[182,137,55,76,256,256],
+"landmark_bench":[97,259,318,218,512,512],
+"landmark_birdbath":[98,276,316,204,512,512],
+"landmark_flower_pots":[95,129,324,349,512,512],
 "landmark_pebble_patch":[70,351,371,122,512,512],
-"landmark_picnic_stump":[100,303,313,176,512,512]}
+"landmark_picnic_stump":[100,303,313,176,512,512],
+"landmark_seed_basket":[106,219,310,253,512,512],
+"landmark_trellis":[139,137,225,342,512,512],
+"landmark_watering_can":[35,260,374,214,512,512]}

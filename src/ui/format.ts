@@ -42,6 +42,18 @@ export function formatClock(seconds: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/**
+ * Time left on a growing plot (GUI_MVP §15.4): rounded up, `m:ss`, or `h:mm:ss` from an
+ * hour, so it never reads 0:00 before it is done.
+ */
+export function formatTimeLeft(seconds: number): string {
+  const s = Math.max(0, Math.ceil(seconds - 1e-9));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
 /** A duration, floored to whole seconds: `2 h 14 m`, `4 m 02 s`, `12 s`. */
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));

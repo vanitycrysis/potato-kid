@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatClock, formatCount, formatDuration, formatExact, formatInterval, formatRate } from './format';
+import { formatClock, formatCount, formatDuration, formatExact, formatInterval, formatRate, formatTimeLeft } from './format';
 
 describe('number display (GUI_MVP §3)', () => {
   it('counters truncate, never round up', () => {
@@ -56,5 +56,16 @@ describe('number display (GUI_MVP §3)', () => {
     expect(formatRate(1)).toBe('1');
     expect(formatRate(8)).toBe('8');
     expect(formatRate(1.25)).toBe('1.3');
+  });
+});
+
+describe('time left on a growing plot (GUI_MVP §15.4)', () => {
+  it('rounds up, m:ss under an hour and h:mm:ss from one, never 0:00 early', () => {
+    expect(formatTimeLeft(1800)).toBe('30:00');
+    expect(formatTimeLeft(59.2)).toBe('1:00');
+    expect(formatTimeLeft(0.01)).toBe('0:01');
+    expect(formatTimeLeft(0)).toBe('0:00');
+    expect(formatTimeLeft(3599.5)).toBe('1:00:00');
+    expect(formatTimeLeft(3725)).toBe('1:02:05');
   });
 });

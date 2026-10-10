@@ -1,51 +1,35 @@
-# Session handoff (2026-10-03, second session, for the next Claude session)
+# Session handoff (2026-10-05, second session, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-059**) and `docs/TASKS.md`. Pull `main` first.
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**) and `docs/TASKS.md`.
+
+**Until PR #81 merges, this handoff and the current `DECISIONS.md` / `TASKS.md` live on the branch `claude/gate4-feedback-2`, not on `main`** (`main` still has the previous session's handoff). Run `git fetch && git checkout claude/gate4-feedback-2 && git pull` and read the docs there. Once #81 is merged, pull `main` as usual.
 
 ## Where we are
 
-- **Gate 4 came back with feedback** (2026-10-03), not approval. The owner's answers are recorded as **D-050..D-059** (PR #60, merged), and every item is a task on the board in `TASKS.md`, with an order of work. After those tasks, the MVP goes back to the owner as gate 4.
-- In brief:
-  - The **icon is approved**.
-  - **Forgiving drop** (D-051): drop a kid onto another to try the pair; the kid under the finger is highlighted. No fusing screen.
-  - **Pacing** (D-052): a tutorial at 1 kid/min, then 20 min per kid, falling to about 8 min with Garden upgrades; much slower Materials.
-  - **Offline** (D-053): kids keep spawning and are found where they wandered; still no offline fusions.
-  - **Planting replaces Send home** (D-054): grows over time in plots, then sprouts a random kid, sometimes a variant. A planting sound is wanted.
-  - **Rainbow and Mini variants** of any kid (D-055).
-  - **Feeding** (D-056): a happy kid earns more and sprouts better variants; each type has a favourite food and a hated one, which it refuses.
-  - **Naming** (D-057) and **personalities** (D-058): a description, likes, hates and hobbies per type.
-  - **The wave becomes a fast stubby-arm wiggle** (D-059).
-  - **Music loop bug.**
-- **The repo is public now** (D-060, PR #64, merged; CI's token is read-only). Public repos don't use the owner's Actions minutes.
-- **The owner has given full access and doesn't want permission questions** (see the memory file `no-permission-asks`). Still stop at the owner gates. Claude Code's auto-mode classifier blocked two actions anyway: turning on GitHub Pages, and stopping the stale Codex processes. Both are left to the owner.
+- **`main`** has everything from the first gate-4 round (D-050..D-067): planting (#72), rare variants (#77), feeding and naming (#78). Its save schema is 5.
+- **The owner's second round (D-068..D-074)** is recorded in #81, not yet merged. The engine work for it is in #82, #83 and #84, which take the save schema to 6 and then 7. All four wait for Codex's review.
+- **The owner now talks to Claude directly** (this session); the earlier relay through "session 03" is no longer used.
+- **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
 
-## Open work at handoff (check each first)
+## Open work at handoff
 
-1. **PR #61, MUSIC-LOOP: merged.** The music loops on a decoded Web Audio buffer and survives hide/show and system interruptions; Off/On resumes from the same offset. It needs listening on the device at the next gate-4 build.
-2. **PR #62, WAVE-WIGGLE (Codex art):** `chatgpt/wave-wiggle`.
-   - **Round 1:** Claude committed Codex's round 1 unchanged and merged `main` into the branch (TASKS.md conflict resolved to main's board).
-   - **Claude's review, round 1 (posted on the PR):** the nubs are stubby now, but the wiggle is **invisible at 55 px** (about 2 CSS px of travel), and many costumes hide the left nub. The review asks for a bigger angular sweep and a costume-agnostic fix, perhaps both nubs.
-   - **Round 2 is delivered and pushed** (1050909, committed unchanged as ChatGPT):
-     - both stubby nubs, constant length, sweep 106°, about 5.2 CSS px of tip travel at 55 px;
-     - right-hand props bob through the shared attachment;
-     - still 500 ms, reserves unchanged; all 64 costumes audited.
-     - Codex says Water's hood still partly masks a nub.
-   - **Next:** Claude's round-2 review at 55 px. Use the colour and grayscale sheets and `wave-wiggle-preview.html`, which compares old, round 1 and round 2, in `../potato-kid-chatgpt/.codex-out/`. Judge especially Water and the prop bob on Baker, Blacksmith, Pinwheel and Rescue Station. Then the engine check, and merge when it passes.
-   - **Never discard or rerun a Codex task's edits** while its task may still be running: one writer per worktree. Check the companion's job status first.
-   - **Engine side, after the art passes:** `waveSeconds` derives from the clip (0.5 s now); Send home's farewell uses the same clip.
-3. **FUSE-DROP (Claude), next up.** Nothing written yet. The design worked out:
-   - **The target (D-051): the kid under the finger.** Hit-test the pointer's world point (`w` in `endDrag`, *before* `HOLD_LIFT`; the held kid is drawn 70 units above the finger) against the other kids' drawn boxes (`this.drawn` + their `box`). Not the lifted body's overlap, which can pick a neighbour (Codex review, PR #63).
-   - **The scene** computes the target each frame in `resolveHeld()` (`src/render/scene.ts`), stores it on the `Drag`, and exposes it to tests (for example `__PK__.dropTarget()`).
-   - **The command:** `endDrag` sends `{ type: 'drop', ..., target }`.
-   - **The sim:** in `src/sim/game.ts`, `applyCommands` returns the targeted pair, and `resolveFusions` gives it priority (`d = -1`) ahead of the `seen` contacts. A non-recipe target just lands at the free spot (D-039). Kids in newborn grace stay ineligible.
-   - **Unless the drop is over the Garden**, where the home/plant target keeps priority.
-   - **The highlight's look is Codex's** (GATE4-DESIGN). Claude draws nothing (D-036), so ship the logic first and render the highlight once the design lands.
-   - **Tests:** unit tests for target choice and priority; e2e for a crowded drop onto a partner and onto a non-partner; mutation-check both.
-4. **Then, in the board's order:**
-   - **Claude:** PACING (`src/content/balance.json`, `npm run balance`; spawn is 12 s today, so the target is 60 s for a tutorial of about 10 spawns, then 1200 s falling to about 480 s at Garden level 10, a factor of about 0.903 per level) and OFFLINE-WANDER (`Game.reconcile` in `src/sim/game.ts`).
-   - **Codex:** GATE4-DESIGN, one big interaction-design and art task: the highlight, plots/seed/sprout, the Rainbow and Mini looks, foods, the kid card, feeding, naming, and the planting cue. Also PERSONALITY (text for 64 types plus liked and hated foods). Codex's worktree takes **one task at a time**, so queue them after WAVE-WIGGLE.
-   - **Claude, after those designs:** PLANTING (reuse Send home's 400 ms hold gesture), VARIANTS, FEED-NAME.
-   - Numbers that D-052..D-056 leave open (tutorial length, growing time, odds, prices, happiness duration) are Claude's to tune with the simulator, review with Codex, and show the owner at gate 4.
+1. **Codex is out of usage until 2026-10-09 17:13** (its error, 2026-10-05). The owner chose to wait rather than buy credits or switch back to ChatGPT sessions. Until then nothing merges and no Codex task can start. **At the reset, in this order:**
+   - **Run Codex's reviews** on #81 (docs: D-068..D-074 and this board), #82 (PLOT-REMOVE), #83 (MAP-ZOOM) and #84 (RARE-KIDS, stacked on #82: merge #82 first, then retarget #84 to `main`). Each PR notes the limit in a comment.
+   - **Hand Codex LAYOUT-DESIGN** (D-070's less busy screen, D-071's 4 × 4 map composition and how zoom looks, D-074's take-out and cancel controls), then FARM-DESIGN (D-069), then WILD-ART (D-072's ten rare kids and D-073's special redesigns, on PR #76 with Claude's third round-1 finding). The `TASKS.md` rows say what "done" means.
+2. **The owner's second gate-4 feedback is D-068..D-074** (2026-10-05). They also said the build "looks alright for an early build", and that visual polish waits for the polish phase. The owner picked the recommended option on all four questions: fields on the map; two sets that both go wild; take kids out any time; a 4 × 4 map.
+3. **Built on branches this session** (each fully tested and mutation-checked; details in the PRs):
+   - **#82 PLOT-REMOVE**: `unplant` and `emptyPlot`, schema 6 (planted kids keep ids). Kids come back clear of recipe partners.
+   - **#83 MAP-ZOOM**: pinch 0.5×–2×, wheel zoom, the zoom survives resizes. Still open: whether far zoom wants more (LAYOUT-DESIGN).
+   - **#84 RARE-KIDS**: `rare: true` types, the rare roll wins over the special roll, schema 7 retires the variants. It also adds `?debug=1&rare=a,b` stand-ins for tests, fixes the Compendium to list ordinary kids only, and gives every small kid the 44 px pickup target.
+4. **Still to build after the designs:**
+   - the plot take-out UI and the layout (LAYOUT);
+   - FARMING (sim, save, balance, UI; the food shop goes);
+   - the 20 specials' and the ten rares' content entries;
+   - the Dex's Ordinary/Specials segments (§16.4);
+   - the T6 tier text;
+   - the simulator on the 4 × 4 world, with rares (their tier).
+5. **Open question for the owner (not urgent):** D-067's happiness durations (20 min ordinary food, 60 min favourite) and the name price (50 Materials). They stay proposed until the owner confirms or changes them. The food price is gone with farming (D-069).
+6. **TROPHY-MAP (D-064)** comes after SPECIALS; expeditions (D-065) stay parked.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -60,12 +44,25 @@
   - `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`;
   - post the output to the PR verbatim, labelled as Codex's, then a reply per finding;
   - merge only after a clean Codex round **and** green CI.
-- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). The scratchpad has a small `mutate_c1.py` runner.
+- **Codex reviews are rigorous:** most rounds find real edge cases. **Mutation-check every regression test** (break the fix; the test must fail). Each session's scratchpad is new: write a small Python runner that applies each mutant, runs `tsc` and then `vitest` (or `npm run build` and a `playwright test -g` filter), restores the file in `finally`, and reports KILLED or SURVIVED. Run subprocesses with `encoding='utf-8', errors='replace'`, or Windows' cp1252 decoding crashes the reader threads.
 - **Art review:** judge at true game size (about 55 CSS px) in colour and grayscale, and in-engine after import (`npm run art:preview`).
   - Batch lessons so far: no shared torso mark as the main read; nothing on or under the mouth line; no kid-in-a-vessel; no faint cues; no stereotype-adjacent shapes; no medical or weapon reads; check against everyday objects too.
   - Codex's art PRs are gated by Claude's review.
 
+## The balance simulator (`npm run balance [seeds]`)
+
+- It runs every scenario × seed in its own process, in parallel: 3 seeds take about 7 minutes.
+- Scenarios: the first hour; casual (10 min every 3 h, 14 days); daily (30 min a day, 14 days).
+- It reports wall-clock milestones, levels, income by day, plots, plantings and sprouts, and specials on the map against capacity.
+- **Tuning runs side by side:** `PK_BALANCE='{"planting":{...}}'` merges over the balance one level deep, and `PK_SPECIALS=20` adds stand-in special kids (tier 5, in no recipe). Run each variant as **its own background command** with full paths; never share shell variables across `&`.
+- **Never edit `src/`, or run mutation tests, while it runs.** Its worker processes load `src/` as they start, so a mutant can silently corrupt some seeds.
+
 ## Testing gotchas learned this session
+
+- **Codex's model can be "at capacity".** Retry with the same model (the owner's instruction is `gpt-6.1-sol`): a background loop that reruns the review every 5 minutes until the log has no "at capacity" works.
+- **A tap is timed, so time it in the page.** Tests of 220 ms taps send their pointer events from `page.evaluate` (and wait for frames with `requestAnimationFrame`), never with Playwright's mouse and wall-clock waits, which CI stretches.
+- **A closing sheet stays in the DOM while it fades.** Scope locators to `getByRole('dialog')`, or they match two titles.
+- **Python heredocs and the Edit tool both turn `\uXXXX` into the character.** For code points in source, build them with `String.fromCodePoint(...)`.
 
 - **The e2e preview server** (port 4173) is reused if running: it serves **this worktree's `dist/`**. Rebuild before every run, and don't test another worktree's code against it.
 - A failing `tsc` makes `npm run build` fail and leaves a **stale `dist/`**. Read the build output before trusting test results.
@@ -80,14 +77,30 @@
 - **CI runs about 3× slower than this machine,** and the Garden keeps spawning during tests. Anything timed against a short window (the 650 ms farewell, a row count) belongs in the page, inside a `requestAnimationFrame` loop, not in clicks from the test (PR #54). To stage frames below 10 fps, busy-wait in each frame (`slowFrames` in `smoke.spec.ts`).
 - `a view change just before release restarts the dwell` (PR #50) timed out once in about 80 local runs and has never failed on CI. If it shows up again, look at it.
 
+- **Reproduce a reported bug before fixing it.** A regression test that passes on the unfixed code tests nothing. It happened twice this session: the scenery case first needed the shipped body bounds; the crowd case first needed touching spacing (box 120 + gap ≤ 8).
+- **Mutation runner** (`mutate.py` in the scratchpad):
+  - open files with `newline=''`, or Windows rewrites LF as CRLF;
+  - run build-plus-e2e mutants through a small bash script, not `cmd.exe` (which mangles quoted paths);
+  - a surviving mutant can be *equivalent* (it changes nothing observable): say so rather than chase it.
+- **Commit messages with double quotes** break `git commit -m "…"` in a chain. Use `git commit -F - <<'EOF'`.
+- **A `SaveManager` saves only after it has loaded**, in tests too.
+- **Codex's reviews can't see PR replies.** When a finding is resolved by process (for example "this PR won't merge alone"), make it structural (a draft, one combined PR), or the next round repeats the finding.
+### Learned this session (2026-10-05, second)
+
+- **The Bash tool fails on some heredocs with apostrophes** ("unexpected EOF while looking for matching `''`"). For multi-line patches, write a Python script or a TS fragment to the scratchpad with the Write tool, then run it.
+- **Playwright emulates a Pixel 7** (mobile, touch), so `page.mouse.wheel` isn't delivered: dispatch a `WheelEvent` on the canvas. Multi-touch is tested by dispatching `PointerEvent`s with different `pointerId`s and `pointerType: 'touch'` in one `page.evaluate`.
+- **A mutant must compile.** Replacing a line with a bare `continue;` can make the rest unreachable, which fails `tsc`, so the mutant tests nothing. Use an always-true condition instead.
+- **No rare or special kids exist in the shipped content yet.** Tests use `?debug=1&rare=hero,lantern` (#84) to stand types in as rares. Unit tests add `{ id, tier, rare: true }` kids to a cloned content.
+- **The kid card's tap is timing-sensitive in e2e.** Prefer sim-level checks (unit tests) or debug hooks, such as `kids()`, which now includes `held`.
+
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout, left on `main`.
-  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/wave-wiggle`.
-  - `potato-kid-review-50`: the Codex review worktree, with `node_modules`.
+  - `potato-kid-claude`: Claude's main checkout (on `main` at handoff; the session's branches are `claude/gate4-feedback-2` (#81), `claude/plot-remove` (#82), `claude/map-zoom` (#83), `claude/rare-kids` (#84)).
+  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials` (PR #76).
+  - `potato-kid-review-50`: the Codex review worktree, with `node_modules` (detached at #81's first commit; check it out per review).
   - `potato-kid-docs`: docs branches.
-- **Finished worktrees removed:** the old `potato-kid-import3` and `-review-41..57` worktrees were removed from git this session. Their **empty folders** remain, locked by about 26 stale Codex processes (and their `node` helpers) from 2026-10-02. The owner hasn't said whether to stop those processes; the owner was told how to end them in Task Manager; once they're gone, delete the folders.
-- **Merged remote branches** (`claude/*`, `chatgpt/*`) were never deleted. That's harmless.
+- **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
+- **Merged remote branches** were never deleted. That's harmless.
 - **Gate captures** live outside the repo, in `C:\Users\Adria\potato-kid-gate2\` and `-gate3\`.
-- **GitHub:** `gh` (authenticated) is used for PRs and comments.
+- **GitHub:** `gh` (authenticated) for PRs and comments; it sometimes returns HTTP 503, so retry a merge after a few seconds.

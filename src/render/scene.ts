@@ -1,12 +1,14 @@
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
-import type { KidRig, MapData } from '../content/artData';
+import type { KidRig, MapData, PlantingArt } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
-import { intersects, rectAt, resolveDrawn, touching } from '../sim/space';
+import { rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
+import { plotAt, PlotsView } from './plotsView';
+import { RareLayer, type RareKid } from './rareView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
 import { KidRigView } from './rigView';
@@ -26,13 +28,14 @@ export interface SceneArt {
   ambient: Ambient;
   obstacles: Obstacle[];
   reducedMotion: boolean;
-  /** Send home (D-048, GUI_MVP §13): Codex's target and departure tokens, and its ink. */
+  /** The Garden's drop target (GUI_MVP §15.1, from Send home's §13): Codex's tokens and its ink. */
   home?: {
     target: HomeSpec;
-    departure: { clipMs: number; fadeMs: number; reducedFadeMs: number };
     tether: { strokePx: number; dashPx: [number, number]; stopBeforeKidBoxPx: number };
     ink: string;
   } | undefined;
+  /** Planting (D-061, GUI_MVP §15): Codex's plot art and its placement. */
+  planting?: PlantingArt | undefined;
 }
 
 /** What the Send home overlay draws this frame, in screen (CSS px) coordinates. */
@@ -43,18 +46,10 @@ export interface HomeView {
   point: { x: number; y: number } | null;
   /** The held kid's drawn silhouette box, while one is held. */
   held: { left: number; top: number; right: number; bottom: number } | null;
-}
-
-/** A kid going home: its view plays the farewell, apart from the sim (GUI_MVP §13.2). */
-interface Departure {
-  kidId: number;
-  view: KidRigView;
-  /** Its costume stays loaded until the view is gone (§13.2). */
-  type: KidId;
-  x: number;
-  y: number;
-  box: Kid['box'];
-  ms: number;
+  /** The plot a release would add to (0-based) and the kids already in it (GUI_MVP §15.1). */
+  plot: { index: number; count: number } | null;
+  /** No plot takes kids: filled plots wait to be started (`full`), or all are growing. */
+  busy: 'full' | 'growing' | null;
 }
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
@@ -65,6 +60,21 @@ const RELEASE_AFTER_MS = 15_000;
 const EDGE_ZONE = 56;
 /** Edge auto-scroll speed at the very edge, world units per second. */
 const EDGE_SPEED = 1100;
+/** A tap on the map (GUI_MVP §15.2): at most this long, and this far, in CSS px. */
+const TAP_MS = 220;
+const TAP_SLOP = 8;
+/** The least a small kid's pickup target spans each way, in CSS px (GUI_MVP §16.1). */
+const TAP_TARGET = 44;
+/**
+ * Pinch-zoom range (D-071), as a factor on the fitted zoom (1080 units across a portrait
+ * screen). Farthest: twice as much map each way, kids at about half size; nearest: twice.
+ */
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2;
+/** Mouse-wheel zoom per wheel pixel (desktop and tests). */
+const WHEEL_ZOOM = 0.0015;
+/** CSS px a wheel line counts for. */
+const WHEEL_LINE_PX = 16;
 /** Pan inertia decay rate per second (higher stops sooner). */
 const PAN_FRICTION = 6;
 
@@ -110,6 +120,7 @@ export class MapScene {
     this.paused = on;
     if (on) {
       this.pan = undefined;
+      this.pinch = undefined;
       this.panVelocity = { x: 0, y: 0 };
     }
   }
@@ -119,6 +130,8 @@ export class MapScene {
   private readonly shownListeners = new Set<(kidId: number) => void>();
   private readonly camera = new Container();
   private readonly kidLayer = new Container({ sortableChildren: true });
+  /** Rare marks and sleeves, beneath every kid (GUI_MVP §16.1-16.2). */
+  private readonly rareLayer: RareLayer;
   private readonly views = new Map<number, KidRigView>();
   /** Kids whose costume is still loading: their view, and what it should play, come after. */
   private readonly pendingViews = new Map<number, ((v: KidRigView) => void)[]>();
@@ -126,6 +139,12 @@ export class MapScene {
   private readonly absentSince = new Map<KidId, number>();
   /** Types kept loaded however long they are absent: the Garden spawns them all the time. */
   private readonly resident: Set<KidId>;
+  /** The plot and count the Garden target pointed at last frame; a change restarts the dwell. */
+  private lastPlotKey = '';
+  /** The held kid is over the target while every plot is busy: the map still holds still. */
+  private overBusyHome = false;
+  /** The plots on the map, if the art has them. */
+  private readonly plotsView: PlotsView | null;
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -144,7 +163,31 @@ export class MapScene {
   /** Screen size the camera was last laid out for, to keep the view centre across resizes. */
   private laidOut = { width: 0, height: 0 };
   private pan: { pointerId: number; lastX: number; lastY: number; vx: number; vy: number; lastT: number } | undefined;
+  /**
+   * Two fingers on the map (D-071): where each is now, how far apart they started, the zoom
+   * then, and the world point under their midpoint then, which stays under it.
+   */
+  private pinch: { points: Map<number, { x: number; y: number }>; startDist: number; startFactor: number; anchor: { x: number; y: number } } | undefined;
+  /** The fitted zoom for this screen (`layout`), and the player's zoom on top of it. */
+  private fitZoom = 1;
+  private zoomFactor = 1;
   private panVelocity = { x: 0, y: 0 };
+  /**
+   * A ground press that may still be a tap on a plot (GUI_MVP §15.2): at most 220 ms and
+   * 8 CSS px, with no camera move and no second pointer. Until it moves 8 px the map holds.
+   */
+  private tap: { pointerId: number; x: number; y: number; t: number; view: string } | null = null;
+  private readonly plotTapListeners = new Set<(plot: number) => void>();
+  /**
+   * A kid press that may still be a tap, which opens its card (GUI_MVP §18.1): the same
+   * 220 ms and 8 CSS px. The kid lifts as for a drag; a tap puts it back untouched.
+   */
+  private kidTap: { pointerId: number; kidId: number; x: number; y: number; t: number; view: string } | null = null;
+  private readonly kidTapListeners = new Set<(kidId: number) => void>();
+  /** How a kid press resolved: a drag (from the moment it is one) or a tap (Codex review). */
+  private readonly gestureListeners = new Set<(kind: 'drag' | 'tap') => void>();
+  /** The Garden's ground point, which the plots sit around. */
+  private readonly gardenGround: { x: number; y: number };
   /**
    * Kids released by the player whose drop/cancel the sim hasn't applied yet,
    * with where to keep drawing them meanwhile. Without this a released kid would
@@ -157,7 +200,6 @@ export class MapScene {
   /** Send home (D-048): the Garden target, its tether layer, and kids on their way out. */
   private readonly home: HomeTarget | null;
   private readonly homeLayer = new Graphics();
-  private readonly departures: Departure[] = [];
   private readonly homeListeners = new Set<(v: HomeView) => void>();
   /** Foreground time (ms): it only advances while frames run, never while hidden. */
   private clock = 0;
@@ -197,10 +239,18 @@ export class MapScene {
     );
     this.resident = new Set(Object.keys(content.balance.spawnWeights));
     const [gx, gy] = art.map.garden.worldGround;
+    this.gardenGround = { x: gx, y: gy };
     this.home = art.home ? new HomeTarget({ x: gx, y: gy }, art.home.target) : null;
     // The tether is drawn beneath kids (GUI_MVP §13.1) and takes no input.
     this.homeLayer.eventMode = 'none';
-    this.camera.addChild(buildMap(art.map, art.textures.map), this.homeLayer, this.kidLayer);
+    // Plots sit on the ground after the Garden and below kids (GUI_MVP §15.2); no input.
+    this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
+    if (this.plotsView) this.plotsView.root.eventMode = 'none';
+    this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
+    // The preference can change while the game is open: the rare layer follows it at once.
+    const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+    motion?.addEventListener('change', (e) => (this.rareLayer.reducedMotion = e.matches));
+    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.rareLayer.root, this.kidLayer);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -218,7 +268,21 @@ export class MapScene {
     app.canvas.addEventListener('pointercancel', (e) => {
       if (this.drag && e.pointerId === this.drag.pointerId) this.cancelActiveDrag();
       if (this.pan && e.pointerId === this.pan.pointerId) this.pan = undefined;
+      if (this.pinch?.points.has(e.pointerId)) this.pinch = undefined;
     });
+    // A mouse wheel zooms about the pointer (desktop and tests; D-071).
+    app.canvas.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        if (this.inputPaused || this.drag || this.pinch) return;
+        const r = app.canvas.getBoundingClientRect();
+        // Lines and pages to CSS px, or a line-counting wheel (Firefox's) barely zooms (Codex review, PR #83).
+        const dy = e.deltaY * (e.deltaMode === WheelEvent.DOM_DELTA_LINE ? WHEEL_LINE_PX : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? r.height : 1);
+        this.zoomAt(e.clientX - r.left, e.clientY - r.top, this.zoomFactor * Math.exp(-dy * WHEEL_ZOOM));
+      },
+      { passive: false },
+    );
 
     this.layout();
     this.centerOn(art.map.camera.initialCentre[0], art.map.camera.initialCentre[1]);
@@ -231,6 +295,32 @@ export class MapScene {
     this.listeners.add(fn);
   }
 
+  /**
+   * Calls `fn` when a kid press resolves: 'drag' once it can no longer be a tap (moved 8 px,
+   * held 220 ms, a second finger or a view change), 'tap' when it opens the card. Sounds
+   * follow this, not the sim's pick-up, so a tap never sounds like a pick-up.
+   */
+  listenGesture(fn: (kind: 'drag' | 'tap') => void): void {
+    this.gestureListeners.add(fn);
+  }
+
+  /** A kid press that can no longer be a tap is a drag, from now. */
+  private promoteToDrag(): void {
+    if (!this.kidTap) return;
+    this.kidTap = null;
+    for (const fn of this.gestureListeners) fn('drag');
+  }
+
+  /** Calls `fn` when a kid on the map is tapped (GUI_MVP §18.1): its id. */
+  listenKidTap(fn: (kidId: number) => void): void {
+    this.kidTapListeners.add(fn);
+  }
+
+  /** Calls `fn` when a plot on the map is tapped (GUI_MVP §15.2): its 0-based index. */
+  listenPlotTap(fn: (plot: number) => void): void {
+    this.plotTapListeners.add(fn);
+  }
+
   /** Calls `fn` every frame with what the Send home overlay should show (D-048). */
   listenHome(fn: (v: HomeView) => void): void {
     this.homeListeners.add(fn);
@@ -239,19 +329,6 @@ export class MapScene {
   /** The Send home target's state (tests). */
   get homeState(): HomeState {
     return this.home?.state ?? 'hidden';
-  }
-
-  /**
-   * The kid's farewell is still playing (§13.3: its success waits for it). On the frame
-   * clock, not the wall clock: a slow frame plays at most 100 ms of it (Codex review, PR #54).
-   */
-  isDeparting(kidId: number): boolean {
-    return this.departures.some((d) => d.kidId === kidId);
-  }
-
-  /** Kids still playing their farewell, and where (tests). */
-  get departing(): { x: number; y: number }[] {
-    return this.departures.map((d) => ({ x: d.x, y: d.y }));
   }
 
   /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
@@ -277,6 +354,11 @@ export class MapScene {
     this.shownListeners.add(fn);
   }
 
+  /** Test hook: what each plot shows on the map, as asset names. */
+  get plotsShown(): string[][] {
+    return this.plotsView?.shown() ?? [];
+  }
+
   /** Whether a kid is drawn now, or still exists waiting for its costume. */
   viewState(kidId: number): 'shown' | 'pending' | 'gone' {
     if (this.views.has(kidId)) return 'shown';
@@ -291,7 +373,7 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'sendHome' }>): void {
+  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' }>): void {
     this.pending.push(cmd);
   }
 
@@ -308,8 +390,9 @@ export class MapScene {
     if (this.pending.length) this.stepOnce(0);
     // Panning is dropped too: its pointerup may never arrive (Codex review, PR #11).
     this.pan = undefined;
-    // Hidden: departures are disposed, not replayed, and any dwell starts over (§13).
-    this.endDepartures();
+    // So is a pinch, for the same reason, or it would swallow every press after (Codex review, PR #83).
+    this.pinch = undefined;
+    // Hidden: any dwell starts over (§15.1).
     this.home?.reset();
     this.panVelocity = { x: 0, y: 0 };
     this.app.ticker.stop();
@@ -321,7 +404,8 @@ export class MapScene {
     // Kids wandered while away (D-053): they are found where they are, never seen sliding
     // there from where they were left.
     for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
-    for (const kid of report.spawned) this.addView(kid);
+    // Garden arrivals and sprouts alike need a view (Codex review, PR #72).
+    for (const kid of [...report.spawned, ...report.sprouted]) this.addView(kid);
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
     return report;
@@ -334,9 +418,6 @@ export class MapScene {
    */
   private releaseUnused(now: number): void {
     const present = new Set(this.game.state.world.kids.map((k) => k.type));
-    // A farewell still draws its costume: keep it loaded until the view is disposed (Codex
-    // review, PR #50).
-    for (const d of this.departures) present.add(d.type);
     for (const type of this.art.textures.loadedTypes) {
       if (present.has(type) || this.resident.has(type)) {
         this.absentSince.delete(type);
@@ -417,7 +498,8 @@ export class MapScene {
       y: this.cam.y + this.laidOut.height / this.cam.zoom / 2,
     };
     this.laidOut = { width, height };
-    this.cam.zoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
+    this.fitZoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
     this.app.stage.hitArea = this.app.screen;
     this.centerOn(centre.x, centre.y);
   }
@@ -445,13 +527,144 @@ export class MapScene {
   // --- Panning -------------------------------------------------------------
 
   private startPan(e: FederatedPointerEvent): void {
+    if (this.startPinch(e)) return;
+    // A second pointer is never a tap.
+    if (this.pan) this.tap = null;
+    if (this.drag) this.promoteToDrag();
     if (this.drag || this.pan || this.inputPaused) return;
+    // A press near a kid drawn smaller than 44 CSS px picks it up: its target is at least that
+    // each way (§16.1, first for Minis; now for any kid, as at far zoom, D-071). Its own body,
+    // any other kid's and real soil all come first: they took the press already.
+    const small = this.smallKidAt(this.toWorld(e));
+    if (small !== null) {
+      this.startDrag(small, e);
+      return;
+    }
+    // A press that stops a moving map is no tap: the camera was moving (§15.2).
+    const still = Math.hypot(this.panVelocity.x, this.panVelocity.y) < 5;
+    this.tap = still ? { pointerId: e.pointerId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey() } : null;
     this.panVelocity = { x: 0, y: 0 };
     this.pan = { pointerId: e.pointerId, lastX: e.global.x, lastY: e.global.y, vx: 0, vy: 0, lastT: performance.now() };
   }
 
+  /**
+   * The small kid whose pickup target holds world point `p`, or null (GUI_MVP §16.1): a kid
+   * drawn under 44 CSS px either way has its box grown to at least that, about its centre. Never over real soil; where two
+   * overlap, the nearest centre wins, then the lower id. Only for picking up: drops and
+   * fusions use the drawn box.
+   */
+  private smallKidAt(p: { x: number; y: number }): number | null {
+    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return null;
+    const min = TAP_TARGET / this.cam.zoom;
+    let best: number | null = null;
+    let bestD = Infinity;
+    for (const k of this.game.state.world.kids) {
+      if (!this.views.has(k.id)) continue;
+      if (k.box.right - k.box.left >= min && k.box.bottom - k.box.top >= min) continue;
+      const at = this.drawn.get(k.id) ?? k;
+      const cx = at.x + (k.box.left + k.box.right) / 2;
+      const cy = at.y + (k.box.top + k.box.bottom) / 2;
+      const hw = Math.max(k.box.right - k.box.left, min) / 2;
+      const hh = Math.max(k.box.bottom - k.box.top, min) / 2;
+      if (Math.abs(p.x - cx) > hw || Math.abs(p.y - cy) > hh) continue;
+      const d = Math.hypot(p.x - cx, p.y - cy);
+      if (d < bestD || (d === bestD && best !== null && k.id < best)) {
+        bestD = d;
+        best = k.id;
+      }
+    }
+    return best;
+  }
+
+  // --- Pinch-zoom (D-071) ---------------------------------------------------
+
+  /** The player's zoom on top of the fitted zoom, in [ZOOM_MIN, ZOOM_MAX]. */
+  get zoom(): number {
+    return this.zoomFactor;
+  }
+
+  /** Zooms to `factor` (clamped), keeping the world point under screen (sx, sy) where it is. */
+  zoomAt(sx: number, sy: number, factor: number): void {
+    const anchor = { x: this.cam.x + sx / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom };
+    this.zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor));
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
+    this.cam.x = anchor.x - sx / this.cam.zoom;
+    this.cam.y = anchor.y - sy / this.cam.zoom;
+    this.applyCamera();
+  }
+
+  /**
+   * A second finger starts a pinch (D-071) when the first is panning, or pressing a kid that
+   * is still only a press (within the tap window): that kid goes back untouched, never a tap
+   * or a drag. A kid already being dragged keeps its drag; a third finger is ignored.
+   * Returns whether `e` was taken.
+   */
+  private startPinch(e: FederatedPointerEvent): boolean {
+    if (this.inputPaused) return false;
+    if (this.pinch) return true;
+    // A press past its tap window is a drag even if no frame has promoted it yet (Codex review, PR #83).
+    this.promoteExpiredTap();
+    let first: { id: number; x: number; y: number } | undefined;
+    if (this.pan && e.pointerId !== this.pan.pointerId) first = { id: this.pan.pointerId, x: this.pan.lastX, y: this.pan.lastY };
+    else if (this.drag && this.kidTap && e.pointerId !== this.drag.pointerId) {
+      first = { id: this.drag.pointerId, x: this.dragScreen.x, y: this.dragScreen.y };
+      this.cancelActiveDrag();
+    }
+    if (!first) return false;
+    this.tap = null;
+    this.pan = undefined;
+    this.panVelocity = { x: 0, y: 0 };
+    const points = new Map([
+      [first.id, { x: first.x, y: first.y }],
+      [e.pointerId, { x: e.global.x, y: e.global.y }],
+    ]);
+    const mid = { x: (first.x + e.global.x) / 2, y: (first.y + e.global.y) / 2 };
+    this.pinch = {
+      points,
+      startDist: Math.max(1, Math.hypot(e.global.x - first.x, e.global.y - first.y)),
+      startFactor: this.zoomFactor,
+      anchor: { x: this.cam.x + mid.x / this.cam.zoom, y: this.cam.y + mid.y / this.cam.zoom },
+    };
+    return true;
+  }
+
+  /** Spread or pinch zooms; both fingers moving together pan. The anchor stays under the midpoint. */
+  private movePinch(e: FederatedPointerEvent): void {
+    const pinch = this.pinch!;
+    pinch.points.set(e.pointerId, { x: e.global.x, y: e.global.y });
+    const [a, b] = [...pinch.points.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    const dist = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
+    this.zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, (pinch.startFactor * dist) / pinch.startDist));
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    this.cam.x = pinch.anchor.x - mid.x / this.cam.zoom;
+    this.cam.y = pinch.anchor.y - mid.y / this.cam.zoom;
+    this.applyCamera();
+  }
+
+  /** One finger lifts: the other pans on from where it is, with no fling and never a tap. */
+  private endPinch(pointerId: number): void {
+    const pinch = this.pinch!;
+    this.pinch = undefined;
+    pinch.points.delete(pointerId);
+    const [rest] = [...pinch.points];
+    if (!rest || this.inputPaused) return;
+    const [id, at] = rest;
+    this.pan = { pointerId: id, lastX: at.x, lastY: at.y, vx: 0, vy: 0, lastT: performance.now() };
+  }
+
   private movePan(e: FederatedPointerEvent): void {
     const pan = this.pan!;
+    // Within 8 px a press may still be a tap: the map holds still. Crossing it pans.
+    if (this.tap) {
+      if (Math.hypot(e.global.x - this.tap.x, e.global.y - this.tap.y) <= TAP_SLOP) {
+        pan.lastX = e.global.x;
+        pan.lastY = e.global.y;
+        pan.lastT = performance.now();
+        return;
+      }
+      this.tap = null;
+    }
     const dx = e.global.x - pan.lastX;
     const dy = e.global.y - pan.lastY;
     const now = performance.now();
@@ -506,6 +719,12 @@ export class MapScene {
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
       e.stopPropagation(); // a kid press is a pickup, never a pan
+      // A second finger, on a kid or not, pinches instead (D-071).
+      if (this.startPinch(e)) return;
+      // Nor part of a tap: a finger on a kid cancels a plot tap in progress (Codex review, PR #72),
+      // and a second finger cancels a kid tap.
+      this.tap = null;
+      if (this.drag) this.promoteToDrag();
       this.startDrag(kid.id, e);
     });
     this.views.set(kid.id, view);
@@ -547,15 +766,21 @@ export class MapScene {
     this.home?.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
+    this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey() };
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
     if (this.paused) return;
+    if (this.pinch?.points.has(e.pointerId)) {
+      this.movePinch(e);
+      return;
+    }
     if (this.pan && e.pointerId === this.pan.pointerId) {
       this.movePan(e);
       return;
     }
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    if (this.kidTap && Math.hypot(e.global.x - this.kidTap.x, e.global.y - this.kidTap.y) > TAP_SLOP) this.promoteToDrag();
     this.dragScreen = { x: e.global.x, y: e.global.y };
     const w = this.toWorld(e);
     this.home?.move(w);
@@ -564,7 +789,20 @@ export class MapScene {
   }
 
   private endPointer(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
+    if (this.pinch?.points.has(e.pointerId)) {
+      this.endPinch(e.pointerId);
+      return;
+    }
     if (this.pan && e.pointerId === this.pan.pointerId) {
+      const tap = this.tap;
+      this.tap = null;
+      if (kind === 'drop' && tap && !this.inputPaused && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP && this.viewKey() === tap.view) {
+        this.pan = undefined;
+        // Rechecked at release, where the finger is now (§15.2).
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, this.toWorld(e), this.cam.zoom) : null;
+        if (plot !== null) for (const fn of this.plotTapListeners) fn(plot);
+        return;
+      }
       // Fling with the finger's recent velocity, decayed by however long it then rested,
       // so a pause before lifting doesn't fling (Codex review, PR #11). Cancels never fling.
       const rested = (performance.now() - this.pan.lastT) / 1000;
@@ -578,19 +816,34 @@ export class MapScene {
 
   private endDrag(e: FederatedPointerEvent, kind: 'drop' | 'cancelDrag'): void {
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    const tap = this.kidTap;
+    this.kidTap = null;
     if (kind === 'cancelDrag') {
       this.cancelActiveDrag();
       return;
     }
+    // A tap on a kid: put it back untouched, and open its card (GUI_MVP §18.1). The view must
+    // be as it was at the press: a camera or viewport change makes it something else.
+    if (tap && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP && this.viewKey() === tap.view) {
+      this.cancelActiveDrag();
+      for (const fn of this.gestureListeners) fn('tap');
+      for (const fn of this.kidTapListeners) fn(tap.kidId);
+      return;
+    }
+    // Not a tap after all: a drag that never sounded gets its pick-up now, then its drop.
+    if (tap) for (const fn of this.gestureListeners) fn('drag');
     const w = this.toWorld(e);
     // A view change since the last frame (camera, viewport, insets) also restarts the dwell,
     // checked here too: no frame may have run in between (Codex review, PR #50).
     if (this.viewKey() !== this.lastView) this.home?.restartDwell();
     // Released over the armed target, rechecked now: the kid goes home instead of landing
     // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
-    if (this.home?.releases(this.clock, this.homeEligible(), w)) {
+    // Released over the armed target, or over the target while every plot is busy: the
+    // plant is sent, and the sim refuses the busy one (the kid is put down clear, §15.1).
+    const busyRelease = !!this.home && this.homeEligible() && this.home.contains(w) && this.plantTarget().busy !== null;
+    if (this.home && (busyRelease || this.home.releases(this.clock, this.homeEligible(), w))) {
       const { kidId, spot } = this.drag;
-      this.pending.push({ type: 'sendHome', kidId });
+      this.pending.push({ type: 'plant', kidIds: [kidId] });
       this.placing.set(kidId, spot);
       this.views.get(kidId)?.dropped();
       this.drag = undefined;
@@ -675,6 +928,8 @@ export class MapScene {
   }
 
   private cancelActiveDrag(): void {
+    // A cancelled press resolves as nothing: never a tap, never a later drag (Codex review).
+    this.kidTap = null;
     this.home?.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
@@ -737,16 +992,32 @@ export class MapScene {
     const moved = view !== this.lastView;
     this.lastView = view;
     const point = this.drag ? this.camera.toLocal(this.dragScreen) : null;
-    const state = this.home.update(this.clock, this.homeEligible(), point ? { x: point.x, y: point.y } : null, moved);
+    const { plot, busy } = this.plantTarget();
+    // A different plot or count under a still finger starts the dwell over (GUI_MVP §15.1).
+    const plotKey = plot ? `${plot.index}:${plot.count}` : '';
+    if (plotKey !== this.lastPlotKey) this.home.restartDwell();
+    this.lastPlotKey = plotKey;
+    // With every plot busy the target never arms; a release over it is refused (§15.1).
+    const state = this.home.update(this.clock, this.homeEligible(), point && !busy ? { x: point.x, y: point.y } : null, moved);
     const over = state === 'waiting' || state === 'ready';
+    this.overBusyHome = !!busy && !!point && state !== 'hidden' && this.home.contains(point);
     this.drawTether(over);
     const v: HomeView = {
       state,
       target: this.homeScreenRect(),
       point: over ? { x: this.dragScreen.x, y: this.dragScreen.y } : null,
       held: state === 'hidden' ? null : this.heldScreenRect(),
+      plot,
+      busy,
     };
     for (const fn of this.homeListeners) fn(v);
+  }
+
+  /** Where a drop on the Garden goes now: a plot and its count, or why none takes kids. */
+  private plantTarget(): Pick<HomeView, 'plot' | 'busy'> {
+    const index = this.game.plotForDrop();
+    if (index !== null) return { plot: { index, count: this.game.state.plots[index]?.seed?.planted.length ?? 0 }, busy: null };
+    return { plot: null, busy: this.game.state.plots.some((p) => p.seed && !p.seed.sprout) ? 'full' : 'growing' };
   }
 
   /**
@@ -779,54 +1050,16 @@ export class MapScene {
     g.stroke({ width: t.strokePx / z, color: this.art.home!.ink });
   }
 
-  /** The kid's view leaves the sim's world but waves goodbye where it was last drawn. */
-  private startDeparture(kid: Kid): void {
-    const view = this.views.get(kid.id);
-    if (!view || !this.art.home) {
-      this.removeView(kid.id);
-      return;
-    }
-    this.views.delete(kid.id);
-    this.prev.delete(kid.id);
-    this.drawn.delete(kid.id);
-    this.pendingViews.delete(kid.id);
-    view.root.eventMode = 'none';
-    this.departures.push({ kidId: kid.id, view, type: kid.type, x: view.root.position.x, y: view.root.position.y, box: kid.box, ms: 0 });
-  }
-
-  /**
-   * Plays each farewell, and ends it early rather than ever overlapping a live kid, the
-   * held preview or a newer departure (no-overlap holds for what is drawn, §13.2).
-   */
-  private updateDepartures(dt: number): void {
-    const timing = this.art.home?.departure;
-    if (!timing) return;
-    const live = this.game.state.world.kids.flatMap((k) => {
-      const at = this.drag?.kidId === k.id ? this.drag.spot : this.drawn.get(k.id);
-      return at ? [rectAt(k.box, at.x, at.y)] : [];
-    });
-    for (let i = this.departures.length - 1; i >= 0; i--) {
-      const d = this.departures[i]!;
-      d.ms += dt * 1000;
-      const box = rectAt(d.box, d.x, d.y);
-      const newer = this.departures.slice(i + 1).map((n) => rectAt(n.box, n.x, n.y));
-      const blocked = [...live, ...newer].some((o) => intersects(box, o));
-      if (blocked || !d.view.depart(d.x, d.y, d.ms, timing)) {
-        d.view.destroy();
-        this.departures.splice(i, 1);
-      }
-    }
-  }
-
-  private endDepartures(): void {
-    for (const d of this.departures) d.view.destroy();
-    this.departures.length = 0;
-  }
-
   // --- Frame loop --------------------------------------------------------
+
+  /** A kid press held past 220 ms, or under a view that changed, is a drag (§18.1). */
+  private promoteExpiredTap(): void {
+    if (this.kidTap && (performance.now() - this.kidTap.t > TAP_MS || this.viewKey() !== this.kidTap.view)) this.promoteToDrag();
+  }
 
   private frame(dt: number): void {
     this.clock += dt * 1000;
+    this.promoteExpiredTap();
     this.updateCamera(dt);
     this.releaseUnused(performance.now());
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are
@@ -852,8 +1085,8 @@ export class MapScene {
       this.resolveHeld();
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
+    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
     this.updateHome();
-    this.updateDepartures(dt);
     for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
@@ -866,6 +1099,22 @@ export class MapScene {
       const at = drawn.get(k.id) ?? k;
       view.update(at.x, at.y, k.activity, false, dt);
     }
+    // Rares follow where their kid is drawn, held or not.
+    const rares: RareKid[] = [];
+    for (const k of kids) {
+      const special = this.game.isSpecial(k.type);
+      const rare = this.game.isRare(k.type);
+      if (!rare && !special && !k.happy) continue;
+      if (!this.views.has(k.id)) continue;
+      const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
+      rares.push({ id: k.id, rare, special, x: at.x, y: at.y, box: k.box, scale: k.look.scale, happy: !!k.happy });
+    }
+    this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
+  }
+
+  /** Test hook: the rares drawn now. */
+  get raresShown(): ReturnType<RareLayer['shown']> {
+    return this.rareLayer.shown();
   }
 
   /** One fixed sim step with the queued commands (dt 0 applies commands without time passing). */
@@ -900,9 +1149,11 @@ export class MapScene {
       // even on short landscape screens.
       const zy = zone(bottom - top - (held ? held.bottom - held.top : 0));
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
-      // Over the Send home target, the map holds still (GUI_MVP §13.1).
-      const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready';
-      if ((ex || ey) && !this.drag.noRoom && !overHome) {
+      // Over the planting target, the map holds still, armed or busy (GUI_MVP §13.1, §15.1).
+      const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready' || this.overBusyHome;
+      // A press that may still be a tap on the kid (§18.1) never moves the map.
+      const maybeTap = this.kidTap !== null && performance.now() - this.kidTap.t <= TAP_MS;
+      if ((ex || ey) && !this.drag.noRoom && !overHome && !maybeTap) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();
@@ -928,13 +1179,20 @@ export class MapScene {
     switch (e.type) {
       case 'spawned':
         this.addView(e.kid).play('spawn');
+        // A rare or special newborn's burst, once it is on the map (GUI_MVP §15.5).
+        if (e.source === 'sprout' && (this.game.isRare(e.kid.type) || this.game.isSpecial(e.kid.type))) this.rareLayer.born(e.kid.id);
         break;
-      case 'sentHome': {
-        // Gone from the sim at once (D-048); its view stays briefly to wave goodbye.
+      case 'planted': {
+        // Gone from the sim and the map at once (GUI_MVP §15.5: no ghost or wave); its plot
+        // shows the new stamp.
         if (this.drag?.kidId === e.kid.id) this.drag = undefined;
-        this.startDeparture(e.kid);
+        this.removeView(e.kid.id);
         break;
       }
+      case 'unplanted':
+        // Back from a plot by the Garden (D-074), as a sprout comes up; no burst.
+        this.addView(e.kid).play('spawn');
+        break;
       case 'fused': {
         // Parents are consumed at once, never fading or converging (rig: fusion onStart);
         // the child is born where the sim resolved it, with the fusion effect behind it.

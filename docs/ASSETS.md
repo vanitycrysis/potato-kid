@@ -1,5 +1,20 @@
 # Asset list
 
+## LAYOUT-DESIGN round 2 (2026-10-09; Claude review pending)
+
+Current layout/composition contract: GUI_MVP §§19–21, `layout-design-2`. The accepted UI/planting sidecars, HUD, sheets and D-074 flow are unchanged; cancellation text uses ink with a danger border. `map_garden_v3.json`, revision `layout-design-map-3-round2`, places Garden/outlet/camera near the centre, reuses the three ground/six small-decor textures and supplies connected path loops, 250 accents and twelve outer landmarks. Claude owns save migration and selecting v3 in every reader.
+
+| New decorative source ID | Source canvas / cropped export | Status |
+| --- | --- | --- |
+| landmark_bench | 512 × 512 SVG / 318 × 218 PNG | final for Claude review |
+| landmark_birdbath | 512 × 512 SVG / 316 × 204 PNG | final for Claude review |
+| landmark_flower_pots | 512 × 512 SVG / 324 × 349 PNG | final for Claude review |
+| landmark_seed_basket | 512 × 512 SVG / 310 × 253 PNG | final for Claude review |
+| landmark_trellis | 512 × 512 SVG / 225 × 342 PNG | final for Claude review |
+| landmark_watering_can | 512 × 512 SVG / 374 × 214 PNG | final for Claude review |
+
+Sources: `art/src/maps/`; exports: `assets/maps/decor/`. Pivots, conservative bounds, scales, rotations and ground reserves are in the map sidecar; generated trim offsets retain source coordinates. Props have no gameplay function. Existing stump/pebble landmarks remain byte-identical; twelve compositions use eight silhouettes, at most two copies of any type. The six new cropped exports add **1,929,120 decoded RGBA bytes (1.83975 MiB)**: runtime inventory **218 → 224 PNGs**, **12,815,892 → 14,745,012 bytes (12.22219 → 14.06194 MiB)**. The historical inventories below describe earlier deliveries. The 32 MiB actual-allocation ceiling remains; device residency/culling are Claude's checks. Export passes 293 sources/six sidecars. Updated gallery has 62 SVG/PNG review screens, including every outer screen at 0.5× in both viewports. [Notes](../.codex-out/layout-design-notes.md), [gallery](../art/previews/ui/layout_review.html), [audit](../.codex-out/layout-audit.json). No owner gate acceptance or engine wander change.
+
 ## SPECIALS delivery (2026-10-04; Claude review pending)
 
 D-066 approves all twenty concepts (12 T5 /8 T6). Revision `specials-1` delivers drawings and writing; **SPECIALS remains doing** because four readability gates need owner review and Claude's content/art review is outstanding.

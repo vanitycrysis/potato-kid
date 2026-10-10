@@ -1,3 +1,4 @@
+import { personalityBlocks } from './kidCard';
 import { kidRig } from '../content/artData';
 import type { Content, KidId, RecipeDef } from '../content/types';
 import { pairKey } from '../content/validate';
@@ -5,11 +6,8 @@ import type { MapScene } from '../render/scene';
 import type { BuildingSheets } from './buildings';
 import { el, icon, shortName } from './dom';
 import { homeSection, type HomeSection } from './dexHome';
-import { HomeFeed } from './homeFeed';
 import { formatRate } from './format';
 import { LazyPortraits, portrait } from './portrait';
-import type { GameEvent } from '../sim/game';
-import type { SendHomeNotes } from './sendHome';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
 // The Potato-Dex (docs/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
@@ -72,19 +70,16 @@ export class Dex {
     private readonly content: Content,
     private readonly sheets: Sheets,
     private readonly buildings: BuildingSheets,
-    notes: SendHomeNotes,
+    /**
+     * Opens a live kid's card in place of the Dex (GUI_MVP §18.1); `back` returns here: this
+     * detail, its scroll, and focus on that kid's row.
+     */
+    private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }, ordinal: number) => void,
     private readonly readOnly: () => boolean = () => false,
-  ) {
-    this.feed = new HomeFeed(scene, content, notes);
-  }
+  ) {}
 
-  /** Sends made from the Dex and their messages, kept across details (Codex review, PR #54). */
-  private readonly feed: HomeFeed;
-
-  /** A step's events: the Dex answers its own sends, open or not (no world card for them). */
-  onStep(events: GameEvent[]): GameEvent[] {
-    return this.feed.onStep(events);
-  }
+  /** What opened the Dex: focus returns there when it, or a kid card it opened, closes. */
+  private launcher: HTMLElement | null = null;
 
   get isOpen(): boolean {
     return this.shown !== null;
@@ -94,8 +89,8 @@ export class Dex {
    * Opens the Dex where the player left it (tab, filter, scroll), or on `kid`'s detail when
    * a discovery card asks for it (GUI_MVP §§7, 9).
    */
-  open(launcher: HTMLElement | null, kid?: KidId): void {
-    this.feed.active = true;
+  open(launcher: HTMLElement | null, kid?: KidId, focusKid?: number): void {
+    this.launcher = launcher;
     if (kid !== undefined) this.tab = 'kids';
     const tabs = new Map<Tab, HTMLButtonElement>();
     const strip = el('div', 'dex-tabs');
@@ -108,7 +103,7 @@ export class Dex {
         title: 'Potato-Dex',
         requestedHeight: 624,
         update: () => this.update(),
-        onEscape: () => this.shown?.kids?.home?.collapse() ?? false,
+        onEscape: () => false,
         onClose: () => this.closed(),
       },
       launcher,
@@ -142,7 +137,7 @@ export class Dex {
     // Lazy portraits re-target as soon as what scrolls changes.
     sheet.body.closest('.sheet')?.addEventListener(SCROLLER_CHANGE, () => this.update());
     this.shown = { sheet, tabs, tabBar, kids: null, recipes: null, compendium: null, panel };
-    this.render(kid);
+    this.render(kid, focusKid);
   }
 
   /** Switches tab, keeping each list's place (GUI_MVP §7). */
@@ -162,7 +157,7 @@ export class Dex {
     else this.scroll[this.tab] = at;
   }
 
-  private render(kid?: KidId): void {
+  private render(kid?: KidId, focusKid?: number): void {
     const s = this.shown!;
     for (const [tab, b] of s.tabs) {
       const on = tab === this.tab;
@@ -190,6 +185,8 @@ export class Dex {
       if (back && this.discovered(back.kid)) {
         this.showDetail(back.kid);
         s.sheet.scrollTo(back.scroll);
+        // Back from a kid's card: its row (or the section, if it has left) takes focus.
+        if (focusKid !== undefined) s.kids.home?.focusKid(focusKid);
       }
     } else if (this.tab === 'recipes') {
       s.recipes = this.recipesPanel();
@@ -221,8 +218,6 @@ export class Dex {
   }
 
   private closed(): void {
-    this.feed.active = false;
-    this.feed.clear();
     const s = this.shown;
     this.shown = null;
     s?.kids?.dispose();
@@ -399,7 +394,12 @@ export class Dex {
     };
     p.refreshFound();
     p.home?.dispose();
-    p.home = homeSection(type, this.content, this.scene, this.feed, this.readOnly);
+    p.home = homeSection(type, this.content, this.scene, (kidId, ordinal) => {
+      // The detail is kept, scroll and all, for coming back.
+      this.remember();
+      const launcher = this.launcher;
+      this.openKid(kidId, launcher, { label: `Back to ${k.name}`, go: () => this.open(launcher, undefined, kidId) }, ordinal);
+    });
     const name = el('h3', 'dex-detail-name', k.name);
     p.detail.replaceChildren(
       back,
@@ -408,6 +408,8 @@ export class Dex {
       el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
       // Per hour: at the slow pacing (D-052) a per-second rate would round to 0.
       el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type) * 3600)} Materials / h`),
+      // The type's personality, as on a kid's card (GUI_MVP §18.1); never one kid's name or mood.
+      el('section', 'dex-personality', ...personalityBlocks(this.content, type)),
       p.home.root,
       el('h3', 'sheet-section', 'Found recipes'),
       foundBox,

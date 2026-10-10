@@ -28,6 +28,8 @@ export interface OpenSheet {
   readonly bar: HTMLElement;
   readonly body: HTMLElement;
   readonly footer: HTMLElement;
+  /** A view inside the sheet names itself (a Garden plot, GUI_MVP §15.4). */
+  setTitle(text: string): void;
   setSubtitle(text: string): void;
   /** Scrolls whatever scrolls (the body, or a tight sheet) to `top`. */
   scrollTo(top: number): void;
@@ -168,9 +170,11 @@ export class Sheets {
     for (const b of this.background()) b.inert = true;
     document.addEventListener('keydown', this.onKey, true);
 
-    // The bar grows when a status appears: the fit is checked again (see `place`).
+    // The bar grows when a status appears, a footer when a notice does: the fit is
+    // checked again (see `place`).
     const watch = new ResizeObserver(() => this.place());
     watch.observe(bar);
+    watch.observe(footer);
     this.current = { spec, scrim, sheet, subtitle, bar, body, footer, launcher, watch };
     this.announcedRoot = undefined;
     this.place();
@@ -182,6 +186,11 @@ export class Sheets {
       bar,
       body,
       footer,
+      setTitle: (t) => {
+        if (title.textContent === t) return;
+        title.textContent = t;
+        close.setAttribute('aria-label', `Close ${t}`);
+      },
       setSubtitle: (t) => (subtitle.textContent = t),
       scrollTo: (top) => {
         this.place();
@@ -276,23 +285,29 @@ export class Sheets {
   }
 
   /**
-   * A fixed bar (the Compendium's balances, message and status) may leave the body too
-   * little room on a short screen, hiding search and every card. Then the bar scrolls with
-   * the body under a sticky header and footer, so every control stays reachable (GUI_MVP
-   * §2 required-action visibility; Codex review, PR #41).
+   * A fixed bar (the Compendium's balances, message and status) or a tall footer (the
+   * planting picker's odds) may leave the body too little room on a short screen, hiding
+   * search and every card. Then the bar scrolls with the body under a sticky header and
+   * footer, so every control stays reachable (GUI_MVP §2 required-action visibility; Codex
+   * review, PR #41). If even that leaves no room, the footer scrolls in the flow too, below
+   * the content (§15.3: "all in flow"; Codex review, PR #72).
    */
   private fitBar(c: { sheet: HTMLElement; bar: HTMLElement; body: HTMLElement }): void {
     const was = c.sheet.dataset.tight === 'true';
     const scroll = was ? c.sheet.scrollTop : c.body.scrollTop;
-    c.sheet.dataset.tight = 'false';
-    const tight = c.bar.childElementCount > 0 && c.body.clientHeight < BODY_MIN;
-    c.sheet.dataset.tight = String(tight);
-    // Scrolling something into view (a message, a focused control) stops clear of the
-    // sticky header and footer, never under them (Codex review, PR #54).
     const header = c.sheet.querySelector<HTMLElement>(':scope > .sheet-header');
     const footer = c.sheet.querySelector<HTMLElement>(':scope > .sheet-footer');
+    c.sheet.dataset.tight = 'false';
+    c.sheet.dataset.flow = 'false';
+    const crowded = c.bar.childElementCount > 0 || (footer?.childElementCount ?? 0) > 0;
+    const tight = crowded && c.body.clientHeight < BODY_MIN;
+    c.sheet.dataset.tight = String(tight);
+    const flow = tight && c.sheet.clientHeight - (header?.offsetHeight ?? 0) - (footer?.offsetHeight ?? 0) < BODY_MIN;
+    c.sheet.dataset.flow = String(flow);
+    // Scrolling something into view (a message, a focused control) stops clear of the
+    // sticky header and footer, never under them (Codex review, PR #54).
     c.sheet.style.scrollPaddingTop = tight && header ? `${header.offsetHeight}px` : '';
-    c.sheet.style.scrollPaddingBottom = tight && footer ? `${footer.offsetHeight}px` : '';
+    c.sheet.style.scrollPaddingBottom = tight && !flow && footer ? `${footer.offsetHeight}px` : '';
     if (tight !== was) (tight ? c.sheet : c.body).scrollTop = scroll;
   }
 

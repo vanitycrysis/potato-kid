@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "gui-mvp-1-short-1",
+  "revision": "layout-design-1",
   "status": "final",
   "runtimeMode": "native_dom_svg",
   "palette": {
@@ -2149,6 +2149,57 @@
       "sidecar": "gate4_v2.json",
       "revision": "gate4-design-2",
       "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract"
+    },
+    "layoutDesign": {
+      "authority": "GUI_MVP sections 19-21 supersede historical layout/remove/retired variant copy",
+      "frameHeight": 60,
+      "worldGap": 8,
+      "navigation": [
+        "Garden",
+        "Dex",
+        "Notebook"
+      ],
+      "zoom": {
+        "min": 0.5,
+        "max": 2,
+        "step": 1.4142135623730951,
+        "pickupMinimumCss": 44,
+        "nearestStackTap": "open instance chooser",
+        "compactLandscapeFitFloor": 0.3611111111111111
+      },
+      "referenceViewports": [
+        {
+          "size": [
+            390,
+            844
+          ],
+          "safe": [
+            24,
+            24
+          ],
+          "worldBand": [
+            92,
+            752
+          ],
+          "share": 0.7819905213270142
+        },
+        {
+          "size": [
+            640,
+            360
+          ],
+          "safe": [
+            8,
+            8
+          ],
+          "worldBand": [
+            76,
+            284
+          ],
+          "share": 0.5777777777777777
+        }
+      ],
+      "mapRevision": "layout-design-map-3"
     }
   },
   "stateBorderImageRepeat": {

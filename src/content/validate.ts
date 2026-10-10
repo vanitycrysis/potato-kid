@@ -51,6 +51,18 @@ export function validateContent(content: Content): string[] {
   errors.push(...validateWander(content.balance.wander));
   errors.push(...validateSpawn(content.balance));
   errors.push(...validateEconomy(content.balance, content.kids.length));
+  errors.push(...validatePlanting(content.balance));
+  errors.push(...validateFeeding(content));
+
+  // Special kids (D-063) and rare kids (D-072): apex, tier 5 or above, in no recipe, never
+  // from the Garden; a kid is one or the other.
+  for (const k of content.kids.filter((x) => x.special || x.rare)) {
+    const kind = k.special ? 'special' : 'rare';
+    if (k.special && k.rare) errors.push(`kid "${k.id}" can't be both special and rare`);
+    if (k.tier < 5) errors.push(`${kind} kid "${k.id}" must be tier 5 or above`);
+    if (content.recipes.some((r) => r.a === k.id || r.b === k.id || r.result === k.id)) errors.push(`${kind} kid "${k.id}" must not be in a recipe`);
+    if (k.id in content.balance.spawnWeights) errors.push(`${kind} kid "${k.id}" must not be in the spawn pool`);
+  }
 
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));
@@ -69,8 +81,9 @@ export function validateContent(content: Content): string[] {
       errors.push(`recipe ${r.a} + ${r.b} → ${r.result} is unreachable`);
     }
   }
+  // Special and rare kids come only from planting (D-063, D-072), so they're reachable that way.
   for (const k of content.kids) {
-    if (!reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
+    if (!k.special && !k.rare && !reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
   }
 
   return errors;
@@ -135,6 +148,66 @@ function validateSpawn(balance: unknown): string[] {
 }
 
 /** Economy and building tracks (plan §3): every value finite and in range, so no NaN reaches a save. */
+/** Planting (D-054): every value finite and in range, so no NaN reaches a save. */
+function validatePlanting(balance: unknown): string[] {
+  const p = (balance as Record<string, unknown>).planting as Record<string, unknown> | undefined;
+  if (typeof p !== 'object' || p === null) return ['balance.planting is missing'];
+  const errors: string[] = [];
+  const num = (key: string, ok: (v: number) => boolean, rule: string) => {
+    const v = p[key];
+    if (typeof v !== 'number' || !Number.isFinite(v) || !ok(v)) errors.push(`balance.planting.${key} must be ${rule}`);
+  };
+  num('growSeconds', (v) => v > 0, 'a finite number > 0');
+  num('startPlots', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('maxPlots', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('unlockCostBase', (v) => v >= 0, 'a finite number >= 0');
+  num('unlockCostGrowth', (v) => v >= 1, 'a finite number >= 1');
+  if (typeof p.startPlots === 'number' && typeof p.maxPlots === 'number' && p.startPlots > p.maxPlots) {
+    errors.push('balance.planting.startPlots must not exceed maxPlots');
+  }
+  num('minKids', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  num('maxKids', (v) => Number.isInteger(v) && v >= 1, 'an integer >= 1');
+  if (typeof p.minKids === 'number' && typeof p.maxKids === 'number' && p.minKids > p.maxKids) errors.push('balance.planting.minKids must not exceed maxKids');
+  for (const key of ['specialOdds', 'rareOdds'] as const) {
+    const v = p[key];
+    const ok = Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1) && v[0] <= v[1];
+    if (!ok) errors.push(`balance.planting.${key} must be [floor, ceiling] chances in 0..1, floor <= ceiling`);
+  }
+  return errors;
+}
+
+/** Feeding and naming (D-056, D-057), and every type's personality with two known, different foods. */
+function validateFeeding(content: Content): string[] {
+  const errors: string[] = [];
+  const f = (content.balance as unknown as Record<string, unknown>).feeding as Content['balance']['feeding'] | undefined;
+  if (typeof f !== 'object' || f === null) return ['balance.feeding is missing'];
+  const ids = new Set<string>();
+  if (!Array.isArray(f.foods) || f.foods.length === 0) errors.push('balance.feeding.foods must list the foods');
+  for (const food of f.foods ?? []) {
+    if (typeof food.id !== 'string' || !food.id || ids.has(food.id)) errors.push(`food "${String(food.id)}" needs a distinct id`);
+    ids.add(food.id);
+    if (typeof food.name !== 'string' || !food.name) errors.push(`food "${food.id}" needs a name`);
+    if (typeof food.price !== 'number' || !Number.isFinite(food.price) || food.price < 0) errors.push(`food "${food.id}" price must be a finite number >= 0`);
+  }
+  const pos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+  if (!pos(f.happySeconds) || !pos(f.favouriteSeconds)) errors.push('balance.feeding happy durations must be > 0');
+  if (!(f.happyMultiplier >= 1) || !(f.favouriteMultiplier >= 1)) errors.push('balance.feeding multipliers must be >= 1');
+  // A favourite is never worse than any other food (GUI_MVP §17.2).
+  if (f.favouriteSeconds < f.happySeconds || f.favouriteMultiplier < f.happyMultiplier) errors.push('balance.feeding: a favourite must last and pay at least as much as other foods');
+  const n = (content.balance as unknown as Record<string, unknown>).naming as Content['balance']['naming'] | undefined;
+  if (!n || !(n.price >= 0) || !Number.isInteger(n.maxLength) || n.maxLength < 1) errors.push('balance.naming needs a price >= 0 and a whole maxLength >= 1');
+  for (const k of content.kids) {
+    const p = content.personality?.[k.id];
+    if (!p) {
+      errors.push(`kid "${k.id}" has no personality`);
+      continue;
+    }
+    if (!ids.has(p.favouriteFood) || !ids.has(p.hatedFood)) errors.push(`kid "${k.id}" has an unknown food`);
+    if (p.favouriteFood === p.hatedFood) errors.push(`kid "${k.id}" can't like and hate the same food`);
+  }
+  return errors;
+}
+
 function validateEconomy(balance: unknown, kidCount: number): string[] {
   const errors: string[] = [];
   const b = balance as Record<string, unknown>;

@@ -15,9 +15,16 @@ describe('audio cues (ART_AUDIO_PLAN priorities)', () => {
     expect(cueFor([fused(true)])).toBe('sfx_discovery');
   });
 
-  it('is silent for offline arrivals, send home, income and refusals', () => {
+  it('planting plays its own cue; a sprout arrives with the spawn cue; a plot unlock is an upgrade (GUI_MVP §15.3)', () => {
+    expect(cueFor([{ type: 'planted', kid, plot: 0, count: 1 }])).toBe('sfx_plant');
+    expect(cueFor([{ type: 'spawned', kid, source: 'sprout' }])).toBe('sfx_spawn');
+    expect(cueFor([{ type: 'plotUnlocked', plots: 2 }])).toBe('sfx_upgrade');
+    // Planting frees a slot; a Garden kid arriving in the same step doesn't drown it out.
+    expect(cueFor([{ type: 'planted', kid, plot: 0, count: 1 }, { type: 'spawned', kid, source: 'garden' }])).toBe('sfx_plant');
+  });
+
+  it('is silent for offline arrivals, income and refusals', () => {
     expect(cueFor([{ type: 'spawned', kid, source: 'offline' }])).toBeNull();
-    expect(cueFor([{ type: 'sentHome', kid }])).toBeNull();
     expect(cueFor([{ type: 'rejected', command: 'upgrade', reason: 'cost' }])).toBeNull();
     expect(cueFor([])).toBeNull();
   });
@@ -28,5 +35,16 @@ describe('audio cues (ART_AUDIO_PLAN priorities)', () => {
     expect(l.allow('sfx_spawn', 299)).toBe(false);
     expect(l.allow('sfx_fusion', 299)).toBe(true);
     expect(l.allow('sfx_spawn', 300)).toBe(true);
+  });
+});
+
+describe('feeding and naming cues (GUI_MVP §17.2, §18.2)', () => {
+  it('an accepted bite or name is a quiet UI tap, below every world sound; a refusal is silent', () => {
+    expect(cueFor([{ type: 'fed', kid, food: 'apple', favourite: false }])).toBe('sfx_ui_tap');
+    expect(cueFor([{ type: 'named', kid, name: 'Spud' }])).toBe('sfx_ui_tap');
+    expect(cueFor([{ type: 'fed', kid, food: 'apple', favourite: true }, { type: 'dropped', kidId: 1 }])).toBe('sfx_place');
+    // The sim's pick-up is silent: the scene's gesture sounds it once a press is a drag.
+    expect(cueFor([{ type: 'pickedUp', kidId: 1 }])).toBeNull();
+    expect(cueFor([{ type: 'rejected', command: 'feed', reason: 'hated' }])).toBeNull();
   });
 });

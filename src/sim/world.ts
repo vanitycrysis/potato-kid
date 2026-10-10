@@ -58,6 +58,10 @@ export interface Kid {
   held: boolean;
   box: Box;
   look: Look;
+  /** The name the player gave this kid (D-057); it ends when the kid fuses or is planted. */
+  name?: string;
+  /** Happy from a bite (D-056): seconds left, and whether it was its favourite food. */
+  happy?: { left: number; favourite: boolean };
 }
 
 /** Static scenery a kid's box may not enter (map v2 exclusions, already inflated by the gap). */
@@ -94,9 +98,11 @@ export function addKid(
   grace = 0,
   box: Box = defaultBox(60),
   look: Look = DEFAULT_LOOK,
+  /** An id the kid had before, coming back from a plot (D-074); otherwise the next one. */
+  id?: number,
 ): Kid {
   const kid: Kid = {
-    id: world.nextKidId++,
+    id: id ?? world.nextKidId++,
     type,
     x,
     y,

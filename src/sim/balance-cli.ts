@@ -38,9 +38,26 @@ export function incomeDays(sc: Scenario): number[] {
   return [1, 3, 7, 14].filter((d) => d * DAY <= span);
 }
 
+/**
+ * The content to simulate: the shipped content, with `PK_BALANCE` (JSON) merged over its
+ * balance one level deep, to try tunings side by side without editing balance.json.
+ */
+function tuned(): typeof content {
+  const raw = process.env.PK_BALANCE;
+  if (!raw && !process.env.PK_SPECIALS) return content;
+  const c = structuredClone(content);
+  // PK_SPECIALS=n adds n stand-in special kids (tier 5, in no recipe) for planting to sprout.
+  const n = Number(process.env.PK_SPECIALS ?? 0);
+  for (let i = 1; i <= n; i++) c.kids.push({ id: `special_${i}`, tier: 5, name: `Special ${i}`, special: true });
+  const patch = JSON.parse(raw ?? '{}') as Record<string, Record<string, unknown>>;
+  const b = c.balance as unknown as Record<string, Record<string, unknown>>;
+  for (const [k, v] of Object.entries(patch)) b[k] = { ...b[k], ...v };
+  return c;
+}
+
 /** One scenario on one seed (a child process of scripts/balance.mjs). */
 export function runOne(scenario: number, seed: number): Report {
-  return simulate(content, options, scenarios[scenario]!, seed);
+  return simulate(tuned(), options, scenarios[scenario]!, seed);
 }
 
 const fmt = (s: number | null) => {
@@ -58,6 +75,8 @@ export function summarize(reports: Report[][], seeds: number): string {
   const tiers = [...new Set(content.kids.map((k) => k.tier))].sort();
   const sp = content.balance.spawn;
   lines.push(`Roster ${content.kids.length} kids, ${content.recipes.length} recipes; ${seeds} seeds per scenario.`);
+  if (process.env.PK_BALANCE) lines.push(`Balance overrides: ${process.env.PK_BALANCE}`);
+  if (process.env.PK_SPECIALS) lines.push(`Stand-in special kids: ${process.env.PK_SPECIALS}`);
   lines.push(`Garden: ${sp.tutorialSpawns} tutorial spawns every ${fmt(sp.tutorialIntervalSeconds)}, then ${fmt(sp.intervalSeconds)} at L1.`);
   scenarios.forEach((sc, i) => {
     const rs = reports[i]!;
@@ -76,6 +95,8 @@ export function summarize(reports: Report[][], seeds: number): string {
     const incomeAt = (t: number) => median(rs.map((r) => [...r.income].reverse().find((x) => x.clock <= t)?.perSecond ?? null));
     const rate = (v: number | null) => (v === null ? '?' : v < 10 ? v.toFixed(2) : String(Math.round(v)));
     lines.push(`income, Materials/s: end of first session ${rate(median(rs.map((r) => r.income[0]?.perSecond ?? null)))}${days.map((d) => `, day ${d} ${rate(incomeAt(d * DAY))}`).join('')}`);
+    const plotsLine = [2, 3, 4].map((n) => `${n} plots ${m((r) => r.plotsAt[n]?.clock ?? null)}`).join(', ');
+    lines.push(`plots (wall clock): ${plotsLine}; planted ${median(rs.map((r) => r.planted))}, sprouted ${median(rs.map((r) => r.sprouted))}`);
     lines.push(
       `starvation (map < 30 % full): ${pct(median(rs.map((r) => r.starvation))!)}; stuck turns: ${pct(median(rs.map((r) => r.stuck))!)}; ` +
         `deadlocked turns: ${pct(median(rs.map((r) => r.deadlocked))!)} (worst seed ${pct(Math.max(...rs.map((r) => r.deadlocked)))})`,
@@ -84,7 +105,8 @@ export function summarize(reports: Report[][], seeds: number): string {
     lines.push(
       `at the end: ${median(end.map((e) => e.kidsDiscovered))} kids, ${median(end.map((e) => e.recipesFound))} recipes; ` +
         `garden L${median(end.map((e) => e.levels.garden))}, capacity L${median(end.map((e) => e.levels.capacity))}, compendium L${median(end.map((e) => e.levels.compendium))}; ` +
-        `${Math.round(median(end.map((e) => e.materials))!)} Materials, ${median(end.map((e) => e.potatokens))} Potatokens`,
+        `${Math.round(median(end.map((e) => e.materials))!)} Materials, ${median(end.map((e) => e.potatokens))} Potatokens; ` +
+        `${median(end.map((e) => e.specialsOnMap))} specials on the map (capacity ${median(end.map((e) => e.capacity))}), ${median(end.map((e) => e.specialsFound))} special types found`,
     );
   });
   return lines.join('\n');

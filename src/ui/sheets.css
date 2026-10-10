@@ -40,6 +40,8 @@
   font-size: 26px;
   line-height: 32px;
   font-weight: 400;
+  /* A kid's name can be one long word: it wraps, clear of the close button (GUI_MVP §18.1). */
+  overflow-wrap: anywhere;
 }
 .sheet-title:focus {
   outline: none;
@@ -89,6 +91,10 @@
   position: sticky;
   bottom: 0;
   background: var(--ui-paper);
+}
+/* Too short even for that: the footer follows the content (GUI_MVP §15.3, "all in flow"). */
+.sheet[data-flow='true'] .sheet-footer {
+  position: static;
 }
 
 /* Fixed region above the body (Compendium toolbar and message, GUI_MVP §6). */
@@ -599,7 +605,8 @@
 .dex-tile {
   box-sizing: border-box;
   flex: 1;
-  min-height: 148px;
+  /* 148 plus the one-line rare strip (GUI_MVP §16.4: 172). */
+  min-height: 172px;
   padding: 0 0 4px;
   display: flex;
   flex-direction: column;
@@ -740,6 +747,10 @@
   border-image-source: var(--ui-button-selected);
 }
 .dex-home-row-text {
+  flex: 1;
+  /* A kid's name can be one long word: it wraps, inside the row (GUI_MVP §18.2). */
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
 }
@@ -762,6 +773,28 @@
 }
 .dex-home-confirm .sheet-body-text {
   margin: 0;
+}
+/* Planting from the Dex (GUI_MVP §15.6): the plot chooser and one plot's confirmation. */
+.dex-home-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-home-step .sheet-body-text,
+.dex-home-step .sheet-helper {
+  margin: 0;
+}
+.ui-button.dex-home-row.dex-plot-row {
+  min-height: 44px;
+}
+.dex-home-who {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dex-home-planting {
+  font-size: 22px;
+  line-height: 28px;
 }
 .ui-button.dex-home-action {
   width: 100%;
@@ -806,4 +839,440 @@
   .sheet-scrim {
     transition: none !important;
   }
+}
+
+/* --- The Garden's plots (GUI_MVP §15.2-15.4) ------------------------------------------ */
+.garden-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.garden-link {
+  min-height: 44px;
+  font-size: 16px;
+}
+.garden-rate,
+.garden-plots,
+.garden-more {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.garden-section-heading {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.garden-section-heading:focus,
+.plot-row-heading:focus,
+.plot-detail-heading:focus,
+.plot-review-heading:focus {
+  outline: none;
+}
+.garden-plot-helpers .sheet-helper,
+.garden-more .sheet-body-text,
+.garden-more .sheet-helper {
+  margin: 0;
+}
+.ui-button.garden-upgrade,
+.ui-button.plot-action-full {
+  width: 100%;
+  min-height: 48px;
+  font-size: 18px;
+}
+.plot-row {
+  min-height: 190px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plot-row[data-state='locked'] {
+  min-height: 0;
+}
+.plot-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plot-row-heading {
+  margin: 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.plot-row-status,
+.plot-row .sheet-helper {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.plot-slots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.plot-slot {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.plot-slot-empty {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ui-ink);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.plot-rail {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ui-disabled);
+  overflow: hidden;
+}
+.plot-rail-fill {
+  height: 100%;
+  background: var(--ui-ink);
+}
+.plot-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ui-button.plot-action {
+  min-height: 48px;
+  font-size: 16px;
+}
+.ui-button.plot-back {
+  min-height: 44px;
+  padding: 0 12px;
+  justify-self: start;
+  align-self: flex-start;
+  font-size: 16px;
+}
+.plot-detail-heading {
+  margin: 8px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.plot-detail,
+.plot-kids,
+.plot-review,
+.picker-helpers,
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plot-detail p,
+.plot-review p,
+.picker-helpers p {
+  margin: 0;
+}
+.plot-kid {
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.plot-review {
+  padding: 8px;
+}
+.plot-note {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.plot-note[hidden] {
+  display: none;
+}
+.sheet-action.plot-start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+/* Full plot: the shared sparkle breathes beside Start growing, never moving (§15.4). */
+.plot-sparkle {
+  animation: plot-sparkle 2400ms ease-in-out infinite;
+}
+@keyframes plot-sparkle {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plot-sparkle {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* The picker (§15.3). */
+.picker-search-label {
+  font-size: 16px;
+  line-height: 22px;
+}
+.picker-search {
+  min-height: 44px;
+  font: inherit;
+  font-size: 16px;
+  padding: 0 12px;
+}
+.picker-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ui-button.picker-filter {
+  min-height: 44px;
+  font-size: 16px;
+}
+.ui-button.picker-filter.is-selected {
+  border-image-source: var(--ui-button-selected);
+}
+.picker-row {
+  min-height: 88px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+.picker-row[hidden] {
+  display: none;
+}
+.picker-row.is-selected {
+  outline: 3px solid var(--ui-ink);
+  outline-offset: -3px;
+}
+.picker-row-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+}
+.picker-row-name {
+  font-size: 18px;
+  line-height: 24px;
+}
+.picker-check {
+  width: 24px;
+  height: 24px;
+  margin: 10px;
+  flex: none;
+}
+.picker-limit,
+.picker-empty {
+  margin: 0;
+}
+.picker-lines,
+.picker-notices {
+  display: flex;
+  flex-direction: column;
+}
+.picker-line {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* --- The kid card, feeding and naming (GUI_MVP §17-18) ------------------------------- */
+.kid-card-portrait {
+  display: flex;
+  justify-content: center;
+}
+.kid-card-marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+.kid-card-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.kid-card-tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.kid-card-tier .sheet-helper,
+.kid-card-happy p,
+.kid-card-planting p,
+.kid-status ~ p,
+.sheet-body p.kid-card-food {
+  margin: 0;
+}
+.kid-card-heading {
+  margin: 16px 0 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.kid-card-trait {
+  margin: 8px 0 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.kid-card-happy-line,
+.kid-card-food {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.kid-card-food strong {
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kid-card-planting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kid-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ui-button.kid-card-action {
+  min-height: 48px;
+}
+.kid-status:focus {
+  outline: none;
+}
+
+/* Feeding (§17.2): one 64 px row per food; the price always on its button. Where the
+   name and the 160 px button don't both fit (a narrow phone, larger text), the button
+   goes below, full width, and nothing leaves the row. */
+.feed-row {
+  container-type: inline-size;
+  min-height: 64px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.feed-row > img {
+  flex: none;
+  margin-top: 8px;
+}
+.feed-row.is-selected {
+  outline: 3px solid var(--ui-ink);
+  outline-offset: -3px;
+}
+.feed-text {
+  flex: 1 1 96px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+  overflow-wrap: anywhere;
+}
+.feed-name {
+  font-size: 18px;
+  line-height: 24px;
+}
+.feed-relation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.ui-button.feed-button {
+  flex: 0 0 160px;
+  max-width: 100%;
+  min-height: 48px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.feed-button .action-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.feed-price {
+  font-size: 16px;
+  line-height: 22px;
+}
+.feed-short,
+.feed-refused {
+  flex: 1 0 100%;
+  margin: 0;
+}
+/* Measured in em, so larger text stacks sooner: icon, a name's room, the button. */
+@container (max-width: 20.5em) {
+  .ui-button.feed-button {
+    flex-basis: 100%;
+  }
+}
+
+/* Naming (§18.2). */
+.name-portrait {
+  margin-top: 8px;
+}
+.name-label {
+  font-size: 18px;
+  line-height: 24px;
+}
+.name-input {
+  min-height: 48px;
+  font: inherit;
+  font-size: 18px;
+  padding: 0 12px;
+  border: 2px solid var(--ui-ink);
+  border-radius: 8px;
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+}
+.name-input:focus {
+  outline: 2px solid var(--ui-ink);
+  outline-offset: 2px;
+}
+.name-count,
+.name-error {
+  margin: 0;
+}
+.name-error:empty {
+  display: none;
+}
+.ui-button.name-save {
+  width: 100%;
+  min-height: 48px;
+}
+.dex-personality {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dex-personality p {
+  margin: 0;
 }

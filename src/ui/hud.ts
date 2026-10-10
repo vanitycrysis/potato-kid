@@ -4,13 +4,16 @@ import type { MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
 import type { GameEvent, OfflineReport } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
-import { formatClock, formatCount, formatExact } from './format';
+import { formatClock, formatCount, formatDuration, formatExact } from './format';
 import { BuildingSheets } from './buildings';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
-import { SendHomeNotes } from './sendHome';
+import type { PlotsSnapshot } from './gardenPlots';
+import { KidCard, type CardSnapshot } from './kidCard';
+import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
+import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
 import { openSettings } from './settings';
 import { Sheets, type SheetSnapshot } from './sheet';
@@ -81,12 +84,13 @@ export class Hud {
   private readonly sheets: Sheets;
   private readonly buildings: BuildingSheets;
   private readonly dex: Dex;
-  private readonly notes: SendHomeNotes;
+  private readonly notes: PlantingNotes;
+  private readonly kidCard: KidCard;
   private readonly dexButton = el('button', 'ui-button dex-button', icon('icon_dex', '', 'ui-icon-24'));
   private readonly trayCells = new Map<string, HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
-  private interrupted: (SheetSnapshot & { search: string }) | null = null;
+  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null }) | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -145,9 +149,18 @@ export class Hud {
       () => (this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0),
       matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
-    this.buildings = new BuildingSheets(scene, content, this.sheets);
-    this.notes = new SendHomeNotes(settings, scene.game);
-    this.dex = new Dex(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    this.notes = new PlantingNotes(settings);
+    this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
+    this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly);
+    // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex button
+    // (world kids are no focus targets); a read-only save can still browse it.
+    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    scene.listenKidTap((kidId) => this.kidCard.open(kidId, this.dexButton));
+    // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
+    const gardenCell = tray.querySelector<HTMLElement>('.tray-cell');
+    scene.listenPlotTap((plot) => {
+      if (!this.save.readOnly) this.buildings.openPlot(plot, gardenCell);
+    });
     // Send home (D-048): the target's label stays in the world area between HUD and tray.
     const home = new HomeOverlay(() => {
       const top = this.top.getBoundingClientRect();
@@ -276,7 +289,7 @@ export class Hud {
     if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText };
+      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot() };
     }
     this.summaryOpen = true;
     openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, (replaced) => {
@@ -286,9 +299,10 @@ export class Hud {
       this.interrupted = null;
       if (!back) return;
       if (back.key === 'dex') this.dex.open(back.launcher);
+      else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
       else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
-        this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search });
+        this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
     });
   }
 
@@ -408,7 +422,7 @@ export class Hud {
 
   private onStep(events: GameEvent[]): void {
     // A sheet shows its own command's refusal inline; the world never repeats it (GUI_MVP §9).
-    const inSheet = new Set([...this.buildings.onStep(events), ...this.dex.onStep(events)]);
+    const inSheet = new Set([...this.buildings.onStep(events), ...this.kidCard.onStep(events)]);
     const items = feedbackFor(
       events.filter((e) => !inSheet.has(e)),
       this.known,
@@ -423,7 +437,7 @@ export class Hud {
       const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
       const text = item.kind === 'refusal' ? refusalText(item.reason, item.command, currency) : undefined;
       const card: Card =
-        item.kind === 'sentHome' ? this.sentHomeCard(item) : { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
+        item.kind === 'planted' ? this.sentHomeCard(item) : { item, node: this.card(item, text), remaining: FEEDBACK_MS, notBefore };
       // Refusals are never dropped: they wait like any card, but ahead of rewards.
       const firstReward = this.queue.findIndex((c) => c.item.kind !== 'refusal');
       if (item.kind === 'refusal' && firstReward >= 0) this.queue.splice(firstReward, 0, card);
@@ -436,6 +450,9 @@ export class Hud {
    * after its effect); Infinity while its costume is still loading.
    */
   private readyAt(item: FeedbackItem, now: number): number {
+    // A sprout's card waits for its kid too: a costume still loading would leave it on show
+    // for a kid nobody can see yet (Codex review, PR #77).
+    if (item.kind === 'sprouted') return this.scene.viewState(item.kidId) === 'pending' ? Infinity : now;
     if (item.kind !== 'discovery' && item.kind !== 'newKid') return now;
     const after = item.kind === 'discovery' ? this.scene.discoveryToastDelayMs : 0;
     const state = item.kidId === undefined ? 'shown' : this.scene.viewState(item.kidId);
@@ -444,7 +461,7 @@ export class Hud {
 
   private kidShown(kidId: number, now: number): void {
     for (const c of this.queue) {
-      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
+      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid' || c.item.kind === 'sprouted') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
     }
   }
 
@@ -476,15 +493,7 @@ export class Hud {
     }
     // A card still waiting for its kid never holds up the ones behind it; one whose kid
     // was consumed before it appeared is shown anyway (the discovery did happen).
-    // A farewell's card waits until the farewell has played, and behind any earlier one
-    // still waiting: successes keep their order (GUI_MVP §13.3; Codex review, PR #54).
-    let homeWaiting = false;
     for (const c of this.queue) {
-      if (c.item.kind === 'sentHome') {
-        if (c.notBefore === Infinity && !homeWaiting && !this.scene.isDeparting(c.item.kidId)) c.notBefore = now;
-        if (c.notBefore === Infinity) homeWaiting = true;
-        continue;
-      }
       if (c.notBefore === Infinity && 'kidId' in c.item && c.item.kidId !== undefined && this.scene.viewState(c.item.kidId) === 'gone') c.notBefore = now;
     }
     const at = this.queue.findIndex((c) => c.notBefore <= now);
@@ -548,7 +557,9 @@ export class Hud {
     switch (item.kind) {
       case 'discovery':
       case 'newKid': {
-        const heading = item.kind === 'newKid' ? 'New kid discovered' : item.newKid ? 'New discovery' : 'New recipe found';
+        // A planting-only special or rare found for the first time says so (GUI_MVP §15.5, D-072).
+        const kind = kindMark(this.content.kids.find((k) => k.id === item.childType));
+        const heading = item.kind === 'newKid' ? (kind ? `${kind} found` : 'New kid discovered') : item.newKid ? 'New discovery' : 'New recipe found';
         const lines: Node[] = [el('span', 'card-heading', heading), el('span', 'card-name', this.name(item.childType)), this.tier(item.childType)];
         if (item.kind === 'discovery' && item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
         if (item.milestone > 0) lines.push(el('span', 'card-line', `Dex milestone · +${formatExact(item.milestone)} Potatokens`));
@@ -578,24 +589,59 @@ export class Hud {
         return el('div', 'toast toast-short', icon('icon_spawn', '', 'ui-icon-28'), el('span', 'card-heading', item.count === 1 ? 'Kid arrived at the Garden.' : `${item.count} kids arrived at the Garden.`));
       case 'refusal':
         return el('div', 'toast toast-short', icon('icon_warning', '', 'ui-icon-28'), el('span', 'card-heading', text ?? refusalText(item.reason, item.command)));
-      case 'sentHome':
-        return el('div', 'toast', el('span', 'card-heading', this.notes.heading(this.name(item.kidType))));
+      case 'planted':
+        return el('div', 'toast', el('span', 'card-heading', this.notes.heading(this.name(item.kidType), item.plot, item.added)));
+      case 'growing':
+        return el(
+          'div',
+          'toast toast-short',
+          icon('icon_garden', '', 'ui-icon-28'),
+          el(
+            'div',
+            'card-text',
+            el('span', 'card-heading', `Plot ${item.plot + 1} is growing.`),
+            el('span', 'card-line', `One kid sprouts in ${formatDuration(this.scene.game.growSeconds)}.`),
+          ),
+        );
+      case 'fed': {
+        // Its card had closed before the bite was accepted: the result is still said (§17.2).
+        const f = this.content.balance.feeding;
+        const who = item.name ?? this.name(item.kidType);
+        const food = f.foods.find((x) => x.id === item.food)?.name ?? item.food;
+        const lines = item.favourite
+          ? [`${food} is ${who}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}.`]
+          : [`${who} enjoyed ${food}.`, `Happy for ${formatDuration(f.happySeconds)}.`];
+        return el('div', 'toast toast-short', icon('icon_happy', '', 'ui-icon-28'), el('div', 'card-text', el('span', 'card-heading', lines[0]!), el('span', 'card-line', lines[1]!)));
+      }
+      case 'named':
+        return el(
+          'div',
+          'toast toast-short',
+          icon('icon_check', '', 'ui-icon-28'),
+          el('span', 'card-heading', item.name ? `Named ${item.name}.` : `Called ${this.name(item.kidType)} again.`),
+        );
+      case 'sprouted': {
+        // The reveals (GUI_MVP §15.5): by the actual kid, never by which roll hit. A type new to
+        // the Dex gets the discovery card instead.
+        const kind = kindMark(this.content.kids.find((k) => k.id === item.kidType));
+        const from = `From Plot ${item.plot + 1}.`;
+        const helper = kind ? `${kind} kid · ${from}` : from;
+        return el('div', 'toast toast-short', portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', `${this.name(item.kidType)} sprouted!`), el('span', 'card-line', helper)));
+      }
     }
   }
 
   /**
-   * "{name} went home." (GUI_MVP §13.3), once its farewell has played. The first one in
-   * this profile explains where the kid went, stays 6 s and can be closed; its copy follows
-   * whether the Compendium is built when it appears, and only then is it marked as shown.
+   * "{name} added to Plot {n}." (GUI_MVP §15.6). The first one in this profile explains
+   * planting, stays 6 s and can be closed; only once it is visible is it marked as shown.
    */
-  private sentHomeCard(item: Extract<FeedbackItem, { kind: 'sentHome' }>): Card {
-    const { kidType } = item;
+  private sentHomeCard(item: Extract<FeedbackItem, { kind: 'planted' }>): Card {
     const first = this.notes.claimFirst();
-    const lines = first ? [el('span', 'card-line'), el('span', 'card-line')] : [el('span', 'card-line', this.notes.later())];
-    const text = el('div', 'card-text', el('span', 'card-heading', this.notes.heading(this.name(kidType))), ...lines);
+    const lines = (first ? this.notes.firstLines() : [this.notes.later(item.count)]).map((t) => el('span', 'card-line', t));
+    const text = el('div', 'card-text', el('span', 'card-heading', this.notes.heading(this.name(item.kidType), item.plot, item.added)), ...lines);
     const node = el('div', 'toast toast-reward toast-home', icon('icon_garden', '', 'ui-icon-28'), text);
-    // Waits for the farewell itself (below), however slowly it plays.
-    const card: Card = { item, node, remaining: this.notes.visibleMs(first), notBefore: Infinity };
+    // Shown as soon as the queue allows: a planted kid leaves the map at once, no farewell.
+    const card: Card = { item, node, remaining: this.notes.visibleMs(first), notBefore: 0 };
     if (first) {
       const close = el('button', 'ui-button card-close', icon('icon_close', '', 'ui-icon-24'));
       close.type = 'button';
@@ -604,11 +650,6 @@ export class Hud {
         if (this.showing === card) card.remaining = 0;
       });
       node.append(close);
-      card.refresh = () => {
-        const [a, b] = this.notes.firstLines();
-        lines[0]!.textContent = a;
-        lines[1]!.textContent = b;
-      };
       card.mounted = () => this.notes.markShown();
     }
     return card;

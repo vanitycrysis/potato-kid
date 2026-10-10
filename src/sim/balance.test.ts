@@ -101,7 +101,7 @@ describe('the bot drags like a player (Codex review, PR #45)', () => {
     const bot = createBot(g, c);
     // Every other pairing on the map has been tried already.
     for (const p of ['aurora|plain', 'aurora|aurora', 'aurora|water']) bot.tried.add(p);
-    expect(bot.decide()).toEqual([{ type: 'sendHome', kidId: expect.any(Number) }]);
+    expect(bot.decide()).toEqual([{ type: 'plant', kidIds: [expect.any(Number)] }]);
   });
 
   it('drags the other way when only the second kid of a pair can reach the first', () => {
@@ -161,5 +161,22 @@ describe('what a drop tested (Codex review, PR #45)', () => {
     const graced = { ...drop, contacts: [{ id: 2, type: 'water', grace: 1.5 }, drop.contacts[1]!] };
     learnFromDrop(tried, graced, [{ type: 'fused', parents: [kid(3, 'fire'), kid(7, 'water')], child: kid(9, 'steam'), firstDiscovery: false }]);
     expect([...tried]).toEqual([]);
+  });
+});
+
+describe('the bot never buys what the Compendium refuses (Codex review, PR #84)', () => {
+  it('a discovered rare is no Compendium choice, so the bot does something else', () => {
+    const c = structuredClone(content);
+    c.kids.push({ id: 'rare_a', tier: 6, name: 'Rare A', rare: true });
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, intervalSeconds: 1e9 };
+    const g = new Game(c, { ...options, now: 0 }, 1);
+    addKid(g.state.world, 'plain', 1000, 1500, createRng(1), 0, defaultBox(c.balance.body.radius));
+    g.state.discoveredKids = ['rare_a', 'plain'];
+    g.state.buildings.compendium = 1;
+    g.state.materials = 0;
+    g.state.potatokens = 1e6;
+    const act = createBot(g, c).decide();
+    expect(act).not.toBeNull();
+    expect(act!.some((x) => x.type === 'respawn' && x.kidType === 'rare_a')).toBe(false);
   });
 });

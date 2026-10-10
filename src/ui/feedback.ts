@@ -8,7 +8,7 @@ import type { GameEvent, RejectReason } from '../sim/game';
 export type FeedbackItem =
   /** A recipe's first discovery; `newKid` when the child type is new to the Dex too. */
   | { kind: 'discovery'; childType: KidId; kidId?: number; newKid: boolean; potatokens: number; milestone: number }
-  /** A kid type first seen from the Garden or Compendium (no recipe, no invented reward). */
+  /** A kid type first seen from the Garden, Compendium or a plot (no recipe, no invented reward). */
   | { kind: 'newKid'; childType: KidId; kidId?: number; milestone: number }
   /** A discovery award with no matching fusion in the batch. */
   | { kind: 'recipeReward'; potatokens: number }
@@ -16,8 +16,16 @@ export type FeedbackItem =
   /** Instant spawns that landed (successive ones coalesce). */
   | { kind: 'arrival'; count: number }
   | { kind: 'refusal'; command: string; reason: RejectReason }
-  /** A kid sent home (D-048, GUI_MVP §13.3). */
-  | { kind: 'sentHome'; kidType: KidId; kidId: number };
+  /** Kids added to a plot (D-061, GUI_MVP §15.6): one card per plot per step; `count` in it now. */
+  | { kind: 'planted'; kidType: KidId; kidId: number; plot: number; count: number; added: number }
+  /** A plot started growing (§15.6). */
+  | { kind: 'growing'; plot: number }
+  /** A bite accepted where no kid card showed it (§17.2): its card had closed. */
+  | { kind: 'fed'; kidType: KidId; kidId: number; name: string | undefined; food: string; favourite: boolean }
+  /** A name given or cleared where no kid card showed it (§18.2). */
+  | { kind: 'named'; kidType: KidId; kidId: number; name: string | null }
+  /** A known type sprouted from a plot (§15.5); a new type gets the discovery card instead. */
+  | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -48,6 +56,9 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
         } else {
           current = null;
         }
+        if (e.source === 'sprout' && current === null && e.plot !== undefined) {
+          out.push({ kind: 'sprouted', kidType: e.kid.type, kidId: e.kid.id, plot: e.plot });
+        }
         if (e.source === 'instant') {
           const last = out[out.length - 1];
           if (last?.kind === 'arrival') last.count++;
@@ -68,8 +79,24 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
           else out.push({ kind: 'milestone', potatokens: e.potatokens, kids: discovered });
         }
         break;
-      case 'sentHome':
-        out.push({ kind: 'sentHome', kidType: e.kid.type, kidId: e.kid.id });
+      case 'planted': {
+        // Several added at once (the picker) make one card (§15.6).
+        const last = out[out.length - 1];
+        if (last?.kind === 'planted' && last.plot === e.plot) {
+          last.added++;
+          last.count = e.count;
+          last.kidId = e.kid.id;
+        } else out.push({ kind: 'planted', kidType: e.kid.type, kidId: e.kid.id, plot: e.plot, count: e.count, added: 1 });
+        break;
+      }
+      case 'growing':
+        out.push({ kind: 'growing', plot: e.plot });
+        break;
+      case 'fed':
+        out.push({ kind: 'fed', kidType: e.kid.type, kidId: e.kid.id, name: e.kid.name, food: e.food, favourite: e.favourite });
+        break;
+      case 'named':
+        out.push({ kind: 'named', kidType: e.kid.type, kidId: e.kid.id, name: e.name });
         break;
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });
@@ -104,5 +131,22 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'This kid can’t be favoured by the Garden.';
     case 'gone':
       return 'This kid has already left the map.';
+    case 'plotsBusy':
+      return command === 'unplant' ? 'This plot is growing. Cancel it to take its kids out.' : 'All plots are growing. Try again when one is empty.';
+    // GUI_MVP §15.1 and §15.4.
+    case 'plotFull':
+      return 'All plots are full. Start growing a filled plot first.';
+    case 'tooFewKids':
+      return 'Add at least 3 kids to Start growing.';
+    // D-074: interim copy until LAYOUT-DESIGN settles taking kids out of plots.
+    case 'ready':
+      return 'This plot’s kid is ready to sprout. It can’t be cancelled now.';
+    // GUI_MVP §17.2, §18.2: the sheets say these with the kid's name and the food.
+    case 'hated':
+      return 'This kid won’t eat that. Nothing was spent.';
+    case 'invalid':
+      return 'Use letters, numbers, spaces, apostrophes or hyphens.';
+    case 'unchanged':
+      return 'Name unchanged.';
   }
 }

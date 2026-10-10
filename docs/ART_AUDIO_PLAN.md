@@ -1,5 +1,21 @@
 # Art and audio plan
 
+## LAYOUT-DESIGN addendum (2026-10-09; round 2, Claude review pending)
+
+GUI_MVP §§19–21, revision `layout-design-2`, preserves the accepted one 60 px status strip and one 60 px Garden/Dex/Notebook navigation row: 78.20% unobscured world at 390 × 844 and 57.78% at 640 × 360. HUD, sheet geometry, folding timer/upgrades/Settings, D-074 removal/cancellation flow and N1–N6 are unchanged. Cancel action text now uses existing ink `#1a1a1a` (15.58:1 on paper, 13.86:1 on sage); danger remains a border accent. The exact D-074 copy, identity/look/name/happiness restoration, independent D-072 rolls and D-069 farming scope remain as accepted. The GUI contract is plain UTF-8; number/unit spacing is corrected.
+
+`art/data/map_garden_v3.json`, revision `layout-design-map-3-round2`, is 4320 × 7680 with 510 ground cells, 131 connected path cells and 263 scenery instances (Garden + 12 landmarks + 250 accents). Garden (2160, 3500), outlet (2160, 4000) and camera centre (2160, 3830) move together by (1080, 2880); plot relative grounds/scale stay exact. Claude owns save migration and switching every v2 reader. Two joined loops, connecting walks and the hub cross-route have zero dead ends. Flower/clover/mushroom/stone zones use the same three ground and six small-decor textures, with 15–19 accents plus one landmark in every outer reference screen. Small decor averages 15.625 per screen versus round 1's 4.75 and v2's 7.5. The central lawn stays open around the plots/outlet.
+
+Six new original 512 × 512 vector sources add decorative bench, watering can, trellis, flower pots, birdbath and seed basket. Reuse stump/pebbles; eight landmark silhouettes appear in twelve outer compositions, at most two copies of any type. Props have no gameplay function. These are composition assets under D-071, within the existing notebook palette and D-045 art constraints. Keep 0.5×…2× zoom, 44 px pickup targets/candidate chooser/non-drag route and the accepted compact-landscape fit floor 65/180; no new floating control. Home range remains a proposal in the notes, with no authored engine rule.
+
+| Decoded runtime PNG inventory | Before round 2 | After round 2 | Change |
+| --- | ---: | ---: | ---: |
+| PNGs under assets/ | 218 | 224 | +6 |
+| RGBA bytes | 12,815,892 | 14,745,012 | +1,929,120 |
+| MiB | 12.22219 | 14.06194 | +1.83975 |
+
+This debit uses actual cropped export dimensions; source canvases total 6 MiB but are not loaded untrimmed. Inventory includes historical exported variant FX conservatively. Remaining headroom to the unchanged 32 MiB ceiling is 17.93806 MiB before atlas/surface/framebuffer overhead; this is not measured GPU residency. Existing runtime PNGs remain byte-identical. Native UI adds no Pixi raster/portrait cache/world render target. Extra visible instances require Claude's culling/frame-time/device checks. `npm run art:export` passes: 293 sources, six sidecars. Independent audit preserves 602 protected files and the accepted UI/planting sidecars; 62 SVG/native PNG review screens include all twelve outer reference screens at 0.5× in both viewports. [Gallery](../art/previews/ui/layout_review.html); [notes](../.codex-out/layout-design-notes.md); [audit](../.codex-out/layout-audit.json). No gate 4 acceptance or polish is claimed.
+
 ## SPECIALS delivery (2026-10-04; Claude review pending)
 
 Under D-063/D-066, retain the approved keepsake identities, exact IDs and 12 T5 /8 T6 split. Twenty new costumes share 21 original 256px front components, existing attachment slots and explicit fits on all four bodies. Acorn alone needs a second component. No new body/face/pose/clip, rare art, filter, portrait cache or lifetime reserve.

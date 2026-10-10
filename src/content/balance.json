@@ -102,5 +102,37 @@
       "costBase": 1000,
       "costGrowth": 1
     }
-  }
+  },
+  "planting": {
+    "growSeconds": 1800,
+    "startPlots": 1,
+    "maxPlots": 4,
+    "unlockCostBase": 1000,
+    "unlockCostGrowth": 5,
+    "minKids": 3,
+    "maxKids": 5,
+    "specialOdds": [0.1, 0.2],
+    "rareOdds": [0.05, 0.1]
+  },
+  "feeding": {
+    "foods": [
+      { "id": "toast", "name": "Toast", "price": 100 },
+      { "id": "berry_jam", "name": "Berry jam", "price": 100 },
+      { "id": "berries", "name": "Berries", "price": 100 },
+      { "id": "apple", "name": "Apple", "price": 100 },
+      { "id": "carrot", "name": "Carrot", "price": 100 },
+      { "id": "corn", "name": "Corn", "price": 100 },
+      { "id": "mushroom", "name": "Mushroom", "price": 100 },
+      { "id": "pickle", "name": "Pickle", "price": 100 },
+      { "id": "cheese", "name": "Cheese", "price": 100 },
+      { "id": "soup", "name": "Soup", "price": 100 },
+      { "id": "cocoa", "name": "Cocoa", "price": 100 },
+      { "id": "cracker", "name": "Cracker", "price": 100 }
+    ],
+    "happySeconds": 1200,
+    "happyMultiplier": 1.5,
+    "favouriteSeconds": 3600,
+    "favouriteMultiplier": 2
+  },
+  "naming": { "price": 50, "maxLength": 24 }
 }
