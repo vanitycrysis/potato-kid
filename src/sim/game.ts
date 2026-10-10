@@ -274,6 +274,8 @@ export interface LookTable {
   bodies: { id: string; weight: number; box: Box }[];
   faces: { id: string; weight: number }[];
   sizes: { scale: number; weight: number }[];
+  /** Wild kids' boxes at scale 1 (D-072, D-073): their own bodies, whatever their saved body id. */
+  types?: Record<string, Box>;
 }
 
 /** How long rest activities last; derived from the rig's scheduler and clip lengths. */
@@ -400,14 +402,14 @@ export class Game {
       kid.held = false;
       // Appearance is cosmetic: a body or face the current art doesn't have (e.g. retired
       // in a later version) maps to the first one rather than failing to draw (Codex review, PR #30).
-      const { box, ...look } = this.lookWithBox(kid.look);
+      const { box, ...look } = this.lookWithBox(kid.look, kid.type);
       kid.look = look;
       kid.box = box;
     }
     // Farming kids are drawn too: the same fallback for a body or face the art no longer has
     // (Codex review, #90).
     for (const worker of this.state.fields.flatMap((f) => f.workers)) {
-      const { body, face, scale } = this.lookWithBox(worker.look);
+      const { body, face, scale } = this.lookWithBox(worker.look, worker.type);
       worker.look = { body, face, scale };
     }
     // A save from another map (schema 8 moved kids beside the v3 Garden, D-071), or a box
@@ -819,12 +821,14 @@ export class Game {
   }
 
   /** A newborn at the Garden outlet, if a spot is free; the type is drawn only then. */
-  private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[]): Kid | null {
-    const look = this.peekLook();
+  private spawnAtOutlet(type: () => KidId, source: SpawnSource, events: GameEvent[], known?: KidId): Kid | null {
+    // A type known already (a sprout) finds room for its own box: a wild kid's is its own.
+    const look = known ? this.typed(known, this.peekLook()) : this.peekLook();
     const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
     if (!p) return null;
     this.rollLook(); // commit the peeked roll
-    const kid = this.add(type(), p, this.content.balance.spawn.newbornGraceSeconds, look);
+    const t = type();
+    const kid = this.add(t, p, this.content.balance.spawn.newbornGraceSeconds, this.typed(t, look));
     events.push({ type: 'spawned', kid, source });
     this.discover(kid.type, events);
     return kid;
@@ -937,7 +941,7 @@ export class Game {
   private sproutFrom(index: number, events: GameEvent[]): Kid | null {
     const plot = this.state.plots[index]!;
     const sprout = plot.seed!.sprout!;
-    const kid = this.spawnAtOutlet(() => sprout.type, 'sprout', events);
+    const kid = this.spawnAtOutlet(() => sprout.type, 'sprout', events, sprout.type);
     if (!kid) return null;
     plot.seed = null;
     for (const e of events) if (e.type === 'spawned' && e.kid === kid) e.plot = index;
@@ -1098,7 +1102,7 @@ export class Game {
       return 'noRoom';
     };
     for (const k of leaving) {
-      const look = this.lookWithBox(k.look);
+      const look = this.lookWithBox(k.look, k.type);
       const p = this.freeSpot(look.box, this.spawnAt.x, this.spawnAt.y);
       if (!p) return rollBack();
       const kid = addKid(world, k.type, p.x, p.y, this.rng, this.content.balance.spawn.newbornGraceSeconds, look.box, { body: look.body, face: look.face, scale: look.scale }, k.id);
@@ -1341,18 +1345,34 @@ export class Game {
     return null;
   }
 
-  /** A look's box in the current art (a farming kid's, for its marks). */
-  boxOf(look: Look): Box {
-    return this.lookWithBox(look).box;
+  /** A kid's box in the current art, by its look and type (a farming kid's, for its marks and hits). */
+  boxOf(look: Look, type?: KidId): Box {
+    return this.lookWithBox(look, type).box;
   }
 
-  /** A look with its box from the current art; a body or face it doesn't have maps to the first. */
-  private lookWithBox(look: Look): Look & { box: Box } {
+  /**
+   * A look with its box from the current art; a body or face it doesn't have maps to the
+   * first. A wild type's box is its own (D-072, D-073), whatever the body id.
+   */
+  private lookWithBox(look: Look, type?: KidId): Look & { box: Box } {
     const body = this.looks.bodies.find((b) => b.id === look.body) ?? this.looks.bodies[0]!;
     const face = this.looks.faces.some((f) => f.id === look.face) ? look.face : this.looks.faces[0]!.id;
     const k = look.scale;
-    const b = body.box;
+    const b = (type !== undefined ? this.looks.types?.[type] : undefined) ?? body.box;
     return { body: body.id, face, scale: k, box: { left: b.left * k, top: b.top * k, right: b.right * k, bottom: b.bottom * k } };
+  }
+
+  /**
+   * A newborn's `look` for `type`: a wild type's own box, and the Classic face (new wild births
+   * use Classic, kid_wild_v1 renderer.appearance; Codex review, #93). Others unchanged. Saved
+   * kids keep their faces: they never come through here.
+   */
+  private typed(type: KidId, look: Look & { box: Box }, face?: string): Look & { box: Box } {
+    const own = this.looks.types?.[type];
+    if (!own) return look;
+    const k = look.scale;
+    const classic = this.looks.faces.some((f) => f.id === 'classic') ? 'classic' : look.face;
+    return { ...look, face: face ?? classic, box: { left: own.left * k, top: own.top * k, right: own.right * k, bottom: own.bottom * k } };
   }
 
   /**
@@ -1467,7 +1487,7 @@ export class Game {
   }
 
   debugAddKid(type: KidId, x: number, y: number, force?: Partial<Look>): Kid {
-    const look = this.forceLook(this.rollLook(), force);
+    const look = this.typed(type, this.forceLook(this.rollLook(), force), force?.face);
     const p = this.freeSpot(look.box, x, y) ?? clampToBounds(this.state.world.bounds, x, y);
     const kid = this.add(type, p, 0, look);
     this.discover(type);

@@ -1,11 +1,11 @@
-import { kidRig } from '../content/artData';
+import { kidRig, kidWild } from '../content/artData';
 import type { Content, FoodDef, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { Field, GameEvent, RejectReason } from '../sim/game';
 import { checkName, graphemes, normalizeName } from '../sim/names';
 import type { Kid } from '../sim/world';
 import type { BuildingSheets } from './buildings';
-import { el, icon } from './dom';
+import { el, icon, tierBadge } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatRate, formatTimeLeft } from './format';
 import type { PlantingNotes } from './plantingNotes';
@@ -415,7 +415,7 @@ export class KidCard {
   private tierLine(type: KidId): HTMLElement {
     const t = this.tierOf.get(type) ?? 1;
     // A tier with no badge (T6) is plain text; no invented glyph (§18.1).
-    return el('span', 'tier dex-tier-24', ...(t <= 5 ? [icon(`badge_tier_${t}`, '', 'ui-icon-24')] : []), `Tier ${t}`);
+    return el('span', 'tier dex-tier-24', ...tierBadge(t, 'ui-icon-24'), `Tier ${t}`);
   }
 
   // --- the card -------------------------------------------------------------------------
@@ -439,7 +439,17 @@ export class KidCard {
     happy.setAttribute('aria-live', 'off');
 
     const personality = [
-      ...(kind ? [el('p', 'sheet-helper', `Found only through planting. No fusion recipes. ${kind} kids cannot be bought.`)] : []),
+      // A rare's profile (GUI_MVP §16.3): labelled, its own flavour, then what it is.
+      ...(def?.rare
+        ? [
+            el('h4', 'kid-card-trait kid-card-profile-label', 'Rare · From planting'),
+            el('p', 'sheet-body-text kid-card-profile', kidWild?.rareProfiles[type] ?? ''),
+            el('p', 'sheet-helper', 'Planting only. Cannot be bought.'),
+            el('p', 'sheet-helper', 'No fusion recipes.'),
+          ]
+        : kind
+          ? [el('p', 'sheet-helper', `Found only through planting. No fusion recipes. ${kind} kids cannot be bought.`)]
+          : []),
       ...personalityBlocks(this.content, type),
     ];
 

@@ -1,10 +1,12 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import type { Attachment, Clip, ClipFrame, ComponentTransform, KidRig, Vec2 } from '../content/artData';
+import type { Attachment, Clip, ClipFrame, ComponentTransform, KidRig, Vec2, WildData, WildFrame } from '../content/artData';
 import type { Activity, Kid } from '../sim/world';
 import { ClipPicker, EffectTracks, type OneShot } from './presentation';
 
 const DEG = Math.PI / 180;
 const OPEN = 'open';
+/** A wild kid's frame when its clip has none of its own: the stand, still (kid_wild_v1 fallbackTiming). */
+const WILD_STAND: WildFrame = { durationMs: 0, frame: 'stand', offsetPx: [0, 0], faceState: 'inherit', opacity: 1 };
 /** A farming kid's steps (Codex's farm_v1 `workerLoop`): body frames and their times. */
 const FARM_STEPS = [
   { frame: 'stand', ms: 600 },
@@ -45,20 +47,32 @@ export class KidRigView {
   private readonly effects: EffectTracks;
   private blinkIn: number;
   private blinkTime = -1;
+  /**
+   * A wild kid (kid_wild_v1, D-072/D-073): its own stand body with the shared face at its
+   * anchor, and the sidecar's bob clips; no costume, and no shared body's frames.
+   */
+  private readonly wildType: WildData['types'][string] | undefined;
 
   constructor(
     private readonly kid: Kid,
     private readonly rig: KidRig,
     private readonly textures: Map<string, Texture>,
     private readonly reducedMotion: boolean,
+    private readonly wild?: WildData,
   ) {
     const k = (kid.look.scale * rig.worldCanvasSize) / rig.canvas[0];
     this.scaled.scale.set(k);
     this.canvas.position.set(-rig.groundAnchor[0], -rig.groundAnchor[1]);
-    const costume = rig.costumes[kid.type];
+    this.wildType = wild?.types[kid.type];
+    // A wild body replaces every shared body and costume layer: no legacy prop over it.
+    const costume = this.wildType ? undefined : rig.costumes[kid.type];
     const face = rig.faces[kid.look.face]!;
     this.face.anchor.set(face.sourcePivot[0] / rig.canvas[0], face.sourcePivot[1] / rig.canvas[1]);
     this.faceAttach.addChild(this.face);
+    if (this.wildType) {
+      this.faceAttach.position.set(this.wildType.faceAnchorPx[0], this.wildType.faceAnchorPx[1]);
+      this.faceAttach.scale.set(this.wildType.faceScale);
+    }
 
     const makePart = (c: NonNullable<typeof costume>['components'][number]) => {
       const sprite = new Sprite(this.tex(c.asset));
@@ -125,6 +139,18 @@ export class KidRigView {
 
   private lastClip = '';
 
+  /** What is drawn now, for tests: body and face assets, the clip's offset, the face's place, costume parts. */
+  get drawn(): { body: string; face: string; offset: [number, number]; faceAt: [number, number]; parts: number } {
+    const name = (t: Texture) => [...this.textures].find(([, v]) => v === t)?.[0] ?? '';
+    return {
+      body: name(this.body.texture),
+      face: name(this.face.texture),
+      offset: [this.rigC.position.x, this.rigC.position.y],
+      faceAt: [this.faceAttach.position.x, this.faceAttach.position.y],
+      parts: this.parts.length,
+    };
+  }
+
   /** Position comes from the sim (already interpolated or resolved); `dt` is real seconds. */
   update(x: number, y: number, activity: Activity, held: boolean, dt: number): void {
     this.root.position.set(x, y);
@@ -132,15 +158,22 @@ export class KidRigView {
 
     const { clip, name, time, reverse } = this.picker.advance(activity, held, dt);
     this.lastClip = name;
+    const canBlink = !held && (name === 'walk' || name === 'idle' || name === 'look_around' || name === 'seated');
+    if (this.wildType) {
+      // The shared scheduler picks the clip and keeps its time; the wild sidecar only draws it.
+      const fade = this.reducedMotion && name === 'spawn' ? this.spawnFade(time) : undefined;
+      this.applyWild(this.wildFrame(name, time), canBlink ? this.blink(dt) : undefined, fade);
+      this.shadow.alpha = held ? this.rig.effects.shadow.heldOpacity : 1;
+      this.drawEffects(dt);
+      return;
+    }
     let frame = this.reducedMotion || !clip ? this.staticFrame(name) : frameAt(clip, time, reverse);
     if (this.reducedMotion && name === 'spawn') {
       // Reduced motion: a newborn fades in briefly instead of playing its clip.
-      const ms = this.rig.reducedMotion.spawn?.opacityTransitionMs ?? 0;
-      frame = { ...frame, rig: { opacity: ms > 0 ? Math.min(1, (time * 1000) / ms) : 1 } };
+      frame = { ...frame, rig: { opacity: this.spawnFade(time) } };
     }
 
     // Blink: a face-only secondary clip, only where the rig allows it to run concurrently.
-    const canBlink = !held && (name === 'walk' || name === 'idle' || name === 'look_around' || name === 'seated');
     this.apply(frame, canBlink ? this.blink(dt) : undefined);
     this.shadow.alpha = held ? this.rig.effects.shadow.heldOpacity : 1;
     this.drawEffects(dt);
@@ -155,6 +188,13 @@ export class KidRigView {
   updateFarming(x: number, y: number, ms: number, dt: number): void {
     this.root.position.set(x, y);
     this.root.zIndex = y;
+    if (this.wildType) {
+      // No steps of its own: it stands at its pad and blinks (kid_wild_v1 has no step frames).
+      this.lastClip = 'farming';
+      this.applyWild(WILD_STAND, this.blink(dt));
+      this.shadow.alpha = 1;
+      return;
+    }
     let bodyFrame = 'stand';
     if (!this.reducedMotion) {
       const pause = 3000 + ((this.kid.id * 977) % 2001);
@@ -194,6 +234,51 @@ export class KidRigView {
   }
 
   // --- internals ---------------------------------------------------------
+
+  /** Reduced motion: a newborn fades in over the rig's transition instead of playing its clip. */
+  private spawnFade(time: number): number {
+    const ms = this.rig.reducedMotion.spawn?.opacityTransitionMs ?? 0;
+    return ms > 0 ? Math.min(1, (time * 1000) / ms) : 1;
+  }
+
+  /**
+   * A wild kid's frame for clip `name` at `time` seconds: its own clip's frame by duration,
+   * else the stand (an alias borrows only the frame; the clip's timing is the scheduler's).
+   * Reduced motion: the sidecar's still frame.
+   */
+  private wildFrame(name: string, time: number): WildFrame {
+    const w = this.wild!;
+    if (this.reducedMotion) {
+      const m = w.reducedMotion[name] ?? w.reducedMotion.idle;
+      return m ? { durationMs: 0, frame: m.frame, offsetPx: m.offsetPx, faceState: m.faceState, opacity: m.opacity } : WILD_STAND;
+    }
+    // A fallback clip borrows its alias's frames (looping as the alias does).
+    const own = w.clips[name];
+    const c = own?.frames ? own : own?.fallback ? w.clips[own.fallback] : undefined;
+    const frames = c?.frames;
+    if (!c || !frames || frames.length === 0) return WILD_STAND;
+    const total = frames.reduce((a, f) => a + f.durationMs, 0);
+    let t = time * 1000;
+    t = total <= 0 ? 0 : c.loop ? ((t % total) + total) % total : Math.min(Math.max(0, t), total);
+    for (const f of frames) {
+      if (t < f.durationMs) return f;
+      t -= f.durationMs;
+    }
+    return frames[frames.length - 1]!;
+  }
+
+  /** Draws a wild frame: its body, the clip's offset for body and face together, the face's state. */
+  private applyWild(f: WildFrame, blinkFace: string | undefined, opacity?: number): void {
+    const t = this.wildType!;
+    this.body.texture = this.tex((t.frames[f.frame] ?? t.frames.stand)!.asset);
+    this.rigC.position.set(f.offsetPx[0], f.offsetPx[1]);
+    this.rigC.rotation = 0;
+    this.rigC.alpha = opacity ?? f.opacity;
+    const explicit = f.faceState && f.faceState !== 'inherit' ? f.faceState : undefined;
+    const faceState = explicit ?? blinkFace ?? OPEN;
+    const face = this.rig.faces[this.kid.look.face]!;
+    this.face.texture = this.tex(face.states[faceState] ?? face.states[OPEN]!);
+  }
 
   private staticFrame(name: string): ClipFrame {
     const m = this.rig.reducedMotion[name] ?? this.rig.reducedMotion.idle ?? { bodyFrame: 'stand', faceState: OPEN };

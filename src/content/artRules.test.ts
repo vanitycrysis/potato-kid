@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { content } from './index';
-import { kidRig, mapData, uiData } from './artData';
+import { kidRig, kidWild, mapData, uiData } from './artData';
 import { bodyBox, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage, worldBox } from './artRules';
 
 // Names of every exported runtime PNG, as the game loads them.
@@ -15,7 +15,7 @@ describe('shipped art (D-036 coverage)', () => {
   });
 
   it('covers every roster type, body and face with exported art', () => {
-    expect(rigCoverage(kidRig!, content.kids, exported)).toEqual([]);
+    expect(rigCoverage(kidRig!, content.kids, exported, kidWild)).toEqual([]);
   });
 
   it('reports a roster type with no costume, and an asset that was never exported', () => {
@@ -82,6 +82,7 @@ describe('GUI colours come only from ui_v2.json (D-036)', () => {
   });
 
   it('content data carries no colours of its own', () => {
-    for (const kid of content.kids) expect(Object.keys(kid).sort()).toEqual(['id', 'name', 'tier']);
+    // Its id, name and tier, and whether it's a special or a rare (D-063, D-072): nothing to draw with.
+    for (const kid of content.kids) for (const key of Object.keys(kid)) expect(['id', 'name', 'tier', 'special', 'rare']).toContain(key);
   });
 });

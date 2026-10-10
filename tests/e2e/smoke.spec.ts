@@ -5077,20 +5077,24 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     await moveTo(page, TARGET);
     await page.waitForTimeout(600);
     await expect(label(page)).toContainText('Release to start farming');
-    // The food changes; two frames later (the change applied, the hold restarted, far less than
-    // 400 ms), the release.
+    // The food changes; just after it applies (the hold restarted), the release.
     const at = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), TARGET);
     const shown = await page.evaluate(
       (at) =>
         new Promise<string>((done) => {
           window.__PK__!.debugCommand!({ type: 'setFieldFood', field: 0, food: 'corn' });
-          requestAnimationFrame(() =>
+          // Frames until the sim has applied it (it steps on its own clock), then one more for
+          // the label: far less than the 400 ms a fresh hold needs.
+          const wait = () =>
             requestAnimationFrame(() => {
-              const text = document.querySelector('.home-label:not(.home-probe)')?.textContent ?? '';
-              document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: at.x, clientY: at.y, buttons: 0, bubbles: true }));
-              done(text);
-            }),
-          );
+              if (window.__PK__!.fields()[0]?.food !== 'corn') return wait();
+              requestAnimationFrame(() => {
+                const text = document.querySelector('.home-label:not(.home-probe)')?.textContent ?? '';
+                document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: at.x, clientY: at.y, buttons: 0, bubbles: true }));
+                done(text);
+              });
+            });
+          wait();
         }),
       at,
     );
@@ -5302,3 +5306,57 @@ test.describe('tapping fields and farming kids from far away (§20.1, §22.2; Co
   });
 });
 
+
+test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () => {
+  test('a rare and a special are drawn from their own bodies, on the map and on their cards; a rare shows its profile', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    const [rainbow, gift] = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const ids: [number, number] = [pk.debugAdd!('rainbow', 1700, 4200), pk.debugAdd!('gift', 2100, 4200)];
+      pk.centerOn(1900, 4150);
+      return ids;
+    });
+    await page.waitForTimeout(400);
+    // The rare sparkles; the special doesn't (GUI_MVP §16.2).
+    const rares = await page.evaluate(() => window.__PK__!.rares());
+    expect(rares.find((r) => r.id === rainbow)?.sleeve).toBe(true);
+    expect(rares.find((r) => r.id === gift)?.sleeve ?? false).toBe(false);
+    // The rare's card: its own body, the face, no costume; its profile (§16.3).
+    const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, rainbow);
+    await page.mouse.click(at.x, at.y - 20);
+    const card = page.getByRole('dialog', { name: 'Rainbow Kid' });
+    await expect(card.locator('.kid-card-portrait .portrait-layer')).toHaveCount(2);
+    await expect(card.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildrainbow_stand');
+    await expect(card.locator('.kid-card-profile-label')).toHaveText('Rare · From planting');
+    await expect(card.locator('.kid-card-profile')).toHaveText('A whole little day painted in six colours.');
+    await expect(card).toContainText('Planting only. Cannot be bought.');
+    await expect(card).toContainText('No fusion recipes.');
+    await expect(card).toContainText('Tier 6');
+    await page.keyboard.press('Escape');
+    // The special's card: its own body; no rare profile.
+    const g = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, gift);
+    await page.mouse.click(g.x, g.y - 20);
+    const special = page.getByRole('dialog', { name: 'Gift Kid' });
+    await expect(special.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildgift_stand');
+    await expect(special.locator('.kid-card-profile-label')).toHaveCount(0);
+    await expect(special).toContainText('Special kid');
+    await expect(special).toContainText('Tier 5');
+    expect(errors).toEqual([]);
+  });
+
+  test('a tier-6 kid sprouts, is announced and shows in the Dex as plain Tier 6 text, no badge (Codex review, #93)', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'treasure_chest'));
+    const found = page.locator('.feedback').getByRole('button', { name: /found/ });
+    await expect(found).toContainText('Treasure Chest');
+    await expect(found).toContainText('T6');
+    await expect(found.locator('img[src*="badge_tier"]')).toHaveCount(0);
+    await page.locator('[data-nav=dex]').click();
+    const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+    await dex.locator('[data-kid="treasure_chest"]').click();
+    await expect(dex.locator('.dex-detail-name')).toHaveText(/Treasure Chest/);
+    await expect(dex).toContainText('Tier 6');
+    await expect(dex.locator('img[src*="badge_tier_6"]')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+});

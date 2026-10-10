@@ -1,4 +1,4 @@
-import type { Attachment, KidRig } from '../content/artData';
+import { kidWild, type Attachment, type KidRig, type WildData } from '../content/artData';
 import type { KidId } from '../content/types';
 import { assetUrl, trimOf } from '../render/art';
 
@@ -44,7 +44,7 @@ function layer(name: string, src: string, at: Attachment | undefined, pivot: [nu
  * A portrait of `type` at `sizePx` CSS px. Throws if any layer is missing: a discovered
  * kid without art is a validation error, never a seed packet (GUI_MVP §7).
  */
-export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }): HTMLElement {
+export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }, wild: WildData | undefined = kidWild): HTMLElement {
   const url = (name: string) => {
     const u = assetUrl(name);
     if (!u) throw new Error(`Missing art "${name}" for the ${type} portrait`);
@@ -63,13 +63,23 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body
   canvas.style.height = `${ch}px`;
   canvas.style.transform = `scale(${sizePx / cw})`;
 
-  const part = (c: NonNullable<typeof costume>['components'][number]) =>
-    layer(c.asset, url(c.asset), frame.attachments[c.attachTo], c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]);
-  // Layer order back → body → face → front, as in the world (rigView).
-  for (const c of costume?.components ?? []) if (c.layer === 'back') canvas.append(part(c));
-  canvas.append(layer(frame.asset, url(frame.asset), undefined, [0, 0]));
-  canvas.append(layer(face.states.open!, url(face.states.open!), frame.attachments.face_centre, face.sourcePivot));
-  for (const c of costume?.components ?? []) if (c.layer === 'front') canvas.append(part(c));
+  const own = wild?.types[type];
+  if (own) {
+    // A wild kid (kid_wild_v1 portraits): its own stand body, the face at its anchor, as on
+    // the map; no shared body, no costume.
+    const stand = own.frames.stand!;
+    const at: Attachment = { position: own.faceAnchorPx, rotationDeg: 0, scale: [own.faceScale, own.faceScale] };
+    canvas.append(layer(stand.asset, url(stand.asset), undefined, [0, 0]));
+    canvas.append(layer(face.states.open!, url(face.states.open!), at, face.sourcePivot));
+  } else {
+    const part = (c: NonNullable<typeof costume>['components'][number]) =>
+      layer(c.asset, url(c.asset), frame.attachments[c.attachTo], c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]);
+    // Layer order back → body → face → front, as in the world (rigView).
+    for (const c of costume?.components ?? []) if (c.layer === 'back') canvas.append(part(c));
+    canvas.append(layer(frame.asset, url(frame.asset), undefined, [0, 0]));
+    canvas.append(layer(face.states.open!, url(face.states.open!), frame.attachments.face_centre, face.sourcePivot));
+    for (const c of costume?.components ?? []) if (c.layer === 'front') canvas.append(part(c));
+  }
 
   const box = document.createElement('div');
   box.className = 'portrait';
