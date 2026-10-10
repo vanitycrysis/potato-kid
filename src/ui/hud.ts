@@ -282,7 +282,7 @@ export class Hud {
       else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'notebook') this.notebook.open(back.launcher, undefined, back.scrollTop);
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
-      else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, 0, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
+      else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
       else if (back.key === 'garden') this.buildings.open('garden', back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
     });
   }
@@ -307,17 +307,26 @@ export class Hud {
     const h = window.visualViewport?.height ?? window.innerHeight;
     root.dataset.compact = h <= 520 ? 'true' : 'false';
     root.dataset.hudFit = 'usual';
+    for (const e of [this.hud, tray]) if (e) e.style.height = '';
     // Read-only hides the HUD and freezes the world: nothing to fit.
     if (this.save.readOnly) return;
     const band = () => (tray?.getBoundingClientRect().top ?? h) - 8 - (this.hud.getBoundingClientRect().bottom + 8);
     if (band() >= PLAY_BAND) return;
     root.dataset.hudFit = 'window';
+    // Each window is 60 px, or taller to show its tallest item whole (enlarged text), plus
+    // its 16 px of border (§19.3; Codex review, PR #87).
+    for (const e of [this.hud, tray]) {
+      if (!e) continue;
+      const tallest = Math.max(0, ...[...e.children].map((c) => (c as HTMLElement).offsetHeight));
+      if (tallest + 16 > 60) e.style.height = `${Math.ceil(tallest) + 16}px`;
+    }
     this.hud.scrollTop = scroll[0]!;
     if (tray) tray.scrollTop = scroll[1]!;
     if (band() >= PLAY_BAND) return;
     // No room even for the windows and the band: held input is settled first (§19.3).
     this.scene.cancelDrag();
     root.dataset.hudFit = 'page';
+    for (const e of [this.hud, tray]) if (e) e.style.height = '';
     if (pageScroll !== null) page.scrollTop = pageScroll;
   }
 

@@ -832,6 +832,25 @@ test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () =>
     await expect(page.locator('#app')).toBeVisible();
   });
 
+  test('a scroll window grows to show its tallest control whole, and the page takes over when that leaves no band (Codex review round 2, PR #87)', async ({ page }) => {
+    // Enlarged text: navigation controls 70 px tall instead of 44.
+    await page.setViewportSize({ width: 240, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.addStyleTag({ content: '.tray-cell { min-height: 70px !important; }' });
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window', nav: 70 + 16 });
+    expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
+    // Every control can be scrolled wholly into the window.
+    const whole = await page.evaluate(() => {
+      const tray = document.querySelector('.tray') as HTMLElement;
+      return [...tray.children].every((c) => (c as HTMLElement).offsetHeight <= tray.clientHeight);
+    });
+    expect(whole).toBe(true);
+    // Shorter: the grown windows would leave no band, so the page takes over.
+    await page.setViewportSize({ width: 240, height: 330 });
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'page' });
+  });
+
   test('rows that wrap on a narrow screen become 60 px scroll windows, which keep their offset', async ({ page }) => {
     // Too narrow for three stats or three labels in a row: both wrap, and with a banner
     // the natural layout leaves no band (§19.3).
@@ -3803,6 +3822,9 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
       window.__PK__!.debugGive!({ potatokens: -window.__PK__!.wallet().potatokens });
     });
     await expect(page.locator('.arrivals-reason')).toContainText('Not enough Potatokens');
+    // Announced, and describing the button (Codex review round 2, PR #87).
+    await expect(page.locator('.arrivals-reason')).toHaveAttribute('role', 'status');
+    await expect(page.locator('.arrivals-spawn')).toHaveAttribute('aria-describedby', 'arrivals-reason');
     // Let the engine answer first (its step runs in a frame): that text could be the prediction.
     await frames(page, 5);
     // The engine's answer stands until the next tap, even once the button could work again.
@@ -3834,6 +3856,25 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await expect(row).toBeFocused();
     await expect(row).toBeInViewport();
     // Exactly where the page was, not merely scrolled to the row.
+    expect(await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollTop)).toBe(scrolled);
+  });
+
+  test('page mode: a tool restored after the return summary goes back to the Notebook where it was (Codex review round 2, PR #87)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.locator('[data-nav=notebook]').scrollIntoViewIfNeeded();
+    await page.locator('[data-nav=notebook]').click();
+    const settings = page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true });
+    await settings.scrollIntoViewIfNeeded();
+    const scrolled = await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollTop);
+    expect(scrolled).toBeGreaterThan(0);
+    await settings.click();
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await page.getByRole('button', { name: 'Back to Notebook' }).click();
+    await expect(page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true })).toBeFocused();
     expect(await page.evaluate(() => (document.scrollingElement ?? document.documentElement).scrollTop)).toBe(scrolled);
   });
 
