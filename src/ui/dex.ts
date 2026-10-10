@@ -31,6 +31,8 @@ interface Shown {
   recipes: RecipesPanel | null;
   compendium: { update(): void; dispose(): void } | null;
   panel: HTMLElement;
+  /** Kids on map (n), above the tabs (§19.2). */
+  onMap: HTMLButtonElement;
 }
 
 interface KidsPanel {
@@ -76,6 +78,8 @@ export class Dex {
      */
     private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }, ordinal: number) => void,
     private readonly readOnly: () => boolean = () => false,
+    /** Opens Kids on map as a page of the Dex; `back` returns here (GUI_MVP §19.2). */
+    private readonly openKidsOnMap: (launcher: HTMLElement | null, back: { label: string; run: () => void }) => void = () => {},
   ) {}
 
   /** What opened the Dex: focus returns there when it, or a kid card it opened, closes. */
@@ -129,14 +133,28 @@ export class Dex {
       strip.append(b);
     }
     const tabBar = el('div', 'dex-tab-bar');
-    sheet.bar.append(strip, tabBar);
+    // Every kid on the map, as rows: the route to any kid without dragging or panning (§19.2).
+    const onMap = el('button', 'ui-button dex-kids-on-map');
+    onMap.type = 'button';
+    onMap.addEventListener('click', () => {
+      this.remember();
+      this.openKidsOnMap(launcher, {
+        label: 'Back to Potato-Dex',
+        run: () => {
+          this.sheets.asPage();
+          this.open(launcher);
+          this.shown?.onMap.focus();
+        },
+      });
+    });
+    sheet.bar.append(onMap, strip, tabBar);
     const panel = el('div', 'dex-panel');
     panel.id = 'dex-panel';
     panel.setAttribute('role', 'tabpanel');
     sheet.body.append(panel);
     // Lazy portraits re-target as soon as what scrolls changes.
     sheet.body.closest('.sheet')?.addEventListener(SCROLLER_CHANGE, () => this.update());
-    this.shown = { sheet, tabs, tabBar, kids: null, recipes: null, compendium: null, panel };
+    this.shown = { sheet, tabs, tabBar, kids: null, recipes: null, compendium: null, panel, onMap };
     this.render(kid, focusKid);
   }
 
@@ -207,6 +225,11 @@ export class Dex {
     if (!s) return;
     // Kept every frame: by the time a close is reported, the sheet's scroll is gone.
     this.remember();
+    const n = this.game.state.world.kids.length;
+    if (s.onMap.dataset.n !== String(n)) {
+      s.onMap.dataset.n = String(n);
+      s.onMap.textContent = `Kids on map (${n})`;
+    }
     if (this.tab === 'compendium') {
       // The Compendium tab keeps the building's own subtitle (GUI_MVP §6).
       s.compendium?.update();

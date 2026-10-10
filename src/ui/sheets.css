@@ -1304,3 +1304,19 @@
   font-size: 18px;
   line-height: 24px;
 }
+
+/* --- Kids on map and Which kid? (GUI_MVP §§19.2, 20.1) ------------------------------------ */
+.ui-button.dex-kids-on-map {
+  width: 100%;
+  min-height: 44px;
+  font-size: 18px;
+  line-height: 24px;
+}
+.kids-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kids-empty[hidden] {
+  display: none;
+}
