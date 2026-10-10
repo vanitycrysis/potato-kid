@@ -134,7 +134,7 @@ export class Hud {
     this.notes = new PlantingNotes(settings);
     this.arrivals = new Arrivals(scene, content, () => this.save.readOnly);
     // Food fields and the pantry (D-069, GUI_MVP §22).
-    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back), () => this.buildings.fieldsBack);
+    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.buildings.fieldsBack);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
     this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) =>
       this.fields.openPantry(launcher, {

@@ -41,8 +41,8 @@ export class FieldSheets {
     private readonly readOnly: () => boolean,
     /** Opens the Garden scrolled to its Fields section (Back from a field page, View fields), with a way back. */
     private readonly openGardenFields: (launcher: HTMLElement | null, back?: { label: string; run: () => void }) => void,
-    /** Opens a farming kid's card, with its way back (View kid, §22.2). */
-    private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }) => void,
+    /** Opens a farming kid's card, with its way back and the number its row showed (View kid, §22.2). */
+    private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }, ordinal: number) => void,
     /** The way back the Garden's Fields were opened with, if any (kept through a field's pages). */
     private readonly fieldsBack: () => { label: string; run: () => void } | null = () => null,
   ) {}
@@ -359,7 +359,7 @@ export class FieldSheets {
             const who = w.name ?? this.kidName(w.type);
             const ordinal = this.game.ownedOrdinal(w.type, w.id);
             // Back to this field as it was opened, with its own way back (Codex review, #90).
-            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: self(`.field-view-kid[data-kid="${w.id}"]`) }));
+            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: self(`.field-view-kid[data-kid="${w.id}"]`) }, ordinal));
             view.dataset.kid = String(w.id);
             view.setAttribute('aria-label', `View kid: ${who}`);
             const b = this.button('Take back', 'field-take-back', () => this.send({ type: 'unfarm', field: i, kidId: w.id, name: who }));

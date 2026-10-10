@@ -164,6 +164,14 @@ export class MapScene {
   private readonly fieldsView: FieldsView | null;
   /** Each bought field's drop target (§22.4): the Garden's dwell rules, on Codex's drag rect. */
   private fieldTargets: HomeTarget[] = [];
+  /** What each field's dwell was started for (its food and places): a change starts it over (§22.4). */
+  private readonly fieldDwellKeys = new Map<number, string>();
+
+  /** Field `i`'s food and free places now, as its dwell sees them. */
+  private fieldDwellKey(i: number): string {
+    const f = this.game.state.fields[i];
+    return f ? `${f.food}|${f.workers.length}` : '';
+  }
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -1004,6 +1012,8 @@ export class MapScene {
     if (fieldIndex >= 0) {
       const info = this.fieldInfo(fieldIndex);
       const target = this.fieldTargets[fieldIndex]!;
+      // Armed for the field as it is now: a change since the last frame disarms it (§22.4).
+      if (this.fieldDwellKeys.get(fieldIndex) !== this.fieldDwellKey(fieldIndex)) target.restartDwell();
       if (info && (info.kind === 'ok' || info.kind === 'favourite') && target.releases(this.clock, this.fieldEligible(fieldIndex), w)) {
         const { kidId, spot } = this.drag;
         this.pending.push({ type: 'farm', field: fieldIndex, kidIds: [kidId], ...(info.food ? { food: info.food } : {}) });
@@ -1217,7 +1227,13 @@ export class MapScene {
       const info = this.fieldInfo(overField)!;
       const able = info.kind === 'ok' || info.kind === 'favourite';
       const eligible = this.fieldEligible(overField);
-      // A field that won't take the kid never arms: no dwell, no ready (§22.4).
+      // A field that won't take the kid never arms: no dwell, no ready (§22.4). A new food or a
+      // place taken or freed starts the hold over (Codex review, #90).
+      const dwellKey = this.fieldDwellKey(overField);
+      if (this.fieldDwellKeys.get(overField) !== dwellKey) {
+        this.fieldTargets[overField]!.restartDwell();
+        this.fieldDwellKeys.set(overField, dwellKey);
+      }
       this.lastView = viewNow;
       const state = this.fieldTargets[overField]!.update(this.clock, eligible, able ? fieldPoint : null, viewMoved);
       this.fieldTargets.forEach((t, i) => i !== overField && t.reset());

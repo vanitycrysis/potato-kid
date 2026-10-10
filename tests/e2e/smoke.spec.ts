@@ -4593,6 +4593,31 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     expect(errors).toEqual([]);
   });
 
+  test('View kid keeps the number its row showed, even after an earlier copy left (Codex review, #90)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const [earlier, worker] = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugGive!({ materials: 5000 });
+      pk.debugCommand!({ type: 'unlockField' });
+      pk.debugCommand!({ type: 'setFieldFood', field: 0, food: 'apple' });
+      const earlier = pk.debugAdd!('plain', 2300, 4300);
+      const worker = pk.debugAdd!('plain', 2500, 4300);
+      pk.debugCommand!({ type: 'farm', field: 0, kidIds: [worker] });
+      return [earlier, worker];
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]?.kids.length ?? -1)).toBe(1);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    await expect(field.locator('.field-worker')).toContainText('Tier 1 · Kid 2');
+    // The earlier copy leaves the map (planted) while this page is open.
+    await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'plant', kidIds: [i] }), earlier);
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), earlier)).toBe(false);
+    await field.locator(`.field-view-kid[data-kid="${worker}"]`).click();
+    await expect(page.getByRole('dialog', { name: 'Potato Kid' }).locator('.sheet-subtitle')).toHaveText('Farming Apple · Field 1 · Kid 2');
+  });
+
   test('a tap on the soil just below a farming kid opens the field, not the kid (Codex review, #90)', async ({ page }) => {
     const id = await setup(page);
     await page.waitForTimeout(300);
@@ -5032,6 +5057,20 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     await touch('pointerup', 1, t.x, t.y);
     await touch('pointerup', 2, t.x + 60, t.y + 120);
     await page.waitForTimeout(400);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
+  });
+
+  test('armed, then the field changes food: the hold starts over, and an early release keeps the kid (Codex review, #90)', async ({ page }) => {
+    const id = await setup(page, 'apple');
+    await pick(page, id);
+    await moveTo(page, TARGET);
+    await page.waitForTimeout(600);
+    await expect(label(page)).toContainText('Release to start farming');
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'setFieldFood', field: 0, food: 'corn' }));
+    await expect(label(page)).toContainText(/Keep holding…|Farm Corn in Field 1/);
+    await page.mouse.up();
+    await page.waitForTimeout(300);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
     expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
   });
