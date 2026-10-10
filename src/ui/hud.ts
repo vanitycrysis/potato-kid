@@ -148,7 +148,7 @@ export class Hud {
     this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly, (launcher, back) => this.kidsOnMap.open(launcher, { back }));
     // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex control
     // (world kids are no focus targets); a read-only save can still browse it.
-    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly, (field, launcher) => this.fields.openField(field, launcher), {
+    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly, (field, launcher) => this.fields.openField(field, launcher, { gardenBack: null }), {
       openPantry: (launcher, back) => this.fields.openPantry(launcher, back),
       openFields: (launcher, back) => this.buildings.openFields(launcher, back),
     });
@@ -159,7 +159,8 @@ export class Hud {
     // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
     const gardenCell = this.trayCells.get('garden')!;
     // A tap on a bought field opens its page (GUI_MVP §22.2).
-    scene.listenFieldTap((field) => this.fields.openField(field, gardenCell));
+    // From the map: a new visit, with no way back to an earlier one's Pantry (Codex review, #90).
+    scene.listenFieldTap((field) => this.fields.openField(field, gardenCell, { gardenBack: null }));
     scene.listenWorkerTap((kidId) => this.kidCard.open(kidId, dex));
     scene.listenPlotTap((plot) => {
       if (!this.save.readOnly) this.buildings.openPlot(plot, gardenCell);

@@ -111,6 +111,8 @@ interface Drag {
   noRoom?: boolean;
   /** The kid under the finger this frame (D-051): releasing tries the pair. */
   target?: number | undefined;
+  /** A second finger came down during this drag: no field arms for the rest of it (§22.4). */
+  interrupted?: boolean;
 }
 
 /**
@@ -718,6 +720,12 @@ export class MapScene {
    */
   private startPinch(e: FederatedPointerEvent): boolean {
     if (this.inputPaused) return false;
+    // A second finger during a drag resets any field's dwell, for good this gesture: a release
+    // then keeps the kid (§22.4; Codex review, #90).
+    if (this.drag && e.pointerId !== this.drag.pointerId) {
+      this.drag.interrupted = true;
+      for (const t of this.fieldTargets) t.reset();
+    }
     if (this.pinch) return true;
     // A press past its tap window is a drag even if no frame has promoted it yet (Codex review, PR #83).
     this.promoteExpiredTap();
@@ -1175,7 +1183,7 @@ export class MapScene {
 
   /** A field's target counts while a kid is held and it shows whole and at least 44 px (§22.4). */
   private fieldEligible(i: number): boolean {
-    if (!this.drag || this.inputPaused) return false;
+    if (!this.drag || this.drag.interrupted || this.inputPaused) return false;
     const r = this.fieldScreenRect(i);
     const { width, height } = this.app.screen;
     const onScreen = r.left >= 0 && r.top >= this.insets.top && r.right <= width && r.bottom <= height - this.insets.bottom;

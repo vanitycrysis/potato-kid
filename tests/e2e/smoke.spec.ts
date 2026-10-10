@@ -4689,6 +4689,35 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
   });
 
+  test('a field tapped on the map starts afresh: no way back to an earlier Pantry (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Pantry', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Pantry' }).getByRole('button', { name: 'View fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    // Tap Field 1's soil on the map.
+    const soil = await page.evaluate(() => window.__PK__!.worldToScreen(1700, 4500));
+    await page.mouse.click(soil.x, soil.y);
+    await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
+    // The same from a farming kid's card, tapped on the map, after another Pantry visit.
+    await page.keyboard.press('Escape');
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Pantry', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Pantry' }).getByRole('button', { name: 'View fields' }).click();
+    await page.keyboard.press('Escape');
+    const id = await page.evaluate(() => window.__PK__!.fields()[0]!.kids[0]!.id);
+    const feet = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.click(feet.x, feet.y - 25);
+    await page.getByRole('dialog', { name: 'Potato Kid' }).getByRole('button', { name: 'View field' }).click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'Back to fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
+  });
+
   test('the Garden opened from the Pantry keeps Back to Pantry over the return summary (Codex review, #90)', async ({ page }) => {
     await setup(page);
     await page.locator('[data-nav=notebook]').click();
@@ -4942,6 +4971,31 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     // Its map figure goes with it; the field draws it now.
     expect(await page.evaluate((i) => window.__PK__!.presentationOf(i), id)).toBeUndefined();
     await expect.poll(() => page.evaluate((i) => window.__PK__!.fields()[0]!.kids.some((k) => k.id === i), id)).toBe(true);
+  });
+
+  test('a second finger while armed over a field: it disarms, and the release keeps the kid (Codex review, #90)', async ({ page }) => {
+    const id = await setup(page, 'apple');
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), TARGET);
+    const touch = (type: string, pid: number, x: number, y: number) =>
+      page.evaluate(
+        ([type, pid, x, y]) => {
+          document.querySelector('canvas')!.dispatchEvent(new PointerEvent(type as string, { pointerId: pid as number, pointerType: 'touch', isPrimary: pid === 1, clientX: x as number, clientY: y as number, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
+        },
+        [type, pid, x, y] as const,
+      );
+    await touch('pointerdown', 1, k.x, k.y - 20);
+    for (let s = 1; s <= 6; s++) await touch('pointermove', 1, k.x + ((t.x - k.x) * s) / 6, k.y - 20 + ((t.y - k.y + 20) * s) / 6);
+    await page.waitForTimeout(600);
+    await expect(label(page)).toContainText('Release to start farming');
+    await touch('pointerdown', 2, t.x + 60, t.y + 120);
+    // Disarmed: the target and its label go.
+    await expect(label(page)).toBeHidden();
+    await touch('pointerup', 1, t.x, t.y);
+    await touch('pointerup', 2, t.x + 60, t.y + 120);
+    await page.waitForTimeout(400);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
   });
 
   test('released before the dwell, the kid stays on the map', async ({ page }) => {
