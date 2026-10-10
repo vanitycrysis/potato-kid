@@ -62,10 +62,44 @@ export class BuildingSheets {
     private readonly sheets: Sheets,
     private readonly notes: PlantingNotes,
     private readonly arrivals: Arrivals,
+    /** The Garden's Fields section, made fresh for each Garden sheet (D-069). */
+    private readonly fieldsSection?: (launcher: () => HTMLElement | null) => { node: HTMLElement; heading: HTMLElement; update(): void },
   ) {}
+
+  /** What opened the Garden: a field page's way back returns focus there in the end. */
+  private gardenLauncher: HTMLElement | null = null;
+
+  /**
+   * The way back the Garden's Fields were opened with (the Pantry, a kid's feeding page),
+   * kept while the player goes into a field and back (Codex review, #90). None when the
+   * Garden was opened any other way.
+   */
+  fieldsBack: { label: string; run: () => void } | null = null;
+
+  /**
+   * Opens the Garden on its Fields section (D-069): Back from a field, View fields. `back`:
+   * the way back to where View fields was (the Pantry, a kid's feeding page, §22.6).
+   */
+  openFields(launcher: HTMLElement | null, back: { label: string; run: () => void } | null = null): void {
+    this.sheets.asPage(back);
+    this.open('garden', launcher);
+    this.fieldsBack = back;
+    const h = document.querySelector<HTMLElement>('.sheet[role=dialog] #garden-fields');
+    h?.scrollIntoView({ block: 'start' });
+    h?.focus({ preventScroll: true });
+  }
+
+  /** The Garden as it was before the return summary, with the way back it had (§8; Codex review, #90). */
+  reopenGarden(launcher: HTMLElement | null, restore: SheetRestore, back: { label: string; run: () => void } | null): void {
+    this.sheets.asPage(back);
+    this.open('garden', launcher, restore);
+    this.fieldsBack = back;
+  }
 
   /** Opens a building's sheet; `restore` brings back where it was (GUI_MVP §8). */
   open(building: BuildingId, launcher: HTMLElement | null, restore?: SheetRestore, onClose?: (replaced: boolean) => void): void {
+    if (building === 'garden') this.gardenLauncher = launcher;
+    this.fieldsBack = null;
     this.pending = null;
     this.success = null;
     this.refusal = null;
@@ -284,7 +318,7 @@ export class BuildingSheets {
         // plots follow (GUI_MVP §15.4).
         if (building === 'garden') {
           act.button.classList.add('garden-upgrade');
-          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button], this.arrivals);
+          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button], this.arrivals, this.fieldsSection?.(() => this.gardenLauncher));
         } else {
           body.append(...parts);
           footer.append(act.button);

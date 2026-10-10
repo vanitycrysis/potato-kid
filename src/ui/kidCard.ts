@@ -1,7 +1,7 @@
 import { kidRig } from '../content/artData';
 import type { Content, FoodDef, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
-import type { GameEvent, RejectReason } from '../sim/game';
+import type { Field, GameEvent, RejectReason } from '../sim/game';
 import { checkName, graphemes, normalizeName } from '../sim/names';
 import type { Kid } from '../sim/world';
 import type { BuildingSheets } from './buildings';
@@ -23,6 +23,8 @@ import type { OpenSheet, Sheets } from './sheet';
 const STATUS_MS = 2500;
 
 type View = 'card' | 'feed' | 'name';
+/** A kid farming in a field. */
+type Worker = Field['workers'][number];
 type Action = { type: 'feed'; food: string } | { type: 'name'; name: string | null } | { type: 'plant'; plot: number };
 /** A sent action and the kid it was for: its result is matched to that kid, card open or not. */
 type Pending = Action & { kidId: number };
@@ -99,6 +101,13 @@ export class KidCard {
     private readonly buildings: BuildingSheets,
     private readonly notes: PlantingNotes,
     private readonly readOnly: () => boolean,
+    /** Opens a field's page (View field on a farming kid's card, §22.6). */
+    private readonly openField: (field: number, launcher: HTMLElement | null) => void,
+    /** The Pantry and Garden → Fields, each with a way back to this card's feeding page (§22.6). */
+    private readonly foodRoutes: {
+      openPantry: (launcher: HTMLElement | null, back: { label: string; run: () => void }) => void;
+      openFields: (launcher: HTMLElement | null, back: { label: string; run: () => void }) => void;
+    },
   ) {
     this.tierOf = new Map(content.kids.map((k) => [k.id, k.tier]));
   }
@@ -107,8 +116,20 @@ export class KidCard {
     return this.scene.game;
   }
 
+  /** The kid on the map, or undefined (farming, or gone). */
   private kid(): Kid | undefined {
     return this.game.state.world.kids.find((k) => k.id === this.kidId);
+  }
+
+  /**
+   * Where the kid is now: on the map, or farming in a field (it keeps its card, GUI_MVP §22.6);
+   * undefined once it has left (fused, planted).
+   */
+  private where(id = this.kidId): { kid: Kid; field: null } | { kid: Worker; field: number } | undefined {
+    const kid = this.game.state.world.kids.find((k) => k.id === id);
+    if (kid) return { kid, field: null };
+    const field = this.game.state.fields.findIndex((f) => f.workers.some((w) => w.id === id));
+    return field >= 0 ? { kid: this.game.state.fields[field]!.workers.find((w) => w.id === id)!, field } : undefined;
   }
 
   private typeName(type: KidId): string {
@@ -131,6 +152,8 @@ export class KidCard {
 
   /** Kid n among live copies of its type, by id (§13.4's rule), now. */
   private ordinalNow(kidId: number, type: KidId): number {
+    const at = this.where(kidId);
+    if (at && at.field !== null) return this.game.ownedOrdinal(type, kidId);
     return this.game.state.world.kids.filter((k) => k.type === type && k.id <= kidId).length || 1;
   }
 
@@ -178,7 +201,7 @@ export class KidCard {
    * since left still gets its card back, read-only (§18.3).
    */
   open(kidId: number, launcher: HTMLElement | null, back?: { label: string; go: () => void }, seen?: Seen, ordinal?: number): void {
-    const kid = this.game.state.world.kids.find((k) => k.id === kidId);
+    const kid = this.where(kidId)?.kid;
     if (!kid && !seen) return;
     this.kidId = kidId;
     this.launcher = launcher;
@@ -249,7 +272,7 @@ export class KidCard {
   }
 
   private update(): void {
-    const kid = this.kid();
+    const kid = this.where()?.kid;
     // Still here: keep what the card shows current (a name, a look). Gone: keep the last.
     if (kid && this.seen) this.seen = { type: kid.type, name: kid.name, look: { ...kid.look } };
     if (this.status && this.status.until < performance.now()) this.status = null;
@@ -283,8 +306,8 @@ export class KidCard {
         const foodName = this.food(e.food)?.name ?? e.food;
         this.say(
           e.favourite
-            ? [`${foodName} is ${name}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}. Check planting chances in a plot.`]
-            : [`${name} enjoyed ${foodName}.`, `Happy for ${formatDuration(f.happySeconds)}.`],
+            ? [`${foodName} is ${name}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}. 1 bite used from the pantry.`]
+            : [`${name} enjoyed ${foodName}.`, `Happy for ${formatDuration(f.happySeconds)}. 1 bite used from the pantry.`],
           false,
         );
       } else if (p.type === 'name' && e.type === 'named' && e.kid.id === this.kidId) {
@@ -317,7 +340,8 @@ export class KidCard {
   private refused(p: Pending, reason: RejectReason): void {
     const name = this.displayName();
     if (reason === 'gone') return this.say(['This kid has already left the map.'], true);
-    if (p.type === 'feed' && reason === 'hated') return this.say([`${name} won’t eat ${this.food(p.food)?.name ?? p.food}. Nothing was spent.`], true);
+    if (p.type === 'feed' && reason === 'hated') return this.say([`${name} won’t eat ${this.food(p.food)?.name ?? p.food}. No food was used.`], true);
+    if (p.type === 'feed' && reason === 'noFood') return this.say([`There are no ${this.food(p.food)?.name ?? p.food} bites left. Grow more in a field.`], true);
     if (p.type === 'name' && reason === 'invalid') return this.say(['Use letters, numbers, spaces, apostrophes or hyphens.'], true);
     // An add was for one plot: say what changed there, not about every plot (§15.3).
     if (p.type === 'plant' && (reason === 'plotsBusy' || reason === 'plotFull')) return this.say([chosenPlotRefusal(reason)], true);
@@ -351,7 +375,7 @@ export class KidCard {
     return {
       node,
       update: () => {
-        const gone = !this.kid();
+        const gone = !this.where();
         // A kid that left says so for good; a read-only save says why nothing can change
         // (§10, §18.2); a result shows its 2.5 s.
         const s = gone ? { lines: ['This kid has already left the map.'], warn: true } : this.readOnly() ? { lines: ['Update the game to continue.'], warn: true } : this.status;
@@ -459,11 +483,19 @@ export class KidCard {
       el('p', 'sheet-body-text', 'This kid leaves the map. You can take it out before growing, or cancel the whole growing plot.'),
       pick,
     );
+    // Farming (§22.6): its rate and favourite, under its income; View field in place of
+    // Choose a plot (taking it back is done there).
+    const farmLines = el('div', 'kid-card-farming-lines');
+    const viewField = this.button('View field', 'plot-action-full kid-card-view-field', () => {
+      const at = this.where();
+      if (at && at.field !== null) this.openField(at.field, this.launcher);
+    });
+    const farming = el('section', 'kid-card-planting kid-card-farming', viewField);
 
     // From the Dex: "Back to {type}", first in the body (§18.1).
     const backTo = this.backTo;
     const toDex = backTo ? [this.button(backTo.label, 'plot-back', () => backTo.go())] : [];
-    s.body.replaceChildren(...toDex, status.node, pic, marks, tier, happy, ...personality, planting);
+    s.body.replaceChildren(...toDex, status.node, pic, marks, tier, farmLines, happy, ...personality, planting, farming);
     const feed = this.button('Feed', 'sheet-action kid-card-action', () => this.show('feed'));
     feed.dataset.action = 'feed';
     const name = this.button('Name', 'sheet-action kid-card-action', () => this.show('name'));
@@ -473,32 +505,56 @@ export class KidCard {
     let happyKey = '';
     return {
       update: () => {
-        const kid = this.kid();
-        const gone = !kid;
+        const at = this.where();
+        const kid = at?.field === null ? at.kid : undefined;
+        // Farming now: its field and food, kept while it farms (§22.6).
+        const farm = at && at.field !== null ? { field: at.field, food: this.game.state.fields[at.field]!.food } : null;
+        const gone = !at;
         s.setTitle(this.displayName());
-        s.setSubtitle(this.seen!.name ? this.typeName(type) : `On your map · Kid ${this.ordinal()}`);
+        const foodName = farm?.food ? (this.food(farm.food)?.name ?? farm.food) : '';
+        s.setSubtitle(farm ? `Farming ${foodName} · Field ${farm.field + 1} · Kid ${this.ordinal()}` : this.seen!.name ? this.typeName(type) : `On your map · Kid ${this.ordinal()}`);
         status.update();
-        if (kid) {
-          const t = `Earns ${formatRate(this.game.incomeOfKid(kid) * 3600)} Materials / h`;
+        if (at) {
+          const t = farm ? '0 Materials while farming.' : `Earns ${formatRate(this.game.incomeOfKid(kid!) * 3600)} Materials / h`;
           if (income.textContent !== t) income.textContent = t;
         }
-        // Happy for how long, at 1 Hz, and what it does now.
-        const h = kid?.happy;
+        // Its rate, and whether this food is its favourite (§22.6).
+        const favourite = !!farm?.food && this.content.personality[type]?.favouriteFood === farm.food;
+        const perHour = farm?.food ? this.game.farmRate(type, farm.food) * 3600 : 0;
+        const rate = `${perHour % 1 === 0 ? perHour : perHour.toFixed(1)} ${perHour === 1 ? 'bite' : 'bites'} per hour`;
+        const farmKey = farm ? `${favourite}|${foodName}|${rate}` : '';
+        if (farmLines.dataset.key !== farmKey) {
+          farmLines.dataset.key = farmKey;
+          farmLines.replaceChildren(...(farm?.food ? [el('p', 'sheet-body-text', favourite ? `Favourite · Farms ${foodName} faster · ${rate}.` : `Farms ${foodName} · ${rate}.`)] : []));
+        }
+        farmLines.hidden = !farm;
+        // Happy for how long, at 1 Hz, and what it does now. A farming kid's still counts down;
+        // its income boost waits for the map (§22.6).
+        const h = at ? (at.field === null ? at.kid.happy : at.kid.happiness) : undefined;
         const tierNow = this.tierOf.get(type) ?? 1;
-        const key = h ? `${Math.ceil(h.left)}|${h.favourite}` : 'none';
+        const key = h ? `${Math.ceil(h.left)}|${h.favourite}|${!!farm}` : 'none';
         if (key !== happyKey) {
           happyKey = key;
           happy.replaceChildren(
             ...(h
               ? [
                   el('p', 'sheet-body-text kid-card-happy-line', icon('icon_happy', '', 'ui-icon-24'), `Happy · ${formatTimeLeft(h.left)}`),
-                  el('p', 'sheet-helper', `Income ×${this.game.happyMultiplier(kid!)} · Counts as Tier ${tierNow + 1} when added to a plot; odds stay capped.`),
+                  el(
+                    'p',
+                    'sheet-helper',
+                    farm ? 'Happy income applies after this kid returns to the map. Farming still earns no Materials.' : `Income ×${this.game.happyMultiplier(kid!)} · Counts as Tier ${tierNow + 1} when added to a plot; odds stay capped.`,
+                  ),
                 ]
               : [el('p', 'sheet-helper', 'Not happy right now.')]),
           );
         }
+        // Planting is for a kid on the map; a farming kid has View field instead.
+        planting.hidden = !!farm;
+        farming.hidden = !farm;
+        if (farm && route) route.node.replaceWith(pick);
+        if (farm) route = null;
         for (const b of [feed, name]) this.setEnabled(b, !gone && !this.readOnly());
-        this.setEnabled(pick, !gone && !this.readOnly());
+        this.setEnabled(pick, !!kid && !this.readOnly());
         route?.refresh();
       },
     };
@@ -512,14 +568,26 @@ export class KidCard {
     const f = this.content.balance.feeding;
     const p = this.content.personality[type];
     const status = this.statusBox();
-    const replaces = el('p', 'sheet-helper', 'Replaces the current happy effect.');
-    const rows: { food: FoodDef; button: HTMLButtonElement; price: HTMLElement; label: HTMLElement; short: HTMLElement }[] = [];
+    const replaces = el('p', 'sheet-helper', 'Replaces the current happy effect; time does not add up.');
+    // Leaving for the Pantry or the Fields keeps the way back here: this kid, this page, its
+    // scroll (§22.6), as the return summary does.
+    const backToFeeding = () => {
+      const snap = this.snapshot();
+      const scroll = this.sheets.snapshot()?.scrollTop ?? 0;
+      const launcher = this.launcher;
+      return { label: 'Back to feeding', run: () => snap && this.restore(snap, launcher, scroll) };
+    };
+    const openPantry = this.button('Open pantry', 'plot-action-full feed-open-pantry', () => this.foodRoutes.openPantry(this.launcher, backToFeeding()));
+    const viewFields = this.button('View fields', 'plot-action-full feed-view-fields', () => this.foodRoutes.openFields(this.launcher, backToFeeding()));
+    // Food comes from the pantry (D-069, GUI_MVP §22.6): each row says how much is stored.
+    const empty = el('p', 'sheet-helper feed-empty', 'Your pantry is empty. Choose a food in a field and assign a kid to grow it.');
+    const stockText = (n: number) => `${formatExact(n)} ${n === 1 ? 'bite' : 'bites'} stored`;
+    const rows: { food: FoodDef; button: HTMLButtonElement; price: HTMLElement; label: HTMLElement; short: HTMLElement; stock: HTMLElement; favourite: boolean }[] = [];
     const row = (food: FoodDef, relation: string | null, favourite: boolean) => {
       const label = el('span', 'action-label', 'Feed');
-      const price = el('span', 'feed-price', `${formatExact(food.price)} Materials`);
+      const price = el('span', 'feed-price', 'Uses 1 bite');
       const button = el('button', 'ui-button feed-button', label, price);
       button.type = 'button';
-      button.setAttribute('aria-label', `Feed ${food.name}, ${formatExact(food.price)} Materials`);
       button.dataset.cue = 'success';
       button.addEventListener('click', () => {
         if (button.getAttribute('aria-disabled') === 'true') return;
@@ -527,16 +595,22 @@ export class KidCard {
       });
       const short = el('p', 'sheet-helper feed-short');
       short.hidden = true;
-      const text = el('div', 'feed-text', el('span', 'feed-name', food.name), ...(relation ? [el('span', 'feed-relation', ...(favourite ? [icon('icon_check', '', 'ui-icon-20')] : []), relation)] : []));
+      const stock = el('span', 'feed-stock');
+      const text = el(
+        'div',
+        'feed-text',
+        el('span', 'feed-name', food.name),
+        stock,
+        ...(relation ? [el('span', 'feed-relation', ...(favourite ? [icon('icon_check', '', 'ui-icon-20')] : []), relation)] : []),
+      );
       const node = el('div', `feed-row ui-surface${favourite ? ' is-selected' : ''}`, icon(`icon_food_${food.id}`, '', 'ui-icon-32'), text, button, short);
-      rows.push({ food, button, price, label, short });
+      rows.push({ food, button, price, label, short, stock, favourite });
       return node;
     };
     const fav = p ? this.food(p.favouriteFood) : undefined;
     const hated = p ? this.food(p.hatedFood) : undefined;
     const others = f.foods.filter((x) => x.id !== fav?.id && x.id !== hated?.id);
-    const plantingLine = () => el('p', 'sheet-helper', 'Planting chances depend on the whole plot. Preview special and rare chances before Start growing.');
-    const tierLine = () => el('p', 'sheet-helper', 'Happy kids count as one tier higher when added to a plot.');
+    const tierLine = () => el('p', 'sheet-helper', 'Happy kids count as one tier higher when added to a planting plot; odds stay capped.');
     const refused = hated
       ? el(
           'div',
@@ -544,51 +618,61 @@ export class KidCard {
           icon(`icon_food_${hated.id}`, '', 'ui-icon-32'),
           el('div', 'feed-text', el('span', 'feed-name', hated.name), el('span', 'feed-relation', icon('icon_warning', '', 'ui-icon-20'), 'Won’t eat this')),
           (() => {
-            const b = el('button', 'ui-button feed-button is-disabled', el('span', 'action-label', 'Refused'), el('span', 'feed-price', 'Costs nothing'));
+            const b = el('button', 'ui-button feed-button is-disabled', el('span', 'action-label', 'Refused'), el('span', 'feed-price', 'Hated food'));
             b.type = 'button';
             b.setAttribute('aria-disabled', 'true');
-            b.setAttribute('aria-label', `${hated.name}: refused, costs nothing`);
+            b.setAttribute('aria-label', `${hated.name}: refused, a hated food`);
             return b;
           })(),
-          el('p', 'sheet-helper feed-refused', `This kid won’t eat ${hated.name}. Nothing charged.`),
+          el('p', 'sheet-helper feed-refused', `${this.displayName()} won’t eat ${hated.name}. No food is used.`),
         )
       : null;
     s.body.replaceChildren(
       this.back('card'),
+      openPantry,
       status.node,
       replaces,
+      empty,
+      viewFields,
       ...(fav
         ? [
             el('h4', 'kid-card-trait', 'Favourite works best'),
             el('p', 'sheet-helper', `Happy for ${formatDuration(f.favouriteSeconds)}; income ×${f.favouriteMultiplier}.`),
-            plantingLine(),
             tierLine(),
             row(fav, 'Favourite', true),
           ]
         : []),
       el('h4', 'kid-card-trait', 'Other foods'),
       el('p', 'sheet-helper', `Happy for ${formatDuration(f.happySeconds)}; income ×${f.happyMultiplier}.`),
-      plantingLine(),
-      tierLine(),
       ...others.map((x) => row(x, null, false)),
       ...(refused ? [el('h4', 'kid-card-trait', 'Won’t eat this'), refused] : []),
     );
     return {
       update: () => {
-        const kid = this.kid();
+        const at = this.where();
+        const kid = at?.kid;
         s.setTitle(`Feed ${this.displayName()}`);
-        s.setSubtitle('Buy one bite for this kid.');
+        s.setSubtitle('Take 1 bite from the pantry.');
         status.update();
-        replaces.hidden = !kid?.happy;
-        const have = this.game.state.materials;
+        replaces.hidden = !(at && (at.field === null ? at.kid.happy : at.kid.happiness));
+        const pantry = this.game.state.pantry;
+        empty.hidden = Object.values(pantry).some((n) => n > 0);
+        viewFields.hidden = empty.hidden;
         const feeding = this.pending?.type === 'feed' ? this.pending.food : null;
         for (const r of rows) {
-          const short = have < r.food.price;
-          const label = feeding === r.food.id ? 'Feeding…' : 'Feed';
+          const stock = pantry[r.food.id] ?? 0;
+          const none = stock < 1;
+          const label = feeding === r.food.id ? 'Feeding…' : none ? 'Empty' : 'Feed';
           if (r.label.textContent !== label) r.label.textContent = label;
-          r.short.hidden = !short;
-          if (short) r.short.textContent = `Need ${formatExact(Math.ceil(r.food.price - have))} more Materials.`;
-          const on = !!kid && !this.readOnly() && !this.pending && !short;
+          const sub = none ? '0 bites stored' : 'Uses 1 bite';
+          if (r.price.textContent !== sub) r.price.textContent = sub;
+          const text = stockText(stock);
+          if (r.stock.textContent !== text) r.stock.textContent = text;
+          r.button.setAttribute('aria-label', none ? `${r.food.name}: none stored` : `Feed ${r.food.name} to ${this.displayName()}, uses 1 pantry bite`);
+          // The favourite with nothing stored says how to get some (§22.6).
+          r.short.hidden = !(none && r.favourite);
+          if (none && r.favourite) r.short.textContent = `Grow ${r.food.name} in a field to feed it.`;
+          const on = !!kid && !this.readOnly() && !this.pending && !none;
           this.setEnabled(r.button, on);
           r.button.classList.toggle('ui-primary', on);
         }
@@ -632,7 +716,7 @@ export class KidCard {
     /** Whether the draft can be saved now: checked at once, never from the last frame's state. */
     const canSave = () => {
       const check = checkName(input.value, n.maxLength);
-      return !!this.kid() && !this.readOnly() && !this.pending && check.ok && check.name !== this.seen!.name && this.game.state.materials >= n.price;
+      return !!this.where() && !this.readOnly() && !this.pending && check.ok && check.name !== this.seen!.name && this.game.state.materials >= n.price;
     };
     const trySave = () => {
       if (composing || !canSave()) return;
@@ -683,7 +767,7 @@ export class KidCard {
     s.footer.replaceChildren(save);
     return {
       update: () => {
-        const kid = this.kid();
+        const kid = this.where()?.kid;
         s.setTitle('Name this kid');
         s.setSubtitle(this.typeName(type));
         status.update();

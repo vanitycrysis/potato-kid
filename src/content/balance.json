@@ -116,23 +116,30 @@
   },
   "feeding": {
     "foods": [
-      { "id": "toast", "name": "Toast", "price": 100 },
-      { "id": "berry_jam", "name": "Berry jam", "price": 100 },
-      { "id": "berries", "name": "Berries", "price": 100 },
-      { "id": "apple", "name": "Apple", "price": 100 },
-      { "id": "carrot", "name": "Carrot", "price": 100 },
-      { "id": "corn", "name": "Corn", "price": 100 },
-      { "id": "mushroom", "name": "Mushroom", "price": 100 },
-      { "id": "pickle", "name": "Pickle", "price": 100 },
-      { "id": "cheese", "name": "Cheese", "price": 100 },
-      { "id": "soup", "name": "Soup", "price": 100 },
-      { "id": "cocoa", "name": "Cocoa", "price": 100 },
-      { "id": "cracker", "name": "Cracker", "price": 100 }
+      { "id": "toast", "name": "Toast" },
+      { "id": "berry_jam", "name": "Berry jam" },
+      { "id": "berries", "name": "Berries" },
+      { "id": "apple", "name": "Apple" },
+      { "id": "carrot", "name": "Carrot" },
+      { "id": "corn", "name": "Corn" },
+      { "id": "mushroom", "name": "Mushroom" },
+      { "id": "pickle", "name": "Pickle" },
+      { "id": "cheese", "name": "Cheese" },
+      { "id": "soup", "name": "Soup" },
+      { "id": "cocoa", "name": "Cocoa" },
+      { "id": "cracker", "name": "Cracker" }
     ],
     "happySeconds": 1200,
     "happyMultiplier": 1.5,
     "favouriteSeconds": 3600,
     "favouriteMultiplier": 2
+  },
+  "farming": {
+    "maxFields": 4,
+    "unlockPrices": [300, 3000, 15000, 60000],
+    "kidsPerField": 4,
+    "biteSeconds": 3600,
+    "favouriteFactor": 2
   },
   "naming": { "price": 50, "maxLength": 24 }
 }

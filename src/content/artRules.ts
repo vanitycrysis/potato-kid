@@ -1,6 +1,6 @@
 import type { Ambient, LookTable } from '../sim/game';
 import type { Obstacle } from '../sim/world';
-import type { BoundsPx, KidRig, MapData, MapInstance, UiData } from './artData';
+import type { BoundsPx, FarmData, KidRig, MapData, MapInstance, UiData } from './artData';
 import type { KidDef } from './types';
 
 // Pure derivations from ChatGPT/Codex's art data into what the simulation needs.
@@ -60,6 +60,35 @@ export function obstaclesFrom(map: MapData): Obstacle[] {
       box: { minX: r.minX - gap, minY: r.minY - gap, maxX: r.maxX + gap, maxY: r.maxY + gap },
       circle: { x: i.worldGround[0], y: i.worldGround[1], r: i.exclusionRadiusWorld + gap },
     };
+  });
+}
+
+/**
+ * The map with Codex's farm relocations applied (GUI_MVP §22.1): scenery that stood on the
+ * four field sites moves to free lawn, once, whether or not a field is bought.
+ */
+export function withFarmRelocations(map: MapData, farm: FarmData | undefined): MapData {
+  if (!farm) return map;
+  const moved = new Map(farm.sceneryRelocations.map((r) => [r.instanceId, r]));
+  return {
+    ...map,
+    instances: map.instances.map((i) => {
+      const r = moved.get(i.id);
+      return r && i.worldGround[0] === r.from[0] && i.worldGround[1] === r.from[1] ? { ...i, worldGround: r.to } : i;
+    }),
+  };
+}
+
+/**
+ * Each food field's bay, in field order (GUI_MVP §22.1): its reserve about its ground, plus the
+ * map's kid-to-scenery gap. A bought field is scenery: kids don't wander, spawn or land in it.
+ */
+export function fieldBaysFrom(farm: FarmData, map: MapData): Obstacle[] {
+  const gap = map.exclusions.kidSceneryGapWorld;
+  return farm.fields.map((f) => {
+    const [x, y] = f.worldGround;
+    const [l, t, r, b] = f.reserveRelative;
+    return { box: { minX: x + l - gap, minY: y + t - gap, maxX: x + r + gap, maxY: y + b + gap }, circle: { x, y, r: 0 } };
   });
 }
 

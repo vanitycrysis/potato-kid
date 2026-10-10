@@ -79,5 +79,7 @@ export function migrations(content: Content): Record<number, Migration> {
       }
       return s;
     },
+    // Schema 9 (D-069): food is farmed, not bought. No fields yet, and an empty pantry.
+    8: (state) => ({ ...(state as object), fields: [], pantry: {} }),
   };
 }

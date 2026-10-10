@@ -90,6 +90,8 @@ export class GardenPlots {
     spawnRate: HTMLElement[],
     /** Arrivals and Spawn now, first in the Garden (GUI_MVP §19.2). */
     private readonly arrivals: Arrivals,
+    /** The Fields section (D-069), after the plots (GUI_MVP §22.2). */
+    private readonly fields?: { node: HTMLElement; heading: HTMLElement; update(): void },
   ) {
     this.tierOf = new Map(content.kids.map((k) => [k.id, k.tier]));
     this.overview = this.buildOverview(spawnRate);
@@ -360,6 +362,7 @@ export class GardenPlots {
       'garden-links',
       this.button('Arrivals', 'garden-link', jump(this.arrivals.heading)),
       this.button('Plots', 'garden-link', jump(plotsHeading)),
+      ...(this.fields ? [this.button('Fields', 'garden-link', jump(this.fields.heading))] : []),
       this.button('Spawn rate', 'garden-link', jump(rateHeading)),
     );
     links.setAttribute('aria-label', 'Garden sections');
@@ -390,12 +393,20 @@ export class GardenPlots {
     const more = el('section', 'garden-more', moreHeading, nowNext, cost, holding, shortfall, maxed, unlock, status);
 
     // Arrivals first, then the plots, then the spawn rate (GUI_MVP §19.2).
-    const nodes = [links, this.arrivals.node, el('section', 'garden-plots', plotsHeading, helpers, ...rows.map((r) => r.node)), more, el('section', 'garden-rate', rateHeading, ...spawnRate)];
+    const nodes = [
+      links,
+      this.arrivals.node,
+      el('section', 'garden-plots', plotsHeading, helpers, ...rows.map((r) => r.node)),
+      more,
+      ...(this.fields ? [this.fields.node] : []),
+      el('section', 'garden-rate', rateHeading, ...spawnRate),
+    ];
     let shown = '';
     return {
       nodes,
       update: () => {
         this.arrivals.update();
+        this.fields?.update();
         for (const r of rows) r.update();
         const g = this.game;
         const n = g.state.plots.length;

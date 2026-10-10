@@ -1,5 +1,5 @@
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
-import type { KidRig, MapData, PlantingArt } from '../content/artData';
+import type { FarmData, KidRig, MapData, PlantingArt } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
@@ -8,6 +8,7 @@ import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
 import { plotAt, PlotsView } from './plotsView';
+import { fieldAt, FieldsView } from './fieldsView';
 import { RareLayer, type RareKid } from './rareView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
@@ -31,6 +32,10 @@ export interface SceneArt {
   looks: LookTable;
   ambient: Ambient;
   obstacles: Obstacle[];
+  /** Each food field's bay, in field order: scenery once bought (GUI_MVP §22.1). */
+  fieldBays?: Obstacle[];
+  /** Codex's food fields (farm_v1): how bought fields are drawn (GUI_MVP §22.1). */
+  farm?: FarmData | undefined;
   reducedMotion: boolean;
   /** The Garden's drop target (GUI_MVP §15.1, from Send home's §13): Codex's tokens and its ink. */
   home?: {
@@ -54,6 +59,11 @@ export interface HomeView {
   plot: { index: number; count: number } | null;
   /** No plot takes kids: filled plots wait to be started (`full`), or all are growing. */
   busy: 'full' | 'growing' | null;
+  /**
+   * A food field under the finger instead of the Garden (D-069, GUI_MVP §22.4): which one,
+   * its food and kids, and what a release would do: farm (`ok`, or `favourite`), or not.
+   */
+  field?: { index: number; food: string | null; foodName: string; count: number; limit: number; kind: 'ok' | 'favourite' | 'noFood' | 'hated' | 'full'; kidName: string };
 }
 
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
@@ -101,6 +111,8 @@ interface Drag {
   noRoom?: boolean;
   /** The kid under the finger this frame (D-051): releasing tries the pair. */
   target?: number | undefined;
+  /** A second finger came down during this drag: no field arms for the rest of it (§22.4). */
+  interrupted?: boolean;
 }
 
 /**
@@ -149,6 +161,17 @@ export class MapScene {
   private overBusyHome = false;
   /** The plots on the map, if the art has them. */
   private readonly plotsView: PlotsView | null;
+  private readonly fieldsView: FieldsView | null;
+  /** Each bought field's drop target (§22.4): the Garden's dwell rules, on Codex's drag rect. */
+  private fieldTargets: HomeTarget[] = [];
+  /** What each field's dwell was started for (its food and places): a change starts it over (§22.4). */
+  private readonly fieldDwellKeys = new Map<number, string>();
+
+  /** Field `i`'s food and free places now, as its dwell sees them. */
+  private fieldDwellKey(i: number): string {
+    const f = this.game.state.fields[i];
+    return f ? `${f.food}|${f.workers.length}` : '';
+  }
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -182,6 +205,8 @@ export class MapScene {
    */
   private tap: { pointerId: number; x: number; y: number; t: number; view: string } | null = null;
   private readonly plotTapListeners = new Set<(plot: number) => void>();
+  private readonly fieldTapListeners = new Set<(field: number) => void>();
+  private readonly workerTapListeners = new Set<(kidId: number) => void>();
   /**
    * A kid press that may still be a tap, which opens its card (GUI_MVP §18.1): the same
    * 220 ms and 8 CSS px. The kid lifts as for a drag; a tap puts it back untouched.
@@ -235,6 +260,7 @@ export class MapScene {
         bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
         spawnAt: { x: sx, y: sy },
         obstacles: art.obstacles,
+        fieldBays: art.fieldBays ?? [],
         looks: art.looks,
         ambient: art.ambient,
         // A new game is accounted up to now (plan §3), never from the epoch.
@@ -252,11 +278,35 @@ export class MapScene {
     // Plots sit on the ground after the Garden and below kids (GUI_MVP §15.2); no input.
     this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
     if (this.plotsView) this.plotsView.root.eventMode = 'none';
+    // Bought fields, their crops and their working kids (D-069). A costume still loading is
+    // asked for; the kid is drawn once it's ready.
+    this.fieldsView = art.farm
+      ? new FieldsView(art.farm, art.rig, art.textures.map, art.reducedMotion, (type) => {
+          if (art.textures.ready(type)) return true;
+          void art.textures.ensure(type).catch(() => {});
+          return false;
+        }, (look) => this.game.boxOf(look))
+      : null;
+    if (this.fieldsView) {
+      this.fieldsView.root.eventMode = 'none';
+      this.fieldsView.workers.eventMode = 'none';
+    }
     this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
     // The preference can change while the game is open: the rare layer follows it at once.
     const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
     motion?.addEventListener('change', (e) => (this.rareLayer.reducedMotion = e.matches));
-    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.rareLayer.root, this.kidLayer);
+    this.camera.addChild(
+      buildMap(art.map, art.textures.map),
+      ...(this.plotsView ? [this.plotsView.root] : []),
+      ...(this.fieldsView ? [this.fieldsView.root] : []),
+      this.homeLayer,
+      this.rareLayer.root,
+      // Farming kids cover the marks behind them, as kids on the map do (§16; Codex review, #90).
+      ...(this.fieldsView ? [this.fieldsView.workers] : []),
+      this.kidLayer,
+    );
+    this.rareLayer.root.label = 'rareMarks';
+    this.kidLayer.label = 'kids';
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -328,6 +378,16 @@ export class MapScene {
   }
 
   /** Calls `fn` when a plot on the map is tapped (GUI_MVP §15.2): its 0-based index. */
+  /** Calls `fn` with the bought field a tap landed on (D-069, GUI_MVP §22.2). */
+  listenFieldTap(fn: (field: number) => void): void {
+    this.fieldTapListeners.add(fn);
+  }
+
+  /** A tap on a kid farming in a field: its card (GUI_MVP §22.2, §22.6). */
+  listenWorkerTap(fn: (kidId: number) => void): void {
+    this.workerTapListeners.add(fn);
+  }
+
   listenPlotTap(fn: (plot: number) => void): void {
     this.plotTapListeners.add(fn);
   }
@@ -384,7 +444,12 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' }>): void {
+  command(
+    cmd: Extract<
+      Command,
+      { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' | 'unlockField' | 'setFieldFood' | 'farm' | 'unfarm' | 'emptyField' }
+    >,
+  ): void {
     this.pending.push(cmd);
   }
 
@@ -428,7 +493,8 @@ export class MapScene {
    * last kid of a type and a respawn moments later don't thrash the loader.
    */
   private releaseUnused(now: number): void {
-    const present = new Set(this.game.state.world.kids.map((k) => k.type));
+    // Kids on the map and kids farming (D-069) both need their costumes.
+    const present = new Set([...this.game.state.world.kids, ...this.game.state.fields.flatMap((f) => f.workers)].map((k) => k.type));
     for (const type of this.art.textures.loadedTypes) {
       if (present.has(type) || this.resident.has(type)) {
         this.absentSince.delete(type);
@@ -443,6 +509,22 @@ export class MapScene {
     }
   }
 
+  /** Where Find fields centres the view (Codex's farm_v1, GUI_MVP §22.2). */
+  get farmCentre(): [number, number] | undefined {
+    return this.art.farm?.findFieldsCentre;
+  }
+
+  /** Where "Find this field" centres the view: its soil and kids (ground y − 208, §22.2). */
+  fieldSite(i: number): { x: number; y: number } | undefined {
+    const f = this.art.farm?.fields[i];
+    return f && { x: f.worldGround[0], y: f.worldGround[1] - 208 };
+  }
+
+  /** Test hook: what each bought field shows (D-069). */
+  get fieldsShown(): ReturnType<FieldsView['shown']> {
+    return this.fieldsView?.shown() ?? [];
+  }
+
   /** Test hook: costume types currently loaded. */
   get loadedCostumes(): KidId[] {
     return this.art.textures.loadedTypes;
@@ -451,8 +533,10 @@ export class MapScene {
   /** Test hook: world → screen (CSS px) for a kid's ground point. */
   screenPointOf(kidId: number): { x: number; y: number } | undefined {
     const view = this.views.get(kidId);
-    if (!view) return undefined;
-    const p = this.camera.toGlobal(view.root.position);
+    // A farming kid: where it stands on its pad.
+    const at = view ? view.root.position : this.fieldsView?.feetOf(kidId);
+    if (!at) return undefined;
+    const p = this.camera.toGlobal(at);
     return { x: p.x, y: p.y };
   }
 
@@ -552,7 +636,9 @@ export class MapScene {
     // Several can hold the press: a drag takes the nearest; a tap asks which (§20.1).
     const small = this.smallKidsAt(this.toWorld(e));
     if (small.length) {
-      this.startDrag(small[0]!, e, small);
+      // Kids farming near the press join a tap's choice; only an on-map kid is dragged (§22.2).
+      const working = this.fieldsView?.workersNear(e.global, TAP_TARGET) ?? [];
+      this.startDrag(small[0]!, e, [...small, ...working]);
       return;
     }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
@@ -570,6 +656,8 @@ export class MapScene {
    */
   private smallKidsAt(p: { x: number; y: number }): number[] {
     if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return [];
+    // A bought field's own bed (and its farming kids) comes before any pickup halo (§20.1).
+    if (this.art.farm && fieldAt(this.art.farm, this.game.state.fields.length, p, this.cam.zoom, 0) !== null) return [];
     const min = TAP_TARGET / this.cam.zoom;
     const hits: { id: number; d: number }[] = [];
     for (const k of this.game.state.world.kids) {
@@ -647,6 +735,12 @@ export class MapScene {
    */
   private startPinch(e: FederatedPointerEvent): boolean {
     if (this.inputPaused) return false;
+    // A second finger during a drag resets any field's dwell, for good this gesture: a release
+    // then keeps the kid (§22.4; Codex review, #90).
+    if (this.drag && e.pointerId !== this.drag.pointerId) {
+      this.drag.interrupted = true;
+      for (const t of this.fieldTargets) t.reset();
+    }
     if (this.pinch) return true;
     // A press past its tap window is a drag even if no frame has promoted it yet (Codex review, PR #83).
     this.promoteExpiredTap();
@@ -808,8 +902,9 @@ export class MapScene {
     const start = this.placing.get(kidId) ?? { x: kid.x, y: kid.y };
     this.placing.delete(kidId);
     this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT, spot: start };
-    // A new gesture starts with no dwell (§13.1).
+    // A new gesture starts with no dwell (§13.1), on the Garden or any field (Codex review, #90).
     this.home?.reset();
+    for (const t of this.fieldTargets) t.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
     this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey(), ...(candidates && candidates.length > 1 ? { candidates } : {}) };
@@ -830,6 +925,7 @@ export class MapScene {
     this.dragScreen = { x: e.global.x, y: e.global.y };
     const w = this.toWorld(e);
     this.home?.move(w);
+    for (const t of this.fieldTargets) t.move(w);
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
   }
@@ -844,9 +940,34 @@ export class MapScene {
       this.tap = null;
       if (kind === 'drop' && tap && !this.inputPaused && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP && this.viewKey() === tap.view) {
         this.pan = undefined;
+        // A farming kid first: an actual kid's hit comes before its field's (§20.1, §22.2).
+        const worker = this.fieldsView?.workerAt(e.global) ?? null;
+        if (worker !== null) {
+          for (const fn of this.workerTapListeners) fn(worker);
+          return;
+        }
         // Rechecked at release, where the finger is now (§15.2).
-        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, this.toWorld(e), this.cam.zoom) : null;
-        if (plot !== null) for (const fn of this.plotTapListeners) fn(plot);
+        const at = this.toWorld(e);
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, at, this.cam.zoom) : null;
+        if (plot !== null) {
+          for (const fn of this.plotTapListeners) fn(plot);
+          return;
+        }
+        // Else a bought field (D-069, GUI_MVP §22.2): its own bed; then a farming kid's 44 px
+        // target (one opens its card, several ask which); then the field's own 44 px target.
+        const farm = this.art.farm;
+        const bought = this.game.state.fields.length;
+        const bed = farm ? fieldAt(farm, bought, at, this.cam.zoom, 0) : null;
+        if (bed !== null) {
+          for (const fn of this.fieldTapListeners) fn(bed);
+          return;
+        }
+        const working = this.fieldsView?.workersNear(e.global, TAP_TARGET) ?? [];
+        if (working.length === 1) for (const fn of this.workerTapListeners) fn(working[0]!);
+        else if (working.length > 1) for (const fn of this.kidChoiceListeners) fn(working);
+        if (working.length) return;
+        const field = farm ? fieldAt(farm, bought, at, this.cam.zoom) : null;
+        if (field !== null) for (const fn of this.fieldTapListeners) fn(field);
         return;
       }
       // Fling with the finger's recent velocity, decayed by however long it then rested,
@@ -882,7 +1003,31 @@ export class MapScene {
     const w = this.toWorld(e);
     // A view change since the last frame (camera, viewport, insets) also restarts the dwell,
     // checked here too: no frame may have run in between (Codex review, PR #50).
-    if (this.viewKey() !== this.lastView) this.home?.restartDwell();
+    if (this.viewKey() !== this.lastView) {
+      this.home?.restartDwell();
+      for (const t of this.fieldTargets) t.restartDwell();
+    }
+    // Released over a field (§22.4): farming if it armed and the field takes this kid; any
+    // other release there keeps the kid on the map, safely, never fusing.
+    const fieldIndex = this.fieldTargets.findIndex((t) => t.contains(w));
+    if (fieldIndex >= 0) {
+      const info = this.fieldInfo(fieldIndex);
+      const target = this.fieldTargets[fieldIndex]!;
+      // Armed for the field as it is now: a change since the last frame disarms it (§22.4).
+      if (this.fieldDwellKeys.get(fieldIndex) !== this.fieldDwellKey(fieldIndex)) target.restartDwell();
+      if (info && (info.kind === 'ok' || info.kind === 'favourite') && target.releases(this.clock, this.fieldEligible(fieldIndex), w)) {
+        const { kidId, spot } = this.drag;
+        this.pending.push({ type: 'farm', field: fieldIndex, kidIds: [kidId], ...(info.food ? { food: info.food } : {}) });
+        this.placing.set(kidId, spot);
+        this.views.get(kidId)?.dropped();
+        this.drag = undefined;
+        target.reset();
+        return;
+      }
+      // Kept on the map: put down clear of partners, never fusing (§22.4).
+      this.cancelActiveDrag(true);
+      return;
+    }
     // Released over the armed target, rechecked now: the kid goes home instead of landing
     // (GUI_MVP §13.1). Exactly one of the two commands is ever sent.
     // Released over the armed target, or over the target while every plot is busy: the
@@ -924,6 +1069,7 @@ export class MapScene {
   private dropTargetAt(p: { x: number; y: number }): number | undefined {
     if (!this.drag) return undefined;
     if (this.home && this.homeEligible() && this.home.contains(p)) return undefined;
+    if (this.fieldTargets.some((t) => t.contains(p))) return undefined;
     const boxes = new Map(this.game.state.world.kids.filter((k) => this.views.has(k.id)).map((k) => [k.id, k.box]));
     return kidUnder(p, this.drawn, boxes, this.drag.kidId);
   }
@@ -974,13 +1120,15 @@ export class MapScene {
     return { top: (wantY + kid.box.top - this.cam.y) * z, bottom: (wantY + kid.box.bottom - this.cam.y) * z };
   }
 
-  private cancelActiveDrag(): void {
+  /** `safe`: the kid is put down clear of recipe partners, with a newborn's grace (§22.4). */
+  private cancelActiveDrag(safe = false): void {
     // A cancelled press resolves as nothing: never a tap, never a later drag (Codex review).
     this.kidTap = null;
     this.home?.reset();
+    for (const t of this.fieldTargets) t.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
-    this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY });
+    this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY, ...(safe ? { safe } : {}) });
   }
 
   private finishDrag(cmd: Extract<Command, { type: 'drop' | 'cancelDrag' }>): void {
@@ -1033,7 +1181,91 @@ export class MapScene {
     return `${this.cam.x},${this.cam.y},${this.cam.zoom},${width},${height},${this.insets.top},${this.insets.bottom}`;
   }
 
+  /** What a release of the held kid over field `i` would do (§22.4), or null. */
+  private fieldInfo(i: number): NonNullable<HomeView['field']> | null {
+    const field = this.game.state.fields[i];
+    const kid = this.drag && this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
+    if (!field || !kid) return null;
+    const limit = this.game.kidsPerField;
+    const likes = this.game.likes(kid.type);
+    const kind = field.food === null ? 'noFood' : likes?.hatedFood === field.food ? 'hated' : field.workers.length >= limit ? 'full' : likes?.favouriteFood === field.food ? 'favourite' : 'ok';
+    return { index: i, food: field.food, foodName: field.food ? this.game.foodName(field.food) : '', count: field.workers.length, limit, kind, kidName: kid.name ?? this.game.kidName(kid.type) };
+  }
+
+  /** Field `i`'s target in screen CSS px. */
+  private fieldScreenRect(i: number): HomeView['target'] {
+    const r = this.fieldTargets[i]!.rect;
+    const a = this.worldToScreen(r.minX, r.minY);
+    const b = this.worldToScreen(r.maxX, r.maxY);
+    return { left: a.x, top: a.y, right: b.x, bottom: b.y };
+  }
+
+  /** A field's target counts while a kid is held and it shows whole and at least 44 px (§22.4). */
+  private fieldEligible(i: number): boolean {
+    if (!this.drag || this.drag.interrupted || this.inputPaused) return false;
+    const r = this.fieldScreenRect(i);
+    const { width, height } = this.app.screen;
+    const onScreen = r.left >= 0 && r.top >= this.insets.top && r.right <= width && r.bottom <= height - this.insets.bottom;
+    // Its label needs room too; without it, assigning is done from Garden → Fields (§22.4).
+    return onScreen && r.right - r.left >= 44 && r.bottom - r.top >= 44 && this.homeFits(r, this.heldScreenRect());
+  }
+
   private updateHome(): void {
+    // Bought fields' targets follow the fields (D-069).
+    const site = this.art.farm?.fields;
+    const dwell = this.art.home?.target.dwellMs ?? 400;
+    while (site && this.fieldTargets.length < this.game.state.fields.length) {
+      const f = site[this.fieldTargets.length];
+      if (!f) break;
+      this.fieldTargets.push(new HomeTarget({ x: f.worldGround[0], y: f.worldGround[1] }, { rectRelativeWorld: f.dragRelative, dwellMs: dwell, minimumProjectedSidePx: 44 }));
+    }
+    // The view this frame, against the last: a moved camera restarts any dwell. Recorded here,
+    // before any early return, so a field's dwell sees each frame's change only once.
+    const viewNow = this.viewKey();
+    const viewMoved = viewNow !== this.lastView;
+    const fieldPoint = this.drag ? this.camera.toLocal(this.dragScreen) : null;
+    const overField = fieldPoint ? this.fieldTargets.findIndex((t) => t.contains(fieldPoint)) : -1;
+    if (overField >= 0 && fieldPoint) {
+      const info = this.fieldInfo(overField)!;
+      const able = info.kind === 'ok' || info.kind === 'favourite';
+      const eligible = this.fieldEligible(overField);
+      // A field that won't take the kid never arms: no dwell, no ready (§22.4). A new food or a
+      // place taken or freed starts the hold over (Codex review, #90).
+      const dwellKey = this.fieldDwellKey(overField);
+      if (this.fieldDwellKeys.get(overField) !== dwellKey) {
+        this.fieldTargets[overField]!.restartDwell();
+        this.fieldDwellKeys.set(overField, dwellKey);
+      }
+      this.lastView = viewNow;
+      const state = this.fieldTargets[overField]!.update(this.clock, eligible, able ? fieldPoint : null, viewMoved);
+      this.fieldTargets.forEach((t, i) => i !== overField && t.reset());
+      const p = this.worldToScreen(fieldPoint.x, fieldPoint.y);
+      const v: HomeView = { state, target: this.fieldScreenRect(overField), point: p, held: this.heldScreenRect(), plot: null, busy: null, field: info };
+      for (const fn of this.homeListeners) fn(v);
+      return;
+    }
+    // Not over a field: the Garden's target when it's usable, else the nearest field's on
+    // screen, in its entry state, so the player sees where to hold (§22.4).
+    if (this.drag && fieldPoint && !(this.home && this.homeEligible())) {
+      let near = -1;
+      let best = Infinity;
+      this.fieldTargets.forEach((t, i) => {
+        if (!this.fieldEligible(i)) return;
+        const d = Math.hypot((t.rect.minX + t.rect.maxX) / 2 - fieldPoint.x, (t.rect.minY + t.rect.maxY) / 2 - fieldPoint.y);
+        if (d < best) {
+          best = d;
+          near = i;
+        }
+      });
+      if (near >= 0) {
+        this.lastView = viewNow;
+        this.fieldTargets.forEach((t, i) => (i === near ? t.update(this.clock, true, null, false) : t.reset()));
+        const v: HomeView = { state: 'shown', target: this.fieldScreenRect(near), point: null, held: this.heldScreenRect(), plot: null, busy: null, field: this.fieldInfo(near)! };
+        for (const fn of this.homeListeners) fn(v);
+        return;
+      }
+    }
+    for (const t of this.fieldTargets) t.reset();
     if (!this.home) return;
     const view = this.viewKey();
     const moved = view !== this.lastView;
@@ -1125,7 +1357,8 @@ export class MapScene {
       const p = this.prev.get(k.id) ?? k;
       interpolated.set(k.id, { x: p.x + (k.x - p.x) * alpha, y: p.y + (k.y - p.y) * alpha });
     }
-    const drawn = resolveDrawn(kids, interpolated, this.placing, this.art.obstacles);
+    // The game's scenery, bought fields' bays included.
+    const drawn = resolveDrawn(kids, interpolated, this.placing, this.game.state.world.obstacles);
     this.drawn.clear();
     for (const [id, pos] of drawn) this.drawn.set(id, pos);
     if (this.drag) {
@@ -1133,6 +1366,7 @@ export class MapScene {
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
     this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
+    this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();
     for (const k of kids) {
       const view = this.views.get(k.id);
@@ -1156,7 +1390,26 @@ export class MapScene {
       const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
       rares.push({ id: k.id, rare, special, x: at.x, y: at.y, box: k.box, scale: k.look.scale, happy: !!k.happy });
     }
-    this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
+    // Farming kids keep their marks where they stand: the happy sun, a rare's sparkle (§22.6;
+    // Codex review, #90).
+    const alive = new Set(kids.map((k) => k.id));
+    for (const f of this.game.state.fields) {
+      for (const w of f.workers) {
+        alive.add(w.id);
+        const special = this.game.isSpecial(w.type);
+        const rare = this.game.isRare(w.type);
+        if (!rare && !special && !w.happiness) continue;
+        const at = this.fieldsView?.feetOf(w.id);
+        if (!at) continue;
+        rares.push({ id: w.id, rare, special, x: at.x, y: at.y, box: this.game.boxOf(w.look), scale: w.look.scale, happy: !!w.happiness });
+      }
+    }
+    this.rareLayer.update(rares, this.cam.zoom, this.clock, alive);
+  }
+
+  /** Test hook: the world's layers, bottom first, by label (unlabelled ones as ''). */
+  get layerNames(): string[] {
+    return this.camera.children.map((c) => c.label ?? '');
   }
 
   /** Test hook: the rares drawn now. */
@@ -1198,9 +1451,12 @@ export class MapScene {
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
       // Over the planting target, the map holds still, armed or busy (GUI_MVP §13.1, §15.1).
       const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready' || this.overBusyHome;
+      // Inside a usable field's target too, armed or not (§22.4).
+      const point = this.camera.toLocal(this.dragScreen);
+      const overField = this.fieldTargets.some((t, i) => t.contains(point) && this.fieldEligible(i));
       // A press that may still be a tap on the kid (§18.1) never moves the map.
       const maybeTap = this.kidTap !== null && performance.now() - this.kidTap.t <= TAP_MS;
-      if ((ex || ey) && !this.drag.noRoom && !overHome && !maybeTap) {
+      if ((ex || ey) && !this.drag.noRoom && !overHome && !overField && !maybeTap) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();
@@ -1239,6 +1495,16 @@ export class MapScene {
       case 'unplanted':
         // Back from a plot by the Garden (D-074), as a sprout comes up; no burst.
         this.addView(e.kid).play('spawn');
+        break;
+      case 'farming':
+        // Off the map, into its field, at once (GUI_MVP §22.1): the field draws it from now.
+        if (this.drag?.kidId === e.kid.id) this.drag = undefined;
+        this.placing.delete(e.kid.id);
+        this.removeView(e.kid.id);
+        break;
+      case 'unfarmed':
+        // Back from a field by the Garden: the same kid, no birth or reveal (§22.5).
+        this.addView(e.kid);
         break;
       case 'fused': {
         // Parents are consumed at once, never fading or converging (rig: fusion onStart);

@@ -1341,6 +1341,22 @@
   flex: 1 1 160px;
   min-height: 48px;
 }
+/* A farming kid in its field's roster (GUI_MVP §22.2, Codex's preview): who, then View kid
+   and Take back side by side. */
+.field-worker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.plot-kid.field-worker-identity {
+  min-height: 0;
+  align-items: flex-start;
+  gap: 8px;
+}
+.kid-card-farming-lines p {
+  margin: 0;
+}
 /* Confirming takes kids out: ink text (readable), the danger only in its border (§21.2). */
 .ui-button.plot-confirm-action {
   color: var(--ui-ink);

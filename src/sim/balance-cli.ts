@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { ambientFrom, lookTable, obstaclesFrom } from '../content/artRules';
-import type { KidRig, MapData } from '../content/artData';
+import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, withFarmRelocations } from '../content/artRules';
+import type { FarmData, KidRig, MapData } from '../content/artData';
 import { content } from '../content';
 import { median, simulate, type Report, type Scenario } from './balance';
 import type { GameOptions } from './game';
@@ -9,13 +9,16 @@ import type { GameOptions } from './game';
 // and prints the medians (ENGINEERING_PLAN §3). Run by scripts/balance.mjs through Vite,
 // one process per seed and scenario.
 
-const map = JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData;
+const farm = JSON.parse(readFileSync('art/data/farm_v1.json', 'utf8')) as FarmData;
+// The map as the game has it: Codex's farm relocations applied (GUI_MVP §22.1).
+const map = withFarmRelocations(JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData, farm);
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
 const [w, h] = map.worldSize;
-const options: GameOptions = {
+export const options: GameOptions = {
   bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
   spawnAt: { x: map.garden.spawnOutlet[0], y: map.garden.spawnOutlet[1] },
   obstacles: obstaclesFrom(map),
+  fieldBays: fieldBaysFrom(farm, map),
   looks: lookTable(rig),
   // The shipped rests (look, wave, sit, sleep), as main.ts sets up (Codex review, PR #45).
   ambient: ambientFrom(rig, content.balance.wander.ambientChance),
@@ -57,7 +60,8 @@ function tuned(): typeof content {
 
 /** One scenario on one seed (a child process of scripts/balance.mjs). */
 export function runOne(scenario: number, seed: number): Report {
-  return simulate(tuned(), options, scenarios[scenario]!, seed);
+  // PK_FARM=0 plays without farming, to compare (D-069).
+  return simulate(tuned(), options, { ...scenarios[scenario]!, farm: process.env.PK_FARM !== '0' }, seed);
 }
 
 const fmt = (s: number | null) => {
@@ -77,6 +81,7 @@ export function summarize(reports: Report[][], seeds: number): string {
   lines.push(`Roster ${content.kids.length} kids, ${content.recipes.length} recipes; ${seeds} seeds per scenario.`);
   if (process.env.PK_BALANCE) lines.push(`Balance overrides: ${process.env.PK_BALANCE}`);
   if (process.env.PK_SPECIALS) lines.push(`Stand-in special kids: ${process.env.PK_SPECIALS}`);
+  if (process.env.PK_FARM === '0') lines.push('Farming off.');
   lines.push(`Garden: ${sp.tutorialSpawns} tutorial spawns every ${fmt(sp.tutorialIntervalSeconds)}, then ${fmt(sp.intervalSeconds)} at L1.`);
   scenarios.forEach((sc, i) => {
     const rs = reports[i]!;
@@ -97,6 +102,11 @@ export function summarize(reports: Report[][], seeds: number): string {
     lines.push(`income, Materials/s: end of first session ${rate(median(rs.map((r) => r.income[0]?.perSecond ?? null)))}${days.map((d) => `, day ${d} ${rate(incomeAt(d * DAY))}`).join('')}`);
     const plotsLine = [2, 3, 4].map((n) => `${n} plots ${m((r) => r.plotsAt[n]?.clock ?? null)}`).join(', ');
     lines.push(`plots (wall clock): ${plotsLine}; planted ${median(rs.map((r) => r.planted))}, sprouted ${median(rs.map((r) => r.sprouted))}`);
+    const fieldsLine = [1, 2, 3, 4].map((n) => `${n} ${m((r) => r.farming.fieldsAt[n]?.clock ?? null)}`).join(', ');
+    lines.push(
+      `farming (wall clock): fields ${fieldsLine}; bites grown ${median(rs.map((r) => r.farming.grown))}, fed ${median(rs.map((r) => r.farming.fed))}; ` +
+        `most stored at once ${median(rs.map((r) => r.farming.peakPantry))} (worst seed ${Math.max(...rs.map((r) => r.farming.peakPantry))}); farming at the end ${median(rs.map((r) => r.farming.farmers))}`,
+    );
     lines.push(
       `starvation (map < 30 % full): ${pct(median(rs.map((r) => r.starvation))!)}; stuck turns: ${pct(median(rs.map((r) => r.stuck))!)}; ` +
         `deadlocked turns: ${pct(median(rs.map((r) => r.deadlocked))!)} (worst seed ${pct(Math.max(...rs.map((r) => r.deadlocked)))})`,

@@ -295,6 +295,17 @@ describe('Codex review, PR #30', () => {
     state.world.kids[0]!.look = { body: 'default', face: 'default', scale: 0 };
     expect(validateState(state, content)).not.toEqual([]);
   });
+
+  it('a farming kid’s retired body or face maps to a valid one on restore too (Codex review, #90)', () => {
+    const g = newGame();
+    const state = g.persisted();
+    const id = state.world.nextKidId++;
+    state.fields = [{ food: 'apple', workers: [{ id, type: 'plain', look: { body: 'retired_body', face: 'retired_face', scale: 1 } }], progress: 0 }];
+    expect(validateState(state, content)).toEqual([]);
+    const restored = new Game(structuredClone(content), options, 1, state);
+    const look = restored.state.fields[0]!.workers[0]!.look;
+    expect(look).toEqual({ body: 'default', face: 'default', scale: 1 });
+  });
 });
 
 describe("Codex's round-3 trace (plan §4)", () => {
@@ -489,7 +500,7 @@ describe('schema 7: rare variants retired (D-072)', () => {
   });
 
   it('a schema-7 save keeps its kids where they were beside the Garden, which moved with map v3 (D-071)', async () => {
-    expect(SAVE_SCHEMA).toBe(8);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(8);
     const g = newGame();
     const old = g.persisted();
     old.plots[0]!.seed = { planted: [{ id: old.world.nextKidId, type: 'fire', look: { body: 'default', face: 'default', scale: 1 } }], sprout: null, grown: 0 };
@@ -501,7 +512,18 @@ describe('schema 7: rare variants retired (D-072)', () => {
     expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x + 1080, k.y + 2880]));
     // Planted kids have no position; everything else is as it was.
     expect(r.state!.plots).toEqual(old.plots);
-    expect({ ...r.state!, world: null }).toEqual({ ...old, world: null });
+    expect({ ...r.state!, world: null, fields: null, pantry: null }).toEqual({ ...old, world: null, fields: null, pantry: null });
+  });
+
+  it('a schema-8 save loads with no fields and an empty pantry, all else as it was (D-069)', async () => {
+    expect(SAVE_SCHEMA).toBe(9);
+    const old: Partial<PersistedState> = newGame().persisted();
+    delete old.fields;
+    delete old.pantry;
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(8, 4, 1, old as PersistedState));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual({ ...old, fields: [], pantry: {} });
   });
 
   it('a schema-3 Mini comes through every step at its normal size', async () => {

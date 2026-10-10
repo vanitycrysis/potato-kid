@@ -10,7 +10,6 @@ const bounds = { minX: 0, minY: 0, maxX: 2000, maxY: 2000 };
 const T0 = 1_700_000_000_000;
 const f = content.balance.feeding;
 const n = content.balance.naming;
-const food = (id: string) => f.foods.find((x) => x.id === id)!;
 const likes = content.personality.plain!;
 /** Some food Potato Kid neither loves nor hates. */
 const ordinary = f.foods.find((x) => x.id !== likes.favouriteFood && x.id !== likes.hatedFood)!.id;
@@ -23,9 +22,11 @@ function game(edit: (c: Content) => void = () => {}): Game {
   return new Game(c, { bounds, spawnAt: { x: 1000, y: 300 }, now: T0 }, 3);
 }
 
-function setup(materials = 10_000) {
+/** A kid on the map, Materials, and a pantry with `stock` bites of every food (D-069). */
+function setup(materials = 10_000, stock = 5) {
   const g = game();
   g.state.materials = materials;
+  g.state.pantry = Object.fromEntries(f.foods.map((x) => [x.id, stock]));
   const kid = addKid(g.state.world, 'plain', 600, 1500, createRng(0), 0, defaultBox(content.balance.body.radius));
   return { g, kid };
 }
@@ -33,12 +34,13 @@ function setup(materials = 10_000) {
 const rejected = (events: GameEvent[]) => events.find((e) => e.type === 'rejected');
 
 describe('feeding (D-056, GUI_MVP §17)', () => {
-  it('an ordinary bite costs its price and makes the kid happy: income × happyMultiplier, for happySeconds', () => {
+  it('an ordinary bite uses one from the pantry, no Materials, and makes the kid happy: income × happyMultiplier, for happySeconds', () => {
     const { g, kid } = setup();
     const base = g.incomeOfKid(kid);
     const events = g.step([{ type: 'feed', kidId: kid.id, food: ordinary }], 0);
     expect(events).toContainEqual({ type: 'fed', kid, food: ordinary, favourite: false });
-    expect(g.state.materials).toBe(10_000 - food(ordinary).price);
+    expect(g.state.pantry[ordinary]).toBe(4);
+    expect(g.state.materials).toBe(10_000);
     expect(kid.happy).toEqual({ left: f.happySeconds, favourite: false });
     expect(g.incomeOfKid(kid)).toBeCloseTo(base * f.happyMultiplier, 12);
   });
@@ -51,15 +53,16 @@ describe('feeding (D-056, GUI_MVP §17)', () => {
     expect(g.incomeOfKid(kid)).toBeCloseTo(base * f.favouriteMultiplier, 12);
   });
 
-  it('a hated food is refused and costs nothing; so is a food it cannot afford, or an unknown one', () => {
+  it('a hated food is refused and uses nothing; so is a food the pantry has none of, or an unknown one', () => {
     const { g, kid } = setup();
     expect(rejected(g.step([{ type: 'feed', kidId: kid.id, food: likes.hatedFood }], 0))).toEqual({ type: 'rejected', command: 'feed', reason: 'hated' });
     expect(rejected(g.step([{ type: 'feed', kidId: kid.id, food: 'cake' }], 0))).toEqual({ type: 'rejected', command: 'feed', reason: 'invalid' });
-    expect(g.state.materials).toBe(10_000);
+    expect(g.state.pantry[likes.hatedFood]).toBe(5);
     expect(kid.happy).toBeUndefined();
-    const poor = setup(food(ordinary).price - 1);
-    expect(rejected(poor.g.step([{ type: 'feed', kidId: poor.kid.id, food: ordinary }], 0))).toEqual({ type: 'rejected', command: 'feed', reason: 'cost' });
-    expect(poor.g.state.materials).toBe(food(ordinary).price - 1);
+    const poor = setup(10_000, 0);
+    expect(rejected(poor.g.step([{ type: 'feed', kidId: poor.kid.id, food: ordinary }], 0))).toEqual({ type: 'rejected', command: 'feed', reason: 'noFood' });
+    expect(poor.g.state.pantry[ordinary]).toBe(0);
+    expect(poor.kid.happy).toBeUndefined();
     expect(rejected(poor.g.step([{ type: 'feed', kidId: 999, food: ordinary }], 0))).toEqual({ type: 'rejected', command: 'feed', reason: 'gone' });
   });
 

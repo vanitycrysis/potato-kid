@@ -24,6 +24,12 @@ export type FeedbackItem =
   | { kind: 'fed'; kidType: KidId; kidId: number; name: string | undefined; food: string; favourite: boolean }
   /** A name given or cleared where no kid card showed it (§18.2). */
   | { kind: 'named'; kidType: KidId; kidId: number; name: string | null }
+  /** A kid started farming where no sheet said so (a drag, §22.4). */
+  | { kind: 'farming'; kidType: KidId; kidId: number; name: string | undefined; field: number }
+  /** Field results whose page had closed (§22): bought, a food chosen, kids back by the Garden. */
+  | { kind: 'fieldUnlocked'; field: number }
+  | { kind: 'fieldFood'; field: number; food: string }
+  | { kind: 'unfarmed'; kidType: KidId; name: string | undefined; field: number; count: number }
   /** A known type sprouted from a plot (§15.5); a new type gets the discovery card instead. */
   | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number };
 
@@ -98,6 +104,22 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
       case 'named':
         out.push({ kind: 'named', kidType: e.kid.type, kidId: e.kid.id, name: e.name });
         break;
+      case 'farming':
+        out.push({ kind: 'farming', kidType: e.kid.type, kidId: e.kid.id, name: e.kid.name, field: e.field });
+        break;
+      case 'fieldUnlocked':
+        out.push({ kind: 'fieldUnlocked', field: e.fields - 1 });
+        break;
+      case 'fieldFood':
+        out.push({ kind: 'fieldFood', field: e.field, food: e.food });
+        break;
+      case 'unfarmed': {
+        // Kids back from one field in one step make one card.
+        const last = out[out.length - 1];
+        if (last?.kind === 'unfarmed' && last.field === e.field) last.count++;
+        else out.push({ kind: 'unfarmed', kidType: e.kid.type, name: e.kid.name, field: e.field, count: 1 });
+        break;
+      }
       case 'rejected':
         out.push({ kind: 'refusal', command: e.command, reason: e.reason });
         break;
@@ -136,6 +158,8 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
     // GUI_MVP §15.1 and §15.4.
     case 'plotFull':
       return 'All plots are full. Start growing a filled plot first.';
+    case 'changed':
+      return 'This field changed. Review it again.';
     case 'tooFewKids':
       return 'Add at least 3 kids to Start growing.';
     // D-074: interim copy until LAYOUT-DESIGN settles taking kids out of plots.
@@ -148,5 +172,12 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'Use letters, numbers, spaces, apostrophes or hyphens.';
     case 'unchanged':
       return 'Name unchanged.';
+    // Farming (GUI_MVP §22.7): the sheets name the food and field.
+    case 'noFood':
+      return 'There are no bites of that food left. Grow more in a field.';
+    case 'noCrop':
+      return 'Choose a food for this field before assigning kids.';
+    case 'fieldFull':
+      return 'This field is full. Take a farming kid back, then try again.';
   }
 }

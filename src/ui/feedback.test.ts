@@ -70,6 +70,27 @@ describe('feedback cards (GUI_MVP §9)', () => {
     expect(refusalText('cost', 'upgrade')).toBe('Not enough currency.');
   });
 
+  it('field results no page showed get cards; kids back from one field in one step make one (Codex review, #90)', () => {
+    const events = [
+      { type: 'fieldUnlocked', fields: 2 },
+      { type: 'fieldFood', field: 1, food: 'apple' },
+      { type: 'unfarmed', kid: { id: 3, type: 'plain' }, field: 1, count: 1 },
+      { type: 'unfarmed', kid: { id: 4, type: 'fire' }, field: 1, count: 0 },
+      { type: 'unfarmed', kid: { id: 5, type: 'fire', name: 'Ash' }, field: 0, count: 0 },
+    ] as GameEvent[];
+    expect(feedbackFor(events, new Set(['plain', 'fire']), 2)).toEqual([
+      { kind: 'fieldUnlocked', field: 1 },
+      { kind: 'fieldFood', field: 1, food: 'apple' },
+      { kind: 'unfarmed', kidType: 'plain', name: undefined, field: 1, count: 2 },
+      { kind: 'unfarmed', kidType: 'fire', name: 'Ash', field: 0, count: 1 },
+    ]);
+  });
+
+  it('a kid that starts farming with no sheet to say so gets a card (a drag, GUI_MVP §22.4)', () => {
+    const events = [{ type: 'farming', kid: { id: 7, type: 'plain', name: 'Spud' }, field: 1, count: 2 }] as GameEvent[];
+    expect(feedbackFor(events, new Set(['plain']), 1)).toEqual([{ kind: 'farming', kidType: 'plain', kidId: 7, name: 'Spud', field: 1 }]);
+  });
+
   it('a locked refusal names the right building (Codex review, PR #33)', () => {
     expect(refusalText('locked', 'setBias')).toBe('Build Spawn bias first.');
     expect(refusalText('locked', 'respawn')).toBe('Build the Compendium first.');

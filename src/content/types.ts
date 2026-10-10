@@ -109,14 +109,30 @@ export interface PlantingBalance {
   rareOdds: [number, number];
 }
 
-/** One food (D-056, GUI_MVP §17.1): a pinned id, its name, and its price in Materials. */
+/** One food (D-056, GUI_MVP §17.1): a pinned id and its name. It is farmed, not bought (D-069). */
 export interface FoodDef {
   id: string;
   name: string;
-  price: number;
 }
 
-/** Feeding (D-056): what a bite costs and how long, and how much, it makes a kid happy. */
+/**
+ * Farming (D-069, GUI_MVP §22): food fields that kids work, filling a shared pantry. The
+ * numbers are Claude's, tuned with the simulator.
+ */
+export interface FarmingBalance {
+  /** Fields on the map, all bought (at most Codex's four authored sites). */
+  maxFields: number;
+  /** Price of field n (1-based), in Materials. */
+  unlockPrices: number[];
+  /** Kids a field takes (at most its four authored pads). */
+  kidsPerField: number;
+  /** Seconds one kid takes to grow one bite of an ordinary food. */
+  biteSeconds: number;
+  /** How many times faster a kid grows its favourite food. */
+  favouriteFactor: number;
+}
+
+/** Feeding (D-056): how long, and how much, a bite makes a kid happy. A bite comes from the pantry (D-069). */
 export interface FeedingBalance {
   /** All twelve foods, in the pinned table order. */
   foods: FoodDef[];
@@ -155,6 +171,7 @@ export interface Balance {
   buildings: Record<BuildingId, BuildingBalance>;
   planting: PlantingBalance;
   feeding: FeedingBalance;
+  farming: FarmingBalance;
   naming: NamingBalance;
 }
 

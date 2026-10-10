@@ -2,6 +2,8 @@
 // ART_AUDIO_PLAN.md). These are art data: Claude only reads them, never edits them.
 // `npm run art:export` validates and copies them from art/data to assets/data.
 
+import { withFarmRelocations } from './artRules';
+
 export type Vec2 = [number, number];
 /** Absolute source-canvas box: [left, top, right, bottom] in pixels. */
 export type BoundsPx = [number, number, number, number];
@@ -162,7 +164,41 @@ function pick<T>(name: string): T | undefined {
 }
 
 export const kidRig = pick<KidRig>('kid_rig_v2.json');
-export const mapData = pick<MapData>('map_garden_v3.json');
+const rawMap = pick<MapData>('map_garden_v3.json');
+
+/** One of Codex's four field sites (farm_v1, GUI_MVP §22.1): the bed, its pads, crops and target. */
+export interface FarmField {
+  worldGround: Vec2;
+  sourcePivot: Vec2;
+  scale: number;
+  /** The bay the field takes, about its ground: scenery once bought. */
+  reserveRelative: [number, number, number, number];
+  /** Working kids' feet, about the ground: rear left, rear right, front left, front right. */
+  workerFeetRelative: Vec2[];
+  /** Which pad each newcomer takes, in order (indexes into `workerFeetRelative`). */
+  workerAdmissionPadOrder: number[];
+  /** Where the two crop stamps stand, about the ground. */
+  cropGroundsRelative: Vec2[];
+  /** The drop target for assigning by drag, about the ground (§22.4). */
+  dragRelative: [number, number, number, number];
+}
+
+/** Codex's food fields (farm_v1): the sites, the scenery they push aside, and how they're drawn. */
+export interface FarmData {
+  fields: FarmField[];
+  sceneryRelocations: { instanceId: string; from: Vec2; to: Vec2 }[];
+  findFieldsCentre: Vec2;
+  render: {
+    fieldAsset: string;
+    cropAssets: Record<string, string>;
+    cropSourcePivot: Vec2;
+    cropScale: number;
+  };
+}
+export const farmData = pick<FarmData>('farm_v1.json');
+
+/** The map as the game has it: Codex's farm relocations applied (GUI_MVP §22.1). */
+export const mapData = rawMap && withFarmRelocations(rawMap, farmData);
 export const uiData = pick<UiData>('ui_v2.json');
 
 /** Codex's planting tokens (GUI_MVP §15, `gate4_v2.json` → planting). */

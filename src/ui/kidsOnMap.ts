@@ -1,14 +1,25 @@
 import { kidRig } from '../content/artData';
 import type { Content } from '../content/types';
 import type { MapScene } from '../render/scene';
+import type { Kid } from '../sim/world';
 import { el } from './dom';
 import { portrait } from './portrait';
 import type { Sheets } from './sheet';
 
 // Every kid on the map, wherever it is (GUI_MVP §19.2, Codex's LAYOUT-DESIGN): Dex → Kids on
 // map, the route to any kid without dragging, panning or pinching; and "Which kid?" (§20.1),
-// the same rows for a tap that landed on several kids' pickup targets at once. A row opens
-// that kid's card; its Back returns here with the search, scroll and focus as they were.
+// the same rows for a tap that landed on several kids' pickup targets at once (including
+// kids farming, §22.2). A row opens that kid's card; its Back returns here with the search,
+// scroll and focus as they were.
+
+/** A row's kid: on the map, or farming in field `field` (a tap's candidate, §22.2). */
+interface Entry {
+  id: number;
+  type: string;
+  look: Kid['look'];
+  name?: string | undefined;
+  field: number | null;
+}
 
 export interface ListOptions {
   /** Only these kids (a tap's candidates); every kid on the map when absent. */
@@ -31,6 +42,10 @@ export class KidsOnMap {
 
   private name(type: string): string {
     return this.content.kids.find((k) => k.id === type)?.name ?? type;
+  }
+
+  private foodName(id: string): string {
+    return this.content.balance.feeding.foods.find((f) => f.id === id)?.name ?? id;
   }
 
   private tier(type: string): number {
@@ -60,12 +75,21 @@ export class KidsOnMap {
     const title = choosing ? 'Which kid?' : 'Kids on map';
     if (options.back) this.sheets.asPage(options.back);
     const sheet = this.sheets.open({ key: choosing ? 'which-kid' : 'kids-on-map', icon: 'icon_kids', title, requestedHeight: 624, update: () => update() }, launcher);
-    const kids = () => this.scene.game.state.world.kids.filter((k) => !options.ids || options.ids.includes(k.id));
+    const kids = (): Entry[] => {
+      const s = this.scene.game.state;
+      const onMap: Entry[] = s.world.kids.filter((k) => !options.ids || options.ids.includes(k.id)).map((k) => ({ id: k.id, type: k.type, look: k.look, name: k.name, field: null }));
+      // A tap's candidates may be farming; the full list is the map's kids only (§19.2).
+      const ids = options.ids;
+      const farming: Entry[] = ids ? s.fields.flatMap((f, i) => f.workers.filter((w) => ids.includes(w.id)).map((w) => ({ id: w.id, type: w.type, look: w.look, name: w.name, field: i }))) : [];
+      return [...onMap, ...farming];
+    };
     // Each kid's number among its type's copies on the map, by id: the number its card shows
     // (§18.1). A kid keeps its number while the list is open; newcomers are appended.
     const ordinals = new Map<number, number>();
     const nextOf = new Map<string, number>();
-    const number = (k: { id: number; type: string }) => {
+    const number = (k: { id: number; type: string; field?: number | null }) => {
+      // A farming kid's number counts its copies on the map and farming, as its card (§22.6).
+      if (k.field !== null && k.field !== undefined) return this.scene.game.ownedOrdinal(k.type, k.id);
       if (!ordinals.has(k.id)) {
         const n = (nextOf.get(k.type) ?? 0) + 1;
         nextOf.set(k.type, n);
@@ -94,8 +118,8 @@ export class KidsOnMap {
       update();
     });
 
-    const rowFor = new Map<number, { row: HTMLButtonElement; text: string; set(name: string | undefined): void }>();
-    const makeRow = (kid: (typeof this.scene.game.state.world.kids)[number]) => {
+    const rowFor = new Map<number, { row: HTMLButtonElement; text: string; set(name: string | undefined, field: number | null): void }>();
+    const makeRow = (kid: Entry) => {
       const ordinal = number(kid);
       const typeName = this.name(kid.type);
       const tier = this.tier(kid.type);
@@ -111,14 +135,16 @@ export class KidsOnMap {
       const r = {
         row,
         text: '',
-        set: (name: string | undefined) => {
+        set: (name: string | undefined, field: number | null) => {
           nameEl.textContent = name ?? typeName;
-          sub.textContent = `${name ? `${typeName} · ` : ''}Tier ${tier} · Kid ${ordinal}`;
+          // A farming candidate says where (§22.2).
+          const food = field === null ? null : this.scene.game.state.fields[field]?.food;
+          sub.textContent = field === null ? `${name ? `${typeName} · ` : ''}Tier ${tier} · Kid ${ordinal}` : `Farming ${food ? this.foodName(food) : ''} · Field ${field + 1}`;
           row.setAttribute('aria-label', `View kid: ${name ? `${name}, ` : ''}${typeName}, tier ${tier}, kid ${ordinal}`);
           r.text = `${name ?? ''} ${typeName}`.toLowerCase();
         },
       };
-      r.set(kid.name);
+      r.set(kid.name, kid.field);
       return r;
     };
 
@@ -139,7 +165,7 @@ export class KidsOnMap {
           rowFor.set(k.id, r);
           rows.append(r.row);
         }
-        rowFor.get(k.id)!.set(k.name);
+        rowFor.get(k.id)!.set(k.name, k.field);
       }
       const q = search.value.trim().toLowerCase();
       let visible = 0;

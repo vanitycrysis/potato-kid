@@ -1,7 +1,7 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { gate4Data, kidRig, mapData, uiData } from './content/artData';
-import { ambientFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
+import { farmData, gate4Data, kidRig, mapData, uiData } from './content/artData';
+import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
 import { Lifecycle } from './platform/lifecycle';
@@ -34,6 +34,10 @@ declare global {
       }[];
       discoveredRecipes: () => string[];
       wallet: () => { materials: number; potatokens: number };
+      /** Bites stored, by food (D-069). */
+      pantry: () => Record<string, number>;
+      /** What each bought field shows on the map: its food, crop stamps and kids on pads (D-069). */
+      fields: () => { food: string | null; crops: number; kids: { id: number; pad: number }[] }[];
       /** Building levels and the bias target. */
       buildings: () => { levels: Record<string, number>; biasTarget: string | null };
       save: () => { mode: SaveMode; failing: boolean; olderSaveLoaded: boolean };
@@ -53,7 +57,7 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null } | { type: 'unlockField' } | { type: 'setFieldFood'; field: number; food: string } | { type: 'farm'; field: number; kidIds: number[] } | { type: 'unfarm'; field: number; kidId: number } | { type: 'emptyField'; field: number }) => void;
       /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
       debugReadySeed?: (plot: number, type: string) => void;
       /**
@@ -62,7 +66,7 @@ declare global {
        */
       debugListenSteps?: (fn: (types: string[]) => void) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
-      debugGive?: (amounts: { materials?: number; potatokens?: number }) => void;
+      debugGive?: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => void;
       /** The audio runtime's state (tests). */
       audio: () => {
         unlocked: boolean;
@@ -82,6 +86,7 @@ declare global {
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
       rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean }[];
+      layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -152,6 +157,8 @@ async function boot(): Promise<void> {
       looks: lookTable(kidRig),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
       obstacles: obstaclesFrom(mapData),
+      fieldBays: farmData ? fieldBaysFrom(farmData, mapData) : [],
+      farm: farmData,
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       home: homeArt(),
       planting: gate4Data?.planting,
@@ -207,7 +214,9 @@ async function boot(): Promise<void> {
   }, SAVE_EVERY_MS);
   // Also after every fusion, purchase and upgrade (plan §4).
   const saveAfter = (e: GameEvent) =>
-    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'unplanted' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden');
+    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'unplanted' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden') ||
+    // Fields (D-069): bought, a food chosen, kids sent or taken back (Codex review, #90).
+    e.type === 'fieldUnlocked' || e.type === 'fieldFood' || e.type === 'farming' || e.type === 'unfarmed';
   scene.listen((e) => {
     if (saveAfter(e)) void save();
   });
@@ -229,6 +238,8 @@ async function boot(): Promise<void> {
       })),
     discoveredRecipes: () => [...scene.game.state.discoveredRecipes],
     wallet: () => ({ materials: scene.game.state.materials, potatokens: scene.game.state.potatokens }),
+    pantry: () => ({ ...scene.game.state.pantry }),
+    fields: () => scene.fieldsShown,
     buildings: () => ({ levels: { ...scene.game.state.buildings }, biasTarget: scene.game.state.biasTarget }),
     save: () => ({ mode: saves.mode, failing: saves.failing, olderSaveLoaded: loaded.olderSaveLoaded }),
     settings: () => settings.value,
@@ -236,6 +247,7 @@ async function boot(): Promise<void> {
     home: () => ({ state: scene.homeState }),
     dropTarget: () => scene.dropTarget,
     rares: () => scene.raresShown,
+    layers: () => scene.layerNames,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
         const seed = p.seed;
@@ -266,11 +278,12 @@ async function boot(): Promise<void> {
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
-          debugGive: (amounts: { materials?: number; potatokens?: number }) => {
+          debugGive: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
+            for (const [food, n] of Object.entries(amounts.pantry ?? {})) scene.game.state.pantry[food] = (scene.game.state.pantry[food] ?? 0) + n;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null } | { type: 'unlockField' } | { type: 'setFieldFood'; field: number; food: string } | { type: 'farm'; field: number; kidIds: number[] } | { type: 'unfarm'; field: number; kidId: number } | { type: 'emptyField'; field: number }) => scene.command(cmd),
         }
       : {}),
     };
