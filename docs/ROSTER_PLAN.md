@@ -1,5 +1,25 @@
 # Roster plan
 
+## WILD-ART: planting-only rare kids and special bodies (2026-10-09)
+
+D-072/D-073 override the ordinary-only shared-potato and costume restrictions below **for rares and specials only**. The original 64 IDs/recipes/body rigs remain exact. This handoff adds ten rare IDs and redesigns all twenty special bodies. Result: **94 art-covered types**, subject to Claude's content import, simulator tiers and review; no additional recipes or Garden/Compendium entries. The ten are planting-only apex types, count in Dex completion, can be planted, and win when both independent rolls succeed. Retired per-type variants do not return.
+
+| rainbow | Rainbow Kid | Six-colour scalloped puff; whole body rainbow, ink seams retain identity in gray. | toast / apple | Pending Claude |
+| blimp | Blimp Kid | Long airship hull with two broad tail fins; no gondola or child in a vehicle. | berry_jam / toast | Pending Claude |
+| spool | Spool Kid | Broad thread reel with projecting oval end flanges. | berries / corn | Pending Claude |
+| paper_fan | Paper Fan Kid | Wide pleated semicircle with stepped upper edge and short folded base. | apple / berries | Pending Claude |
+| jelly | Jelly Kid | Tall moulded dessert with broad wavy rim, visibly scalloped dome. | carrot / berry_jam | Pending Claude |
+| cushion | Cushion Kid | Plump concave-sided square pillow with four oversized tied corners. | corn / carrot | Pending Claude |
+| seashell | Seashell Kid | Asymmetric conch shell with a stepped spire and flared side lip; distinct from the semicircular Paper Fan. | mushroom / pickle | Pending Claude |
+| flying_saucer | Flying Saucer Kid | Wide saucer rim under a solid domed hull; face on hull, no glass cockpit. | pickle / cheese | Pending Claude |
+| ring_planet | Ring Planet Kid | Round globe with a broad oblique rear ring, exposed on both sides without crossing the face. | cheese / mushroom | Pending Claude |
+| wind_up_key | Wind-Up Key Kid | Butterfly winding bow with two open finger holes above the face and a long smooth shaft with a blunt end. | soup / cocoa | Pending Claude |
+
+Every rare has a complete record in `art/data/personality_v1.json` (description, likes, hates, hobbies, favouriteFood and hatedFood). All **94 ordered food pairs are distinct**; the original 84 records are unchanged. All ten rare tiers are **null placeholders owned by Claude**, not zero or tentative balance choices. D-066's special names/IDs/12 T5 + 8 T6 tiers and personality prose are retained exactly.
+
+All thirty wild types use the additive `kid_wild_v1.json` contract and one cropped body frame, with unchanged shared D-045 faces. Per-type lifetime boxes use the existing axis-aligned collision rules, not an enlarged universal potato reserve. Bob/closed-eye/static object substitutes cover unsupported walk/wave/sit clips without added anatomy. Full contract and explicit renderer handoff: [notes](../.codex-out/wild-art-notes.md). [Native review gallery](../art/previews/wild/index.html) includes each among ordinary T1–T4 kids, the full roster, Dex rows and cards in colour/grayscale. Original costume and concept sections below are historical where superseded; this delivery does not claim Claude's review or gate-4 owner acceptance.
+
+
 ChatGPT proposal for ROSTER-PLAN, 2026-10-02. Claude reviews IDs, validation and balance. **64 MVP types / 58 recipes / tiers 1–5; 500-type long-term allocation / tiers 1–8.** Existing 16 IDs, names, tiers and all 12 recipes are retained. This PR supplies planning data only. It does not approve balance, supply art, or mark the joint task done before Claude's review.
 
 Authority: D-038, D-044–D-047, design-doc.md and ENGINEERING_PLAN.md §§2–3 / Roster scale. Recipes stay hidden until found, unordered, consume two to make one, and strictly increase tier. Family membership is an editorial aid; it adds no gameplay categories, maps, affinity bonuses, unlocks or buildings.

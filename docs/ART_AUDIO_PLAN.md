@@ -13,6 +13,24 @@ The byte-identical v3 map gains an explicit overlay of four reserves below the G
 
 Round 2 addresses B1/B2 and N1/N2 only: warm tan soil (#bca480) with brown furrows (#86765a), an extended upper bed and rear feet at y −275 inside it; two short-stem crops at scale 0.9, pivot (128, 240), grounds (±140, +94), with food silhouettes about 28–32 CSS px at 1× (individual dimensions in the size report); round cheese holes in the crop and shared food icon; all map navigation labels accompanied by their 24 px glyphs. The four grounds, reserve, map/relocations, full saved worker sizes, flows and other accepted choices stay unchanged.
 
+## WILD-ART delivery (2026-10-09; round 2, Claude review pending)
+
+Round 2 addresses B1 (conch silhouette), B2 (open butterfly bow and longer winding shaft) and N1 (pale ribbed fossil). Only those three bodies and review evidence change; the accepted base and wild rig contracts remain byte-identical. Round 2 inventory: 275 PNGs / 19,728,380 bytes → 275 / 19,702,632 bytes (18.81445 → 18.78989 MiB), -25,748 bytes. [Round 2 audit](../.codex-out/wild-round2-audit.json) verifies all 30 actual alpha bounds and exact source/export pixels. The cumulative table below includes both rounds.
+
+D-072/D-073 supersede the historical ten shared variants and carried-special art below. Ten new rare types and all twenty special object bodies use **30 original vectors / 30 cropped runtime body PNGs**, one raster frame per type, with the unchanged shared D-045 face states. The four held specials are redesigned under the owner's freer-body authorization. IDs/names/tiers/all 84 existing personalities stay exact; ten new D-058 records bring the total to **94 distinct food pairs / 94 records**. Rare tiers are **null placeholders for Claude's simulator**, with no new multiplier or income number.
+
+The additive `art/data/kid_wild_v1.json` declares type body selection, face anchor/scale, per-type lifetime boxes, all fifteen clip mappings/substitutes, completion timing, reduced motion and renderer responsibilities. The base `kid_rig_v2.json` remains byte-identical. Existing special prop rasters and retired variant rasters are conservatively retained in the inventory for history; Claude must not compose/load their unused layers for wild types. No new FX, audio master, face texture or portrait cache. Use existing shared sparkle only for rare types; keep ordinary rigs, exact planting odds and D-074 flow.
+
+| Decoded runtime PNG inventory | Before WILD-ART | After WILD-ART | Change |
+| --- | ---: | ---: | ---: |
+| PNGs under assets/ | 245 | 275 | +30 |
+| RGBA bytes | 15,159,972 | 19,702,632 | +4,542,660 |
+| MiB | 14.45768 | 18.78989 | +4.33222 |
+
+These are measured against the actual merged checkout (specials plus layout landmarks), not either earlier PR's isolated subtotal. Cropped exports total 18.78989 MiB. The unchanged physical ceiling is 32 MiB; decoded headroom is 13.21011 MiB before atlas slack, surfaces or duplicate allocation. Native cropped non-power-of-two textures, no mipmaps, no per-instance raster, no flattened portrait cache and one shared face/FX allocation are requirements of this handoff. Rounding the entire stored inventory to individual power-of-two textures would be **35.99609 MiB**, which exceeds the ceiling and is **not an acceptable allocation strategy**. This is a decoded/storage audit and allocation contract, not a measurement of GPU residency. Claude must check actual device/atlas allocation before acceptance.
+
+`npm run art:export` passes: 344 sources / seven sidecars. Independent checks preserve all existing source art, runtime PNGs, `src/`, `tests/` and canonical personalities. All **360** object/face/state combinations have opaque support and at least 3 source px clearance from body ink; all bob offsets fit their type lifetime box inside the existing 8 px source-padding envelope. **131 review PNGs** include bare 55 px colour/gray, 3× native pixels, full 94 roster, all saved faces, every wild kid among twelve ordinary kids, aggregate and individual Dex-row/card portraits. [Gallery](../art/previews/wild/index.html); [notes](../.codex-out/wild-art-notes.md); [audit](../.codex-out/wild-audit.json). Content import, rare tiers, renderer implementation, physical GPU checks, Claude review and the next owner gate-4 build remain outstanding; no shipping/device/gate acceptance is claimed.
+
 ## LAYOUT-DESIGN addendum (2026-10-09; round 2, Claude review pending)
 
 GUI_MVP §§19–21, revision `layout-design-2`, preserves the accepted one 60 px status strip and one 60 px Garden/Dex/Notebook navigation row: 78.20% unobscured world at 390 × 844 and 57.78% at 640 × 360. HUD, sheet geometry, folding timer/upgrades/Settings, D-074 removal/cancellation flow and N1–N6 are unchanged. Cancel action text now uses existing ink `#1a1a1a` (15.58:1 on paper, 13.86:1 on sage); danger remains a border accent. The exact D-074 copy, identity/look/name/happiness restoration, independent D-072 rolls and D-069 farming scope remain as accepted. The GUI contract is plain UTF-8; number/unit spacing is corrected.
@@ -29,6 +47,22 @@ Six new original 512 × 512 vector sources add decorative bench, watering can, t
 
 This debit uses actual cropped export dimensions; source canvases total 6 MiB but are not loaded untrimmed. Inventory includes historical exported variant FX conservatively. Remaining headroom to the unchanged 32 MiB ceiling is 17.93806 MiB before atlas/surface/framebuffer overhead; this is not measured GPU residency. Existing runtime PNGs remain byte-identical. Native UI adds no Pixi raster/portrait cache/world render target. Extra visible instances require Claude's culling/frame-time/device checks. `npm run art:export` passes: 293 sources, six sidecars. Independent audit preserves 602 protected files and the accepted UI/planting sidecars; 62 SVG/native PNG review screens include all twelve outer reference screens at 0.5× in both viewports. [Gallery](../art/previews/ui/layout_review.html); [notes](../.codex-out/layout-design-notes.md); [audit](../.codex-out/layout-audit.json). No gate 4 acceptance or polish is claimed.
 
+## SPECIALS delivery (2026-10-04; Claude review pending)
+
+Under D-063/D-066, retain the approved keepsake identities, exact IDs and 12 T5 /8 T6 split. Twenty new costumes share 21 original 256px front components, existing attachment slots and explicit fits on all four bodies. Acorn alone needs a second component. No new body/face/pose/clip, rare art, filter, portrait cache or lifetime reserve.
+
+| Item | Delivery / status |
+| --- | --- |
+| Costume art | `specials-1` sources/rig/trimmed PNGs delivered; sixteen pass ChatGPT's native 55 px colour/gray art review; Claude review pending |
+| Readability holds | **Music Box, Marble Run, Puppet Theatre and Paper Town fail ChatGPT's recognition gate**; simpler proposals/sheets in the notes go to the owner under D-066; do not mark complete |
+| Writing | `personality-2-specials`: 84 records; original 64 unchanged; unique pairs; exactly seven uses per food in each column; caps/no-recipe-food checks pass |
+| Existing alignment fix | Raincloud source +2 y, same shape/PNG bytes, trim offset only; full 84 alpha sweep passes without enlarging Tall's reserve |
+| Verification | New 20: 671,040 combinations; full 84: 2,818,368 combinations; zero bounds/face failures. Vector 213,095 checks, rare lane 21,600 placements; zero failures. Export/check and 215 tests pass |
+| Budget | Complete runtime **218/12,815,892 → 239/13,230,852 PNGs/decoded bytes**, +414,960 bytes; 12.61792 MiB; measured GPU allocation remains Claude's work |
+
+[Handoff and gates](../.codex-out/specials-notes.md) include all-body colour/gray/pose/size sheets, a 40-kid mixed map, full-roster comparisons, inventories and reproduction. Sources are original code-authored vectors. Review-only alternatives live outside `art/src/`/the export manifest and have no approved runtime status. `src/` remains unchanged; T6 presentation, content validation, live rare combinations and phone recognition remain integration/review checks. SPECIALS is doing, **Claude review pending**.
+
+
 ## PLANT-V2-DESIGN addendum (2026-10-04; Claude review pending)
 
 D-061–D-063 replace the historical one-kid planting and two-variant contract below. The current design is GUI_MVP §§15–16 with collection/profile/feeding amendments in §§7/17/18 and `art/data/gate4_v2.json`, revision `plant-v2-design-2`. Round 2 changes only B1/B2 and settled-rule copy; the approved flow, ten variant identities, Dex and concepts remain.
@@ -40,7 +74,7 @@ D-061–D-063 replace the historical one-kid planting and two-variant contract b
 | Common sparkle / reveal | One shared six-glint paper/ink sleeve outside lifetime silhouette, below all kid layers; slow2400 ms opacity .8…1/static1;480 ms birth expansion/fade for rare or special then calm rare idle. Special-only reduced-motion sleeve static1200 ms; approved two-star Start icon unchanged |
 | Mini mark | Two unequal pebbles replace square/corner arms; .72 scale and existing foot placement remain; B2 Claude review pending |
 | Collection/profile | Compact `Rare n / 10` grid summary, ten labelled detail rows, special section/type completion, planting-only rare profile and multiplier placeholder |
-| Special concepts | 20 pitches, 12 T5 / 8 T6; **owner approval pending before costume work**; no per-type final art this round |
+| Special concepts | 20 pitches, 12 T5 / 8 T6; owner concepts approved (D-066); SPECIALS delivery above; four readability gates held |
 | Source/export | 20 new SVGs = 11 shared trimmed runtime PNGs and nine native SVG icons; exporter unchanged, 287 sources/five sidecars pass |
 | Decode budget | 218 PNGs / **12,815,892 bytes (12.22219 MiB)**; round2 +151,756 bytes /no extra textures;32 MiB actual allocation ceiling unchanged |
 | Verification | Only sparkle/Mini PNGs change; approved art/content/source hashes preserved. Clear-window alpha and69,120 placements pass; Garden reserve290.489 <300;25 files/215 tests;204 SVG/PNG screens, forty single-rare crowd cases, native burst/static and motion evidence |
