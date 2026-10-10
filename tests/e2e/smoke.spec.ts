@@ -832,6 +832,17 @@ test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () =>
     await expect(page.locator('#app')).toBeVisible();
   });
 
+  test('the navigation growing on its own (a font loading) re-selects the layout (Codex review round 4, PR #87)', async ({ page }) => {
+    await page.setViewportSize({ width: 240, height: 480 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual' });
+    // No resize: only the navigation's content grows.
+    await page.addStyleTag({ content: '.tray-cell { min-height: 150px !important; }' });
+    await expect.poll(() => measure(page).then((m) => m.fit)).not.toBe('usual');
+    expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
+  });
+
   test('a scroll window grows to show its tallest control whole, and the page takes over when that leaves no band (Codex review round 2, PR #87)', async ({ page }) => {
     // Enlarged text: navigation controls 70 px tall instead of 44.
     await page.setViewportSize({ width: 240, height: 360 });

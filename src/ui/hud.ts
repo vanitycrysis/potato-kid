@@ -167,6 +167,9 @@ export class Hud {
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
+    // The navigation is sized by its content: a font that loads, or text that wraps, can change
+    // it with no other resize (Codex review round 4, PR #87).
+    new ResizeObserver(measure).observe(tray);
     // A banner appearing or changing size moves the HUD down and re-places an open sheet.
     new ResizeObserver(() => {
       measure();
