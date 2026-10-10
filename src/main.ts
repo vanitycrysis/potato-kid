@@ -202,7 +202,7 @@ async function boot(): Promise<void> {
   }, SAVE_EVERY_MS);
   // Also after every fusion, purchase and upgrade (plan §4).
   const saveAfter = (e: GameEvent) =>
-    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden');
+    e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'unplanted' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden');
   scene.listen((e) => {
     if (saveAfter(e)) void save();
   });
