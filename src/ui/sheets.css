@@ -596,6 +596,26 @@
 .dex-search .sheet-helper {
   margin: 0;
 }
+/* Ordinary / Specials / Rares (GUI_MVP §16.4): three equal 44 px controls, 8 px gaps. */
+.dex-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.dex-segments[hidden] {
+  display: none;
+}
+.ui-button.dex-segment {
+  min-height: 44px;
+  white-space: normal;
+}
+.ui-button.dex-segment[aria-pressed='true'] {
+  border-image-source: var(--ui-button-selected);
+}
+.dex-tile-kind {
+  font-size: 16px;
+  line-height: 22px;
+}
 
 /* Kids grid: 148 px cards, 8 px gaps; a long name grows its whole row equally. */
 .dex-grid {

@@ -1497,8 +1497,13 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   const dexButton = (page: Page) => page.locator('[data-nav=dex]');
   const dialog = (page: Page) => page.getByRole('dialog', { name: 'Potato-Dex' });
+  const roster = JSON.parse(readFileSync('src/content/kids.json', 'utf8')) as { id: string; special?: boolean; rare?: boolean }[];
   const totals = {
-    kids: (JSON.parse(readFileSync('src/content/kids.json', 'utf8')) as unknown[]).length,
+    kids: roster.length,
+    /** Each Kids segment's size (§16.4). */
+    ordinary: roster.filter((k) => !k.special && !k.rare).length,
+    specials: roster.filter((k) => k.special).length,
+    rares: roster.filter((k) => k.rare).length,
     recipes: (JSON.parse(readFileSync('src/content/recipes.json', 'utf8')) as unknown[]).length,
   };
 
@@ -1516,21 +1521,57 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     const errors = await twoKnown(page);
     await dexButton(page).click();
     await expect(dialog(page).locator('.sheet-subtitle')).toHaveText(`2 / ${totals.kids} discovered`);
+    // The Ordinary segment first (§16.4): its kids, then its packets.
     const cells = dialog(page).locator('.dex-cell');
-    await expect(cells).toHaveCount(totals.kids);
+    await expect(cells).toHaveCount(totals.ordinary);
     // Discovered first, in roster order, then packets: a packet's position says nothing.
     await expect(cells.nth(0)).toHaveAttribute('role', 'listitem');
     await expect(cells.nth(0).locator('.dex-tile')).toHaveAttribute('aria-label', 'Potato Kid, Tier 1');
     await expect(cells.nth(1).locator('.dex-tile')).toHaveAttribute('aria-label', 'Water Kid, Tier 1');
     await expect(cells.nth(1).locator('.dex-tile-name')).toHaveText('Water');
     const packets = dialog(page).locator('.dex-unknown');
-    await expect(packets).toHaveCount(totals.kids - 2);
+    await expect(packets).toHaveCount(totals.ordinary - 2);
     // Every packet is identical: same text, no tier, no data, not a button.
     const html = await packets.evaluateAll((els) => [...new Set(els.map((e) => e.outerHTML))]);
     expect(html).toHaveLength(1);
     expect(html[0]).not.toMatch(/tier|data-kid|button/i);
     expect(await dialog(page).locator('.dex-cell').nth(2).locator('.dex-unknown').count()).toBe(1);
+    // Specials and Rares: none found yet, all the same packets; the combined count is unchanged.
+    await dialog(page).getByRole('button', { name: 'Specials', exact: true }).click();
+    await expect(cells).toHaveCount(totals.specials);
+    await expect(packets).toHaveCount(totals.specials);
+    await dialog(page).getByRole('button', { name: 'Rares', exact: true }).click();
+    await expect(cells).toHaveCount(totals.rares);
+    await expect(packets).toHaveCount(totals.rares);
+    await expect(dialog(page).locator('.dex-segment-helper')).toHaveText(`Rares 0 / ${totals.rares}`);
+    const html2 = await packets.evaluateAll((els) => [...new Set(els.map((e) => e.outerHTML))]);
+    expect(html2).toEqual(html);
+    await expect(dialog(page).locator('.sheet-subtitle')).toHaveText(`2 / ${totals.kids} discovered`);
     expect(errors).toEqual([]);
+  });
+
+  test('each segment keeps its own search; a found special shows its label and apex facts (§16.4)', async ({ page }) => {
+    await twoKnown(page);
+    await page.evaluate(() => window.__PK__!.debugAdd!('gift', 1620, 5080));
+    await dexButton(page).click();
+    const field = dialog(page).getByLabel('Find a discovered kid');
+    await field.fill('wat');
+    await dialog(page).getByRole('button', { name: 'Specials', exact: true }).click();
+    await expect(field).toHaveValue('');
+    await expect(dialog(page).locator('[data-kid="gift"]')).toContainText('Special');
+    await dialog(page).getByRole('button', { name: 'Ordinary', exact: true }).click();
+    await expect(field).toHaveValue('wat');
+    await dialog(page).getByRole('button', { name: 'Specials', exact: true }).click();
+    await dialog(page).locator('[data-kid="gift"]').click();
+    await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Gift Kid');
+    await expect(dialog(page).locator('.dex-apex-label')).toHaveText('Special · From planting');
+    await expect(dialog(page)).toContainText('No fusion recipes.');
+    await expect(dialog(page)).toContainText('Cannot be bought.');
+    await expect(dialog(page).getByText('Found recipes')).toHaveCount(0);
+    // Back: the Specials segment, as it was.
+    await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
+    await expect(dialog(page).getByRole('button', { name: 'Specials', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dialog(page).locator('[data-kid="gift"]')).toBeFocused();
   });
 
   test('search finds discovered names only', async ({ page }) => {
@@ -1539,7 +1580,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     const field = dialog(page).getByLabel('Find a discovered kid');
     await field.fill('wat');
     await expect(dialog(page).locator('.dex-cell:visible')).toHaveCount(1);
-    await expect(dialog(page).getByText(`${totals.kids - 2} still undiscovered`)).toBeVisible();
+    await expect(dialog(page).getByText(`${totals.ordinary - 2} still undiscovered`)).toBeVisible();
     // An undiscovered kid is never found, by its name or its id.
     for (const q of ['Firefighter', 'firefighter', 'steam']) {
       await field.fill(q);
@@ -2894,6 +2935,7 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+    await dex.getByRole('button', { name: 'Rares', exact: true }).click();
     await dex.locator('[data-kid="hero"]').click();
     await expect(dex.locator('.dex-detail-name')).toHaveText(/Hero/);
     await expect(dex.getByText('Rare variants')).toHaveCount(0);
@@ -5353,6 +5395,7 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await expect(found.locator('img[src*="badge_tier"]')).toHaveCount(0);
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+    await dex.getByRole('button', { name: 'Specials', exact: true }).click();
     await dex.locator('[data-kid="treasure_chest"]').click();
     await expect(dex.locator('.dex-detail-name')).toHaveText(/Treasure Chest/);
     await expect(dex).toContainText('Tier 6');

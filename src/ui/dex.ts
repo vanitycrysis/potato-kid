@@ -57,9 +57,26 @@ interface RecipesPanel {
   dispose(): void;
 }
 
+/** The Kids tab's three segments (GUI_MVP §16.4): ordinary kids, the specials, the rares. */
+type Segment = 'ordinary' | 'special' | 'rare';
+const SEGMENTS: { id: Segment; label: string }[] = [
+  { id: 'ordinary', label: 'Ordinary' },
+  { id: 'special', label: 'Specials' },
+  { id: 'rare', label: 'Rares' },
+];
+
 export class Dex {
   private tab: Tab = 'kids';
-  private filter = '';
+  /** The Kids segment shown; each keeps its own search and scroll (§16.4). */
+  private segment: Segment = 'ordinary';
+  private readonly filters: Record<Segment, string> = { ordinary: '', special: '', rare: '' };
+  private readonly segmentScroll: Record<Segment, number> = { ordinary: 0, special: 0, rare: 0 };
+  private get filter(): string {
+    return this.filters[this.segment];
+  }
+  private set filter(q: string) {
+    this.filters[this.segment] = q;
+  }
   private readonly scroll: Record<Tab, number> = { kids: 0, recipes: 0, compendium: 0 };
   private shown: Shown | null = null;
   /** The kid detail that was open, and its scroll: reopening returns to it (§§7-8). */
@@ -192,6 +209,9 @@ export class Dex {
     s.tabBar.replaceChildren();
     s.sheet.footer.replaceChildren();
     if (this.tab === 'kids') {
+      // A discovery card's kid, or the detail that was open: its segment (§16.4).
+      const target = kid ?? this.detail?.kid;
+      if (target !== undefined && this.discovered(target)) this.segment = this.segmentOf(target);
       s.kids = this.kidsPanel();
       s.panel.append(s.kids.root);
       s.kids.update();
@@ -260,6 +280,11 @@ export class Dex {
     return this.content.kids.find((k) => k.id === type)!;
   }
 
+  private segmentOf(type: KidId): Segment {
+    const k = this.kid(type);
+    return k.rare ? 'rare' : k.special ? 'special' : 'ordinary';
+  }
+
   private tierMark(tier: number, size: 20 | 24, text: string): HTMLElement {
     return el('span', `tier dex-tier-${size}`, ...tierBadge(tier, `ui-icon-${size}`), text);
   }
@@ -285,10 +310,33 @@ export class Dex {
     const grid = el('div', 'dex-grid');
     grid.setAttribute('role', 'list');
     grid.setAttribute('aria-label', 'Kids');
-    const search = el('div', 'dex-search', label, field, summary, empty);
+    // Rares {found} / {total} (§16.4): its own count, in the combined total too.
+    const segmentHelper = el('p', 'sheet-helper dex-segment-helper');
+    const search = el('div', 'dex-search', label, field, summary, empty, segmentHelper);
     const detail = el('div', 'dex-detail');
     detail.hidden = true;
-    const root = el('div', 'dex-kids', search, grid, detail);
+    // Three 44 px controls in one row (§16.4); each segment keeps its search and scroll.
+    const segments = el('div', 'dex-segments');
+    segments.setAttribute('role', 'group');
+    segments.setAttribute('aria-label', 'Kinds of kids');
+    const segmentButtons = new Map<Segment, HTMLButtonElement>();
+    for (const sg of SEGMENTS) {
+      const b = el('button', 'ui-button dex-segment', sg.label);
+      b.type = 'button';
+      b.dataset.segment = sg.id;
+      b.addEventListener('click', () => {
+        if (sg.id === this.segment) return;
+        this.segmentScroll[this.segment] = this.sheets.snapshot()?.scrollTop ?? 0;
+        this.segment = sg.id;
+        field.value = this.filter;
+        known = -1;
+        panel.update();
+        this.shown?.sheet.scrollTo(this.segmentScroll[sg.id]);
+      });
+      segmentButtons.set(sg.id, b);
+      segments.append(b);
+    }
+    const root = el('div', 'dex-kids', segments, search, grid, detail);
 
     // Cells are kept and reordered, never rebuilt: discovered kids in roster order, then
     // identical packets. Interleaving packets in roster order would give away each unknown
@@ -339,11 +387,18 @@ export class Dex {
         grid.dataset.cols = sheetEl?.dataset.compact === 'true' && width >= 560 ? '5' : width >= 360 ? '3' : '2';
         portraits.watch(this.sheets.scrollRoot);
         panel.detailPortraits?.watch(this.sheets.scrollRoot);
+        for (const [id, b] of segmentButtons) b.setAttribute('aria-pressed', String(id === this.segment));
+        segments.hidden = panel.showing !== null;
         const n = this.game.state.discoveredKids.length;
         if (n === known) return;
         known = n;
+        const inSegment = this.content.kids.filter((k) => this.segmentOf(k.id) === this.segment);
+        const rareCount = this.content.kids.filter((k) => k.rare);
+        segmentHelper.hidden = this.segment !== 'rare';
+        segmentHelper.textContent = `Rares ${rareCount.filter((k) => this.discovered(k.id)).length} / ${rareCount.length}`;
         const order: HTMLElement[] = [];
-        for (const kid of this.content.kids) {
+        // Cells for other segments stay kept, out of the grid.
+        for (const kid of inSegment) {
           if (!this.discovered(kid.id)) continue;
           let c = knownCells.get(kid.id);
           if (!c) {
@@ -352,7 +407,7 @@ export class Dex {
           }
           order.push(c.cell);
         }
-        unknown = this.content.kids.length - order.length;
+        unknown = inSegment.length - order.length;
         while (unknownCells.length < unknown) unknownCells.push(cell(this.unknownTile()));
         unknownCells.length = unknown;
         // Reordering moves nodes, which drops focus: put it back.
@@ -378,10 +433,12 @@ export class Dex {
       portraits.add(type),
       el('span', 'dex-tile-name', shortName(k.name)),
       this.tierMark(k.tier, 20, `T${k.tier}`),
+      // A plain label, never colour alone (§16.4).
+      ...(k.rare || k.special ? [el('span', 'dex-tile-kind', k.rare ? 'Rare' : 'Special')] : []),
     );
     b.type = 'button';
     b.dataset.kid = type;
-    b.setAttribute('aria-label', `${k.name}, Tier ${k.tier}`);
+    b.setAttribute('aria-label', `${k.name}, ${k.rare ? 'Rare, ' : k.special ? 'Special, ' : ''}Tier ${k.tier}`);
     b.addEventListener('click', () => this.showDetail(type));
     return b;
   }
@@ -424,6 +481,15 @@ export class Dex {
       this.openKid(kidId, launcher, { label: `Back to ${k.name}`, go: () => this.open(launcher, undefined, kidId) }, ordinal);
     });
     const name = el('h3', 'dex-detail-name', k.name);
+    // Apex kids (§16.4): from planting, no recipes, never sold; no recipe list.
+    const apex = k.rare || k.special;
+    const recipes = apex
+      ? [
+          el('p', 'sheet-body-text dex-apex-label', `${k.rare ? 'Rare' : 'Special'} · From planting`),
+          el('p', 'sheet-helper', 'No fusion recipes.'),
+          el('p', 'sheet-helper', 'Cannot be bought.'),
+        ]
+      : [el('h3', 'sheet-section', 'Found recipes'), foundBox];
     p.detail.replaceChildren(
       back,
       el('div', 'dex-detail-portrait', portrait(kidRig!, type, 96)),
@@ -434,10 +500,9 @@ export class Dex {
       // The type's personality, as on a kid's card (GUI_MVP §18.1); never one kid's name or mood.
       el('section', 'dex-personality', ...personalityBlocks(this.content, type)),
       p.home.root,
-      el('h3', 'sheet-section', 'Found recipes'),
-      foundBox,
+      ...recipes,
     );
-    for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid]) node.hidden = true;
+    for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid, p.root.querySelector('.dex-segments') as HTMLElement]) node.hidden = true;
     p.detail.hidden = false;
     this.shown!.sheet.scrollTo(0);
     back.focus({ preventScroll: true });
@@ -459,7 +524,7 @@ export class Dex {
     p.detailPortraits = null;
     p.detail.hidden = true;
     p.detail.replaceChildren();
-    for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid]) node.hidden = false;
+    for (const node of [p.root.querySelector('.dex-search') as HTMLElement, p.grid, p.root.querySelector('.dex-segments') as HTMLElement]) node.hidden = false;
     this.shown!.sheet.scrollTo(this.scroll.kids);
     // Its tile, unless the kept search hides it: then the search field, so focus stays in
     // the sheet (Codex review, PR #43).
