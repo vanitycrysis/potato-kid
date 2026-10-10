@@ -229,7 +229,9 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
     return (t - y0) / ((pk.worldToScreen(0, 100).y - y0) / 100);
   }, trayTop);
   await page.mouse.move(size.width / 2, trayTop - 10, { steps: 8 });
-  await page.waitForTimeout(700);
+  // Held long enough that the scroll alone carries it past the margin, however slow the
+  // frames (scenery that pushes a landing spot down is no help to count on, FARMING #90).
+  await page.waitForTimeout(1000);
   await page.mouse.up();
   await page.waitForTimeout(250);
   const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);

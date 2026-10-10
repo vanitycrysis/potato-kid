@@ -14,7 +14,7 @@ const farm = JSON.parse(readFileSync('art/data/farm_v1.json', 'utf8')) as FarmDa
 const map = withFarmRelocations(JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData, farm);
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
 const [w, h] = map.worldSize;
-const options: GameOptions = {
+export const options: GameOptions = {
   bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
   spawnAt: { x: map.garden.spawnOutlet[0], y: map.garden.spawnOutlet[1] },
   obstacles: obstaclesFrom(map),
