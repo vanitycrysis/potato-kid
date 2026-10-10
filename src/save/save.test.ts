@@ -39,6 +39,12 @@ class TestStorage implements SaveStorage {
 
 const revisionOf = (s: SaveStorage & { data: Map<string, string> }, key: string) => decode(s.data.get(key)!)!.revision;
 
+
+/** A pre-schema-8 state's kids where schema 8 puts them: beside the moved Garden (D-071). */
+function v3<T extends { world: { kids: { x: number; y: number }[] } }>(old: T): T {
+  return { ...old, world: { ...old.world, kids: old.world.kids.map((k) => ({ ...k, x: k.x + 1080, y: k.y + 2880 })) } };
+}
+
 describe('saving and loading', () => {
   it('a new player starts fresh; a saved game loads back exactly', async () => {
     const storage = new MemoryStorage();
@@ -363,7 +369,7 @@ describe('schema 2: the tutorial counter (D-052)', () => {
     const old = schema1();
     storage.data.set('slotA', encode(1, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toMatchObject({ ...old, gardenSpawns: content.balance.spawn.tutorialSpawns });
+    expect(r.state).toMatchObject({ ...v3(old), gardenSpawns: content.balance.spawn.tutorialSpawns });
     // It plays on the slow schedule at once.
     const game = new Game(structuredClone(content), options, 5, r.state!);
     expect(game.interval).toBe(content.balance.spawn.intervalSeconds * content.balance.economy.gardenIntervalFactor ** (game.state.buildings.garden - 1));
@@ -387,7 +393,7 @@ describe('schema 3: plots (D-061)', () => {
     storage.data.set('slotA', encode(2, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
     // Schema 4 added the variants found, and schema 7 retired them (D-072).
-    expect(r.state).toEqual({ ...old, plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
+    expect(r.state).toEqual({ ...v3(old as PersistedState), plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
   });
 
   it('a schema-3 save must carry valid plots (D-061)', () => {
@@ -462,7 +468,7 @@ describe('schema 7: rare variants retired (D-072)', () => {
   }
 
   it('a schema-6 save loads with every variant kid ordinary, a Mini back at its normal size, and no variants found', async () => {
-    expect(SAVE_SCHEMA).toBe(7);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(7);
     const { old, mini, comet } = schema6();
     const storage = new TestStorage();
     storage.data.set('slotA', encode(6, 4, 1, old));
@@ -480,6 +486,22 @@ describe('schema 7: rare variants retired (D-072)', () => {
     expect(state.plots[1]!.seed!.sprout).toEqual({ type: 'hero' });
     // What the Dex knows of the types themselves stays.
     expect(state.discoveredKids).toEqual(old.discoveredKids);
+  });
+
+  it('a schema-7 save keeps its kids where they were beside the Garden, which moved with map v3 (D-071)', async () => {
+    expect(SAVE_SCHEMA).toBe(8);
+    const g = newGame();
+    const old = g.persisted();
+    old.plots[0]!.seed = { planted: [{ id: old.world.nextKidId, type: 'fire', look: { body: 'default', face: 'default', scale: 1 } }], sprout: null, grown: 0 };
+    old.world.nextKidId++;
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(7, 4, 1, old));
+    const r = await new SaveManager(storage, content).load();
+    // The Garden went from (1080, 620) to (2160, 3500).
+    expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x + 1080, k.y + 2880]));
+    // Planted kids have no position; everything else is as it was.
+    expect(r.state!.plots).toEqual(old.plots);
+    expect({ ...r.state!, world: null }).toEqual({ ...old, world: null });
   });
 
   it('a schema-3 Mini comes through every step at its normal size', async () => {
@@ -511,7 +533,7 @@ describe('schema 5: names and happiness (D-056, D-057)', () => {
     const storage = new TestStorage();
     storage.data.set('slotA', encode(4, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual(old);
+    expect(r.state).toEqual(v3(old));
   });
 
   it('a kid may carry a normalized, allowed name and some happiness; a planted kid whether it was happy', () => {

@@ -3,7 +3,7 @@ import { pairKey } from '../content/validate';
 import { BUILDING_IDS, type BuildingId, type Content, type KidId } from '../content/types';
 import { createRng, type Rng } from './rng';
 import { clearSpotFor, wanderOffline } from './offlineWander';
-import { blockedByScenery, findFreeSpot, gaps, kidRect, separate, touching } from './space';
+import { blockedByScenery, findFreeSpot, gaps, isFree, kidRect, separate, touching } from './space';
 import {
   addKid,
   clampToBounds,
@@ -327,6 +327,14 @@ export class Game {
       const { box, ...look } = this.lookWithBox(kid.look);
       kid.look = look;
       kid.box = box;
+    }
+    // A save from another map (schema 8 moved kids beside the v3 Garden, D-071), or a box
+    // grown with new art, may leave a kid in scenery or another kid: it moves to the nearest
+    // free spot clear of recipe partners, so loading never fuses it.
+    for (const kid of this.state.world.kids) {
+      if (isFree(this.state.world, kid.box, kid.x, kid.y, kid.id)) continue;
+      const spot = clearSpotFor(this.state.world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
+      if (spot) [kid.x, kid.y] = [spot.x, spot.y];
     }
     this.rng.setState(copy.rngState);
     this.cosmetic.setState(copy.cosmeticRngState);

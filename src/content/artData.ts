@@ -162,7 +162,7 @@ function pick<T>(name: string): T | undefined {
 }
 
 export const kidRig = pick<KidRig>('kid_rig_v2.json');
-export const mapData = pick<MapData>('map_garden_v2.json');
+export const mapData = pick<MapData>('map_garden_v3.json');
 export const uiData = pick<UiData>('ui_v2.json');
 
 /** Codex's planting tokens (GUI_MVP §15, `gate4_v2.json` → planting). */

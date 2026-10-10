@@ -2,7 +2,7 @@ import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { MapData } from '../content/artData';
 
 /**
- * Builds the world from ChatGPT/Codex's map sidecar (map_garden_v2.json): the explicit
+ * Builds the world from ChatGPT/Codex's map sidecar (map_garden_v3.json): the explicit
  * ground cells, path decals and scenery instances it lists. Nothing is improvised here:
  * no generated layout, no reshuffle, no whole-world cache texture (ART_AUDIO_PLAN.md).
  * Scenery draws behind kids.
