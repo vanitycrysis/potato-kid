@@ -1,5 +1,5 @@
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
-import type { KidRig, MapData, PlantingArt } from '../content/artData';
+import type { FarmData, KidRig, MapData, PlantingArt } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
@@ -8,6 +8,7 @@ import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
 import { plotAt, PlotsView } from './plotsView';
+import { FieldsView } from './fieldsView';
 import { RareLayer, type RareKid } from './rareView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
 import { clipLength } from './presentation';
@@ -33,6 +34,8 @@ export interface SceneArt {
   obstacles: Obstacle[];
   /** Each food field's bay, in field order: scenery once bought (GUI_MVP §22.1). */
   fieldBays?: Obstacle[];
+  /** Codex's food fields (farm_v1): how bought fields are drawn (GUI_MVP §22.1). */
+  farm?: FarmData | undefined;
   reducedMotion: boolean;
   /** The Garden's drop target (GUI_MVP §15.1, from Send home's §13): Codex's tokens and its ink. */
   home?: {
@@ -151,6 +154,7 @@ export class MapScene {
   private overBusyHome = false;
   /** The plots on the map, if the art has them. */
   private readonly plotsView: PlotsView | null;
+  private readonly fieldsView: FieldsView | null;
   private readonly prev = new Map<number, Prev>();
   private readonly worldWidth: number;
   private readonly worldHeight: number;
@@ -253,11 +257,28 @@ export class MapScene {
     // Plots sit on the ground after the Garden and below kids (GUI_MVP §15.2); no input.
     this.plotsView = art.planting ? new PlotsView(art.planting, { x: gx, y: gy }, art.textures.map) : null;
     if (this.plotsView) this.plotsView.root.eventMode = 'none';
+    // Bought fields, their crops and their working kids (D-069). A costume still loading is
+    // asked for; the kid is drawn once it's ready.
+    this.fieldsView = art.farm
+      ? new FieldsView(art.farm, art.rig, art.textures.map, art.reducedMotion, (type) => {
+          if (art.textures.ready(type)) return true;
+          void art.textures.ensure(type).catch(() => {});
+          return false;
+        })
+      : null;
+    if (this.fieldsView) this.fieldsView.root.eventMode = 'none';
     this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
     // The preference can change while the game is open: the rare layer follows it at once.
     const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
     motion?.addEventListener('change', (e) => (this.rareLayer.reducedMotion = e.matches));
-    this.camera.addChild(buildMap(art.map, art.textures.map), ...(this.plotsView ? [this.plotsView.root] : []), this.homeLayer, this.rareLayer.root, this.kidLayer);
+    this.camera.addChild(
+      buildMap(art.map, art.textures.map),
+      ...(this.plotsView ? [this.plotsView.root] : []),
+      ...(this.fieldsView ? [this.fieldsView.root] : []),
+      this.homeLayer,
+      this.rareLayer.root,
+      this.kidLayer,
+    );
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -380,7 +401,12 @@ export class MapScene {
   }
 
   /** Queues a UI command (purchase, upgrade, bias) for the next sim step. */
-  command(cmd: Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' }>): void {
+  command(
+    cmd: Extract<
+      Command,
+      { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' | 'unlockField' | 'setFieldFood' | 'farm' | 'unfarm' | 'emptyField' }
+    >,
+  ): void {
     this.pending.push(cmd);
   }
 
@@ -424,7 +450,8 @@ export class MapScene {
    * last kid of a type and a respawn moments later don't thrash the loader.
    */
   private releaseUnused(now: number): void {
-    const present = new Set(this.game.state.world.kids.map((k) => k.type));
+    // Kids on the map and kids farming (D-069) both need their costumes.
+    const present = new Set([...this.game.state.world.kids, ...this.game.state.fields.flatMap((f) => f.workers)].map((k) => k.type));
     for (const type of this.art.textures.loadedTypes) {
       if (present.has(type) || this.resident.has(type)) {
         this.absentSince.delete(type);
@@ -437,6 +464,11 @@ export class MapScene {
         this.art.textures.release(type);
       }
     }
+  }
+
+  /** Test hook: what each bought field shows (D-069). */
+  get fieldsShown(): ReturnType<FieldsView['shown']> {
+    return this.fieldsView?.shown() ?? [];
   }
 
   /** Test hook: costume types currently loaded. */
@@ -1132,6 +1164,7 @@ export class MapScene {
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
     this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
+    this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();
     for (const k of kids) {
       const view = this.views.get(k.id);

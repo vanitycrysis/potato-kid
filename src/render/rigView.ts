@@ -5,6 +5,13 @@ import { ClipPicker, EffectTracks, type OneShot } from './presentation';
 
 const DEG = Math.PI / 180;
 const OPEN = 'open';
+/** A farming kid's steps (Codex's farm_v1 `workerLoop`): body frames and their times. */
+const FARM_STEPS = [
+  { frame: 'stand', ms: 600 },
+  { frame: 'step_left', ms: 160 },
+  { frame: 'stand', ms: 600 },
+  { frame: 'step_right', ms: 160 },
+] as const;
 
 /**
  * Draws one kid from ChatGPT/Codex's rig (kid_rig_v2.json), following the spec's
@@ -134,23 +141,52 @@ export class KidRigView {
 
     // Blink: a face-only secondary clip, only where the rig allows it to run concurrently.
     const canBlink = !held && (name === 'walk' || name === 'idle' || name === 'look_around' || name === 'seated');
-    let blinkFace: string | undefined;
-    if (canBlink && !this.reducedMotion) {
-      if (this.blinkTime >= 0) {
-        this.blinkTime += dt;
-        const blink = this.rig.clips.blink;
-        const f = blink && this.blinkTime < blink.frames.length / blink.fps ? frameAt(blink, this.blinkTime, false) : undefined;
-        if (f) blinkFace = f.faceState;
-        else this.blinkTime = -1;
-      } else if ((this.blinkIn -= dt) <= 0) {
-        this.blinkTime = 0;
-        this.blinkIn = this.blinkDelay();
-      }
-    }
-
-    this.apply(frame, blinkFace);
+    this.apply(frame, canBlink ? this.blink(dt) : undefined);
     this.shadow.alpha = held ? this.rig.effects.shadow.heldOpacity : 1;
     this.drawEffects(dt);
+  }
+
+  /**
+   * A kid farming (D-069, Codex's farm_v1 `workerLoop`): fixed on its pad, its feet tend the
+   * furrow, stand → step_left → stand → step_right for 600 / 160 / 600 / 160 ms, then a pause
+   * of 3 to 5 s that depends on its id, so a field's kids never step together. It blinks as
+   * usual. Reduced motion: standing, blinking only. `ms`: the field's clock.
+   */
+  updateFarming(x: number, y: number, ms: number, dt: number): void {
+    this.root.position.set(x, y);
+    this.root.zIndex = y;
+    let bodyFrame = 'stand';
+    if (!this.reducedMotion) {
+      const pause = 3000 + ((this.kid.id * 977) % 2001);
+      const steps = FARM_STEPS.reduce((a, s) => a + s.ms, 0);
+      let t = (ms + this.kid.id * 1301) % (steps + pause);
+      for (const s of FARM_STEPS) {
+        if (t < s.ms) {
+          bodyFrame = s.frame;
+          break;
+        }
+        t -= s.ms;
+      }
+    }
+    this.lastClip = 'farming';
+    this.apply({ bodyFrame, faceState: 'inherit' }, this.blink(dt));
+    this.shadow.alpha = 1;
+  }
+
+  /** The blink scheduler's face state now, or undefined (open). */
+  private blink(dt: number): string | undefined {
+    if (this.reducedMotion) return undefined;
+    if (this.blinkTime >= 0) {
+      this.blinkTime += dt;
+      const blink = this.rig.clips.blink;
+      const f = blink && this.blinkTime < blink.frames.length / blink.fps ? frameAt(blink, this.blinkTime, false) : undefined;
+      if (f) return f.faceState;
+      this.blinkTime = -1;
+    } else if ((this.blinkIn -= dt) <= 0) {
+      this.blinkTime = 0;
+      this.blinkIn = this.blinkDelay();
+    }
+    return undefined;
   }
 
   destroy(): void {

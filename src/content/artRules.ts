@@ -64,6 +64,22 @@ export function obstaclesFrom(map: MapData): Obstacle[] {
 }
 
 /**
+ * The map with Codex's farm relocations applied (GUI_MVP §22.1): scenery that stood on the
+ * four field sites moves to free lawn, once, whether or not a field is bought.
+ */
+export function withFarmRelocations(map: MapData, farm: FarmData | undefined): MapData {
+  if (!farm) return map;
+  const moved = new Map(farm.sceneryRelocations.map((r) => [r.instanceId, r]));
+  return {
+    ...map,
+    instances: map.instances.map((i) => {
+      const r = moved.get(i.id);
+      return r && i.worldGround[0] === r.from[0] && i.worldGround[1] === r.from[1] ? { ...i, worldGround: r.to } : i;
+    }),
+  };
+}
+
+/**
  * Each food field's bay, in field order (GUI_MVP §22.1): its reserve about its ground, plus the
  * map's kid-to-scenery gap. A bought field is scenery: kids don't wander, spawn or land in it.
  */
