@@ -317,6 +317,40 @@ describe('scenery obstacles (map v2)', () => {
   });
 });
 
+describe('a save from another map (D-071)', () => {
+  const obstacle = { box: { minX: 400, minY: 400, maxX: 600, maxY: 600 }, circle: { x: 500, y: 600, r: 100 } };
+
+  it('a loaded kid standing in scenery, or in another kid, moves to a free spot clear of its partners', () => {
+    const c = testContent({ tutorialSpawns: 0, startingKids: 0 });
+    const before = new Game(c, { bounds, spawnAt: { x: 200, y: 200 } }, 3);
+    // A plain in the rock with a water beside it (plain + water is a recipe), and two fire
+    // kids overlapping (no recipe: a v2 save can't hold overlapping partners, they'd have fused).
+    const plain = before.debugAddKid('plain', 500, 500);
+    // The water stands just clear of the first free spot the plain's search finds, (700, 500):
+    // landing there it would touch, and fuse.
+    const water = before.debugAddKid('water', 700 + plain.box.right - plain.box.left + 4, 500);
+    const fire = before.debugAddKid('fire', 200, 650);
+    const fire2 = before.debugAddKid('fire', 240, 650);
+    const free = before.debugAddKid('snow', 200, 850);
+    const saved = before.persisted();
+    const after = new Game(c, { bounds, spawnAt: { x: 200, y: 200 }, obstacles: [obstacle] }, 3, saved);
+    const kids = after.state.world.kids;
+    const at = (id: number) => kids.find((k) => k.id === id)!;
+    // Out of the rock, and touching no other kid's box.
+    for (const k of kids) {
+      expect(Math.max(gaps(kidRect(k), obstacle.box).dx, gaps(kidRect(k), obstacle.box).dy)).toBeGreaterThanOrEqual(-1e-6);
+      for (const o of kids) if (o !== k) expect(Math.max(gaps(kidRect(k), kidRect(o)).dx, gaps(kidRect(k), kidRect(o)).dy)).toBeGreaterThanOrEqual(-1e-6);
+    }
+    // The plain landed clear of the water: nothing fuses after loading.
+    const g = gaps(kidRect(at(plain.id)), kidRect(at(water.id)));
+    expect(Math.max(g.dx, g.dy)).toBeGreaterThan(c.balance.body.touchSlack);
+    expect(after.step([]).filter((e) => e.type === 'fused')).toEqual([]);
+    // A kid already free stays exactly where it was.
+    expect([at(free.id).x, at(free.id).y]).toEqual([free.x, free.y]);
+    expect(kids.map((k) => k.id).sort()).toEqual([plain.id, water.id, fire.id, fire2.id, free.id].sort());
+  });
+});
+
 describe('appearance and rests (ART-V2)', () => {
   const looks = {
     bodies: [

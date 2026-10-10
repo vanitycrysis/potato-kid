@@ -4,6 +4,9 @@ import type { Migration } from './manager';
 /** Mini's size when schema 4 shipped (D-062); the balance no longer has it (D-072). */
 const MINI_SCALE_V4 = 0.72;
 
+/** Where the Garden moved from map v2 to v3 (D-071): (1080, 620) to (2160, 3500). */
+const V3_GARDEN_SHIFT = { x: 1080, y: 2880 };
+
 /**
  * `migrations(content)[n]` upgrades a schema-n state to n+1 (plan §4). A shipped step is
  * never edited: a new format adds the next one and bumps SAVE_SCHEMA.
@@ -62,6 +65,18 @@ export function migrations(content: Content): Record<number, Migration> {
         if (plot.seed?.sprout) delete plot.seed.sprout.variant;
       }
       delete s.discoveredVariants;
+      return s;
+    },
+    // Schema 8 (D-071): the world grows from about 2 × 2 screens to 4 × 4 (map v3), with the
+    // Garden in its middle. Kids on the map move with the Garden, so they stay where they
+    // were relative to it: (1080, 620) in v2, (2160, 3500) in v3. Planted kids have no
+    // position. The current map's scenery may now stand where a kid is: loading moves it.
+    7: (state) => {
+      const s = structuredClone(state) as { world?: { kids?: { x: number; y: number }[] } };
+      for (const k of s.world?.kids ?? []) {
+        k.x += V3_GARDEN_SHIFT.x;
+        k.y += V3_GARDEN_SHIFT.y;
+      }
       return s;
     },
   };

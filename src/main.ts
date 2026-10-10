@@ -100,7 +100,7 @@ const back = handleBack();
 async function boot(): Promise<void> {
   // D-036: the engine never draws art of its own. If ChatGPT/Codex's art doesn't cover
   // the roster, stop with a clear message instead of inventing placeholders.
-  if (!kidRig || !mapData) throw new Error('Art data missing: run `npm run art:export` (kid_rig_v2.json, map_garden_v2.json).');
+  if (!kidRig || !mapData) throw new Error('Art data missing: run `npm run art:export` (kid_rig_v2.json, map_garden_v3.json).');
   const coverage = [...rigCoverage(kidRig, content.kids, exportedNames), ...uiPaletteCoverage(uiData)];
   if (coverage.length) throw new Error(`Art coverage incomplete:\n${coverage.join('\n')}`);
 

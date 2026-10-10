@@ -17,6 +17,10 @@ import { KidRigView } from './rigView';
 const VIEW_WIDTH = 1080;
 /** On short/landscape screens, at least this much world height stays visible. */
 const VIEW_MIN_HEIGHT = 1920;
+/** Compact screens are at most this tall, CSS px (GUI_MVP §§3, 20.1). */
+const COMPACT_HEIGHT = 520;
+/** The fitted zoom's floor on compact landscape screens: 65 CSS px per 180 world units (§20.1). */
+const LANDSCAPE_FIT_FLOOR = 65 / 180;
 
 /** Everything the scene needs from ChatGPT/Codex's art (D-036: the engine draws none itself). */
 export interface SceneArt {
@@ -499,6 +503,9 @@ export class MapScene {
     };
     this.laidOut = { width, height };
     this.fitZoom = Math.min(width / VIEW_WIDTH, height / VIEW_MIN_HEIGHT);
+    // A compact landscape screen would draw kids too small to read: the fitted zoom keeps a
+    // 180-unit kid canvas at 65 CSS px (about 55 px of kid) at 1× (GUI_MVP §20.1).
+    if (width > height && height <= COMPACT_HEIGHT) this.fitZoom = Math.max(this.fitZoom, LANDSCAPE_FIT_FLOOR);
     this.cam.zoom = this.fitZoom * this.zoomFactor;
     this.app.stage.hitArea = this.app.screen;
     this.centerOn(centre.x, centre.y);

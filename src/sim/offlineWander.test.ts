@@ -118,14 +118,16 @@ describe('a long absence (D-053)', () => {
   });
 
   it('beside scenery too: making room never carries a kid farther than it could walk (Codex review, PR #70)', () => {
-    const map = JSON.parse(readFileSync('art/data/map_garden_v2.json', 'utf8')) as MapData;
+    const map = JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData;
     const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
     const [mw, mh] = map.worldSize;
     const options = { bounds: { minX: 0, minY: 0, maxX: mw, maxY: mh }, spawnAt: garden, now: T0, obstacles: obstaclesFrom(map), looks: lookTable(rig) };
     for (const seed of [1, 11, 42]) {
       for (const body of ['round', 'tall', 'squat', 'bean']) {
         const g = new Game(testContent(), options, seed);
-        const kid = g.debugAddKid('plain', 1475.75, 620, { body, scale: 1 }); // against the Garden's reserve
+        // Against the Garden's reserve, wherever the map puts the Garden (Codex review, PR #88).
+        const [gx, gy] = map.garden.worldGround;
+        const kid = g.debugAddKid('plain', gx + 395.75, gy, { body, scale: 1 });
         const start = { x: kid.x, y: kid.y };
         g.reconcile(T0 + 100);
         expect(dist(kid, start), `seed ${seed}, ${body}`).toBeLessThanOrEqual(w.speed * 0.1 + 1e-9);

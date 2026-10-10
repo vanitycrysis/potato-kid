@@ -9,7 +9,7 @@ import type { GameOptions } from './game';
 // and prints the medians (ENGINEERING_PLAN §3). Run by scripts/balance.mjs through Vite,
 // one process per seed and scenario.
 
-const map = JSON.parse(readFileSync('art/data/map_garden_v2.json', 'utf8')) as MapData;
+const map = JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData;
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
 const [w, h] = map.worldSize;
 const options: GameOptions = {
