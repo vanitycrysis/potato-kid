@@ -224,8 +224,9 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
   // Where the starting view ends, in world units.
   const viewEnd = await page.evaluate((t) => {
     const pk = window.__PK__!;
-    const y0 = pk.worldToScreen(1080, 2880).y;
-    return (t - y0) / ((pk.worldToScreen(1080, 2980).y - y0) / 100);
+    // From the world's origin: an absolute y, like the kid's (Codex review, PR #88).
+    const y0 = pk.worldToScreen(0, 0).y;
+    return (t - y0) / ((pk.worldToScreen(0, 100).y - y0) / 100);
   }, trayTop);
   await page.mouse.move(size.width / 2, trayTop - 10, { steps: 8 });
   await page.waitForTimeout(700);
