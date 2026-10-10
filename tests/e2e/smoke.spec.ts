@@ -3839,6 +3839,55 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     }
   });
 
+  test('a Spawn now refusal that arrives as the Garden closes is shown on the map (Codex review round 3, PR #87)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=garden]').click();
+    // In one task: a valid tap, the sheet closes (it fades out, still in the DOM), then the
+    // Potatokens vanish before the engine answers.
+    await page.evaluate(() => {
+      (document.querySelector('.arrivals-spawn') as HTMLButtonElement).click();
+      (document.querySelector('.sheet[role=dialog] .sheet-close') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ potatokens: -window.__PK__!.wallet().potatokens });
+    });
+    await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+
+  test('the Arrivals status changes only when its message does (Codex review round 3, PR #87)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ potatokens: -window.__PK__!.wallet().potatokens }));
+    await page.locator('[data-nav=garden]').click();
+    await expect(page.locator('.arrivals-reason')).toContainText('Not enough Potatokens');
+    // Thirty frames with the same message: the live region is not touched once.
+    const mutations = await page.evaluate(async () => {
+      let n = 0;
+      const obs = new MutationObserver((list) => (n += list.length));
+      obs.observe(document.querySelector('.arrivals-reason')!, { childList: true, characterData: true, subtree: true });
+      for (let i = 0; i < 30; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
+      obs.disconnect();
+      return n;
+    });
+    expect(mutations).toBe(0);
+  });
+
+  test('a short screen: a new Spawn now refusal is brought into view (Codex review round 3, PR #87)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await page.locator('[data-nav=garden]').click();
+    // Scroll so Spawn now sits at the bottom of what scrolls, its status below, out of view.
+    await page.evaluate(() => {
+      const button = document.querySelector('.arrivals-spawn') as HTMLElement;
+      button.scrollIntoView({ block: 'end' });
+    });
+    await expect(page.locator('.arrivals-spawn')).toBeInViewport({ ratio: 1 });
+    await page.evaluate(() => {
+      (document.querySelector('.arrivals-spawn') as HTMLButtonElement).click();
+      window.__PK__!.debugGive!({ potatokens: -window.__PK__!.wallet().potatokens });
+    });
+    await frames(page, 5);
+    await expect(page.locator('.arrivals-reason')).toBeInViewport();
+  });
+
   test('page mode: Back to Notebook returns to the Notebook where it was, its row in view (Codex review, PR #87)', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 200 });
     await boot(page, '?seed=3&debug=1&calm=1');

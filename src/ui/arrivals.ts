@@ -24,6 +24,8 @@ export class Arrivals {
   private inflight = false;
   /** The engine's last refusal of Spawn now, shown here until the next tap (Codex review, PR #87). */
   private refusal: string | null = null;
+  /** What the status shows, and whether it is the engine's refusal: changed only on a change. */
+  private shown = '';
 
   constructor(
     private readonly scene: MapScene,
@@ -74,7 +76,9 @@ export class Arrivals {
       if (e.type === 'spawned' && e.source === 'instant') this.inflight = false;
       if (e.type === 'rejected' && e.command === 'instantSpawn') {
         this.inflight = false;
-        if (this.node.isConnected) {
+        // Only in the open Garden: a closing sheet stays in the DOM while it fades, but it is no
+        // dialog any more, and its refusal belongs on the map (Codex review round 3, PR #87).
+        if (this.node.closest('[role="dialog"]')) {
           this.refusal = refusalText(e.reason, 'instantSpawn', 'potatokens');
           handled.push(e);
         }
@@ -100,8 +104,14 @@ export class Arrivals {
     this.spawn.classList.toggle('is-disabled', !st.ok);
     this.spawn.setAttribute('aria-label', st.reason ? `Spawn now: ${st.reason}` : `Spawn a random Garden kid for ${formatExact(cost)} Potatokens`);
     // The engine's refusal stands until the next tap; otherwise why the button is unavailable.
+    // The live status changes only when its message does, and a new refusal is brought into
+    // view: the world shows no card for it (Codex review round 3, PR #87).
     const reason = this.refusal ?? st.reason;
+    const key = `${this.refusal ? 'r' : 'p'}${reason}`;
+    if (key === this.shown) return;
+    this.shown = key;
     this.reason.textContent = reason;
     this.reason.hidden = !reason;
+    if (this.refusal) this.reason.scrollIntoView({ block: 'nearest' });
   }
 }
