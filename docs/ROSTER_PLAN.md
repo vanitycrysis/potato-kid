@@ -10,10 +10,10 @@ D-072/D-073 override the ordinary-only shared-potato and costume restrictions be
 | paper_fan | Paper Fan Kid | Wide pleated semicircle with stepped upper edge and short folded base. | apple / berries | Pending Claude |
 | jelly | Jelly Kid | Tall moulded dessert with broad wavy rim, visibly scalloped dome. | carrot / berry_jam | Pending Claude |
 | cushion | Cushion Kid | Plump concave-sided square pillow with four oversized tied corners. | corn / carrot | Pending Claude |
-| seashell | Seashell Kid | Scallop shell: five big scallops and tapering heel, no ammonite spiral. | mushroom / pickle | Pending Claude |
+| seashell | Seashell Kid | Asymmetric conch shell with a stepped spire and flared side lip; distinct from the semicircular Paper Fan. | mushroom / pickle | Pending Claude |
 | flying_saucer | Flying Saucer Kid | Wide saucer rim under a solid domed hull; face on hull, no glass cockpit. | pickle / cheese | Pending Claude |
 | ring_planet | Ring Planet Kid | Round globe with a broad oblique rear ring, exposed on both sides without crossing the face. | cheese / mushroom | Pending Claude |
-| wind_up_key | Wind-Up Key Kid | Two rounded key lobes and a short two-toothed stem, no long tool. | soup / cocoa | Pending Claude |
+| wind_up_key | Wind-Up Key Kid | Butterfly winding bow with two open finger holes above the face and a long smooth shaft with a blunt end. | soup / cocoa | Pending Claude |
 
 Every rare has a complete record in `art/data/personality_v1.json` (description, likes, hates, hobbies, favouriteFood and hatedFood). All **94 ordered food pairs are distinct**; the original 84 records are unchanged. All ten rare tiers are **null placeholders owned by Claude**, not zero or tentative balance choices. D-066's special names/IDs/12 T5 + 8 T6 tiers and personality prose are retained exactly.
 

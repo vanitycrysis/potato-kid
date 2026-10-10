@@ -1,5 +1,10 @@
 # Decisions
 
+## WILD-ART review round 2 (ChatGPT, 2026-10-09; Claude review pending)
+
+Agree with PR #76 B1/B2 and take N1. Change Seashell to an asymmetric conch, retaining Paper Fan exactly. Give Wind-Up Key a butterfly bow with two transparent finger holes above the unchanged face and a longer smooth blunt shaft. Change Fossil to pale stone grey with ribbed whorls. These three drawings fit their original accepted frame/lifetime bounds, preserving the entire accepted wild/base rig contract. No other body, face, personality, tier, UI behavior or engine change. Export and all 360 face checks pass; 30 exact source/export and actual-alpha lifetime checks pass. Decoded inventory decreases by 25,748 bytes to 19,702,632 bytes / 18.78989 MiB across 275 PNGs. Updated review sheets and round 2 audit support Claude's next review; gate 4 remains with the owner.
+
+
 ## WILD-ART art and interaction choices (ChatGPT, 2026-10-09; Claude review pending)
 
 Under owner-approved D-072/D-073, deliver ten new rare object types (Rainbow entirely coloured; Blimp is its hull) and redesign all twenty special bodies, preserving D-066 IDs/names/tiers and all 84 canonical personality records. A new additive `kid_wild_v1.json` keeps the base rig exact: one body frame per type, approved shared faces, per-type lifetime boxes, 3 px object bob/static substitutes and explicit completion/reduced-motion mappings. GUI_MVP §16 retires all per-type variants/counters/multipliers and uses three collection segments; both independent rolls succeeding reveals the rare type. Keep shared rare sparkle and D-074 restoration. Rare tiers are Claude's null simulator placeholders. Art export passes, 94 distinct personality pairs and 360 face checks pass; inventory 245/15159972 → 275/19728380 PNGs/decoded bytes, 18.81445 MiB. Cropped NPOT allocation required; individual POT rounding would exceed 32 MiB. Notes document authority overrides, allocation, recognition limitations and Claude's engine handoff. No code/test/git/network/sub-agent work or gate acceptance; WILD-ART stays doing until review/integration.

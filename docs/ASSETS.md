@@ -1,5 +1,12 @@
 # Asset list
 
+## WILD-ART round 2 (2026-10-09; Claude review pending)
+
+Revision `wild-art-2`, PR #76: B1 revises Seashell to an asymmetric conch; B2 gives Wind-Up Key an open butterfly bow and longer smooth shaft; N1 gives Fossil pale stone grey and radial ribs. Three editable SVGs under `art/src/kids/wild/`, three matching cropped PNGs, generated trim data and affected review sheets change. All other bodies/faces, both accepted rig contracts, tiers and all 94 personalities remain exact. Export passes 344 sources / seven sidecars; 360 face checks, 30 exact source/export comparisons, actual alpha/clip lifetime checks and preservation hashes pass. Plain UTF-8: **0 0 0**.
+
+Runtime inventory: **275 PNGs / 19,728,380 bytes (18.81445 MiB) → 275 / 19,702,632 bytes (18.78989 MiB)**, **-25,748 bytes**. Cropped NPOT/no-mipmap allocation remains accepted; physical residency is Claude's check. All 131 review PNGs are refreshed. [Notes](../.codex-out/wild-art-notes.md), [gallery](../art/previews/wild/index.html), [round 2 audit](../.codex-out/wild-round2-audit.json). WILD-ART remains doing pending Claude's art review, renderer/content integration and owner gate 4.
+
+
 ## LAYOUT-DESIGN round 2 (2026-10-09; Claude review pending)
 
 Current layout/composition contract: GUI_MVP §§19–21, `layout-design-2`. The accepted UI/planting sidecars, HUD, sheets and D-074 flow are unchanged; cancellation text uses ink with a danger border. `map_garden_v3.json`, revision `layout-design-map-3-round2`, places Garden/outlet/camera near the centre, reuses the three ground/six small-decor textures and supplies connected path loops, 250 accents and twelve outer landmarks. Claude owns save migration and selecting v3 in every reader.

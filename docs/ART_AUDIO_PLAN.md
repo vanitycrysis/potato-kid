@@ -1,6 +1,8 @@
 # Art and audio plan
 
-## WILD-ART delivery (2026-10-09; Claude review pending)
+## WILD-ART delivery (2026-10-09; round 2, Claude review pending)
+
+Round 2 addresses B1 (conch silhouette), B2 (open butterfly bow and longer winding shaft) and N1 (pale ribbed fossil). Only those three bodies and review evidence change; the accepted base and wild rig contracts remain byte-identical. Round 2 inventory: 275 PNGs / 19,728,380 bytes → 275 / 19,702,632 bytes (18.81445 → 18.78989 MiB), -25,748 bytes. [Round 2 audit](../.codex-out/wild-round2-audit.json) verifies all 30 actual alpha bounds and exact source/export pixels. The cumulative table below includes both rounds.
 
 D-072/D-073 supersede the historical ten shared variants and carried-special art below. Ten new rare types and all twenty special object bodies use **30 original vectors / 30 cropped runtime body PNGs**, one raster frame per type, with the unchanged shared D-045 face states. The four held specials are redesigned under the owner's freer-body authorization. IDs/names/tiers/all 84 existing personalities stay exact; ten new D-058 records bring the total to **94 distinct food pairs / 94 records**. Rare tiers are **null placeholders for Claude's simulator**, with no new multiplier or income number.
 
@@ -9,10 +11,10 @@ The additive `art/data/kid_wild_v1.json` declares type body selection, face anch
 | Decoded runtime PNG inventory | Before WILD-ART | After WILD-ART | Change |
 | --- | ---: | ---: | ---: |
 | PNGs under assets/ | 245 | 275 | +30 |
-| RGBA bytes | 15,159,972 | 19,728,380 | +4,568,408 |
-| MiB | 14.45768 | 18.81445 | +4.35677 |
+| RGBA bytes | 15,159,972 | 19,702,632 | +4,542,660 |
+| MiB | 14.45768 | 18.78989 | +4.33222 |
 
-These are measured against the actual merged checkout (specials plus layout landmarks), not either earlier PR's isolated subtotal. Cropped exports total 18.81445 MiB. The unchanged physical ceiling is 32 MiB; decoded headroom is 13.18555 MiB before atlas slack, surfaces or duplicate allocation. Native cropped non-power-of-two textures, no mipmaps, no per-instance raster, no flattened portrait cache and one shared face/FX allocation are requirements of this handoff. Rounding the entire stored inventory to individual power-of-two textures would be **35.99609 MiB**, which exceeds the ceiling and is **not an acceptable allocation strategy**. This is a decoded/storage audit and allocation contract, not a measurement of GPU residency. Claude must check actual device/atlas allocation before acceptance.
+These are measured against the actual merged checkout (specials plus layout landmarks), not either earlier PR's isolated subtotal. Cropped exports total 18.78989 MiB. The unchanged physical ceiling is 32 MiB; decoded headroom is 13.21011 MiB before atlas slack, surfaces or duplicate allocation. Native cropped non-power-of-two textures, no mipmaps, no per-instance raster, no flattened portrait cache and one shared face/FX allocation are requirements of this handoff. Rounding the entire stored inventory to individual power-of-two textures would be **35.99609 MiB**, which exceeds the ceiling and is **not an acceptable allocation strategy**. This is a decoded/storage audit and allocation contract, not a measurement of GPU residency. Claude must check actual device/atlas allocation before acceptance.
 
 `npm run art:export` passes: 344 sources / seven sidecars. Independent checks preserve all existing source art, runtime PNGs, `src/`, `tests/` and canonical personalities. All **360** object/face/state combinations have opaque support and at least 3 source px clearance from body ink; all bob offsets fit their type lifetime box inside the existing 8 px source-padding envelope. **131 review PNGs** include bare 55 px colour/gray, 3× native pixels, full 94 roster, all saved faces, every wild kid among twelve ordinary kids, aggregate and individual Dex-row/card portraits. [Gallery](../art/previews/wild/index.html); [notes](../.codex-out/wild-art-notes.md); [audit](../.codex-out/wild-audit.json). Content import, rare tiers, renderer implementation, physical GPU checks, Claude review and the next owner gate-4 build remain outstanding; no shipping/device/gate acceptance is claimed.
 
