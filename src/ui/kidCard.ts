@@ -457,7 +457,7 @@ export class KidCard {
       'section',
       'kid-card-planting',
       el('h3', 'sheet-section kid-card-heading', 'Planting'),
-      el('p', 'sheet-body-text', 'Add this kid to a plot. Leaves the map right away; kept in your Dex. No refund.'),
+      el('p', 'sheet-body-text', 'This kid leaves the map. You can take it out before growing, or cancel the whole growing plot.'),
       pick,
     );
 
@@ -687,7 +687,8 @@ export class KidCard {
       input,
       count,
       error,
-      el('p', 'sheet-helper', 'Names end when this kid fuses or is added to a plot.'),
+      el('p', 'sheet-helper', 'Names end when this kid fuses.'),
+      el('p', 'sheet-helper', 'Names stay with a kid taken out of a plot; a sprout gets its own type name.'),
       el('p', 'sheet-body-text', `Naming costs ${formatExact(n.price)} Materials.`),
       holding,
       shortfall,

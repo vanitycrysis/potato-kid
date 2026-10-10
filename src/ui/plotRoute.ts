@@ -64,7 +64,7 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
   );
   const odds = el('div', 'dex-home-odds');
   const notices = [
-    el('p', 'sheet-body-text', 'This kid leaves the map. Its name, income and happy effect end here. No refund.'),
+    el('p', 'sheet-body-text', 'This kid leaves the map. You can take it out before growing, or cancel the whole growing plot.'),
     el('p', 'sheet-body-text', 'Its type stays in your Dex.'),
     ...(kind ? [el('p', 'sheet-body-text', `${kind} kids cannot be bought back.`)] : []),
   ];

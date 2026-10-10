@@ -192,8 +192,10 @@ export class MapScene {
    * A kid press that may still be a tap, which opens its card (GUI_MVP §18.1): the same
    * 220 ms and 8 CSS px. The kid lifts as for a drag; a tap puts it back untouched.
    */
-  private kidTap: { pointerId: number; kidId: number; x: number; y: number; t: number; view: string } | null = null;
+  private kidTap: { pointerId: number; kidId: number; x: number; y: number; t: number; view: string; candidates?: number[] } | null = null;
   private readonly kidTapListeners = new Set<(kidId: number) => void>();
+  /** A tap that reached several kids' pickup targets and no kid's body (§20.1). */
+  private readonly kidChoiceListeners = new Set<(kidIds: number[]) => void>();
   /** How a kid press resolved: a drag (from the moment it is one) or a tap (Codex review). */
   private readonly gestureListeners = new Set<(kind: 'drag' | 'tap') => void>();
   /** The Garden's ground point, which the plots sit around. */
@@ -340,6 +342,11 @@ export class MapScene {
   }
 
   /** Calls `fn` when a kid on the map is tapped (GUI_MVP §18.1): its id. */
+  /** Calls `fn` with the kids a tap could mean, nearest first, when it reached more than one (§20.1). */
+  listenKidChoice(fn: (kidIds: number[]) => void): void {
+    this.kidChoiceListeners.add(fn);
+  }
+
   listenKidTap(fn: (kidId: number) => void): void {
     this.kidTapListeners.add(fn);
   }
@@ -577,9 +584,10 @@ export class MapScene {
     // A press near a kid drawn smaller than 44 CSS px picks it up: its target is at least that
     // each way (§16.1, first for Minis; now for any kid, as at far zoom, D-071). Its own body,
     // any other kid's and real soil all come first: they took the press already.
-    const small = this.smallKidAt(this.toWorld(e));
-    if (small !== null) {
-      this.startDrag(small, e);
+    // Several can hold the press: a drag takes the nearest; a tap asks which (§20.1).
+    const small = this.smallKidsAt(this.toWorld(e));
+    if (small.length) {
+      this.startDrag(small[0]!, e, small);
       return;
     }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
@@ -590,16 +598,15 @@ export class MapScene {
   }
 
   /**
-   * The small kid whose pickup target holds world point `p`, or null (GUI_MVP §16.1): a kid
-   * drawn under 44 CSS px either way has its box grown to at least that, about its centre. Never over real soil; where two
-   * overlap, the nearest centre wins, then the lower id. Only for picking up: drops and
+   * The small kids whose pickup targets hold world point `p`, nearest centre first, then the
+   * lower id (GUI_MVP §§16.1, 20.1): a kid drawn under 44 CSS px either way has its box grown
+   * to at least that, about its centre. Never over real soil. Only for picking up: drops and
    * fusions use the drawn box.
    */
-  private smallKidAt(p: { x: number; y: number }): number | null {
-    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return null;
+  private smallKidsAt(p: { x: number; y: number }): number[] {
+    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return [];
     const min = TAP_TARGET / this.cam.zoom;
-    let best: number | null = null;
-    let bestD = Infinity;
+    const hits: { id: number; d: number }[] = [];
     for (const k of this.game.state.world.kids) {
       if (!this.views.has(k.id)) continue;
       if (k.box.right - k.box.left >= min && k.box.bottom - k.box.top >= min) continue;
@@ -609,13 +616,9 @@ export class MapScene {
       const hw = Math.max(k.box.right - k.box.left, min) / 2;
       const hh = Math.max(k.box.bottom - k.box.top, min) / 2;
       if (Math.abs(p.x - cx) > hw || Math.abs(p.y - cy) > hh) continue;
-      const d = Math.hypot(p.x - cx, p.y - cy);
-      if (d < bestD || (d === bestD && best !== null && k.id < best)) {
-        bestD = d;
-        best = k.id;
-      }
+      hits.push({ id: k.id, d: Math.hypot(p.x - cx, p.y - cy) });
     }
-    return best;
+    return hits.sort((a, b) => a.d - b.d || a.id - b.id).map((h) => h.id);
   }
 
   // --- Pinch-zoom (D-071) ---------------------------------------------------
@@ -828,7 +831,7 @@ export class MapScene {
     return { x: p.x, y: p.y };
   }
 
-  private startDrag(kidId: number, e: FederatedPointerEvent): void {
+  private startDrag(kidId: number, e: FederatedPointerEvent, candidates?: number[]): void {
     if (this.drag || this.pan || this.inputPaused) return; // one gesture at a time; none under a sheet
     this.panVelocity = { x: 0, y: 0 };
     this.dragScreen = { x: e.global.x, y: e.global.y };
@@ -844,7 +847,7 @@ export class MapScene {
     this.home?.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
-    this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey() };
+    this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey(), ...(candidates && candidates.length > 1 ? { candidates } : {}) };
   }
 
   private onPointerMove(e: FederatedPointerEvent): void {
@@ -905,7 +908,8 @@ export class MapScene {
     if (tap && performance.now() - tap.t <= TAP_MS && Math.hypot(e.global.x - tap.x, e.global.y - tap.y) <= TAP_SLOP && this.viewKey() === tap.view) {
       this.cancelActiveDrag();
       for (const fn of this.gestureListeners) fn('tap');
-      for (const fn of this.kidTapListeners) fn(tap.kidId);
+      if (tap.candidates) for (const fn of this.kidChoiceListeners) fn(tap.candidates);
+      else for (const fn of this.kidTapListeners) fn(tap.kidId);
       return;
     }
     // Not a tap after all: a drag that never sounded gets its pick-up now, then its drop.
