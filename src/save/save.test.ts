@@ -489,7 +489,7 @@ describe('schema 7: rare variants retired (D-072)', () => {
   });
 
   it('a schema-7 save keeps its kids where they were beside the Garden, which moved with map v3 (D-071)', async () => {
-    expect(SAVE_SCHEMA).toBe(8);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(8);
     const g = newGame();
     const old = g.persisted();
     old.plots[0]!.seed = { planted: [{ id: old.world.nextKidId, type: 'fire', look: { body: 'default', face: 'default', scale: 1 } }], sprout: null, grown: 0 };
@@ -501,7 +501,18 @@ describe('schema 7: rare variants retired (D-072)', () => {
     expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x + 1080, k.y + 2880]));
     // Planted kids have no position; everything else is as it was.
     expect(r.state!.plots).toEqual(old.plots);
-    expect({ ...r.state!, world: null }).toEqual({ ...old, world: null });
+    expect({ ...r.state!, world: null, fields: null, pantry: null }).toEqual({ ...old, world: null, fields: null, pantry: null });
+  });
+
+  it('a schema-8 save loads with no fields and an empty pantry, all else as it was (D-069)', async () => {
+    expect(SAVE_SCHEMA).toBe(9);
+    const old: Partial<PersistedState> = newGame().persisted();
+    delete old.fields;
+    delete old.pantry;
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(8, 4, 1, old as PersistedState));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state).toEqual({ ...old, fields: [], pantry: {} });
   });
 
   it('a schema-3 Mini comes through every step at its normal size', async () => {

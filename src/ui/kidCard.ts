@@ -283,8 +283,8 @@ export class KidCard {
         const foodName = this.food(e.food)?.name ?? e.food;
         this.say(
           e.favourite
-            ? [`${foodName} is ${name}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}. Check planting chances in a plot.`]
-            : [`${name} enjoyed ${foodName}.`, `Happy for ${formatDuration(f.happySeconds)}.`],
+            ? [`${foodName} is ${name}’s favourite!`, `Happy for ${formatDuration(f.favouriteSeconds)}. 1 bite used from the pantry.`]
+            : [`${name} enjoyed ${foodName}.`, `Happy for ${formatDuration(f.happySeconds)}. 1 bite used from the pantry.`],
           false,
         );
       } else if (p.type === 'name' && e.type === 'named' && e.kid.id === this.kidId) {
@@ -317,7 +317,8 @@ export class KidCard {
   private refused(p: Pending, reason: RejectReason): void {
     const name = this.displayName();
     if (reason === 'gone') return this.say(['This kid has already left the map.'], true);
-    if (p.type === 'feed' && reason === 'hated') return this.say([`${name} won’t eat ${this.food(p.food)?.name ?? p.food}. Nothing was spent.`], true);
+    if (p.type === 'feed' && reason === 'hated') return this.say([`${name} won’t eat ${this.food(p.food)?.name ?? p.food}. No food was used.`], true);
+    if (p.type === 'feed' && reason === 'noFood') return this.say([`There are no ${this.food(p.food)?.name ?? p.food} bites left. Grow more in a field.`], true);
     if (p.type === 'name' && reason === 'invalid') return this.say(['Use letters, numbers, spaces, apostrophes or hyphens.'], true);
     // An add was for one plot: say what changed there, not about every plot (§15.3).
     if (p.type === 'plant' && (reason === 'plotsBusy' || reason === 'plotFull')) return this.say([chosenPlotRefusal(reason)], true);
@@ -512,14 +513,16 @@ export class KidCard {
     const f = this.content.balance.feeding;
     const p = this.content.personality[type];
     const status = this.statusBox();
-    const replaces = el('p', 'sheet-helper', 'Replaces the current happy effect.');
-    const rows: { food: FoodDef; button: HTMLButtonElement; price: HTMLElement; label: HTMLElement; short: HTMLElement }[] = [];
+    const replaces = el('p', 'sheet-helper', 'Replaces the current happy effect; time does not add up.');
+    // Food comes from the pantry (D-069, GUI_MVP §22.6): each row says how much is stored.
+    const empty = el('p', 'sheet-helper feed-empty', 'Your pantry is empty. Choose a food in a field and assign a kid to grow it.');
+    const stockText = (n: number) => `${formatExact(n)} ${n === 1 ? 'bite' : 'bites'} stored`;
+    const rows: { food: FoodDef; button: HTMLButtonElement; price: HTMLElement; label: HTMLElement; short: HTMLElement; stock: HTMLElement; favourite: boolean }[] = [];
     const row = (food: FoodDef, relation: string | null, favourite: boolean) => {
       const label = el('span', 'action-label', 'Feed');
-      const price = el('span', 'feed-price', `${formatExact(food.price)} Materials`);
+      const price = el('span', 'feed-price', 'Uses 1 bite');
       const button = el('button', 'ui-button feed-button', label, price);
       button.type = 'button';
-      button.setAttribute('aria-label', `Feed ${food.name}, ${formatExact(food.price)} Materials`);
       button.dataset.cue = 'success';
       button.addEventListener('click', () => {
         if (button.getAttribute('aria-disabled') === 'true') return;
@@ -527,16 +530,22 @@ export class KidCard {
       });
       const short = el('p', 'sheet-helper feed-short');
       short.hidden = true;
-      const text = el('div', 'feed-text', el('span', 'feed-name', food.name), ...(relation ? [el('span', 'feed-relation', ...(favourite ? [icon('icon_check', '', 'ui-icon-20')] : []), relation)] : []));
+      const stock = el('span', 'feed-stock');
+      const text = el(
+        'div',
+        'feed-text',
+        el('span', 'feed-name', food.name),
+        stock,
+        ...(relation ? [el('span', 'feed-relation', ...(favourite ? [icon('icon_check', '', 'ui-icon-20')] : []), relation)] : []),
+      );
       const node = el('div', `feed-row ui-surface${favourite ? ' is-selected' : ''}`, icon(`icon_food_${food.id}`, '', 'ui-icon-32'), text, button, short);
-      rows.push({ food, button, price, label, short });
+      rows.push({ food, button, price, label, short, stock, favourite });
       return node;
     };
     const fav = p ? this.food(p.favouriteFood) : undefined;
     const hated = p ? this.food(p.hatedFood) : undefined;
     const others = f.foods.filter((x) => x.id !== fav?.id && x.id !== hated?.id);
-    const plantingLine = () => el('p', 'sheet-helper', 'Planting chances depend on the whole plot. Preview special and rare chances before Start growing.');
-    const tierLine = () => el('p', 'sheet-helper', 'Happy kids count as one tier higher when added to a plot.');
+    const tierLine = () => el('p', 'sheet-helper', 'Happy kids count as one tier higher when added to a planting plot; odds stay capped.');
     const refused = hated
       ? el(
           'div',
@@ -544,32 +553,30 @@ export class KidCard {
           icon(`icon_food_${hated.id}`, '', 'ui-icon-32'),
           el('div', 'feed-text', el('span', 'feed-name', hated.name), el('span', 'feed-relation', icon('icon_warning', '', 'ui-icon-20'), 'Won’t eat this')),
           (() => {
-            const b = el('button', 'ui-button feed-button is-disabled', el('span', 'action-label', 'Refused'), el('span', 'feed-price', 'Costs nothing'));
+            const b = el('button', 'ui-button feed-button is-disabled', el('span', 'action-label', 'Refused'), el('span', 'feed-price', 'Hated food'));
             b.type = 'button';
             b.setAttribute('aria-disabled', 'true');
-            b.setAttribute('aria-label', `${hated.name}: refused, costs nothing`);
+            b.setAttribute('aria-label', `${hated.name}: refused, a hated food`);
             return b;
           })(),
-          el('p', 'sheet-helper feed-refused', `This kid won’t eat ${hated.name}. Nothing charged.`),
+          el('p', 'sheet-helper feed-refused', `${this.displayName()} won’t eat ${hated.name}. No food is used.`),
         )
       : null;
     s.body.replaceChildren(
       this.back('card'),
       status.node,
       replaces,
+      empty,
       ...(fav
         ? [
             el('h4', 'kid-card-trait', 'Favourite works best'),
             el('p', 'sheet-helper', `Happy for ${formatDuration(f.favouriteSeconds)}; income ×${f.favouriteMultiplier}.`),
-            plantingLine(),
             tierLine(),
             row(fav, 'Favourite', true),
           ]
         : []),
       el('h4', 'kid-card-trait', 'Other foods'),
       el('p', 'sheet-helper', `Happy for ${formatDuration(f.happySeconds)}; income ×${f.happyMultiplier}.`),
-      plantingLine(),
-      tierLine(),
       ...others.map((x) => row(x, null, false)),
       ...(refused ? [el('h4', 'kid-card-trait', 'Won’t eat this'), refused] : []),
     );
@@ -577,18 +584,26 @@ export class KidCard {
       update: () => {
         const kid = this.kid();
         s.setTitle(`Feed ${this.displayName()}`);
-        s.setSubtitle('Buy one bite for this kid.');
+        s.setSubtitle('Take 1 bite from the pantry.');
         status.update();
         replaces.hidden = !kid?.happy;
-        const have = this.game.state.materials;
+        const pantry = this.game.state.pantry;
+        empty.hidden = Object.values(pantry).some((n) => n > 0);
         const feeding = this.pending?.type === 'feed' ? this.pending.food : null;
         for (const r of rows) {
-          const short = have < r.food.price;
-          const label = feeding === r.food.id ? 'Feeding…' : 'Feed';
+          const stock = pantry[r.food.id] ?? 0;
+          const none = stock < 1;
+          const label = feeding === r.food.id ? 'Feeding…' : none ? 'Empty' : 'Feed';
           if (r.label.textContent !== label) r.label.textContent = label;
-          r.short.hidden = !short;
-          if (short) r.short.textContent = `Need ${formatExact(Math.ceil(r.food.price - have))} more Materials.`;
-          const on = !!kid && !this.readOnly() && !this.pending && !short;
+          const sub = none ? '0 bites stored' : 'Uses 1 bite';
+          if (r.price.textContent !== sub) r.price.textContent = sub;
+          const text = stockText(stock);
+          if (r.stock.textContent !== text) r.stock.textContent = text;
+          r.button.setAttribute('aria-label', none ? `${r.food.name}: none stored` : `Feed ${r.food.name} to ${this.displayName()}, uses 1 pantry bite`);
+          // The favourite with nothing stored says how to get some (§22.6).
+          r.short.hidden = !(none && r.favourite);
+          if (none && r.favourite) r.short.textContent = `Grow ${r.food.name} in a field to feed it.`;
+          const on = !!kid && !this.readOnly() && !this.pending && !none;
           this.setEnabled(r.button, on);
           r.button.classList.toggle('ui-primary', on);
         }

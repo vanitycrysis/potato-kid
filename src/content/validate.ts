@@ -187,13 +187,25 @@ function validateFeeding(content: Content): string[] {
     if (typeof food.id !== 'string' || !food.id || ids.has(food.id)) errors.push(`food "${String(food.id)}" needs a distinct id`);
     ids.add(food.id);
     if (typeof food.name !== 'string' || !food.name) errors.push(`food "${food.id}" needs a name`);
-    if (typeof food.price !== 'number' || !Number.isFinite(food.price) || food.price < 0) errors.push(`food "${food.id}" price must be a finite number >= 0`);
   }
   const pos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v > 0;
   if (!pos(f.happySeconds) || !pos(f.favouriteSeconds)) errors.push('balance.feeding happy durations must be > 0');
   if (!(f.happyMultiplier >= 1) || !(f.favouriteMultiplier >= 1)) errors.push('balance.feeding multipliers must be >= 1');
   // A favourite is never worse than any other food (GUI_MVP §17.2).
   if (f.favouriteSeconds < f.happySeconds || f.favouriteMultiplier < f.happyMultiplier) errors.push('balance.feeding: a favourite must last and pay at least as much as other foods');
+  // Farming (D-069): up to Codex's four sites and four pads; prices that never fall.
+  const fm = (content.balance as unknown as Record<string, unknown>).farming as Content['balance']['farming'] | undefined;
+  const whole = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
+  if (!fm) errors.push('balance.farming is missing');
+  else {
+    if (!whole(fm.maxFields, 1, 4)) errors.push('balance.farming.maxFields must be a whole 1-4');
+    if (!whole(fm.kidsPerField, 1, 4)) errors.push('balance.farming.kidsPerField must be a whole 1-4');
+    if (!Array.isArray(fm.unlockPrices) || fm.unlockPrices.length !== fm.maxFields || !fm.unlockPrices.every((v, i, a) => Number.isFinite(v) && v >= 0 && (i === 0 || v >= a[i - 1]!))) {
+      errors.push('balance.farming.unlockPrices needs one non-decreasing price >= 0 per field');
+    }
+    if (!pos(fm.biteSeconds)) errors.push('balance.farming.biteSeconds must be > 0');
+    if (!(fm.favouriteFactor >= 1)) errors.push('balance.farming.favouriteFactor must be >= 1');
+  }
   const n = (content.balance as unknown as Record<string, unknown>).naming as Content['balance']['naming'] | undefined;
   if (!n || !(n.price >= 0) || !Number.isInteger(n.maxLength) || n.maxLength < 1) errors.push('balance.naming needs a price >= 0 and a whole maxLength >= 1');
   for (const k of content.kids) {

@@ -58,8 +58,24 @@ export type Command =
   | { type: 'emptyPlot'; plot: number }
   /** Unlock the next plot with Materials (GUI_MVP §15.4). */
   | { type: 'unlockPlot' }
-  /** Feed a kid one bite for Materials (D-056): happy for a while. A hated food is refused, free. */
+  /**
+   * Feed a kid one bite from the pantry (D-056, D-069): happy for a while. A hated food is
+   * refused and nothing is used. A farming kid can be fed too.
+   */
   | { type: 'feed'; kidId: number; food: string }
+  /** Buy the next food field with Materials (D-069). Kids standing in its bay move aside. */
+  | { type: 'unlockField' }
+  /**
+   * Choose a field's food (D-069, GUI_MVP §22.3). Changing it loses the field's progress
+   * toward its next bite; kids who hate the new food go back to the map, all or none.
+   */
+  | { type: 'setFieldFood'; field: number; food: string }
+  /** Kids on the map start farming a field (D-069): all or none. */
+  | { type: 'farm'; field: number; kidIds: number[] }
+  /** One farming kid back to the map (D-069). */
+  | { type: 'unfarm'; field: number; kidId: number }
+  /** Every farming kid in a field back to the map, all or none (D-069). */
+  | { type: 'emptyField'; field: number }
   /** Name a kid for Materials (D-057), or clear its name (`null`), which is free. */
   | { type: 'name'; kidId: number; name: string | null };
 
@@ -83,9 +99,29 @@ export type RejectReason =
   /** Not a food, or not an allowed name (GUI_MVP §18.2). */
   | 'invalid'
   /** The kid already has that name, or has none to clear. */
-  | 'unchanged';
+  | 'unchanged'
+  /** The pantry has no bite of that food (D-069). */
+  | 'noFood'
+  /** The field has no food chosen yet (D-069). */
+  | 'noCrop'
+  /** The field has no free place for that many kids (D-069). */
+  | 'fieldFull';
 
 export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline' | 'sprout';
+
+/** Who a card's action was for: a kid on the map, or one farming (D-069). */
+export type KidRef = Pick<Kid, 'id' | 'type'> & { name?: string };
+
+/**
+ * A food field (D-069): its food, the kids working it (kept as they went in, like planted
+ * kids: they come back with their id, name and what is left of their happiness), and its
+ * progress toward the next bite, a fraction of one.
+ */
+export interface Field {
+  food: string | null;
+  workers: Omit<PlantedKid, 'happy'>[];
+  progress: number;
+}
 
 /** What a started seed sprouts (D-061): decided at Start growing, so saves never change it. */
 export interface Sprout {
@@ -138,6 +174,8 @@ export interface OfflineReport {
   sprouted: Kid[];
   /** Plots ready on return but waiting for room. */
   plotsWaiting: number;
+  /** Bites the fields grew while away, by food (D-069). */
+  food: Record<string, number>;
 }
 
 type PurchaseCommand = Extract<Command, { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'unlockPlot' }>;
@@ -154,12 +192,22 @@ export type GameEvent =
   /** A kid came back out of `plot` to the map (D-074); `count`: the kids left in it. */
   | { type: 'unplanted'; kid: Kid; plot: number; count: number }
   /** A bite accepted (D-056): the kid is happy from now, replacing any earlier happiness. */
-  | { type: 'fed'; kid: Kid; food: string; favourite: boolean }
+  | { type: 'fed'; kid: KidRef; food: string; favourite: boolean }
   /** A name given, or cleared (`null`) (D-057). */
-  | { type: 'named'; kid: Kid; name: string | null }
+  | { type: 'named'; kid: KidRef; name: string | null }
   /** A plot started growing; its sprout is decided (not revealed until it comes up). */
   | { type: 'growing'; plot: number }
   | { type: 'plotUnlocked'; plots: number }
+  /** A field bought (D-069); `fields`: how many there are now. */
+  | { type: 'fieldUnlocked'; fields: number }
+  /** A field's food chosen or changed (D-069). */
+  | { type: 'fieldFood'; field: number; food: string }
+  /** A kid started farming `field`; `count`: the kids in it now. */
+  | { type: 'farming'; kid: Kid; field: number; count: number }
+  /** A farming kid came back to the map; `count`: the kids left in the field. */
+  | { type: 'unfarmed'; kid: Kid; field: number; count: number }
+  /** Whole bites a field added to the pantry (D-069). */
+  | { type: 'harvested'; field: number; food: string; bites: number }
   | { type: 'upgraded'; building: BuildingId; level: number }
   | { type: 'biasSet'; kidType: KidId | null }
   | { type: 'rejected'; command: Command['type']; reason: RejectReason }
@@ -185,6 +233,10 @@ export interface GameState {
   gardenSpawns: number;
   /** Unlocked plots, in order (D-054). */
   plots: Plot[];
+  /** Bought food fields, in order (D-069). */
+  fields: Field[];
+  /** Whole bites of each food, from the fields (D-069). */
+  pantry: Record<string, number>;
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
   /** Recipe pair keys (`pairKey`) the player has triggered. */
@@ -237,6 +289,11 @@ export interface GameOptions {
   ambient?: Ambient;
   /** Wall-clock ms at creation: a new save is accounted up to now. */
   now?: number;
+  /**
+   * Each food field's bay, in field order (Codex's farm_v1): a bought field is scenery, so
+   * nothing wanders, spawns or lands in it (GUI_MVP §22.1).
+   */
+  fieldBays?: Obstacle[];
 }
 
 export class Game {
@@ -250,6 +307,7 @@ export class Game {
   private readonly looks: LookTable;
   private readonly spawnAt: { x: number; y: number };
   private readonly ambient: Ambient | undefined;
+  private readonly fieldBays: Obstacle[];
   /** A due Garden spawn found no free spot near the outlet (shown as "Waiting for room"). */
   private blocked = false;
   /** Ready plots that couldn't sprout in the last step, and why. */
@@ -270,6 +328,7 @@ export class Game {
     this.tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
     this.spawnAt = options.spawnAt;
     this.ambient = options.ambient;
+    this.fieldBays = options.fieldBays ?? [];
     this.looks = options.looks ?? {
       bodies: [{ id: DEFAULT_LOOK.body, weight: 1, box: defaultBox(content.balance.body.radius) }],
       faces: [{ id: DEFAULT_LOOK.face, weight: 1 }],
@@ -283,6 +342,8 @@ export class Game {
       spawnProgress: 0,
       gardenSpawns: 0,
       plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })),
+      fields: [],
+      pantry: {},
       discoveredKids: [],
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,
@@ -293,6 +354,8 @@ export class Game {
       accountedUntil: options.now ?? 0,
     };
     if (saved) {
+      // Bought fields are scenery before kids are placed: one standing in a bay moves (§22.1).
+      for (let i = 0; i < saved.fields.length; i++) this.addBay(i);
       this.restore(saved);
       return;
     }
@@ -468,6 +531,7 @@ export class Game {
       if (kid.happy.left <= 0) delete kid.happy;
     }
     this.wearOffPlanted(dt);
+    this.advanceFields(dt, events);
     stepWander(
       world,
       this.rng,
@@ -519,6 +583,9 @@ export class Game {
       }
     }
     this.wearOffPlanted(away);
+    // Fields keep growing while away, for the credited time (D-069).
+    const food: Record<string, number> = {};
+    for (const e of this.advanceFields(away, [])) if (e.type === 'harvested') food[e.food] = (food[e.food] ?? 0) + e.bites;
     const admit = (kid: Kid, at: number, into: Kid[]) => {
       kid.grace = 0; // it has been around for a while
       into.push(kid);
@@ -581,7 +648,7 @@ export class Game {
     let potatokens = 0;
     for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;
     const plotsWaiting = s.plots.filter((p) => p.seed && p.seed.grown >= grow).length;
-    return { seconds: away, discardedSeconds: elapsed - away, materials, potatokens, spawned, sprouted, plotsWaiting };
+    return { seconds: away, discardedSeconds: elapsed - away, materials, potatokens, spawned, sprouted, plotsWaiting, food };
   }
 
   /**
@@ -622,6 +689,22 @@ export class Game {
       }
       if (c.type === 'unplant' || c.type === 'emptyPlot') {
         this.unplant(c, events);
+        continue;
+      }
+      if (c.type === 'unlockField') {
+        this.unlockField(events);
+        continue;
+      }
+      if (c.type === 'setFieldFood') {
+        this.setFieldFood(c, events);
+        continue;
+      }
+      if (c.type === 'farm') {
+        this.farm(c, events);
+        continue;
+      }
+      if (c.type === 'unfarm' || c.type === 'emptyField') {
+        this.unfarm(c, events);
         continue;
       }
       const kid = world.kids.find((k) => k.id === c.kidId);
@@ -959,13 +1042,29 @@ export class Game {
     if (c.type === 'unplant' && seed.sprout) return reject('plotsBusy');
     const leaving = c.type === 'unplant' ? seed.planted.filter((k) => k.id === c.kidId) : [...seed.planted];
     if (leaving.length === 0) return reject('gone');
+    const back = this.returnToMap(leaving);
+    if (typeof back === 'string') return reject(back);
+    const ids = new Set(leaving.map((k) => k.id));
+    seed.planted = seed.planted.filter((k) => !ids.has(k.id));
+    if (seed.planted.length === 0) this.state.plots[c.plot]!.seed = null;
+    const left = this.state.plots[c.plot]!.seed?.planted.length ?? 0;
+    for (const kid of back) events.push({ type: 'unplanted', kid, plot: c.plot, count: left });
+  }
+
+  /**
+   * Kids back to the map from a plot or a field (D-069, D-074), all or none: room on the map
+   * for every one (`full`), and a free spot by the Garden outlet clear of recipe partners for
+   * each (`noRoom`), else nothing changes. They come back as they went in: id, look, name and
+   * what is left of their happiness, with a newborn's grace, so they never fuse on the way.
+   */
+  private returnToMap(leaving: readonly Omit<PlantedKid, 'happy'>[]): Kid[] | 'full' | 'noRoom' {
     const world = this.state.world;
-    if (world.kids.length + leaving.length > this.capacity) return reject('full');
+    if (world.kids.length + leaving.length > this.capacity) return 'full';
     const back: Kid[] = [];
-    // All or none: the ones already placed go back into the plot.
-    const rollBack = (): void => {
+    // All or none: the ones already placed go back where they were.
+    const rollBack = (): 'noRoom' => {
       for (const b of back) world.kids.splice(world.kids.indexOf(b), 1);
-      reject('noRoom');
+      return 'noRoom';
     };
     for (const k of leaving) {
       const look = this.lookWithBox(k.look);
@@ -975,29 +1074,196 @@ export class Game {
       if (k.name) kid.name = k.name;
       if (k.happiness) kid.happy = { ...k.happiness };
       // Clear of recipe partners, those already on the map and those coming back with it:
-      // taking kids out never fuses them, now or once their grace ends. With no such spot, none
+      // coming back never fuses a kid, now or once its grace ends. With no such spot, none
       // comes back (Codex review, PR #82).
       back.push(kid);
       const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (x, y) => this.recipes.has(pairKey(x.type, y.type)));
       if (!spot) return rollBack();
       [kid.x, kid.y] = [spot.x, spot.y];
     }
-    const ids = new Set(leaving.map((k) => k.id));
-    seed.planted = seed.planted.filter((k) => !ids.has(k.id));
-    if (seed.planted.length === 0) this.state.plots[c.plot]!.seed = null;
-    const left = this.state.plots[c.plot]!.seed?.planted.length ?? 0;
-    for (const kid of back) events.push({ type: 'unplanted', kid, plot: c.plot, count: left });
+    return back;
   }
 
-  /** Planted kids' happiness keeps counting down (D-074); `happy`, for the odds, stays. */
+  /** Planted and farming kids' happiness keeps counting down (D-069, D-074); `happy`, for the odds, stays. */
   private wearOffPlanted(dt: number): void {
-    for (const plot of this.state.plots) {
-      for (const k of plot.seed?.planted ?? []) {
-        if (!k.happiness) continue;
-        k.happiness.left -= dt;
-        if (k.happiness.left <= 0) delete k.happiness;
+    const kept = [...this.state.plots.flatMap((p) => p.seed?.planted ?? []), ...this.state.fields.flatMap((f) => f.workers)];
+    for (const k of kept) {
+      if (!k.happiness) continue;
+      k.happiness.left -= dt;
+      if (k.happiness.left <= 0) delete k.happiness;
+    }
+  }
+
+  // --- food fields (D-069, GUI_MVP §22) --------------------------------------------------
+
+  /** Field `i`'s bay becomes scenery (it is bought). */
+  private addBay(i: number): void {
+    const bay = this.fieldBays[i];
+    if (bay && !this.state.world.obstacles.includes(bay)) this.state.world.obstacles.push(bay);
+  }
+
+  /**
+   * The next field, for Materials. Kids standing in its bay move to the nearest spot clear
+   * of scenery, other kids and recipe partners, never fusing; if one has nowhere to go,
+   * nothing is bought and nobody moves (`noRoom`, GUI_MVP §22.2 as Claude decided).
+   */
+  private unlockField(events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: 'unlockField', reason });
+    };
+    const fm = this.content.balance.farming;
+    const n = this.state.fields.length;
+    if (n >= fm.maxFields) return reject('maxLevel');
+    const price = fm.unlockPrices[n]!;
+    if (this.state.materials < price) return reject('cost');
+    const world = this.state.world;
+    const bay = this.fieldBays[n];
+    if (bay) {
+      world.obstacles.push(bay);
+      const moved: { kid: Kid; x: number; y: number }[] = [];
+      for (const kid of world.kids) {
+        if (isFree(world, kid.box, kid.x, kid.y, kid.id)) continue;
+        const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
+        if (!spot) {
+          for (const m of moved) [m.kid.x, m.kid.y] = [m.x, m.y];
+          world.obstacles.splice(world.obstacles.indexOf(bay), 1);
+          return reject('noRoom');
+        }
+        moved.push({ kid, x: kid.x, y: kid.y });
+        [kid.x, kid.y] = [spot.x, spot.y];
       }
     }
+    this.state.materials -= price;
+    this.state.fields.push({ food: null, workers: [], progress: 0 });
+    events.push({ type: 'fieldUnlocked', fields: this.state.fields.length });
+  }
+
+  /**
+   * A field's food. The same food changes nothing (`unchanged`). A change loses the progress
+   * toward the next bite (whole bites are already in the pantry), and kids who hate the new
+   * food go back to the map, all or none (`full`, `noRoom`): if they can't, nothing changes.
+   */
+  private setFieldFood(c: Extract<Command, { type: 'setFieldFood' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: 'setFieldFood', reason });
+    };
+    const field = this.state.fields[c.field];
+    if (!field) return reject('gone');
+    if (!this.content.balance.feeding.foods.some((f) => f.id === c.food)) return reject('invalid');
+    if (field.food === c.food) return reject('unchanged');
+    const haters = field.workers.filter((k) => this.content.personality[k.type]?.hatedFood === c.food);
+    let back: Kid[] = [];
+    if (haters.length) {
+      const r = this.returnToMap(haters);
+      if (typeof r === 'string') return reject(r);
+      back = r;
+      const ids = new Set(haters.map((k) => k.id));
+      field.workers = field.workers.filter((k) => !ids.has(k.id));
+    }
+    field.food = c.food;
+    field.progress = 0;
+    for (const kid of back) events.push({ type: 'unfarmed', kid, field: c.field, count: field.workers.length });
+    events.push({ type: 'fieldFood', field: c.field, food: c.food });
+  }
+
+  /**
+   * Kids start farming (D-069), all or none: each on the map (`gone`), the field bought
+   * (`gone`) with a food (`noCrop`), none hating it (`hated`), and places for all (`fieldFull`).
+   * They leave the map, earn nothing while farming, and keep their name and happiness.
+   */
+  private farm(c: Extract<Command, { type: 'farm' }>, events: GameEvent[]): void {
+    const world = this.state.world;
+    const field = this.state.fields[c.field];
+    const kids = c.kidIds.map((id) => world.kids.find((k) => k.id === id));
+    const reason: RejectReason | null =
+      !field || kids.some((k) => !k) || new Set(c.kidIds).size !== c.kidIds.length || c.kidIds.length === 0
+        ? 'gone'
+        : field.food === null
+          ? 'noCrop'
+          : kids.some((k) => this.content.personality[k!.type]?.hatedFood === field.food)
+            ? 'hated'
+            : field.workers.length + c.kidIds.length > this.content.balance.farming.kidsPerField
+              ? 'fieldFull'
+              : null;
+    if (reason || !field) {
+      // A kid held over the field lands where it was let go, clear of its partners (as a
+      // refused planting).
+      for (const kid of kids) {
+        if (!kid?.held) continue;
+        kid.held = false;
+        const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
+        if (spot) [kid.x, kid.y] = [spot.x, spot.y];
+        kid.grace = Math.max(kid.grace, this.content.balance.spawn.newbornGraceSeconds);
+      }
+      events.push({ type: 'rejected', command: 'farm', reason: reason ?? 'gone' });
+      return;
+    }
+    for (const kid of kids as Kid[]) {
+      world.kids.splice(world.kids.indexOf(kid), 1);
+      field.workers.push({
+        id: kid.id,
+        type: kid.type,
+        look: { ...kid.look },
+        ...(kid.name ? { name: kid.name } : {}),
+        ...(kid.happy ? { happiness: { ...kid.happy } } : {}),
+      });
+      events.push({ type: 'farming', kid, field: c.field, count: field.workers.length });
+    }
+  }
+
+  /** One farming kid, or all of them, back to the map, all or none (`full`, `noRoom`). The field keeps its food and progress. */
+  private unfarm(c: Extract<Command, { type: 'unfarm' | 'emptyField' }>, events: GameEvent[]): void {
+    const reject = (reason: RejectReason): void => {
+      events.push({ type: 'rejected', command: c.type, reason });
+    };
+    const field = this.state.fields[c.field];
+    if (!field) return reject('gone');
+    const leaving = c.type === 'unfarm' ? field.workers.filter((k) => k.id === c.kidId) : [...field.workers];
+    if (leaving.length === 0) return reject('gone');
+    const back = this.returnToMap(leaving);
+    if (typeof back === 'string') return reject(back);
+    const ids = new Set(leaving.map((k) => k.id));
+    field.workers = field.workers.filter((k) => !ids.has(k.id));
+    for (const kid of back) events.push({ type: 'unfarmed', kid, field: c.field, count: field.workers.length });
+  }
+
+  /** How many bites a second a field grows: each kid's rate, faster on its favourite (D-069). */
+  fieldRate(i: number): number {
+    const field = this.state.fields[i];
+    if (!field?.food) return 0;
+    const fm = this.content.balance.farming;
+    let rate = 0;
+    for (const k of field.workers) rate += (this.content.personality[k.type]?.favouriteFood === field.food ? fm.favouriteFactor : 1) / fm.biteSeconds;
+    return rate;
+  }
+
+  /** Fields grow for `dt` seconds; whole bites go to the pantry (D-069). Returns the harvests. */
+  private advanceFields(dt: number, events: GameEvent[]): GameEvent[] {
+    const out: GameEvent[] = [];
+    this.state.fields.forEach((field, i) => {
+      const rate = this.fieldRate(i);
+      if (!field.food || rate <= 0) return;
+      field.progress += rate * dt;
+      const bites = Math.floor(field.progress + 1e-9);
+      if (bites <= 0) return;
+      field.progress = Math.max(0, field.progress - bites);
+      this.state.pantry[field.food] = (this.state.pantry[field.food] ?? 0) + bites;
+      const e: GameEvent = { type: 'harvested', field: i, food: field.food, bites };
+      events.push(e);
+      out.push(e);
+    });
+    return out;
+  }
+
+  /** A kid on the map, or one farming (it keeps its card: Feed and Name, GUI_MVP §22.6). */
+  private findKid(id: number): { live: Kid } | { worker: Omit<PlantedKid, 'happy'> } | null {
+    const live = this.state.world.kids.find((k) => k.id === id);
+    if (live) return { live };
+    for (const f of this.state.fields) {
+      const worker = f.workers.find((k) => k.id === id);
+      if (worker) return { worker };
+    }
+    return null;
   }
 
   /** A look with its box from the current art; a body or face it doesn't have maps to the first. */
@@ -1018,18 +1284,23 @@ export class Game {
     const reject = (reason: RejectReason): void => {
       events.push({ type: 'rejected', command: 'feed', reason });
     };
-    const kid = this.state.world.kids.find((k) => k.id === c.kidId);
-    if (!kid) return reject('gone');
+    const found = this.findKid(c.kidId);
+    if (!found) return reject('gone');
+    const type = 'live' in found ? found.live.type : found.worker.type;
     const f = this.content.balance.feeding;
     const food = f.foods.find((x) => x.id === c.food);
     if (!food) return reject('invalid');
-    const likes = this.content.personality[kid.type];
+    const likes = this.content.personality[type];
     if (likes?.hatedFood === food.id) return reject('hated');
-    if (this.state.materials < food.price) return reject('cost');
-    this.state.materials -= food.price;
+    // A bite comes from the pantry (D-069).
+    if ((this.state.pantry[food.id] ?? 0) < 1) return reject('noFood');
+    this.state.pantry[food.id]! -= 1;
     const favourite = likes?.favouriteFood === food.id;
-    kid.happy = { left: favourite ? f.favouriteSeconds : f.happySeconds, favourite };
-    events.push({ type: 'fed', kid, food: food.id, favourite });
+    const happy = { left: favourite ? f.favouriteSeconds : f.happySeconds, favourite };
+    // A farming kid's happiness counts down in its field; its income boost waits for the map.
+    if ('live' in found) found.live.happy = happy;
+    else found.worker.happiness = happy;
+    events.push({ type: 'fed', kid: 'live' in found ? found.live : found.worker, food: food.id, favourite });
   }
 
   /**
@@ -1040,8 +1311,10 @@ export class Game {
     const reject = (reason: RejectReason): void => {
       events.push({ type: 'rejected', command: 'name', reason });
     };
-    const kid = this.state.world.kids.find((k) => k.id === c.kidId);
-    if (!kid) return reject('gone');
+    // On the map or farming: a farming kid keeps its card (GUI_MVP §22.6).
+    const found = this.findKid(c.kidId);
+    if (!found) return reject('gone');
+    const kid = 'live' in found ? found.live : found.worker;
     if (c.name === null) {
       if (kid.name === undefined) return reject('unchanged');
       delete kid.name;

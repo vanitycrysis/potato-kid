@@ -148,5 +148,12 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
       return 'Use letters, numbers, spaces, apostrophes or hyphens.';
     case 'unchanged':
       return 'Name unchanged.';
+    // Farming (GUI_MVP §22.7): the sheets name the food and field.
+    case 'noFood':
+      return 'There are no bites of that food left. Grow more in a field.';
+    case 'noCrop':
+      return 'Choose a food for this field before assigning kids.';
+    case 'fieldFull':
+      return 'This field is full. Take a farming kid back, then try again.';
   }
 }
