@@ -86,6 +86,7 @@ declare global {
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
       rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean }[];
+      layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
       /** Only with `?debug=1`: costume types currently loaded (ROSTER-SCALE). */
@@ -246,6 +247,7 @@ async function boot(): Promise<void> {
     home: () => ({ state: scene.homeState }),
     dropTarget: () => scene.dropTarget,
     rares: () => scene.raresShown,
+    layers: () => scene.layerNames,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
         const seed = p.seed;

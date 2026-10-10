@@ -4579,6 +4579,11 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     expect(await page.evaluate(() => window.__PK__!.pantry().apple)).toBe(2);
     await page.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await expect(card.locator('.kid-card-happy')).toContainText('Happy income applies after this kid returns to the map. Farming still earns no Materials.');
+    // Field soil under the marks; farming kids over them, as map kids are (Codex review, #90).
+    const layers = await page.evaluate(() => window.__PK__!.layers());
+    expect(layers.indexOf('fieldBeds')).toBeLessThan(layers.indexOf('rareMarks'));
+    expect(layers.indexOf('rareMarks')).toBeLessThan(layers.indexOf('fieldWorkers'));
+    expect(layers.indexOf('fieldWorkers')).toBeLessThan(layers.indexOf('kids'));
     // Its happy sun shows in the field, where it stands (Codex review, #90).
     const id = await page.evaluate(() => window.__PK__!.fields()[0]!.kids[0]!.id);
     await expect.poll(() => page.evaluate((i) => window.__PK__!.rares().some((r) => r.id === i && r.happy), id)).toBe(true);

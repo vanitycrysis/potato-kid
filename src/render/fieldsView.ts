@@ -85,7 +85,10 @@ interface FieldNode {
 }
 
 export class FieldsView {
-  readonly root = new Container();
+  /** Beds and crops: under the rare marks and the map's kids. */
+  readonly root = new Container({ label: 'fieldBeds' });
+  /** Farming kids: above the rare marks, as kids on the map are (Codex review, #90). */
+  readonly workers = new Container({ label: 'fieldWorkers' });
   private readonly nodes: FieldNode[] = [];
   private clock = 0;
 
@@ -158,11 +161,13 @@ export class FieldsView {
       bed.addChild(s);
     }
     const crops = new Container();
-    // Workers by foot y, above the bed and crops (§22.1).
+    // Workers by foot y, above the bed and crops (§22.1), in the worker layer, at the field.
     const kids = new Container();
     kids.sortableChildren = true;
-    root.addChild(bed, crops, kids);
+    kids.position.set(site.worldGround[0], site.worldGround[1]);
+    root.addChild(bed, crops);
     this.root.addChild(root);
+    this.workers.addChild(kids);
     const node: FieldNode = { root, bed, crops, kids, food: undefined, pads: new Map(), views: new Map() };
     this.nodes[i] = node;
     return node;

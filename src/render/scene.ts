@@ -279,7 +279,10 @@ export class MapScene {
           return false;
         })
       : null;
-    if (this.fieldsView) this.fieldsView.root.eventMode = 'none';
+    if (this.fieldsView) {
+      this.fieldsView.root.eventMode = 'none';
+      this.fieldsView.workers.eventMode = 'none';
+    }
     this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
     // The preference can change while the game is open: the rare layer follows it at once.
     const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -290,8 +293,12 @@ export class MapScene {
       ...(this.fieldsView ? [this.fieldsView.root] : []),
       this.homeLayer,
       this.rareLayer.root,
+      // Farming kids cover the marks behind them, as kids on the map do (§16; Codex review, #90).
+      ...(this.fieldsView ? [this.fieldsView.workers] : []),
       this.kidLayer,
     );
+    this.rareLayer.root.label = 'rareMarks';
+    this.kidLayer.label = 'kids';
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -1380,6 +1387,11 @@ export class MapScene {
       }
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, alive);
+  }
+
+  /** Test hook: the world's layers, bottom first, by label (unlabelled ones as ''). */
+  get layerNames(): string[] {
+    return this.camera.children.map((c) => c.label ?? '');
   }
 
   /** Test hook: the rares drawn now. */
