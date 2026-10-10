@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "personality-2-specials",
+  "revision": "personality-3-wild",
   "status": "Claude review pending",
   "types": {
     "plain": {
@@ -674,6 +674,86 @@
       "hatedFood": "cheese",
       "hates": "greasy marks on a freshly polished pebble collection.",
       "hobbies": "Sorting smooth pebbles and changing which one gets the best corner."
+    },
+    "rainbow": {
+      "description": "A bright little puff who saves a different colour for each day of the week. Never quite agrees with the calendar about which day it is.",
+      "favouriteFood": "toast",
+      "likes": "sunlit corners and choosing a colour for the afternoon.",
+      "hatedFood": "apple",
+      "hates": "grey laundry days and having to pick just one ribbon.",
+      "hobbies": "Matching fallen petals to an imaginary paint chart."
+    },
+    "blimp": {
+      "description": "An unhurried airship who likes a good view and a very short journey. Plans an entire afternoon around drifting past a favourite bench.",
+      "favouriteFood": "berry_jam",
+      "likes": "wide skies and a snack packed before setting off.",
+      "hatedFood": "toast",
+      "hates": "rushed departures and a breeze that changes its mind.",
+      "hobbies": "Drawing little routes that end exactly where they began."
+    },
+    "spool": {
+      "description": "A tidy reel with a soft spot for loose ends. Keeps one short thread ready in case the afternoon needs tying together more neatly.",
+      "favouriteFood": "berries",
+      "likes": "soft threads and knots that come undone on purpose.",
+      "hatedFood": "corn",
+      "hates": "tangles that tighten when asked politely to loosen.",
+      "hobbies": "Winding little loops and giving each one a name."
+    },
+    "paper_fan": {
+      "description": "A folded fan who makes a small occasion of every gentle breeze. Opens the afternoon carefully and always leaves room for a quiet pause.",
+      "favouriteFood": "apple",
+      "likes": "shady seats and a breeze that arrives on time.",
+      "hatedFood": "berries",
+      "hates": "crumpled corners and sticky fingers near neat folds.",
+      "hobbies": "Counting pleats, then starting again from the other end."
+    },
+    "jelly": {
+      "description": "A wobbly dessert with a surprisingly steady routine. Waits until everyone is settled before attempting a very dignified little jiggle.",
+      "favouriteFood": "carrot",
+      "likes": "cool plates and being invited to the last snack break.",
+      "hatedFood": "berry_jam",
+      "hates": "warm cupboards and a table that wobbles back.",
+      "hobbies": "Practising a grand entrance without leaving the saucer."
+    },
+    "cushion": {
+      "description": "A plump pillow who has strong opinions about comfortable corners. Finds a nice spot, then keeps half of it free for a possible visitor.",
+      "favouriteFood": "corn",
+      "likes": "quiet nooks and a seat with a little extra space.",
+      "hatedFood": "carrot",
+      "hates": "scratchy blankets and crumbs in a favourite corner.",
+      "hobbies": "Testing the comfort of sun patches as they move."
+    },
+    "seashell": {
+      "description": "A little shell who treasures the hush between waves. Collects stories from the shore, including several that are mostly about pebbles.",
+      "favouriteFood": "mushroom",
+      "likes": "smooth sand and listening without needing to answer.",
+      "hatedFood": "pickle",
+      "hates": "grit in tidy folds and interruptions at the quiet part.",
+      "hobbies": "Sorting beach finds into very small imaginary museums."
+    },
+    "flying_saucer": {
+      "description": "A curious saucer who considers every patch of lawn a promising landing place. Takes a careful look, then declares the grass excellent.",
+      "favouriteFood": "pickle",
+      "likes": "open lawns and greetings from the next patch over.",
+      "hatedFood": "cheese",
+      "hates": "cramped parking spots and a welcome mat that curls up.",
+      "hobbies": "Making tiny maps of places already visited twice."
+    },
+    "ring_planet": {
+      "description": "A round little world with a ring and an endless supply of afternoon. Gives every wandering leaf a patient turn around the garden.",
+      "favouriteFood": "cheese",
+      "likes": "long afternoons and friends taking the scenic route.",
+      "hatedFood": "mushroom",
+      "hates": "crowded circles and a stroll ending before the shade.",
+      "hobbies": "Naming imaginary moons after particularly good pebbles."
+    },
+    "wind_up_key": {
+      "description": "A cheerful winding key who is ready well before anything begins. Saves a little enthusiasm for the end in case everyone wants an encore.",
+      "favouriteFood": "soup",
+      "likes": "small beginnings and one more turn before teatime.",
+      "hatedFood": "cocoa",
+      "hates": "stiff drawers and being put away before the good part.",
+      "hobbies": "Inventing gentle rhythms for opening the garden gate."
     }
   }
 }

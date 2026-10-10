@@ -1,5 +1,21 @@
 # Art and audio plan
 
+## WILD-ART delivery (2026-10-09; Claude review pending)
+
+D-072/D-073 supersede the historical ten shared variants and carried-special art below. Ten new rare types and all twenty special object bodies use **30 original vectors / 30 cropped runtime body PNGs**, one raster frame per type, with the unchanged shared D-045 face states. The four held specials are redesigned under the owner's freer-body authorization. IDs/names/tiers/all 84 existing personalities stay exact; ten new D-058 records bring the total to **94 distinct food pairs / 94 records**. Rare tiers are **null placeholders for Claude's simulator**, with no new multiplier or income number.
+
+The additive `art/data/kid_wild_v1.json` declares type body selection, face anchor/scale, per-type lifetime boxes, all fifteen clip mappings/substitutes, completion timing, reduced motion and renderer responsibilities. The base `kid_rig_v2.json` remains byte-identical. Existing special prop rasters and retired variant rasters are conservatively retained in the inventory for history; Claude must not compose/load their unused layers for wild types. No new FX, audio master, face texture or portrait cache. Use existing shared sparkle only for rare types; keep ordinary rigs, exact planting odds and D-074 flow.
+
+| Decoded runtime PNG inventory | Before WILD-ART | After WILD-ART | Change |
+| --- | ---: | ---: | ---: |
+| PNGs under assets/ | 245 | 275 | +30 |
+| RGBA bytes | 15,159,972 | 19,728,380 | +4,568,408 |
+| MiB | 14.45768 | 18.81445 | +4.35677 |
+
+These are measured against the actual merged checkout (specials plus layout landmarks), not either earlier PR's isolated subtotal. Cropped exports total 18.81445 MiB. The unchanged physical ceiling is 32 MiB; decoded headroom is 13.18555 MiB before atlas slack, surfaces or duplicate allocation. Native cropped non-power-of-two textures, no mipmaps, no per-instance raster, no flattened portrait cache and one shared face/FX allocation are requirements of this handoff. Rounding the entire stored inventory to individual power-of-two textures would be **35.99609 MiB**, which exceeds the ceiling and is **not an acceptable allocation strategy**. This is a decoded/storage audit and allocation contract, not a measurement of GPU residency. Claude must check actual device/atlas allocation before acceptance.
+
+`npm run art:export` passes: 344 sources / seven sidecars. Independent checks preserve all existing source art, runtime PNGs, `src/`, `tests/` and canonical personalities. All **360** object/face/state combinations have opaque support and at least 3 source px clearance from body ink; all bob offsets fit their type lifetime box inside the existing 8 px source-padding envelope. **131 review PNGs** include bare 55 px colour/gray, 3× native pixels, full 94 roster, all saved faces, every wild kid among twelve ordinary kids, aggregate and individual Dex-row/card portraits. [Gallery](../art/previews/wild/index.html); [notes](../.codex-out/wild-art-notes.md); [audit](../.codex-out/wild-audit.json). Content import, rare tiers, renderer implementation, physical GPU checks, Claude review and the next owner gate-4 build remain outstanding; no shipping/device/gate acceptance is claimed.
+
 ## LAYOUT-DESIGN addendum (2026-10-09; round 2, Claude review pending)
 
 GUI_MVP §§19–21, revision `layout-design-2`, preserves the accepted one 60 px status strip and one 60 px Garden/Dex/Notebook navigation row: 78.20% unobscured world at 390 × 844 and 57.78% at 640 × 360. HUD, sheet geometry, folding timer/upgrades/Settings, D-074 removal/cancellation flow and N1–N6 are unchanged. Cancel action text now uses existing ink `#1a1a1a` (15.58:1 on paper, 13.86:1 on sage); danger remains a border accent. The exact D-074 copy, identity/look/name/happiness restoration, independent D-072 rolls and D-069 farming scope remain as accepted. The GUI contract is plain UTF-8; number/unit spacing is corrected.

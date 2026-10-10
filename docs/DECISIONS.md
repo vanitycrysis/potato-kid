@@ -1,5 +1,10 @@
 # Decisions
 
+## WILD-ART art and interaction choices (ChatGPT, 2026-10-09; Claude review pending)
+
+Under owner-approved D-072/D-073, deliver ten new rare object types (Rainbow entirely coloured; Blimp is its hull) and redesign all twenty special bodies, preserving D-066 IDs/names/tiers and all 84 canonical personality records. A new additive `kid_wild_v1.json` keeps the base rig exact: one body frame per type, approved shared faces, per-type lifetime boxes, 3 px object bob/static substitutes and explicit completion/reduced-motion mappings. GUI_MVP §16 retires all per-type variants/counters/multipliers and uses three collection segments; both independent rolls succeeding reveals the rare type. Keep shared rare sparkle and D-074 restoration. Rare tiers are Claude's null simulator placeholders. Art export passes, 94 distinct personality pairs and 360 face checks pass; inventory 245/15159972 → 275/19728380 PNGs/decoded bytes, 18.81445 MiB. Cropped NPOT allocation required; individual POT rounding would exceed 32 MiB. Notes document authority overrides, allocation, recognition limitations and Claude's engine handoff. No code/test/git/network/sub-agent work or gate acceptance; WILD-ART stays doing until review/integration.
+
+
 ## LAYOUT-DESIGN choices (ChatGPT, 2026-10-09; round 2, Claude review pending)
 
 Address PR #85 B1–B3 only. Correct GUI_MVP §§19–21 to plain UTF-8 and restore spaces around numbers/units in the new prose. Use the existing ink for all §21 danger action text (15.58:1 on paper / 13.86:1 on sage), carrying danger in the border and explicit Cancel wording. Preserve accepted HUD, sheets, D-074 control/confirmation/refusal/restoration flow and N1–N6: 78.20% world at 390 × 844, 57.78% at 640 × 360, 0.5×…2× zoom, 44 px pickup targets/candidate chooser, compact-landscape fit floor 65/180, Filling tap to detail, Dex → Kids on map and Notebook → Map view. D-072 and D-069 overrides remain exact; UI and planting sidecars are byte-identical to round 1.

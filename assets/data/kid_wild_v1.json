@@ -1,0 +1,1975 @@
+{
+  "schemaVersion": 1,
+  "revision": "wild-art-1",
+  "status": "Claude review pending; renderer implementation required",
+  "extendsRig": "kid_rig_v2.json",
+  "canvas": [
+    256,
+    256
+  ],
+  "groundAnchor": [
+    128,
+    224
+  ],
+  "worldCanvasSize": 180,
+  "renderer": {
+    "selection": "Lookup by kid type ID before selecting the shared body or costume. If a wild type is present, replace ALL shared body/costume layers with its stand body and the shared face. Never draw legacy special props over a wild body.",
+    "trim": "Reconstruct authored 256 x 256 orig/trim metadata before positioning; keep the actual GPU texture cropped. Source coordinates, anchors and collision do not refer to cropped PNG dimensions. Use native cropped non-power-of-two allocation, no mipmaps, no duplicate per-instance texture or 256 px flattening. Recheck the 32 MiB ceiling if atlasing is introduced.",
+    "appearance": "Preserve saved instance scale. Ignore shared bodyId for wild rendering. Use classic face for new wild births and Dex exemplars; preserve any existing saved faceId of redesigned specials. All four approved faces and all three face states are supported.",
+    "transform": "Translate to ground in world; uniform scale = worldCanvasSize / 256 times saved appearance scale. Subtract groundAnchor; apply clip offset equally to body AND face. Face uses its sourcePivot [128,116] at faceAnchorPx. No inherited attachment, shared rig transform, random squash, rotation or second bob.",
+    "collision": "Use type lifetimeBoundsPx in place of shared body bounds; transform through the SAME saved scale and groundAnchor as drawing. Keep axis-aligned boxes, gap/overlap contact, continuous/interpolated no-overlap, resolved held preview, free landing and scenery collision rules. Shadows and transient FX remain excluded. Do not migrate saved position without existing free-space reconciliation.",
+    "scheduler": "Keep the existing priorities/interruptions. Resolve clips through this sidecar only for these types; fallback is a clip alias, not a request for potato frames. Global phase uses foreground monotonic time. Blink/asleep state overrides the inherited open state; held interrupts sleep. Respawn/return rules remain engine-owned.",
+    "effects": "Reuse base rig shared shadow/spawn/fusion/discovery. Rare types only get one existing fx_rare_sparkle sleeve, below all kid silhouettes, per GUI_MVP 16.2. Happy mark remains external. Special-only has no permanent sparkle.",
+    "portraits": "Same body+face composition in map, Dex and kid card. At 55 px canvas scale is 55/256. Dex exemplar classic/open, saved live portrait actual face/scale. DOM portrait lists omit sparkle. Do not flatten/cache a different face or add per-type portrait PNGs.",
+    "integrationRequired": true
+  },
+  "motionEnvelope": {
+    "offsetXPx": [
+      0,
+      0
+    ],
+    "offsetYPx": [
+      -3,
+      0
+    ],
+    "rotationDeg": [
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1
+    ],
+    "concurrency": "Body clips mutually exclusive. Face blink is composable; no other additive transform. All lifetime bounds include bob once."
+  },
+  "fallbackTiming": "An alias borrows ONLY the visual frame. The requested clip retains its own loop/duration and completes normally; never wait on the idle alias loop. Reduced motion uses static visual frames while requested clip completion/hold timers remain unchanged.",
+  "rareProfiles": {
+    "rainbow": "A whole little day painted in six colours.",
+    "blimp": "Taking the scenic route, very slowly.",
+    "spool": "Keeping a soft little thread of the afternoon.",
+    "paper_fan": "A neatly folded welcome for the next breeze.",
+    "jelly": "A small wobble with excellent manners.",
+    "cushion": "Saving the comfiest corner for a friend.",
+    "seashell": "Keeping the quiet part of the shore.",
+    "flying_saucer": "A visitor with very good parking manners.",
+    "ring_planet": "An entire little world, taking its time.",
+    "wind_up_key": "A little more enthusiasm, saved for later."
+  },
+  "clips": {
+    "idle": {
+      "support": "native",
+      "loop": true,
+      "frames": [
+        {
+          "durationMs": 1000,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ]
+    },
+    "walk": {
+      "support": "substitute",
+      "substitute": "bob",
+      "loop": true,
+      "frames": [
+        {
+          "durationMs": 125,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 125,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            -3
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 125,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 125,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            -3
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ]
+    },
+    "blink": {
+      "support": "native",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "blink",
+          "opacity": 1
+        },
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ]
+    },
+    "look_around": {
+      "support": "fallback",
+      "fallback": "idle",
+      "loop": false,
+      "durationMs": 666.6666666666666,
+      "reason": "No face translation or directional body frames."
+    },
+    "sit_down": {
+      "support": "fallback",
+      "fallback": "idle",
+      "loop": false,
+      "durationMs": 375,
+      "reason": "Objects rest in their standing silhouette; no squash."
+    },
+    "seated": {
+      "support": "fallback",
+      "fallback": "idle",
+      "loop": true,
+      "reason": "No sitting anatomy or folded body frame."
+    },
+    "sleep": {
+      "support": "native",
+      "loop": true,
+      "frames": [
+        {
+          "durationMs": 1000,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "asleep",
+          "opacity": 1
+        }
+      ]
+    },
+    "wake": {
+      "support": "native",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 150,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "open",
+          "opacity": 1
+        }
+      ]
+    },
+    "wave": {
+      "support": "substitute",
+      "substitute": "greeting_bob",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            -3
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            -3
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            -3
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 62.5,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ]
+    },
+    "pick_up": {
+      "support": "native",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ],
+      "note": "Use existing resolved hold lift/position; no independent art lift."
+    },
+    "held": {
+      "support": "native",
+      "loop": true,
+      "frames": [
+        {
+          "durationMs": 1000,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ],
+      "note": "Static object at collision-free held presentation position."
+    },
+    "drop": {
+      "support": "substitute",
+      "substitute": "settle_bob",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            -3
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        },
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ]
+    },
+    "spawn": {
+      "support": "native",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 0
+        },
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 0.5
+        },
+        {
+          "durationMs": 100,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ],
+      "sharedEffect": "spawn"
+    },
+    "fusion": {
+      "support": "fallback",
+      "fallback": "idle",
+      "loop": false,
+      "durationMs": 333.3333333333333,
+      "sharedEffect": "fusion",
+      "reason": "Apex types never participate in recipes. Do not enable recipes through this visual fallback."
+    },
+    "discovery": {
+      "support": "native",
+      "loop": false,
+      "frames": [
+        {
+          "durationMs": 600,
+          "frame": "stand",
+          "offsetPx": [
+            0,
+            0
+          ],
+          "faceState": "inherit",
+          "opacity": 1
+        }
+      ],
+      "sharedEffect": "discovery"
+    }
+  },
+  "reducedMotion": {
+    "idle": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "walk": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "blink": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "look_around": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "sit_down": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "seated": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "sleep": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "asleep",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "wake": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "wave": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "pick_up": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "held": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "drop": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "spawn": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "Use unchanged base rig reducedMotion effect mapping; no animated bob."
+    },
+    "fusion": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "none"
+    },
+    "discovery": {
+      "frame": "stand",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "faceState": "inherit",
+      "opacity": 1,
+      "sharedEffect": "Use unchanged base rig reducedMotion effect mapping; no animated bob."
+    }
+  },
+  "types": {
+    "rainbow": {
+      "name": "Rainbow Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Six-colour scalloped puff; whole body rainbow, ink seams retain identity in gray.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildrainbow_stand",
+          "boundsPx": [
+            24,
+            20,
+            238,
+            212
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        24,
+        17,
+        238,
+        212
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "blimp": {
+      "name": "Blimp Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Long airship hull with two broad tail fins; no gondola or child in a vehicle.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildblimp_stand",
+          "boundsPx": [
+            22,
+            58,
+            239,
+            182
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        22,
+        55,
+        239,
+        182
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "spool": {
+      "name": "Spool Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Broad thread reel with projecting oval end flanges.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildspool_stand",
+          "boundsPx": [
+            27,
+            27,
+            216,
+            225
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        27,
+        24,
+        216,
+        225
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "paper_fan": {
+      "name": "Paper Fan Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Wide pleated semicircle with stepped upper edge and short folded base.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildpaperfan_stand",
+          "boundsPx": [
+            21,
+            21,
+            233,
+            200
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        21,
+        18,
+        233,
+        200
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "jelly": {
+      "name": "Jelly Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Tall moulded dessert with broad wavy rim, visibly scalloped dome.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildjelly_stand",
+          "boundsPx": [
+            34,
+            27,
+            222,
+            203
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        34,
+        24,
+        222,
+        203
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "cushion": {
+      "name": "Cushion Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Plump concave-sided square pillow with four oversized tied corners.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildcushion_stand",
+          "boundsPx": [
+            25,
+            19,
+            229,
+            224
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        25,
+        16,
+        229,
+        224
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "seashell": {
+      "name": "Seashell Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Scallop shell: five big scallops and tapering heel, no ammonite spiral.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildseashell_stand",
+          "boundsPx": [
+            18,
+            18,
+            243,
+            214
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        18,
+        15,
+        243,
+        214
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "flying_saucer": {
+      "name": "Flying Saucer Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Wide saucer rim under a solid domed hull; face on hull, no glass cockpit.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildflyingsaucer_stand",
+          "boundsPx": [
+            21,
+            45,
+            237,
+            209
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        21,
+        42,
+        237,
+        209
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "ring_planet": {
+      "name": "Ring Planet Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Round globe with a broad oblique rear ring, exposed on both sides without crossing the face.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildringplanet_stand",
+          "boundsPx": [
+            18,
+            43,
+            237,
+            207
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        18,
+        40,
+        237,
+        207
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "wind_up_key": {
+      "name": "Wind-Up Key Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "Two rounded key lobes and a short two-toothed stem, no long tool.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildwindupkey_stand",
+          "boundsPx": [
+            23,
+            46,
+            230,
+            225
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        23,
+        43,
+        230,
+        225
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "gift": {
+      "name": "Gift Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Large tied bow over a squat rounded parcel; no torso cross.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildgift_stand",
+          "boundsPx": [
+            41,
+            32,
+            215,
+            217
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        41,
+        29,
+        215,
+        217
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "origami": {
+      "name": "Origami Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Folded paper bird with two broad wings and blunt neck; no beak on face.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildorigami_stand",
+          "boundsPx": [
+            25,
+            41,
+            227,
+            192
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        25,
+        38,
+        227,
+        192
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "puzzle": {
+      "name": "Puzzle Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Full jigsaw body with projecting crown tab and lower side socket.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildpuzzle_stand",
+          "boundsPx": [
+            19,
+            23,
+            228,
+            233
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        19,
+        20,
+        228,
+        233
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "rubber_duck": {
+      "name": "Rubber Duck Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "One plump faceless-bill toy body with swept tail; face stays two dots and smirk.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildrubberduck_stand",
+          "boundsPx": [
+            21,
+            47,
+            236,
+            213
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        21,
+        44,
+        236,
+        213
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "handbell": {
+      "name": "Handbell Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Short handle, huge flared bell and a broad rolled edge.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildhandbell_stand",
+          "boundsPx": [
+            23,
+            22,
+            232,
+            218
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        23,
+        19,
+        232,
+        218
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "fossil": {
+      "name": "Fossil Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Uneven stone disc with a broad ammonite curl above the face.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildfossil_stand",
+          "boundsPx": [
+            24,
+            25,
+            223,
+            211
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        24,
+        22,
+        223,
+        211
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "pocket_watch": {
+      "name": "Pocket Watch Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Round case with large winding crown and attached short chain; dial details above face.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildpocketwatch_stand",
+          "boundsPx": [
+            44,
+            21,
+            236,
+            214
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        44,
+        18,
+        236,
+        214
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "accordion": {
+      "name": "Accordion Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Wide horizontal instrument; deep pleated side edges and key bank.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildaccordion_stand",
+          "boundsPx": [
+            21,
+            61,
+            235,
+            208
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        21,
+        58,
+        235,
+        208
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "storybook": {
+      "name": "Storybook Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Two bowed open page lobes and a pronounced central top notch.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildstorybook_stand",
+          "boundsPx": [
+            24,
+            44,
+            234,
+            212
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        24,
+        41,
+        234,
+        212
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "yo_yo": {
+      "name": "Yo-Yo Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Offset double discs and a short curling string above.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildyoyo_stand",
+          "boundsPx": [
+            46,
+            21,
+            235,
+            218
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        46,
+        18,
+        235,
+        218
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "acorn": {
+      "name": "Acorn Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Whole nut with a massive scalloped cap and stubby stalk.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildacorn_stand",
+          "boundsPx": [
+            29,
+            18,
+            228,
+            218
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        29,
+        15,
+        228,
+        218
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "postcard": {
+      "name": "Postcard Kid",
+      "collection": "special",
+      "tier": 5,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Slanted postcard with upper-right scalloped stamp; diagonals distinguish it from slate.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildpostcard_stand",
+          "boundsPx": [
+            23,
+            31,
+            235,
+            218
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        23,
+        28,
+        235,
+        218
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "music_box": {
+      "name": "Music Box Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Scalloped cylindrical music drum with enormous side crank and plain note on lid.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildmusicbox_stand",
+          "boundsPx": [
+            37,
+            34,
+            235,
+            217
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        37,
+        31,
+        235,
+        217
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "magic_slate": {
+      "name": "Magic Slate Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Landscape slate with scalloped erase tab at top and thick side handles.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildmagicslate_stand",
+          "boundsPx": [
+            16,
+            30,
+            239,
+            207
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        16,
+        27,
+        239,
+        207
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "marble_run": {
+      "name": "Marble Run Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "One enormous marble rides an open S chute wrapping a solid central toy body.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildmarblerun_stand",
+          "boundsPx": [
+            18,
+            18,
+            232,
+            219
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        18,
+        15,
+        232,
+        219
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "toy_train": {
+      "name": "Toy Train Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Full blunt engine with tall chimney, square cab and three broad wheels.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildtoytrain_stand",
+          "boundsPx": [
+            29,
+            30,
+            234,
+            226
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        29,
+        27,
+        234,
+        226
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "puppet_theatre": {
+      "name": "Puppet Theatre Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Curtain-shaped theatre body, closed solid curtains carry the face; no child in stage.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildpuppettheatre_stand",
+          "boundsPx": [
+            25,
+            26,
+            231,
+            208
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        25,
+        23,
+        231,
+        208
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "toy_castle": {
+      "name": "Toy Castle Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Unequal toy battlement towers form the entire body; no uniform held box.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildtoycastle_stand",
+          "boundsPx": [
+            30,
+            23,
+            232,
+            209
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        30,
+        20,
+        232,
+        209
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "paper_town": {
+      "name": "Paper Town Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Three joined folded houses with unequal roof heights; face on middle paper panel.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildpapertown_stand",
+          "boundsPx": [
+            21,
+            20,
+            236,
+            213
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        21,
+        17,
+        236,
+        213
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "treasure_chest": {
+      "name": "Treasure Chest Kid",
+      "collection": "special",
+      "tier": 6,
+      "tierAuthority": "D-066; unchanged",
+      "concept": "Wide barrel-lid chest with two heavy side straps and round-ended lid; closed object.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildtreasurechest_stand",
+          "boundsPx": [
+            28,
+            41,
+            228,
+            200
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        116
+      ],
+      "faceScale": 1,
+      "faceClearance": "All twelve approved face rasters remain on opaque body fill with 3 source px clearance from body ink; see wild-visual-check.json.",
+      "lifetimeBoundsPx": [
+        28,
+        38,
+        228,
+        200
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    }
+  }
+}
