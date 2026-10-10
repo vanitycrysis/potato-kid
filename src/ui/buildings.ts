@@ -2,6 +2,7 @@ import { kidRig } from '../content/artData';
 import type { BuildingId, Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { GameEvent } from '../sim/game';
+import type { Arrivals } from './arrivals';
 import { el, icon, shortName } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
@@ -60,6 +61,7 @@ export class BuildingSheets {
     private readonly content: Content,
     private readonly sheets: Sheets,
     private readonly notes: PlantingNotes,
+    private readonly arrivals: Arrivals,
   ) {}
 
   /** Opens a building's sheet; `restore` brings back where it was (GUI_MVP §8). */
@@ -282,7 +284,7 @@ export class BuildingSheets {
         // plots follow (GUI_MVP §15.4).
         if (building === 'garden') {
           act.button.classList.add('garden-upgrade');
-          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button]);
+          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button], this.arrivals);
         } else {
           body.append(...parts);
           footer.append(act.button);

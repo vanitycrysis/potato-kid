@@ -117,143 +117,26 @@
   visibility: hidden;
 }
 
+/* The HUD (GUI_MVP §19.1): one 60 px paper strip of three equal, noninteractive stats.
+   The strip's own 8 px border is its whole inset; the 44 px row sits at local y 8. A stat
+   that doesn't fit wraps onto its own line rather than shrinking (§19.3). */
 .hud {
-  position: relative;
-  height: 160px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  min-height: 60px;
   pointer-events: none;
-  font-size: 22px;
-  line-height: 28px;
-}
-.hud > * {
-  position: absolute;
+  font-size: 20px;
+  line-height: 24px;
 }
 .hud-stat {
+  flex: 1 1 0;
+  min-width: max-content;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 44px;
-}
-.hud-countdown {
-  font-size: 18px;
-  line-height: 24px;
-}
-.hud-settings,
-.hud-spawn {
-  pointer-events: auto;
-}
-
-/* Portrait: rows at local y 8, 60, 108 (inside the 8 px border: 0, 52, 100). */
-.hud[data-mode='portrait'] .hud-materials {
-  top: 0;
-  left: 8px;
-  width: calc((100% - 16px - 60px) / 2);
-}
-.hud[data-mode='portrait'] .hud-potatokens {
-  top: 0;
-  left: calc(8px + (100% - 16px - 60px) / 2 + 8px);
-  width: calc((100% - 16px - 60px) / 2);
-}
-.hud[data-mode='portrait'] .hud-settings {
-  top: 0;
-  right: 8px;
-}
-.hud[data-mode='portrait'] .hud-population {
-  top: 52px;
-  left: 8px;
-  width: 96px;
-}
-.hud[data-mode='portrait'] .hud-timer {
-  top: 52px;
-  left: 112px;
-  right: 8px;
-}
-.hud[data-mode='portrait'] .hud-track {
-  top: 119px;
-  left: 8px;
-  right: calc(8px + 112px + 8px);
-}
-.hud[data-mode='portrait'] .hud-spawn {
-  top: 100px;
-  right: 8px;
-}
-
-/* Narrow (< 360 px wide): four rows at 8, 60, 112, 164; currencies share the first row. */
-.hud[data-mode='narrow'] {
-  height: 212px;
-}
-.hud[data-mode='narrow'] .hud-materials {
-  top: 0;
-  left: 8px;
-  width: calc((100% - 24px) / 2);
-}
-.hud[data-mode='narrow'] .hud-potatokens {
-  top: 0;
-  left: calc(8px + (100% - 24px) / 2 + 8px);
-  width: calc((100% - 24px) / 2);
-}
-.hud[data-mode='narrow'] .hud-population {
-  top: 52px;
-  left: 8px;
-}
-.hud[data-mode='narrow'] .hud-settings {
-  top: 52px;
-  right: 8px;
-}
-.hud[data-mode='narrow'] .hud-timer {
-  top: 104px;
-  left: 8px;
-  right: 8px;
-}
-.hud[data-mode='narrow'] .hud-track {
-  top: 175px;
-  left: 8px;
-  right: calc(8px + 112px + 8px);
-}
-.hud[data-mode='narrow'] .hud-spawn {
-  top: 156px;
-  right: 8px;
-}
-
-/* Compact (height <= 520, inner width >= 556): one 44 px row, track at local y 58. */
-.hud[data-mode='compact'] {
-  height: 72px;
-  display: grid;
-  grid-template-columns: 104px 88px 80px minmax(88px, 1fr) 112px 44px;
-  /* One 44 px row; the track sits below it (local y 58). Items never stretch into it. */
-  grid-template-rows: 44px;
-  align-items: start;
-  gap: 8px;
-  padding: 0 8px;
-  font-size: 20px;
-}
-.hud[data-mode='compact'] > * {
-  position: static;
-}
-.hud[data-mode='compact'] .hud-materials {
-  grid-column: 1;
-}
-.hud[data-mode='compact'] .hud-potatokens {
-  grid-column: 2;
-}
-.hud[data-mode='compact'] .hud-population {
-  grid-column: 3;
-}
-.hud[data-mode='compact'] .hud-timer {
-  grid-column: 4;
-}
-.hud[data-mode='compact'] .hud-spawn {
-  grid-column: 5;
-  grid-row: 1;
-}
-.hud[data-mode='compact'] .hud-settings {
-  grid-column: 6;
-  grid-row: 1;
-}
-.hud[data-mode='compact'] .hud-track {
-  position: absolute;
-  top: 50px;
-  left: 8px;
-  right: 8px;
+  min-height: 44px;
 }
 
 .hud-track {
@@ -269,9 +152,10 @@
   opacity: 0.55;
 }
 
-.hud-spawn {
-  width: 112px;
-  height: 44px;
+/* Spawn now, in the Garden's Arrivals (§19.2): 48 high, its exact price on the control. */
+.arrivals-spawn {
+  width: 100%;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -289,58 +173,24 @@
   font-size: 16px;
   line-height: 18px;
 }
-.hud-spawn.is-full {
-  border-image-source: var(--ui-spawn-full);
+.garden-arrivals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.arrivals-track[hidden] {
+  display: none;
 }
 
-/* Two-row HUD for short viewports with a persistent banner (§3.1): 104 px, rows of 44
-   at local y 8 and 52 with no gap; row 1 Materials, Potatokens, population, Settings;
-   row 2 timer and track, then Spawn now. */
-.hud[data-mode='tworow'] {
-  height: 104px;
-  display: grid;
-  grid-template-columns: 104px 88px minmax(80px, 1fr) 44px;
-  grid-template-rows: 44px 44px;
-  align-items: center;
-  column-gap: 8px;
-  row-gap: 0;
-  padding: 0 8px;
-  font-size: 20px;
-  line-height: 24px;
-}
-.hud[data-mode='tworow'] > * {
-  position: static;
-}
-/* Every cell placed explicitly: the DOM order (Settings before population) differs. */
-.hud[data-mode='tworow'] .hud-materials {
-  grid-area: 1 / 1;
-}
-.hud[data-mode='tworow'] .hud-potatokens {
-  grid-area: 1 / 2;
-}
-.hud[data-mode='tworow'] .hud-population {
-  grid-area: 1 / 3;
-}
-.hud[data-mode='tworow'] .hud-settings {
-  grid-area: 1 / 4;
-  width: 44px;
-}
-.hud[data-mode='tworow'] .hud-timer {
-  grid-area: 2 / 1 / 3 / 4;
-  align-self: start;
-}
-.hud[data-mode='tworow'] .hud-spawn {
-  grid-area: 2 / 3 / 3 / 5;
-  justify-self: end;
-}
-.hud[data-mode='tworow'] .hud-track {
-  position: absolute;
-  top: 76px;
-  left: 8px;
-  width: calc(100% - 16px - 120px);
-}
-/* HUD scroll window (§3.1): fixed border, vertical scroll, 6 px gutter. */
-:root[data-hud-fit='window'] .hud {
+/* Scroll windows (§19.3): HUD and navigation each keep a 60 px aperture with a fixed
+   border and a 6 px gutter, and scroll vertically through full-width stacked items. */
+:root[data-hud-fit='window'] .hud,
+:root[data-hud-fit='window'] .tray {
+  height: 60px;
+  min-height: 0;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -348,10 +198,12 @@
   scrollbar-color: var(--ui-sceneryInk) var(--ui-sage);
   pointer-events: auto;
 }
-:root[data-hud-fit='window'] .hud > * {
+:root[data-hud-fit='window'] .hud > *,
+:root[data-hud-fit='window'] .tray > * {
+  flex: none;
   pointer-events: auto;
 }
-/* Page mode (§3.1): no world; banner, hint, HUD, tray and Dex flow as one page. */
+/* Page mode (§19.3): no world; banner, hint, HUD and navigation flow as one page. */
 .page-hint {
   display: none;
 }
@@ -369,7 +221,7 @@
 :root[data-hud-fit='page'] #app {
   display: none;
 }
-/* Banner, hint and HUD (in the top stack), then the tray, then the Dex button. */
+/* Banner, hint and HUD (in the top stack), then the navigation. */
 :root[data-hud-fit='page'] .banners {
   position: static;
   margin: 8px var(--ui-mr) 0 var(--ui-ml);
@@ -382,27 +234,14 @@
 :root[data-hud-fit='page'] .tray {
   order: 2;
 }
-:root[data-hud-fit='page'] .dex-button {
-  order: 3;
-}
 :root[data-hud-fit='page'] .top-stack,
-:root[data-hud-fit='page'] .tray,
-:root[data-hud-fit='page'] .dex-button {
+:root[data-hud-fit='page'] .tray {
   position: static;
   margin: 8px var(--ui-mr) 8px var(--ui-ml);
 }
 /* The tray keeps its labels in page mode (§3.1), even on a short screen. */
 :root[data-hud-fit='page'] .tray {
   height: auto;
-  min-height: 96px;
-}
-:root[data-hud-fit='page'] .tray .tray-label {
-  /* Higher specificity than the compact rule that clips labels (both apply here). */
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip: auto;
 }
 :root[data-hud-fit='page'] .page-hint {
   display: block;
@@ -413,57 +252,46 @@
   color: var(--ui-ink);
 }
 
-/* --- Tray and Dex button (§3) ---------------------------------------------------- */
-.dex-button {
-  position: fixed;
-  right: var(--ui-mr);
-  bottom: calc(var(--ui-sb) + 96px + 8px);
-  width: 48px;
-  height: 48px;
-  z-index: 10;
-}
+/* --- Navigation (§19.1) ---------------------------------------------------------------
+   One 60 px scalloped tray: Garden, Dex, Notebook, three equal 44 px controls 8 px apart,
+   each an inline 24 px glyph, 6 px gap and an 18/24 label. Labels stay in landscape. */
 .tray {
   position: fixed;
   bottom: var(--ui-sb);
   left: var(--ui-ml);
   right: var(--ui-mr);
-  height: 96px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  min-height: 60px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
   z-index: 10;
 }
 .tray-cell {
+  flex: 1 1 0;
+  min-width: max-content;
   min-height: 44px;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 6px;
   background: none;
   border: none;
   font: inherit;
-  font-size: 16px;
-  line-height: 22px;
+  font-size: 18px;
+  line-height: 24px;
   color: inherit;
+}
+.tray-cell.is-selected {
+  background: var(--ui-sage);
+  border-radius: 8px;
+}
+.tray-cell.is-selected .tray-label {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .tray-cell:disabled {
   color: var(--ui-disabled);
-}
-:root[data-compact='true'] .tray {
-  height: 60px;
-  right: calc(var(--ui-mr) + 68px);
-}
-:root[data-compact='true'] .tray-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-:root[data-compact='true'] .dex-button {
-  bottom: var(--ui-sb);
-  width: 60px;
-  height: 60px;
 }
 
 /* --- Feedback cards (§9) --------------------------------------------------------------- */
@@ -714,4 +542,8 @@
   position: absolute;
   top: 0;
   right: 0;
+}
+
+.hud-count-icon {
+  display: inline-flex;
 }

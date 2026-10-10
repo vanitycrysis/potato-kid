@@ -2,6 +2,7 @@ import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { GameEvent, PlantedKid, RejectReason } from '../sim/game';
+import type { Arrivals } from './arrivals';
 import { el, icon } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatTimeLeft } from './format';
@@ -65,6 +66,8 @@ export class GardenPlots {
     private readonly notes: PlantingNotes,
     /** The spawn-rate part of the Garden sheet (its comparison, cost and Upgrade). */
     spawnRate: HTMLElement[],
+    /** Arrivals and Spawn now, first in the Garden (GUI_MVP §19.2). */
+    private readonly arrivals: Arrivals,
   ) {
     this.tierOf = new Map(content.kids.map((k) => [k.id, k.tier]));
     this.overview = this.buildOverview(spawnRate);
@@ -312,7 +315,13 @@ export class GardenPlots {
       to.scrollIntoView({ block: 'start' });
       to.focus({ preventScroll: true });
     };
-    const links = el('nav', 'garden-links', this.button('Spawn rate', 'garden-link', jump(rateHeading)), this.button('Plots', 'garden-link', jump(plotsHeading)));
+    const links = el(
+      'nav',
+      'garden-links',
+      this.button('Arrivals', 'garden-link', jump(this.arrivals.heading)),
+      this.button('Plots', 'garden-link', jump(plotsHeading)),
+      this.button('Spawn rate', 'garden-link', jump(rateHeading)),
+    );
     links.setAttribute('aria-label', 'Garden sections');
     const helpers = el(
       'div',
@@ -340,11 +349,13 @@ export class GardenPlots {
     status.hidden = true;
     const more = el('section', 'garden-more', moreHeading, nowNext, cost, holding, shortfall, maxed, unlock, status);
 
-    const nodes = [links, el('section', 'garden-rate', rateHeading, ...spawnRate), el('section', 'garden-plots', plotsHeading, helpers, ...rows.map((r) => r.node)), more];
+    // Arrivals first, then the plots, then the spawn rate (GUI_MVP §19.2).
+    const nodes = [links, this.arrivals.node, el('section', 'garden-plots', plotsHeading, helpers, ...rows.map((r) => r.node)), more, el('section', 'garden-rate', rateHeading, ...spawnRate)];
     let shown = '';
     return {
       nodes,
       update: () => {
+        this.arrivals.update();
         for (const r of rows) r.update();
         const g = this.game;
         const n = g.state.plots.length;

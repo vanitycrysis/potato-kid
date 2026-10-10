@@ -79,6 +79,10 @@ export class Sheets {
   } | null = null;
   /** True while `open` replaces a sheet, so its onClose knows it wasn't dismissed. */
   private replacing = false;
+  /** The next `open` is a page of another sheet (Notebook, GUI_MVP §19.2): see `asPage`. */
+  private nextPage: { back: { label: string; run: () => void } | null } | null = null;
+  /** The sheet being replaced by a page goes at once, with no fade. */
+  private swapping = false;
   /** The scroll root last announced to the open sheet's lists. */
   private announcedRoot: Element | null | undefined = undefined;
   private readonly onKey = (e: KeyboardEvent) => this.key(e);
@@ -132,9 +136,13 @@ export class Sheets {
    * paused while it is open; simulation and income continue (GUI_MVP §2).
    */
   open(spec: SheetSpec, launcher: HTMLElement | null): OpenSheet {
+    const page = this.nextPage;
+    this.nextPage = null;
     if (this.current) {
       this.replacing = true;
+      this.swapping = page !== null;
       this.close(false);
+      this.swapping = false;
       this.replacing = false;
     }
     this.scene.cancelDrag();
@@ -160,6 +168,13 @@ export class Sheets {
     const body = el('div', 'sheet-body');
     const footer = el('footer', 'sheet-footer');
     const sheet = el('section', 'sheet ui-surface', header, bar, body, footer);
+    // A page's way back sits above whatever its sheet puts in its bar and body.
+    if (page?.back) {
+      const back = el('button', 'ui-button sheet-page-back', page.back.label);
+      back.type = 'button';
+      back.addEventListener('click', page.back.run);
+      sheet.insertBefore(el('div', 'sheet-page-nav', back), bar);
+    }
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-modal', 'true');
     sheet.setAttribute('aria-labelledby', titleId);
@@ -178,7 +193,8 @@ export class Sheets {
     this.current = { spec, scrim, sheet, subtitle, bar, body, footer, launcher, watch };
     this.announcedRoot = undefined;
     this.place();
-    this.animate(true);
+    // A page replaces its parent in place: the shell doesn't open again.
+    if (!page) this.animate(true);
     title.focus({ preventScroll: true });
     const current = this.current;
     return {
@@ -197,6 +213,14 @@ export class Sheets {
         this.scroller(current).scrollTop = top;
       },
     };
+  }
+
+  /**
+   * The next sheet opened is a page of the open one (Notebook's tools, GUI_MVP §19.2): it
+   * swaps in with no fade, and with `back`, shows a control with that label that runs it.
+   */
+  asPage(back: { label: string; run: () => void } | null = null): void {
+    this.nextPage = { back };
   }
 
   /** Closes the open sheet; focus returns to whatever opened it (GUI_MVP §2). */
@@ -221,7 +245,7 @@ export class Sheets {
     // Nor is it a dialog any more: assistive tech (and tests) see only the open one.
     c.sheet.removeAttribute('role');
     c.sheet.setAttribute('aria-hidden', 'true');
-    if (this.reducedMotion || !m) remove();
+    if (this.reducedMotion || !m || this.swapping) remove();
     else {
       c.scrim.style.transition = `opacity ${m.closeMs}ms ease-in`;
       c.sheet.style.transition = `transform ${m.closeMs}ms ease-in, opacity ${m.closeMs}ms ease-in`;

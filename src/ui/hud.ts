@@ -4,7 +4,8 @@ import type { MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
 import type { GameEvent, OfflineReport } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
-import { formatClock, formatCount, formatDuration, formatExact } from './format';
+import { formatCount, formatDuration, formatExact } from './format';
+import { Arrivals } from './arrivals';
 import { BuildingSheets } from './buildings';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
@@ -12,6 +13,7 @@ import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
 import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
+import { NOTEBOOK_KEYS, Notebook } from './notebook';
 import { openOfflineSummary } from './offline';
 import { portrait } from './portrait';
 import { openSettings } from './settings';
@@ -32,12 +34,8 @@ export interface SaveStatus {
   readOnly: boolean;
 }
 
-type HudMode = 'portrait' | 'narrow' | 'compact' | 'tworow';
-
-/** The play band the GUI must always leave (GUI_MVP §2). */
+/** The play band the GUI must always leave (GUI_MVP §§2, 19.3). */
 const PLAY_BAND = 44;
-/** Smallest HUD scroll window: one complete 44 px target plus padding (GUI_MVP §3.1). */
-const HUD_WINDOW_MIN = 16 + 44;
 
 /** A feedback card, queued or on screen; it keeps its remaining time across both. */
 interface Card {
@@ -61,11 +59,9 @@ export class Hud {
   private readonly materials = el('span', 'hud-count');
   private readonly potatokens = el('span', 'hud-count');
   private readonly count = el('span', 'hud-value');
-  private readonly countdown = el('span', 'hud-countdown');
-  private readonly track = el('div', 'hud-track');
-  private readonly bar = el('div', 'hud-bar');
-  private readonly spawn = el('button', 'ui-button ui-primary hud-spawn');
-  private readonly spawnCost = el('span', 'hud-spawn-cost');
+  /** The population's icon: kids, or a warning when the map is full (§19.1). */
+  private readonly countIcon = el('span', 'hud-count-icon');
+  private countFull: boolean | null = null;
   private readonly top = el('div', 'top-stack');
   private readonly banners = el('div', 'banners');
   private readonly feedback = el('div', 'feedback');
@@ -76,7 +72,6 @@ export class Hud {
   private readonly queue: Card[] = [];
   private showing: Card | null = null;
   private hover = false;
-  private inflight = false;
   private save: SaveStatus = { unsaved: false, recovery: false, readOnly: false };
   private recoveryDismissed = false;
   private last = performance.now();
@@ -85,8 +80,10 @@ export class Hud {
   private readonly dex: Dex;
   private readonly notes: PlantingNotes;
   private readonly kidCard: KidCard;
-  private readonly dexButton = el('button', 'ui-button dex-button', icon('icon_dex', '', 'ui-icon-24'));
-  private readonly trayCells = new Map<string, HTMLButtonElement>();
+  private readonly notebook: Notebook;
+  private readonly arrivals: Arrivals;
+  /** The navigation row: Garden, Dex, Notebook (GUI_MVP §19.1). */
+  private readonly trayCells = new Map<'garden' | 'dex' | 'notebook', HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
   private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null }) | null = null;
@@ -99,25 +96,11 @@ export class Hud {
     this.applyTokens();
     this.known = new Set(scene.game.state.discoveredKids);
 
-    this.track.append(this.bar);
-    this.track.setAttribute('role', 'progressbar');
-    this.track.setAttribute('aria-label', 'Next kid');
-    this.spawn.type = 'button';
-    this.spawn.dataset.cue = 'success'; // the spawn cue is its sound
-    this.spawn.append(el('span', 'hud-spawn-label', 'Spawn now'), el('span', 'hud-spawn-price', icon('icon_potatokens', '', 'ui-icon-18'), this.spawnCost));
-    this.spawn.addEventListener('click', () => this.instantSpawn());
-    const gear = el('button', 'ui-button hud-settings', icon('icon_settings', '', 'ui-icon-24'));
-    gear.type = 'button';
-    gear.setAttribute('aria-label', 'Settings');
-    gear.addEventListener('click', () => openSettings(this.sheets, this.settings, gear));
+    // Three noninteractive stats (§19.1): the timer, Spawn now and Settings moved to sheets.
     this.hud.append(
-      el('span', 'hud-stat hud-materials', icon('icon_materials', 'Materials', 'ui-icon-24'), this.materials),
-      el('span', 'hud-stat hud-potatokens', icon('icon_potatokens', 'Potatokens', 'ui-icon-24'), this.potatokens),
-      gear,
-      el('span', 'hud-stat hud-population', icon('icon_kids', 'Kids', 'ui-icon-24'), this.count),
-      el('span', 'hud-stat hud-timer', icon('icon_timer', '', 'ui-icon-24'), this.countdown),
-      this.track,
-      this.spawn,
+      el('span', 'hud-stat hud-materials', icon('icon_materials', '', 'ui-icon-24'), this.materials),
+      el('span', 'hud-stat hud-potatokens', icon('icon_potatokens', '', 'ui-icon-24'), this.potatokens),
+      el('span', 'hud-stat hud-population', this.countIcon, this.count),
     );
     this.hud.setAttribute('aria-label', 'Garden status');
     this.feedback.setAttribute('role', 'status');
@@ -131,32 +114,30 @@ export class Hud {
     const tray = el(
       'nav',
       'tray ui-surface ui-tray',
-      this.trayCell('garden', 'Garden'),
-      this.trayCell('capacity', 'Capacity'),
-      this.trayCell('bias', 'Bias'),
-      this.trayCell('compendium', 'Compendium'),
+      this.trayCell('garden', 'Garden', 'icon_garden', (b) => this.buildings.open('garden', b)),
+      this.trayCell('dex', 'Dex', 'icon_dex', (b) => this.dex.open(b)),
+      this.trayCell('notebook', 'Notebook', 'icon_compendium', (b) => this.notebook.open(b)),
     );
-    tray.setAttribute('aria-label', 'Buildings');
-    const dex = this.dexButton;
-    dex.type = 'button';
-    dex.setAttribute('aria-label', 'Potato-Dex');
-    dex.addEventListener('click', () => this.dex.open(dex));
-    document.body.append(this.shield, this.banners, this.top, dex, tray);
+    tray.setAttribute('aria-label', 'Main');
+    const dex = this.trayCells.get('dex')!;
+    document.body.append(this.shield, this.banners, this.top, tray);
     this.sheets = new Sheets(
       scene,
-      () => [this.top, tray, dex, document.getElementById('app')!].filter(Boolean),
+      () => [this.top, tray, document.getElementById('app')!].filter(Boolean),
       () => (this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0),
       matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
     this.notes = new PlantingNotes(settings);
-    this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes);
+    this.arrivals = new Arrivals(scene, content, () => this.save.readOnly);
+    this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals);
+    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly);
     this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly);
-    // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex button
+    // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex control
     // (world kids are no focus targets); a read-only save can still browse it.
     this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
-    scene.listenKidTap((kidId) => this.kidCard.open(kidId, this.dexButton));
+    scene.listenKidTap((kidId) => this.kidCard.open(kidId, dex));
     // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
-    const gardenCell = tray.querySelector<HTMLElement>('.tray-cell');
+    const gardenCell = this.trayCells.get('garden')!;
     scene.listenPlotTap((plot) => {
       if (!this.save.readOnly) this.buildings.openPlot(plot, gardenCell);
     });
@@ -167,14 +148,14 @@ export class Hud {
         left: top.left,
         right: top.right,
         top: top.bottom + 8,
-        bottom: Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top) - 8,
+        bottom: tray.getBoundingClientRect().top - 8,
       };
     });
     scene.homeFits = (t, h) => home.fits(t, h);
     scene.listenHome((v) => home.render(v));
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
-    // the top; the tray and Dex button at the bottom (GUI_MVP §2; Codex review, PR #15).
+    // the top; the navigation at the bottom (GUI_MVP §§2, 19.1; Codex review, PR #15).
     const measure = () => {
       // The top stack starts below any banner (+ 8 px).
       const banner = this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0;
@@ -182,7 +163,7 @@ export class Hud {
       this.layout();
       // Page mode changes what scrolls an open sheet.
       this.sheets.place();
-      scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - Math.min(tray.getBoundingClientRect().top, dex.getBoundingClientRect().top));
+      scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
@@ -262,13 +243,12 @@ export class Hud {
     }
   }
 
-  /** A tray button: opens its building's sheet. */
-  private trayCell(key: 'garden' | 'capacity' | 'bias' | 'compendium', label: string): HTMLButtonElement {
-    const b = el('button', 'tray-cell', icon(`icon_${key}`), el('span', 'tray-label', label));
+  /** A navigation control (§19.1): a 24 px glyph beside its label. */
+  private trayCell(key: 'garden' | 'dex' | 'notebook', label: string, glyph: string, open: (b: HTMLButtonElement) => void): HTMLButtonElement {
+    const b = el('button', 'tray-cell', icon(glyph, '', 'ui-icon-24'), el('span', 'tray-label', label));
     b.type = 'button';
     this.trayCells.set(key, b);
-    b.setAttribute('aria-label', label);
-    b.addEventListener('click', () => this.buildings.open(key, b));
+    b.addEventListener('click', () => open(b));
     return b;
   }
 
@@ -300,86 +280,50 @@ export class Hud {
       if (back.key === 'dex') this.dex.open(back.launcher);
       else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'settings') openSettings(this.sheets, this.settings, back.launcher, back.scrollTop);
+      else if (back.key === 'notebook') this.notebook.open(back.launcher, undefined, back.scrollTop);
+      else if (back.key === 'mapview') this.notebook.openMapView(back.launcher);
       else if (back.key === 'garden' || back.key === 'capacity' || back.key === 'bias' || back.key === 'compendium')
         this.buildings.open(back.key, back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
     });
   }
 
   /**
-   * Portrait three rows, narrow four rows, compact one row (GUI_MVP §3); with a persistent
-   * save banner, whichever of those, a two-row HUD, a HUD scroll window or a page without
-   * the world first leaves the 44 px play band (§3.1). The usual HUD is always tried first.
+   * The natural layout first: one 60 px stat strip and one 60 px navigation row, each
+   * growing into stacked lines if its content doesn't fit (GUI_MVP §19.1). If that leaves
+   * less than the 44 px play band (a banner, large text, a short window), both become 60 px
+   * scroll windows; if even that doesn't leave it, the world is hidden and everything flows
+   * as one page until the window grows (§19.3). The natural layout is always tried first.
    */
   private layout(): void {
     const root = document.documentElement;
-    // Staying in the HUD scroll window keeps its offset; entering it starts at 0 (§3.1).
+    const tray = document.querySelector<HTMLElement>('.tray');
+    // Staying in the scroll windows keeps their offsets; entering them starts at 0.
     const wasWindow = root.dataset.hudFit === 'window';
-    const scroll = wasWindow ? this.hud.scrollTop : 0;
-    // Measuring the usual layout briefly shortens the page, which would clamp a page-mode
+    const scroll = wasWindow ? [this.hud.scrollTop, tray?.scrollTop ?? 0] : [0, 0];
+    // Measuring the natural layout briefly shortens the page, which would clamp a page-mode
     // scroll to the top: it is put back if the page stays (Codex review, PR #41 follow-up).
     const page = document.scrollingElement ?? root;
     const pageScroll = root.dataset.hudFit === 'page' ? page.scrollTop : null;
-    const w = window.visualViewport?.width ?? window.innerWidth;
     const h = window.visualViewport?.height ?? window.innerHeight;
     root.dataset.compact = h <= 520 ? 'true' : 'false';
     root.dataset.hudFit = 'usual';
-    this.hud.style.height = '';
-    const inner = this.hud.clientWidth - 16;
-    let mode: HudMode = w < 360 && h > 520 ? 'narrow' : 'portrait';
-    if (h <= 520) mode = inner >= 556 ? 'compact' : 'portrait';
-    this.hud.dataset.mode = mode;
-    if (!this.persistentBanner()) return;
-
-    const banner = this.banners.getBoundingClientRect().height;
-    const top = this.banners.getBoundingClientRect().top;
-    const bottom = Math.min(...['.tray', '.dex-button'].map((q) => document.querySelector(q)?.getBoundingClientRect().top ?? h)) - 8;
-    // A: the tallest HUD that still leaves the band (Y = HUD top, E = band bottom).
-    const hudTop = top + banner + 8;
-    const room = bottom - hudTop - 8 - PLAY_BAND;
-    if (this.hud.offsetHeight <= room) return;
-    // The two-row HUD needs 340 px of content width (C = HUD width − 32).
-    if (104 <= room && this.hud.clientWidth + 16 - 32 >= 340) {
-      this.hud.dataset.mode = 'tworow';
-      return;
-    }
-    if (room >= HUD_WINDOW_MIN) {
-      // A vertical scroll window of height A over the two-row content when it fits beside
-      // the 6 px gutter, else the four-row content (§3.1).
-      root.dataset.hudFit = 'window';
-      this.hud.dataset.mode = this.hud.clientWidth + 16 - 32 - 6 >= 340 ? 'tworow' : 'narrow';
-      this.hud.style.height = `${Math.floor(room)}px`;
-      this.hud.scrollTop = wasWindow ? scroll : 0;
-      return;
-    }
-    // No room even for one target and the band: the world is hidden and everything flows
-    // as one page until the window grows (§3.1). Held input is settled first.
+    // Read-only hides the HUD and freezes the world: nothing to fit.
+    if (this.save.readOnly) return;
+    const band = () => (tray?.getBoundingClientRect().top ?? h) - 8 - (this.hud.getBoundingClientRect().bottom + 8);
+    if (band() >= PLAY_BAND) return;
+    root.dataset.hudFit = 'window';
+    this.hud.scrollTop = scroll[0]!;
+    if (tray) tray.scrollTop = scroll[1]!;
+    if (band() >= PLAY_BAND) return;
+    // No room even for the windows and the band: held input is settled first (§19.3).
     this.scene.cancelDrag();
     root.dataset.hudFit = 'page';
-    this.hud.dataset.mode = 'narrow';
     if (pageScroll !== null) page.scrollTop = pageScroll;
   }
 
   /** An unsaved or recovery banner is up (read-only hides the HUD instead). */
   private persistentBanner(): boolean {
     return !this.save.readOnly && this.banners.childElementCount > 0;
-  }
-
-  // --- instant spawn ------------------------------------------------------------
-
-  private spawnState(): { ok: boolean; reason: string } {
-    const g = this.scene.game;
-    const cost = this.content.balance.economy.instantSpawnPotatokens;
-    if (this.save.readOnly) return { ok: false, reason: 'Update the game to continue.' };
-    if (g.state.world.kids.length >= g.capacity) return { ok: false, reason: refusalText('full', 'instantSpawn') };
-    if (g.state.potatokens < cost) return { ok: false, reason: refusalText('cost', 'instantSpawn', 'potatokens') };
-    return { ok: !this.inflight, reason: '' };
-  }
-
-  private instantSpawn(): void {
-    // A disabled control sends nothing; only a valid tap is dispatched, one at a time.
-    if (!this.spawnState().ok) return;
-    this.inflight = true;
-    this.scene.command({ type: 'instantSpawn' });
   }
 
   // --- per-frame rendering --------------------------------------------------------
@@ -390,31 +334,24 @@ export class Hud {
     const g = this.scene.game;
     const s = g.state;
     this.materials.textContent = formatCount(s.materials);
-    this.materials.parentElement!.setAttribute('aria-label', `${formatExact(s.materials)} Materials`);
+    this.materials.parentElement!.setAttribute('aria-label', `Materials: ${formatExact(s.materials)}`);
     this.potatokens.textContent = formatCount(s.potatokens);
-    this.potatokens.parentElement!.setAttribute('aria-label', `${formatExact(s.potatokens)} Potatokens`);
-    this.count.textContent = `${s.world.kids.length}/${g.capacity}`;
-    const full = s.world.kids.length >= g.capacity;
-    const compact = this.hud.dataset.mode === 'compact';
-    const clock = formatClock(Math.max(0, g.interval - s.spawnProgress));
-    if (full) this.countdown.textContent = compact ? 'Full' : 'Garden is full';
-    else if (g.waitingForRoom) this.countdown.textContent = compact ? 'Waiting' : 'Waiting for room';
-    else this.countdown.textContent = compact ? clock : `Next kid ${clock}`;
-    this.countdown.setAttribute('aria-label', full ? 'Garden is full' : g.waitingForRoom ? 'Waiting for room' : `Next kid in ${clock}`);
-    this.bar.style.width = `${Math.min(1, s.spawnProgress / g.interval) * 100}%`;
-    this.track.classList.toggle('full', full);
-
-    const cost = this.content.balance.economy.instantSpawnPotatokens;
-    this.spawnCost.textContent = formatExact(cost);
-    const st = this.spawnState();
-    this.spawn.setAttribute('aria-disabled', String(!st.ok));
-    this.spawn.classList.toggle('is-disabled', !st.ok);
-    this.spawn.classList.toggle('is-full', full);
-    this.spawn.setAttribute('aria-label', st.reason ? `Spawn now: ${st.reason}` : `Spawn a random Garden kid for ${formatExact(cost)} Potatokens`);
+    this.potatokens.parentElement!.setAttribute('aria-label', `Potatokens: ${formatExact(s.potatokens)}`);
+    const onMap = s.world.kids.length;
+    this.count.textContent = `${onMap}/${g.capacity}`;
+    // A full map swaps the kids icon for a warning, keeping the count (§19.1).
+    const full = onMap >= g.capacity;
+    if (full !== this.countFull) {
+      this.countFull = full;
+      this.countIcon.replaceChildren(icon(full ? 'icon_warning' : 'icon_kids', '', 'ui-icon-24'));
+    }
+    this.count.parentElement!.setAttribute('aria-label', full ? `Map is full: ${onMap} of ${g.capacity} kids` : `${onMap} of ${g.capacity} kids on the map`);
 
     this.tickFeedback(now, dt);
     this.sheets.tick();
-    for (const [key, cell] of this.trayCells) cell.classList.toggle('is-selected', this.sheets.openKey === key);
+    const open = this.sheets.openKey;
+    const selected = open === null ? null : NOTEBOOK_KEYS.has(open) ? 'notebook' : open === 'dex' || open === 'kid' ? 'dex' : open === 'garden' ? 'garden' : null;
+    for (const [key, cell] of this.trayCells) cell.classList.toggle('is-selected', selected === key);
   }
 
   // --- feedback ---------------------------------------------------------------------
@@ -427,10 +364,9 @@ export class Hud {
       this.known,
       this.scene.game.state.discoveredKids.length,
     );
-    for (const e of events) if (e.type === 'spawned' && e.source === 'instant') this.inflight = false;
+    this.arrivals.onStep(events);
     const now = performance.now();
     for (const item of items) {
-      if (item.kind === 'refusal' && item.command === 'instantSpawn') this.inflight = false;
       const notBefore = this.readyAt(item, now);
       // The command implies the currency, except a respawn (whose sheet keeps its own context).
       const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
@@ -667,16 +603,15 @@ export class Hud {
   // --- save banners (GUI_MVP §10) -----------------------------------------------------
 
   private renderBanners(): void {
-    // Read-only: the building launchers are visibly unavailable, with the reason announced
-    // (GUI_MVP §10; Codex review, PR #39).
-    for (const cell of this.trayCells.values()) {
-      const label = cell.querySelector('.tray-label')?.textContent ?? '';
+    // Read-only: the Garden and the Dex are visibly unavailable, with the reason announced
+    // (GUI_MVP §10; Codex review, PR #39). The Notebook stays, for Settings and Map view; its
+    // building rows are unavailable in the same way.
+    for (const key of ['garden', 'dex'] as const) {
+      const cell = this.trayCells.get(key)!;
       cell.disabled = this.save.readOnly;
-      cell.setAttribute('aria-label', this.save.readOnly ? `${label}: Update the game to continue.` : label);
+      if (this.save.readOnly) cell.setAttribute('aria-label', `${cell.textContent}: Update the game to continue.`);
+      else cell.removeAttribute('aria-label');
     }
-    // A read-only save gives the Dex nothing real to show (GUI_MVP §10).
-    this.dexButton.disabled = this.save.readOnly;
-    this.dexButton.setAttribute('aria-label', this.save.readOnly ? 'Potato-Dex: Update the game to continue.' : 'Potato-Dex');
     this.banners.replaceChildren();
     document.documentElement.dataset.readonly = String(this.save.readOnly);
     this.shield.replaceChildren();

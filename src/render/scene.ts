@@ -581,6 +581,31 @@ export class MapScene {
     return this.zoomFactor;
   }
 
+  /** The world point at the centre of the play band, between the HUD and the navigation (§19.1). */
+  bandCentre(): { x: number; y: number } {
+    const { width, height } = this.app.screen;
+    const sy = this.insets.top + (height - this.insets.top - this.insets.bottom) / 2;
+    return { x: this.cam.x + width / 2 / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom };
+  }
+
+  /** Zooms to `factor` (clamped) with world point `at` at the play band's centre (Map view, §20.1). */
+  zoomAround(at: { x: number; y: number }, factor: number): void {
+    const { width, height } = this.app.screen;
+    this.zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor));
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
+    const sy = this.insets.top + (height - this.insets.top - this.insets.bottom) / 2;
+    this.cam.x = at.x - width / 2 / this.cam.zoom;
+    this.cam.y = at.y - sy / this.cam.zoom;
+    this.applyCamera();
+  }
+
+  /** Between the Garden and its outlet: Find Garden centres the play band here (§20.1). */
+  get gardenPoint(): { x: number; y: number } {
+    const [gx, gy] = this.art.map.garden.worldGround;
+    const [ox, oy] = this.art.map.garden.spawnOutlet;
+    return { x: (gx + ox) / 2, y: (gy + oy) / 2 };
+  }
+
   /** Zooms to `factor` (clamped), keeping the world point under screen (sx, sy) where it is. */
   zoomAt(sx: number, sy: number, factor: number): void {
     const anchor = { x: this.cam.x + sx / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom };
