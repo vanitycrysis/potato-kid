@@ -4306,6 +4306,63 @@ test.describe('taking kids out of a plot, and cancelling a growing one (D-074, G
     expect(await page.evaluate(() => window.__PK__!.plots()[0]!.kids)).toBe(3);
   });
 
+  test('an open Empty review holds Add kids and Start growing; Start review holds Empty (Codex review, PR #89)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Empty plot', exact: true }).click();
+    await expect(dialog.locator('.plot-add')).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.locator('.plot-start')).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.locator('.plot-take-out').first()).toHaveAttribute('aria-disabled', 'true');
+    await dialog.locator('.plot-start').click({ force: true }); // a deliberate tap on the held control
+    await expect(dialog.locator('.plot-review-heading')).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Keep filling' }).click();
+    await expect(dialog.locator('.plot-start')).toHaveAttribute('aria-disabled', 'false');
+    await dialog.locator('.plot-start').click();
+    await expect(dialog.locator('.plot-review-heading')).toBeVisible();
+    await expect(dialog.locator('.plot-empty')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('the review shows the map’s room as it is now, and holds its action on a full map (Codex review, PR #89)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    const room = () => page.evaluate(() => 12 - window.__PK__!.kids().length);
+    await expect(dialog.locator('.plot-confirm-room')).toHaveText(`Room needed: 3. Room on map: ${await room()}.`);
+    const action = dialog.getByRole('button', { name: /Cancel growing · 3 kids/ });
+    await expect(action).toHaveAttribute('aria-disabled', 'false');
+    // Kids arrive while the review is open: the count follows, and with less room than
+    // needed the action waits, saying why.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 11; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+    });
+    await expect(dialog.locator('.plot-confirm-room')).toHaveText('Room needed: 3. Room on map: 1.');
+    await expect(action).toHaveAttribute('aria-disabled', 'true');
+    await expect(dialog.locator('.plot-confirm-full')).toBeVisible();
+    await expect(dialog.locator('.plot-confirm-full')).toHaveText("There isn't room on the map for all 3 kids. Make room, then try again.");
+  });
+
+  test('a refused Cancel keeps focus on its action, for a keyboard retry (Codex review, PR #89)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await planted(page, ['plain', 'fire', 'water']);
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Cancel growing', exact: true }).click();
+    const action = dialog.getByRole('button', { name: /Cancel growing · 3 kids/ });
+    await action.focus();
+    // In one task: the action is sent, then the map fills before the engine answers.
+    await page.evaluate(() => {
+      (document.querySelector('.plot-confirm-action') as HTMLButtonElement).click();
+      const pk = window.__PK__!;
+      for (let i = pk.kids().length; i < 12; i++) pk.debugAdd!('snow', 1300 + (i % 6) * 260, 5000 + Math.floor(i / 6) * 300);
+    });
+    await expect(dialog.locator('.plot-note')).toContainText("There isn't room on the map for all 3 kids.");
+    await expect(dialog.locator('.plot-confirm-action')).toBeFocused();
+  });
+
   test('a review that the plot outgrows closes and says why; a ready sprout offers no Cancel', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await planted(page, ['plain', 'fire', 'water']);
