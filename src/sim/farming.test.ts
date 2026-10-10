@@ -193,6 +193,25 @@ describe('farming kids (D-069, GUI_MVP §22.4-22.5)', () => {
   });
 });
 
+describe('a drag kept on the map by a field (Codex review, #90)', () => {
+  it('a safe cancel lands clear of a recipe partner, with a newborn’s grace; a plain one can fuse', () => {
+    for (const safe of [true, false]) {
+      const g = game();
+      const k = place(g, 'plain', 1000, 1500);
+      g.step([{ type: 'pickUp', kidId: k.id }], 0);
+      // Water walks up to where the kid was picked up.
+      const w = place(g, 'water', 1000 + (box.right - box.left) + 2, 1500);
+      const events = g.step([{ type: 'cancelDrag', kidId: k.id, x: 1000, y: 1500, ...(safe ? { safe } : {}) }]);
+      const fused = events.some((e) => e.type === 'fused');
+      expect(fused).toBe(!safe);
+      if (safe) {
+        expect(g.state.world.kids.find((x) => x.id === k.id)!.grace).toBeGreaterThan(0);
+        expect(g.state.world.kids.some((x) => x.id === w.id)).toBe(true);
+      }
+    }
+  });
+});
+
 describe('farming in saves (D-069)', () => {
   it('a farming game saves and loads valid; farming kids keep their ids, unique against the map', () => {
     const g = withField();

@@ -619,7 +619,9 @@ export class MapScene {
     // Several can hold the press: a drag takes the nearest; a tap asks which (§20.1).
     const small = this.smallKidsAt(this.toWorld(e));
     if (small.length) {
-      this.startDrag(small[0]!, e, small);
+      // Kids farming near the press join a tap's choice; only an on-map kid is dragged (§22.2).
+      const working = this.fieldsView?.workersNear(e.global, TAP_TARGET) ?? [];
+      this.startDrag(small[0]!, e, [...small, ...working]);
       return;
     }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
@@ -637,6 +639,8 @@ export class MapScene {
    */
   private smallKidsAt(p: { x: number; y: number }): number[] {
     if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return [];
+    // A bought field's own bed (and its farming kids) comes before any pickup halo (§20.1).
+    if (this.art.farm && fieldAt(this.art.farm, this.game.state.fields.length, p, this.cam.zoom, 0) !== null) return [];
     const min = TAP_TARGET / this.cam.zoom;
     const hits: { id: number; d: number }[] = [];
     for (const k of this.game.state.world.kids) {
@@ -919,10 +923,26 @@ export class MapScene {
           return;
         }
         // Rechecked at release, where the finger is now (§15.2).
-        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, this.toWorld(e), this.cam.zoom) : null;
-        if (plot !== null) for (const fn of this.plotTapListeners) fn(plot);
-        // Else a bought field: its page (D-069, GUI_MVP §22.2).
-        const field = plot === null && this.art.farm ? fieldAt(this.art.farm, this.game.state.fields.length, this.toWorld(e), this.cam.zoom) : null;
+        const at = this.toWorld(e);
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, at, this.cam.zoom) : null;
+        if (plot !== null) {
+          for (const fn of this.plotTapListeners) fn(plot);
+          return;
+        }
+        // Else a bought field (D-069, GUI_MVP §22.2): its own bed; then a farming kid's 44 px
+        // target (one opens its card, several ask which); then the field's own 44 px target.
+        const farm = this.art.farm;
+        const bought = this.game.state.fields.length;
+        const bed = farm ? fieldAt(farm, bought, at, this.cam.zoom, 0) : null;
+        if (bed !== null) {
+          for (const fn of this.fieldTapListeners) fn(bed);
+          return;
+        }
+        const working = this.fieldsView?.workersNear(e.global, TAP_TARGET) ?? [];
+        if (working.length === 1) for (const fn of this.workerTapListeners) fn(working[0]!);
+        else if (working.length > 1) for (const fn of this.kidChoiceListeners) fn(working);
+        if (working.length) return;
+        const field = farm ? fieldAt(farm, bought, at, this.cam.zoom) : null;
         if (field !== null) for (const fn of this.fieldTapListeners) fn(field);
         return;
       }
@@ -978,7 +998,8 @@ export class MapScene {
         target.reset();
         return;
       }
-      this.cancelActiveDrag();
+      // Kept on the map: put down clear of partners, never fusing (§22.4).
+      this.cancelActiveDrag(true);
       return;
     }
     // Released over the armed target, rechecked now: the kid goes home instead of landing
@@ -1073,13 +1094,14 @@ export class MapScene {
     return { top: (wantY + kid.box.top - this.cam.y) * z, bottom: (wantY + kid.box.bottom - this.cam.y) * z };
   }
 
-  private cancelActiveDrag(): void {
+  /** `safe`: the kid is put down clear of recipe partners, with a newborn's grace (§22.4). */
+  private cancelActiveDrag(safe = false): void {
     // A cancelled press resolves as nothing: never a tap, never a later drag (Codex review).
     this.kidTap = null;
     this.home?.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
-    this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY });
+    this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY, ...(safe ? { safe } : {}) });
   }
 
   private finishDrag(cmd: Extract<Command, { type: 'drop' | 'cancelDrag' }>): void {
@@ -1157,7 +1179,8 @@ export class MapScene {
     const r = this.fieldScreenRect(i);
     const { width, height } = this.app.screen;
     const onScreen = r.left >= 0 && r.top >= this.insets.top && r.right <= width && r.bottom <= height - this.insets.bottom;
-    return onScreen && r.right - r.left >= 44 && r.bottom - r.top >= 44;
+    // Its label needs room too; without it, assigning is done from Garden → Fields (§22.4).
+    return onScreen && r.right - r.left >= 44 && r.bottom - r.top >= 44 && this.homeFits(r, this.heldScreenRect());
   }
 
   private updateHome(): void {
@@ -1375,9 +1398,12 @@ export class MapScene {
       const ey = held ? -ramp(held.top - top, zy) + ramp(bottom - held.bottom, zy) : 0;
       // Over the planting target, the map holds still, armed or busy (GUI_MVP §13.1, §15.1).
       const overHome = this.home?.state === 'waiting' || this.home?.state === 'ready' || this.overBusyHome;
+      // Inside a usable field's target too, armed or not (§22.4).
+      const point = this.camera.toLocal(this.dragScreen);
+      const overField = this.fieldTargets.some((t, i) => t.contains(point) && this.fieldEligible(i));
       // A press that may still be a tap on the kid (§18.1) never moves the map.
       const maybeTap = this.kidTap !== null && performance.now() - this.kidTap.t <= TAP_MS;
-      if ((ex || ey) && !this.drag.noRoom && !overHome && !maybeTap) {
+      if ((ex || ey) && !this.drag.noRoom && !overHome && !overField && !maybeTap) {
         this.cam.x += ex * EDGE_SPEED * step;
         this.cam.y += ey * EDGE_SPEED * step;
         this.applyCamera();

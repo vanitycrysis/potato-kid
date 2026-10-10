@@ -32,7 +32,11 @@ export type Command =
    * touching or not; a non-recipe pair just lands as usual (D-039).
    */
   | { type: 'drop'; kidId: number; x: number; y: number; touching?: number[]; target?: number }
-  | { type: 'cancelDrag'; kidId: number; x: number; y: number }
+  /**
+   * A drag ends with no drop. `safe`: put down clear of recipe partners, with a newborn's
+   * grace, so it can't fuse on the way back (a release over a field that didn't take it, §22.4).
+   */
+  | { type: 'cancelDrag'; kidId: number; x: number; y: number; safe?: boolean }
   /** Buy the next level of a building with Materials (instant, plan §2). */
   | { type: 'upgrade'; building: BuildingId }
   /** Which spawn-pool type the bias building favours (null: none). */
@@ -724,6 +728,11 @@ export class Game {
       const p = findFreeSpot(world, kid.box, c.x, c.y, kid.id) ?? clampToBounds(world.bounds, kid.x, kid.y);
       kid.x = p.x;
       kid.y = p.y;
+      if (c.type === 'cancelDrag' && c.safe) {
+        const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
+        if (spot) [kid.x, kid.y] = [spot.x, spot.y];
+        kid.grace = Math.max(kid.grace, this.content.balance.spawn.newbornGraceSeconds);
+      }
       if (c.type === 'drop') {
         events.push({ type: 'dropped', kidId: kid.id });
         for (const other of c.touching ?? []) if (other !== kid.id) seen.push([kid.id, other]);

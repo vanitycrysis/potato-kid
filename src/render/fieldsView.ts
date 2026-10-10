@@ -185,6 +185,27 @@ export class FieldsView {
     return hit?.id ?? null;
   }
 
+  /**
+   * Farming kids whose tap targets hold global point `p`: each drawn box grown to at least
+   * `minPx` per axis about its centre, nearest centre first, then the lower id (§20.1, §22.2).
+   * Only for taps: a farming kid is never dragged.
+   */
+  workersNear(p: { x: number; y: number }, minPx: number): number[] {
+    const hits: { id: number; d: number }[] = [];
+    for (const n of this.nodes) {
+      for (const [id, view] of n.views) {
+        const b = view.root.getBounds();
+        const cx = (b.minX + b.maxX) / 2;
+        const cy = (b.minY + b.maxY) / 2;
+        const hw = Math.max(b.maxX - b.minX, minPx) / 2;
+        const hh = Math.max(b.maxY - b.minY, minPx) / 2;
+        if (Math.abs(p.x - cx) > hw || Math.abs(p.y - cy) > hh) continue;
+        hits.push({ id, d: Math.hypot(p.x - cx, p.y - cy) });
+      }
+    }
+    return hits.sort((a, b) => a.d - b.d || a.id - b.id).map((h) => h.id);
+  }
+
   /** A farming kid's feet in world units, or undefined (test hook). */
   feetOf(id: number): { x: number; y: number } | undefined {
     for (const n of this.nodes) {
