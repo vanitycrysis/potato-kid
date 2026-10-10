@@ -16,9 +16,9 @@ import type { Sheets } from './sheet';
 type Pending =
   | { type: 'unlockField'; field: number }
   | { type: 'setFieldFood'; field: number; food: string; returning: number }
-  | { type: 'farm'; field: number; kidIds: number[] }
+  | { type: 'farm'; field: number; kidIds: number[]; food: string | null }
   | { type: 'unfarm'; field: number; kidId: number; name: string }
-  | { type: 'emptyField'; field: number; count: number };
+  | { type: 'emptyField'; field: number; count: number; kidIds: number[] };
 
 interface Note {
   lines: string[];
@@ -104,9 +104,9 @@ export class FieldSheets {
     const { field } = cmd;
     if (cmd.type === 'unlockField') this.scene.command({ type: 'unlockField' });
     else if (cmd.type === 'setFieldFood') this.scene.command({ type: 'setFieldFood', field, food: cmd.food });
-    else if (cmd.type === 'farm') this.scene.command({ type: 'farm', field, kidIds: cmd.kidIds });
+    else if (cmd.type === 'farm') this.scene.command({ type: 'farm', field, kidIds: cmd.kidIds, ...(cmd.food ? { food: cmd.food } : {}) });
     else if (cmd.type === 'unfarm') this.scene.command({ type: 'unfarm', field, kidId: cmd.kidId });
-    else this.scene.command({ type: 'emptyField', field });
+    else this.scene.command({ type: 'emptyField', field, kidIds: cmd.kidIds });
   }
 
   /**
@@ -177,6 +177,8 @@ export class FieldSheets {
         return `There isn't room on the map for all ${p.type === 'emptyField' ? p.count : ''} kids. Make room, then try again.`;
       case 'noRoom':
         return "There's no clear spot by the Garden. Move nearby kids aside, then try again.";
+      case 'changed':
+        return p.type === 'farm' ? "This field's food changed. Review the field before assigning kids." : 'This field changed. Review it again before taking all kids back.';
       case 'gone':
         if (p.type === 'farm') return 'The map changed. Check these kids and try Assign again.';
         if (p.type === 'unfarm') return 'This kid is no longer farming in this field. Check the field and try again.';
@@ -307,6 +309,7 @@ export class FieldSheets {
     const assign = this.button('Assign kids', 'plot-action-full field-assign', () => this.openPicker(i, launcher, self));
     const roster = el('div', 'plot-kids field-roster');
     const takeAll = this.button('Take all back', 'plot-action-full field-take-all', () => {
+      reviewed = this.game.state.fields[i]?.workers.map((w) => w.id) ?? [];
       review = true;
       built = '';
       update();
@@ -323,6 +326,8 @@ export class FieldSheets {
     sheet.body.append(note.node, foodLine, changeFood, kidsHeading, count, ...rules, rate, rail, assign, roster, takeAll, reviewBox, pantry, find);
 
     let review = options.review ?? false;
+    /** The roster the review shows: Take all back returns exactly these, or nobody (§22.5). */
+    let reviewed: number[] = review ? (this.game.state.fields[i]?.workers.map((w) => w.id) ?? []) : [];
     let built = '';
     const takeBack = new Map<number, HTMLButtonElement>();
     const update = () => {
@@ -386,7 +391,7 @@ export class FieldSheets {
             takeAll.focus();
           });
           const go = this.button(`Take all back · ${f.workers.length} ${plural(f.workers.length, 'kid', 'kids')}`, 'sheet-action plot-confirm-action field-take-all-go', () =>
-            this.send({ type: 'emptyField', field: i, count: f.workers.length }),
+            this.send({ type: 'emptyField', field: i, count: f.workers.length, kidIds: [...reviewed] }),
           );
           reviewBox.replaceChildren(
             heading,
@@ -430,6 +435,14 @@ export class FieldSheets {
       if (review && f.workers.length === 0) {
         review = false;
         built = '';
+      }
+      // The roster changed under the review (another field action, a stale page): it no longer
+      // confirms anything; review again (§22.5).
+      const now = f.workers.map((w) => w.id);
+      if (review && !this.pending && (now.length !== reviewed.length || now.some((id) => !reviewed.includes(id)))) {
+        review = false;
+        built = '';
+        this.notes.set(i, { lines: ['This field changed. Review it again before taking all kids back.'], warn: true });
       }
       note.set(this.notes.get(i) ?? null);
     };
@@ -546,6 +559,10 @@ export class FieldSheets {
     this.sheets.asPage({ label: 'Back to field', run: toField });
     const sheet = this.sheets.open({ key: 'field-pick', icon: 'icon_fields', title: `Pick kids for Field ${i + 1}`, requestedHeight: 624, update: () => update() }, launcher);
     const draft: number[] = [...(restore.draft ?? [])];
+    /** The food these kids are picked for: a change freezes the draft (§22.4). */
+    const food = this.game.state.fields[i]?.food ?? null;
+    const frozen = el('p', 'sheet-body-text field-pick-frozen', "This field's food changed. Review the field before assigning kids.");
+    frozen.hidden = true;
     this.page = { key: 'field-pick', field: i, restore: (scrollTop) => this.openPicker(i, launcher, toField, { draft: [...draft], search: search.value, scrollTop }) };
     const helper = el('p', 'sheet-helper', 'They earn no Materials while farming. You can take them back any time.');
     const label = el('label', 'picker-search-label', 'Find a kid on your map');
@@ -559,14 +576,14 @@ export class FieldSheets {
     const note = this.noteBox();
     const list = el('div', 'picker-list');
     const empty = el('p', 'sheet-body-text picker-empty');
-    sheet.body.append(helper, label, search, limit, note.node, list, empty);
+    sheet.body.append(helper, frozen, label, search, limit, note.node, list, empty);
     const lines = el('p', 'sheet-helper field-pick-count');
     const go = el('button', 'ui-button sheet-action picker-add field-pick-go');
     go.type = 'button';
     go.dataset.cue = 'success';
     go.addEventListener('click', () => {
       if (go.getAttribute('aria-disabled') === 'true' || draft.length === 0) return;
-      this.send({ type: 'farm', field: i, kidIds: [...draft] });
+      this.send({ type: 'farm', field: i, kidIds: [...draft], food });
       sent = true;
     });
     sheet.footer.append(lines, go);
@@ -618,6 +635,8 @@ export class FieldSheets {
         list.append(node);
       }
       const free = Math.max(0, this.fm.kidsPerField - f.workers.length);
+      const stale = f.food !== food;
+      frozen.hidden = !stale;
       const q = search.value.trim().toLowerCase();
       let visible = 0;
       for (const [id, r] of rows) {
@@ -625,7 +644,7 @@ export class FieldSheets {
         if (!r.node.hidden) visible++;
         const chosen = draft.includes(id);
         r.box.checked = chosen;
-        r.box.disabled = r.hated || this.pending !== null || (!chosen && draft.length >= free);
+        r.box.disabled = stale || r.hated || this.pending !== null || (!chosen && draft.length >= free);
       }
       limit.textContent = draft.length >= free && free > 0 ? `All ${free} spaces selected. Uncheck a kid to change your choice.` : '';
       limit.hidden = !limit.textContent;
@@ -635,7 +654,7 @@ export class FieldSheets {
       if (lines.textContent !== text) lines.textContent = text;
       const goLabel = this.pending?.type === 'farm' ? 'Assigning…' : draft.length === 0 ? 'Select kids to assign' : `Assign ${draft.length} ${plural(draft.length, 'kid', 'kids')}`;
       if (go.textContent !== goLabel) go.textContent = goLabel;
-      const ok = draft.length > 0 && !this.pending && !this.readOnly();
+      const ok = draft.length > 0 && !stale && !this.pending && !this.readOnly();
       go.setAttribute('aria-disabled', String(!ok));
       go.classList.toggle('is-disabled', !ok);
       go.classList.toggle('ui-primary', ok);

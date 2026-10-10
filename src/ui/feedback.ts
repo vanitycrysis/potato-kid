@@ -158,6 +158,8 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
     // GUI_MVP §15.1 and §15.4.
     case 'plotFull':
       return 'All plots are full. Start growing a filled plot first.';
+    case 'changed':
+      return 'This field changed. Review it again.';
     case 'tooFewKids':
       return 'Add at least 3 kids to Start growing.';
     // D-074: interim copy until LAYOUT-DESIGN settles taking kids out of plots.

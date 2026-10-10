@@ -4761,6 +4761,58 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await expect(page.locator('.toast', { hasText: 'Spud is farming Apple in Field 1.' })).toBeVisible({ timeout: 20_000 });
   });
 
+  test('the field changes under its pages: Pick kids freezes on a new food; Take all back’s review closes on a new roster (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    const other = await page.evaluate(() => window.__PK__!.debugAdd!('plain', 2300, 4300));
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    // Take all back's review, then another kid joins: the review no longer confirms anything.
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    await field.getByRole('button', { name: 'Take all back' }).click();
+    await expect(field.locator('.field-review-heading')).toBeVisible();
+    await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'farm', field: 0, kidIds: [i] }), other);
+    await expect(field.locator('.field-review-heading')).toBeHidden();
+    await expect(field.locator('.plot-note')).toContainText('This field changed. Review it again before taking all kids back.');
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids.length)).toBe(2);
+    // Pick kids for Apple, then the field changes to Corn: frozen.
+    const spare = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 2500, 4300));
+    await field.getByRole('button', { name: 'Assign kids' }).click();
+    const pick = page.getByRole('dialog', { name: 'Pick kids for Field 1' });
+    await pick.locator(`.picker-check[data-kid="${spare}"]`).check();
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'setFieldFood', field: 0, food: 'corn' }));
+    await expect(pick.locator('.field-pick-frozen')).toHaveText("This field's food changed. Review the field before assigning kids.");
+    await expect(pick.locator('.field-pick-go')).toHaveAttribute('aria-disabled', 'true');
+    await expect(pick.locator(`.picker-check[data-kid="${spare}"]`)).toBeDisabled();
+  });
+
+  test('Assign for Apple, answered after a change to Corn: refused, nobody farms Corn (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    const spare = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 2500, 4300));
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'Assign kids' }).click();
+    const pick = page.getByRole('dialog', { name: 'Pick kids for Field 1' });
+    await pick.locator(`.picker-check[data-kid="${spare}"]`).check();
+    // The food change is queued first, in the same frame as Assign: the sim sees it first.
+    await page.evaluate(() => {
+      window.__PK__!.debugCommand!({ type: 'setFieldFood', field: 0, food: 'corn' });
+      document.querySelector<HTMLButtonElement>('.field-pick-go')!.click();
+    });
+    await expect(pick.locator('.plot-note')).toContainText("This field's food changed. Review the field before assigning kids.");
+    expect(await page.evaluate((i) => window.__PK__!.fields()[0]!.kids.some((k) => k.id === i), spare)).toBe(false);
+  });
+
+  test('a kid taken back is the same kid by the Garden: no birth animation (Codex review, #90)', async ({ page }) => {
+    const id = await setup(page);
+    await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'unfarm', field: 0, kidId: i }), id);
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.presentationOf(i) ?? null, id)).not.toBeNull();
+    const shown = await page.evaluate((i) => window.__PK__!.presentationOf(i)!, id);
+    expect(shown.clip).not.toBe('spawn');
+    expect(shown.effects).not.toContain('spawn');
+  });
+
   test('field changes are saved at once, not at the next autosave (Codex review, #90)', async ({ page }) => {
     const id = await setup(page);
     const newest = () =>

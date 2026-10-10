@@ -144,6 +144,30 @@ describe('farming kids (D-069, GUI_MVP §22.4-22.5)', () => {
     expect(g.state.fields[0]).toEqual({ food: likes.hatedFood, workers: [], progress: 0 });
   });
 
+  it('what was reviewed must still hold: the food for an assignment, the roster for Take all back (Codex review, #90)', () => {
+    const g = withField();
+    const a = place(g, 'plain', 500, 1500);
+    const b = place(g, 'plain', 800, 1500);
+    // Picked for another food: refused, nobody farms.
+    const other = content.balance.feeding.foods.find((f) => f.id !== ordinary && f.id !== likes.hatedFood)!.id;
+    expect(rejected(g.step([{ type: 'farm', field: 0, kidIds: [a.id], food: other }], 0))).toEqual({ type: 'rejected', command: 'farm', reason: 'changed' });
+    expect(g.state.fields[0]!.workers).toEqual([]);
+    // For this food: accepted.
+    g.step([{ type: 'farm', field: 0, kidIds: [a.id], food: ordinary }], 0);
+    expect(g.state.fields[0]!.workers.map((w) => w.id)).toEqual([a.id]);
+    // b joined after the review of [a]: Take all back returns nobody.
+    g.step([{ type: 'farm', field: 0, kidIds: [b.id] }], 0);
+    expect(rejected(g.step([{ type: 'emptyField', field: 0, kidIds: [a.id] }], 0))).toEqual({ type: 'rejected', command: 'emptyField', reason: 'changed' });
+    expect(g.state.fields[0]!.workers).toHaveLength(2);
+    // a left after a review of [a, b]: refused too, b stays.
+    g.step([{ type: 'unfarm', field: 0, kidId: a.id }], 0);
+    expect(rejected(g.step([{ type: 'emptyField', field: 0, kidIds: [a.id, b.id] }], 0))).toEqual({ type: 'rejected', command: 'emptyField', reason: 'changed' });
+    expect(g.state.fields[0]!.workers.map((w) => w.id)).toEqual([b.id]);
+    // The roster as it is: it comes back.
+    g.step([{ type: 'emptyField', field: 0, kidIds: [b.id] }], 0);
+    expect(g.state.fields[0]!.workers).toEqual([]);
+  });
+
   it('a food change that would send a hater home to a full map changes nothing', () => {
     const g = withField();
     g.state.materials = 1e6;

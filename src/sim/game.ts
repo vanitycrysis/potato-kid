@@ -75,11 +75,13 @@ export type Command =
    */
   | { type: 'setFieldFood'; field: number; food: string }
   /** Kids on the map start farming a field (D-069): all or none. */
-  | { type: 'farm'; field: number; kidIds: number[] }
+  /** `food`: the food the player saw; a field growing another refuses (`changed`, GUI_MVP §22.4). */
+  | { type: 'farm'; field: number; kidIds: number[]; food?: string }
   /** One farming kid back to the map (D-069). */
   | { type: 'unfarm'; field: number; kidId: number }
   /** Every farming kid in a field back to the map, all or none (D-069). */
-  | { type: 'emptyField'; field: number }
+  /** `kidIds`: the roster the player reviewed; any other refuses (`changed`, GUI_MVP §22.5). */
+  | { type: 'emptyField'; field: number; kidIds?: number[] }
   /** Name a kid for Materials (D-057), or clear its name (`null`), which is free. */
   | { type: 'name'; kidId: number; name: string | null };
 
@@ -109,7 +111,9 @@ export type RejectReason =
   /** The field has no food chosen yet (D-069). */
   | 'noCrop'
   /** The field has no free place for that many kids (D-069). */
-  | 'fieldFull';
+  | 'fieldFull'
+  /** The field's food or roster changed since the player reviewed it (D-069, GUI_MVP §22.4-22.5). */
+  | 'changed';
 
 export type SpawnSource = 'garden' | 'instant' | 'compendium' | 'offline' | 'sprout';
 
@@ -1204,7 +1208,9 @@ export class Game {
     const reason: RejectReason | null =
       !field || kids.some((k) => !k) || new Set(c.kidIds).size !== c.kidIds.length || c.kidIds.length === 0
         ? 'gone'
-        : field.food === null
+        : c.food !== undefined && field.food !== c.food
+          ? 'changed'
+          : field.food === null
           ? 'noCrop'
           : kids.some((k) => this.content.personality[k!.type]?.hatedFood === field.food)
             ? 'hated'
@@ -1246,6 +1252,8 @@ export class Game {
     if (!field) return reject('gone');
     const leaving = c.type === 'unfarm' ? field.workers.filter((k) => k.id === c.kidId) : [...field.workers];
     if (leaving.length === 0) return reject('gone');
+    // Take all back returns the roster that was reviewed, or nobody (§22.5).
+    if (c.type === 'emptyField' && c.kidIds && (c.kidIds.length !== leaving.length || leaving.some((k) => !c.kidIds!.includes(k.id)))) return reject('changed');
     const back = this.returnToMap(leaving);
     if (typeof back === 'string') return reject(back);
     const ids = new Set(leaving.map((k) => k.id));

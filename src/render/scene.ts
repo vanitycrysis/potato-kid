@@ -991,7 +991,7 @@ export class MapScene {
       const target = this.fieldTargets[fieldIndex]!;
       if (info && (info.kind === 'ok' || info.kind === 'favourite') && target.releases(this.clock, this.fieldEligible(fieldIndex), w)) {
         const { kidId, spot } = this.drag;
-        this.pending.push({ type: 'farm', field: fieldIndex, kidIds: [kidId] });
+        this.pending.push({ type: 'farm', field: fieldIndex, kidIds: [kidId], ...(info.food ? { food: info.food } : {}) });
         this.placing.set(kidId, spot);
         this.views.get(kidId)?.dropped();
         this.drag = undefined;
@@ -1465,8 +1465,8 @@ export class MapScene {
         this.removeView(e.kid.id);
         break;
       case 'unfarmed':
-        // Back from a field by the Garden, as from a plot (§22.5).
-        this.addView(e.kid).play('spawn');
+        // Back from a field by the Garden: the same kid, no birth or reveal (§22.5).
+        this.addView(e.kid);
         break;
       case 'fused': {
         // Parents are consumed at once, never fading or converging (rig: fusion onStart);
