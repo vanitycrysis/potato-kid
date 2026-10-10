@@ -248,6 +248,7 @@ export class Hud {
   private trayCell(key: 'garden' | 'dex' | 'notebook', label: string, glyph: string, open: (b: HTMLButtonElement) => void): HTMLButtonElement {
     const b = el('button', 'tray-cell', icon(glyph, '', 'ui-icon-24'), el('span', 'tray-label', label));
     b.type = 'button';
+    b.dataset.nav = key;
     this.trayCells.set(key, b);
     b.addEventListener('click', () => open(b));
     return b;
@@ -457,8 +458,7 @@ export class Hud {
 
   /** Free height between `top` and the highest bottom control (tray or Dex button). */
   private bandBelow(top: number): number {
-    const bounds = ['.tray', '.dex-button'].map((q) => document.querySelector(q)?.getBoundingClientRect().top ?? window.innerHeight);
-    return Math.min(...bounds) - top;
+    return (document.querySelector('.tray')?.getBoundingClientRect().top ?? window.innerHeight) - top;
   }
 
   /** Whether `node` can be shown and still leave the 44 px play band; measured off-screen. */

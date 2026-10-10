@@ -25,6 +25,12 @@ const price = (building: string, level: number) => Math.ceil(balance.buildings[b
 /** Materials to bring back a kid of `tier` from the Compendium. */
 const respawnPrice = (tier: number) => Math.ceil(balance.economy.respawnMaterials * 2 ** (tier - 1));
 
+/** Opens one of the Notebook's tools (GUI_MVP §19.2): the Notebook, then that row. */
+async function openTool(page: Page, label: 'Capacity' | 'Spawn bias' | 'Compendium' | 'Map view' | 'Settings'): Promise<void> {
+  await page.locator('[data-nav=notebook]').click();
+  await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: label, exact: true }).click();
+}
+
 async function frames(page: Page, n: number): Promise<void> {
   await page.evaluate(async (count) => {
     for (let i = 0; i < count; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -37,8 +43,10 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
   const start = await page.evaluate(() => window.__PK__!.kids().length);
   expect(start).toBeGreaterThan(0);
   await expect(page.locator('.hud-value')).toHaveText(`${start}/12`);
-  await expect(page.locator('.hud-countdown')).toContainText('Next kid');
   await page.screenshot({ path: 'test-results/boot.png' });
+  // The timer lives in the Garden's Arrivals now (GUI_MVP §19.2).
+  await page.locator('[data-nav=garden]').click();
+  await expect(page.locator('.arrivals-next')).toContainText('Next kid');
   expect(errors).toEqual([]);
 });
 
@@ -213,13 +221,19 @@ test('holding a kid at the screen edge scrolls the map and carries the kid along
   await page.mouse.down();
   // Hold just inside the visible play area's bottom edge (above the tray), not behind it.
   const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
+  // Where the starting view ends, in world units.
+  const viewEnd = await page.evaluate((t) => {
+    const pk = window.__PK__!;
+    const y0 = pk.worldToScreen(0, 0).y;
+    return (t - y0) / ((pk.worldToScreen(0, 100).y - y0) / 100);
+  }, trayTop);
   await page.mouse.move(size.width / 2, trayTop - 10, { steps: 8 });
   await page.waitForTimeout(700);
   await page.mouse.up();
   await page.waitForTimeout(250);
   const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
   // It was carried well below where the starting view ended.
-  expect(kid.y).toBeGreaterThan(2300);
+  expect(kid.y).toBeGreaterThan(viewEnd + 250);
   expect(errors).toEqual([]);
 });
 
@@ -320,7 +334,7 @@ test('a kid in the bottom-right corner can be scrolled out from under the Dex bu
   await page.evaluate(() => window.__PK__!.centerOn(99999, 99999)); // as far down-right as allowed
   await page.waitForTimeout(150);
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-  const dexTop = await page.locator('.dex-button').evaluate((e) => e.getBoundingClientRect().top);
+  const dexTop = await page.locator('[data-nav=dex]').evaluate((e) => e.getBoundingClientRect().top);
   expect(p.y).toBeLessThanOrEqual(dexTop + 1);
   expect(errors).toEqual([]);
 });
@@ -334,7 +348,7 @@ test('on a short landscape screen, holding a kid still in the middle does not sc
   const p = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
   const top = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
   const bottom = await page.evaluate(() =>
-    Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top),
+    Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('[data-nav=dex]')!.getBoundingClientRect().top),
   );
   await page.mouse.move(p.x, p.y - 10);
   await page.mouse.down();
@@ -384,7 +398,7 @@ for (const [w, h] of [[640, 360], [568, 320]] as const) {
     await page.waitForTimeout(150);
     const hudBottom = await page.locator('.hud').evaluate((e) => e.getBoundingClientRect().bottom);
     const bottom = await page.evaluate(() =>
-      Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top),
+      Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('[data-nav=dex]')!.getBoundingClientRect().top),
     );
     const zoom = await page.evaluate(() => (window.__PK__!.worldToScreen(0, 100).y - window.__PK__!.worldToScreen(0, 0).y) / 100);
     const kid0 = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, id);
@@ -451,15 +465,21 @@ test('time away is credited once: Garden spawns and income (plan §3)', async ({
   expect(errors).toEqual([]);
 });
 
-test('Spawn now spends a Potatoken and brings a kid; when broke it sends nothing (GUI_MVP §3)', async ({ page }) => {
+test('Spawn now spends a Potatoken and brings a kid; when broke it sends nothing (GUI_MVP §§3, 19.2)', async ({ page }) => {
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
-  const spawn = page.locator('.hud-spawn');
+  // Spawn now is in the Garden's Arrivals.
+  await page.locator('[data-nav=garden]').click();
+  const spawn = page.locator('.arrivals-spawn');
   const start = await page.evaluate(() => ({ kids: window.__PK__!.kids().length, tokens: window.__PK__!.wallet().potatokens }));
   expect(start.tokens).toBeGreaterThan(0);
   await spawn.click();
   await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(start.kids + 1);
   expect(await page.evaluate(() => window.__PK__!.wallet().potatokens)).toBe(start.tokens - 1);
+  // The Garden says so at once; the world's card waits for the sheet to close (§9).
+  await expect(page.locator('.arrivals-population')).toContainText(`${start.kids + 1} of`);
+  await page.keyboard.press('Escape');
   await expect(page.locator('.feedback')).toContainText('Kid arrived at the Garden.');
+  await page.locator('[data-nav=garden]').click();
   // Spend the rest; then the control is disabled and a tap changes nothing.
   for (let i = 1; i < start.tokens; i++) {
     await spawn.click();
@@ -483,9 +503,8 @@ test('a save from a newer app freezes the game and asks for an update (GUI_MVP �
   await page.waitForFunction(() => window.__PK__?.ready === true);
   await expect(page.locator('.banner')).toContainText('Please update the game.');
   await expect(page.locator('.readonly-notice')).toContainText('Your save is kept safe.');
-  await expect(page.locator('.hud-spawn')).toHaveAttribute('aria-disabled', 'true');
-  // Building launchers are disabled too, with the reason (Codex review, PR #39).
-  for (const name of ['Garden', 'Capacity', 'Bias']) {
+  // The Garden (with Spawn now) and the Dex are disabled, with the reason (Codex review, PR #39).
+  for (const name of ['Garden', 'Dex']) {
     await expect(page.getByRole('button', { name: `${name}: Update the game to continue.` })).toBeDisabled();
   }
   const before = await page.evaluate(() => window.__PK__!.wallet());
@@ -572,7 +591,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   const band = (page: Page) =>
     page.evaluate(
       () =>
-        Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top) -
+        Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('[data-nav=dex]')!.getBoundingClientRect().top) -
         document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
     );
 
@@ -590,7 +609,9 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   });
 
   test('a refusal that cannot fit waits, and appears once there is room', async ({ page }) => {
-    await page.setViewportSize({ width: 568, height: 320 });
+    // Navigation top 182, HUD bottom 68: a 72 px refusal card and its gap would leave
+    // less than the 44 px band.
+    await page.setViewportSize({ width: 568, height: 250 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
     // Sampled, not retried: a card shown too early would vanish after 2.5 s and pass a retry.
@@ -652,7 +673,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     // Overlap by geometry: the HUD has pointer-events: none, so hit-testing can't see it.
     const covered = await page.evaluate(() => {
       const n = document.querySelector('.readonly-notice')!.getBoundingClientRect();
-      return [...document.querySelectorAll('.top-stack > *, .tray, .dex-button')].some((e) => {
+      return [...document.querySelectorAll('.top-stack > *, .tray')].some((e) => {
         const r = e.getBoundingClientRect();
         const shown = getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0;
         return shown && r.left < n.right && r.right > n.left && r.top < n.bottom && r.bottom > n.top;
@@ -758,39 +779,45 @@ test('a first rare card waits until its sprout is drawn, even if the costume loa
   expect(log[log.length - 1]).toEqual([true, true]);
 });
 
-test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => {
+test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () => {
   const measure = (page: Page) =>
-    page.evaluate(() => ({
-      mode: document.querySelector('.hud')!.getAttribute('data-mode'),
-      fit: document.documentElement.dataset.hudFit,
-      band:
-        Math.min(document.querySelector('.tray')!.getBoundingClientRect().top, document.querySelector('.dex-button')!.getBoundingClientRect().top) -
-        document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
-    }));
+    page.evaluate(() => {
+      const hud = document.querySelector('.hud')!.getBoundingClientRect();
+      const tray = document.querySelector('.tray')!.getBoundingClientRect();
+      return {
+        fit: document.documentElement.dataset.hudFit,
+        hud: hud.height,
+        nav: tray.height,
+        // The unobscured world: HUD bottom + 8 to navigation top − 8 (§19.1).
+        band: tray.top - 8 - (document.querySelector('.top-stack')!.getBoundingClientRect().bottom + 8),
+      };
+    });
 
-  for (const kind of ['unsaved', 'recovery'] as const) {
-    test(`568x320 with the ${kind} banner keeps the 44 px band via the two-row HUD`, async ({ page }) => {
-      await page.setViewportSize({ width: 568, height: 320 });
+  // Codex's measured bands (§19.1): 660 of 844 (78.2 %), 208 of 360 (57.8 %).
+  for (const [w, h, band] of [[390, 844, 660], [640, 360, 208]] as const) {
+    test(`${w}x${h} with no sheet: a 60 px strip and a 60 px navigation row leave the world ${band} px`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
       await boot(page, '?seed=3&debug=1&calm=1');
-      await page.evaluate((k) => window.__PK__!.debugSaveStatus!({ unsaved: k === 'unsaved', recovery: k === 'recovery', readOnly: false }), kind);
-      await expect.poll(() => measure(page)).toMatchObject({ mode: 'tworow', fit: 'usual' });
-      // 44 px of play plus the two 8 px world gaps.
-      expect((await measure(page)).band).toBeGreaterThanOrEqual(44 + 16);
+      await expect.poll(() => measure(page)).toEqual({ fit: 'usual', hud: 60, nav: 60, band });
     });
   }
 
-  test('640x360 keeps the usual compact HUD; dismissing restores the usual layout at 568x320', async ({ page }) => {
-    await page.setViewportSize({ width: 640, height: 360 });
-    await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: true, readOnly: false }));
-    await expect.poll(() => measure(page)).toMatchObject({ mode: 'compact', fit: 'usual' });
-    await page.setViewportSize({ width: 568, height: 320 });
-    await expect.poll(() => measure(page)).toMatchObject({ mode: 'tworow' });
-    await page.getByRole('button', { name: 'Dismiss save recovery notice' }).click();
-    await expect.poll(() => measure(page)).toMatchObject({ mode: 'portrait', fit: 'usual' });
-  });
+  for (const kind of ['unsaved', 'recovery'] as const) {
+    test(`568x320 with the ${kind} banner keeps both rows, the HUD 8 px below the banner`, async ({ page }) => {
+      await page.setViewportSize({ width: 568, height: 320 });
+      await boot(page, '?seed=3&debug=1&calm=1');
+      await page.evaluate((k) => window.__PK__!.debugSaveStatus!({ unsaved: k === 'unsaved', recovery: k === 'recovery', readOnly: false }), kind);
+      await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual', hud: 60, nav: 60 });
+      // The band follows the banner's actual height B (§19.3): 64 or 72 at least, more if
+      // its copy wraps. Navigation top is H − 8 − 60 = 252.
+      const b = await page.locator('.banners').evaluate((e) => e.getBoundingClientRect().bottom);
+      expect(b).toBeGreaterThanOrEqual(8 + (kind === 'unsaved' ? 64 : 72));
+      expect((await measure(page)).band).toBe(252 - 8 - (b + 8 + 60 + 8));
+      expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
+    });
+  }
 
-  test('too short for any HUD and the band: the world hides and the GUI becomes a page', async ({ page }) => {
+  test('too short for both rows and the band: the world hides and the GUI becomes a page', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 200 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
@@ -798,22 +825,25 @@ test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => 
     await expect(page.locator('#app')).toBeHidden();
     await expect(page.locator('.page-hint')).toBeVisible();
     await page.locator('.tray').scrollIntoViewIfNeeded();
-    // Really shown, not clipped to 1 px by the compact rule (Codex review, PR #37).
+    // Labels stay, never clipped (Codex review, PR #37).
     expect(await page.locator('.tray-label').first().evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(20);
     await page.setViewportSize({ width: 568, height: 700 });
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual' });
     await expect(page.locator('#app')).toBeVisible();
   });
 
-  test('the HUD scroll window keeps its offset across re-measurement', async ({ page }) => {
-    await page.setViewportSize({ width: 340, height: 330 });
+  test('rows that wrap on a narrow screen become 60 px scroll windows, which keep their offset', async ({ page }) => {
+    // Too narrow for three stats or three labels in a row: both wrap, and with a banner
+    // the natural layout leaves no band (§19.3).
+    await page.setViewportSize({ width: 240, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
-    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window' });
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window', hud: 60, nav: 60 });
+    expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
     await page.locator('.hud').evaluate((e) => (e.scrollTop = 40));
     const before = await page.locator('.hud').evaluate((e) => e.scrollTop);
     expect(before).toBeGreaterThan(0);
-    await page.setViewportSize({ width: 340, height: 332 });
+    await page.setViewportSize({ width: 240, height: 362 });
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'window' });
     await page.waitForTimeout(200);
     expect(await page.locator('.hud').evaluate((e) => e.scrollTop)).toBe(before);
@@ -821,8 +851,7 @@ test.describe('short viewports with a persistent banner (GUI_MVP §3.1)', () => 
 });
 
 test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
-  const garden = (page: Page) => page.locator('.tray-cell').nth(0);
-  const bias = (page: Page) => page.locator('.tray-cell').nth(2);
+  const garden = (page: Page) => page.locator('[data-nav=garden]');
 
   test('the Garden upgrades in place, and an unaffordable upgrade sends nothing', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
@@ -868,7 +897,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
   test('Spawn bias: seeds are disabled until built, then a pick sets the target', async ({ page }) => {
     await boot(page, '?seed=3&debug=1');
-    await bias(page).click();
+    await openTool(page, 'Spawn bias');
     await expect(page.locator('.seed-card').first()).toHaveAttribute('aria-disabled', 'true');
     await page.locator('.seed-card').first().click({ force: true });
     await page.waitForTimeout(300);
@@ -927,7 +956,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     await page.mouse.move(200, 600);
     await page.mouse.down();
     await page.mouse.move(220, 560, { steps: 3 });
-    await page.evaluate(() => (document.querySelectorAll('.tray-cell')[0] as HTMLButtonElement).click());
+    await page.evaluate(() => (document.querySelector('[data-nav=garden]') as HTMLButtonElement).click());
     await expect(page.locator('.sheet')).toBeVisible();
     const before = await page.evaluate(() => window.__PK__!.worldToScreen(1000, 1000));
     await page.mouse.move(300, 300, { steps: 5 });
@@ -968,8 +997,8 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
-    await page.locator('.tray-cell').nth(0).scrollIntoViewIfNeeded();
-    await page.locator('.tray-cell').nth(0).click();
+    await page.locator('[data-nav=garden]').scrollIntoViewIfNeeded();
+    await page.locator('[data-nav=garden]').click();
     const action = page.locator('.sheet-action');
     await action.scrollIntoViewIfNeeded();
     await expect(action).toBeInViewport();
@@ -998,7 +1027,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
   test('keyboard: Shift+Tab from the heading stays in the sheet; arrows move and select seeds (Codex review, PR #39)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1');
     await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
-    await bias(page).click();
+    await openTool(page, 'Spawn bias');
     await page.locator('.sheet-action').click();
     await expect(page.locator('.sheet-subtitle')).toHaveText(/Level 1 \//);
     await page.locator('.sheet-title').focus();
@@ -1023,8 +1052,7 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
 
 test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)', () => {
-  const garden = (page: Page) => page.locator('.tray-cell').nth(0);
-  const compendium = (page: Page) => page.locator('.tray-cell').nth(3);
+  const garden = (page: Page) => page.locator('[data-nav=garden]');
   const zeroMaterials = (page: Page) => page.evaluate(() => window.__PK__!.debugGive!({ materials: -window.__PK__!.wallet().materials }));
 
   /** A calm game with Potato and Fire discovered and the Compendium built. */
@@ -1050,7 +1078,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       window.__PK__!.debugCommand!({ type: 'upgrade', building: 'compendium' });
     }, price('compendium', 0));
     await expect.poll(() => page.evaluate(() => window.__PK__!.buildings().levels.compendium)).toBe(1);
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(1);
     await expect(page.locator('.comp-card')).toContainText('Potato Kid');
   });
@@ -1058,7 +1086,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
   test('the Compendium builds in place, then brings a kid back for either currency', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugAdd!('plain', 250, 1500));
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await expect(page.locator('.sheet-subtitle')).toHaveText('Level 0 / 1');
     const build = page.locator('.sheet-action');
     await expect(build).toHaveAttribute('aria-disabled', 'true');
@@ -1099,7 +1127,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
   test('an engine refusal keeps the currency the player chose, inside the sheet', async ({ page }) => {
     await built(page);
     await page.evaluate((m) => window.__PK__!.debugGive!({ materials: m }), respawnPrice(1));
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     // Pay with Materials, then lose them before the sim applies the purchase.
     await page.evaluate(() => {
       (document.querySelector('.comp-buy') as HTMLButtonElement).click();
@@ -1131,7 +1159,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
         { timeout: 10_000 },
       )
       .toBe(12);
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await expect(page.locator('.sheet-bar .sheet-status')).toContainText('Garden is full. Make room for a kid.');
     for (const b of await page.locator('.comp-buy').all()) {
       await expect(b).toHaveAttribute('aria-disabled', 'true');
@@ -1142,7 +1170,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 
   test('search matches discovered names only', async ({ page }) => {
     await built(page);
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(2);
     await expect(page.getByText('2 discovered kids')).toBeVisible();
     const field = page.getByLabel('Find a discovered kid');
@@ -1205,7 +1233,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 
   test('Settings: Audio Off disables the sliders; choices persist across a reload', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await openTool(page, 'Settings');
     const music = page.getByLabel('Music');
     await expect(music).toHaveValue('70');
     await page.getByRole('radio', { name: 'Off' }).click();
@@ -1229,23 +1257,28 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.waitForFunction(() => window.__PK__?.ready === true);
     expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
     // A reload a moment later is too short an absence for the summary (D-049).
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await openTool(page, 'Settings');
     await expect(page.getByLabel('Music')).toHaveValue('100');
     expect(errors).toEqual([]);
   });
 
-  test('read-only disables the Compendium launcher too', async ({ page }) => {
+  test('read-only disables the Compendium launcher too, in the Notebook (GUI_MVP §19.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));
-    await expect(compendium(page)).toBeDisabled();
-    await expect(compendium(page)).toHaveAttribute('aria-label', 'Compendium: Update the game to continue.');
+    await page.locator('[data-nav=notebook]').click();
+    const row = page.locator('.notebook-row[data-row=compendium]');
+    await expect(row).toBeDisabled();
+    await expect(row).toHaveAttribute('aria-label', 'Compendium: Update the game to continue.');
+    // Settings and Map view stay available.
+    await expect(page.locator('.notebook-row[data-row=settings]')).toBeEnabled();
+    await expect(page.locator('.notebook-row[data-row=mapview]')).toBeEnabled();
   });
   test('a short screen with a banner and a status keeps search and cards reachable (Codex review, PR #41)', async ({ page }) => {
     await built(page);
     await page.setViewportSize({ width: 568, height: 320 });
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     await page.evaluate(() => window.__PK__!.debugGive!({ materials: 1000, potatokens: 50 }));
-    await compendium(page).click({ force: true });
+    await openTool(page, 'Compendium');
     // Trigger the status row: a refusal for a purchase whose Materials vanish first.
     await page.evaluate(() => {
       (document.querySelector('.comp-buy') as HTMLButtonElement).click();
@@ -1291,7 +1324,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
       types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
     });
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(14);
     // Most cards are far below the fold, so their portraits are still waiting.
     expect(await page.evaluate(() => (window as unknown as { __liveObservers: number }).__liveObservers)).toBeGreaterThan(0);
@@ -1317,7 +1350,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       };
     });
     await built(page);
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await page.getByLabel('Find a discovered kid').focus();
     const visible = await page.evaluate(() => {
       (window as unknown as { __keyboard: (px: number) => void }).__keyboard(400);
@@ -1339,8 +1372,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
-    await compendium(page).scrollIntoViewIfNeeded();
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(10);
     await page.locator('.comp-card').nth(6).scrollIntoViewIfNeeded();
     const before = await page.evaluate(() => document.scrollingElement!.scrollTop);
@@ -1356,8 +1388,8 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
-    await page.locator('.tray-cell').nth(0).scrollIntoViewIfNeeded();
-    await page.locator('.tray-cell').nth(0).click();
+    await page.locator('[data-nav=garden]').scrollIntoViewIfNeeded();
+    await page.locator('[data-nav=garden]').click();
     await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
     // Sampled right after closing, during the fade: no longer taking space in the page.
     const display = await page.evaluate(() => {
@@ -1375,8 +1407,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
-    await compendium(page).scrollIntoViewIfNeeded();
-    await compendium(page).click();
+    await openTool(page, 'Compendium');
     await page.evaluate(() => (document.scrollingElement!.scrollTop = 900));
     // Any re-measure (a resize, a banner change) runs the HUD layout again.
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
@@ -1392,7 +1423,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
       types.forEach((t, i) => window.__PK__!.debugAdd!(t, 150 + (i % 4) * 260, 300 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
-    await compendium(page).click({ force: true });
+    await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(14);
     await expect(page.locator('.sheet')).toHaveAttribute('data-tight', 'true');
     await page.waitForTimeout(300);
@@ -1407,7 +1438,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
 });
 
 test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
-  const dexButton = (page: Page) => page.locator('.dex-button');
+  const dexButton = (page: Page) => page.locator('[data-nav=dex]');
   const dialog = (page: Page) => page.getByRole('dialog', { name: 'Potato-Dex' });
   const totals = {
     kids: (JSON.parse(readFileSync('src/content/kids.json', 'utf8')) as unknown[]).length,
@@ -1682,7 +1713,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));
     await expect(dexButton(page)).toBeDisabled();
-    await expect(dexButton(page)).toHaveAttribute('aria-label', 'Potato-Dex: Update the game to continue.');
+    await expect(dexButton(page)).toHaveAttribute('aria-label', 'Dex: Update the game to continue.');
   });
 });
 
@@ -1704,7 +1735,7 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     // The loop decodes after the cues.
     await expect.poll(async () => (await audio(page)).musicPlaying, { timeout: 15_000 }).toBe(true);
     // Audio Off pauses it; On brings it back. Music at 0 % stays quiet.
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await openTool(page, 'Settings');
     await page.getByRole('radio', { name: 'Off' }).click();
     await expect.poll(async () => (await audio(page)).musicPlaying).toBe(false);
     await page.getByRole('radio', { name: 'On' }).click();
@@ -1766,7 +1797,7 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
 
     // Audio Off and On again picks the loop up where it stopped, not from the top.
     await page.waitForTimeout(600);
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await openTool(page, 'Settings');
     await page.getByRole('radio', { name: 'Off' }).click();
     await expect.poll(async () => (await audio(page)).music).toBeNull();
     await page.waitForTimeout(300);
@@ -1831,11 +1862,16 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     await expect.poll(async () => (await audio(page)).unlocked).toBe(true);
     await page.waitForTimeout(500);
     const before = (await audio(page)).played.length;
-    await page.getByRole('button', { name: /Spawn a random Garden kid/ }).click();
-    await expect.poll(async () => (await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
+    await page.locator('[data-nav=garden]').click();
     await page.waitForTimeout(300);
-    expect((await audio(page)).played.slice(before)).toEqual(['sfx_spawn']);
-    await page.getByRole('button', { name: 'Settings' }).click();
+    const opened = (await audio(page)).played.length;
+    await page.getByRole('button', { name: /Spawn a random Garden kid/ }).click();
+    await expect.poll(async () => (await audio(page)).played.slice(opened)).toEqual(['sfx_spawn']);
+    await page.waitForTimeout(300);
+    expect((await audio(page)).played.slice(opened)).toEqual(['sfx_spawn']);
+    expect(before).toBeLessThan(opened);
+    await page.keyboard.press('Escape');
+    await openTool(page, 'Settings');
     await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_ui_tap');
   });
 });
@@ -1870,7 +1906,7 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     await expect(page.locator('.toast-home')).toContainText('Fire Kid added to Plot 1.');
     await expect(page.locator('.toast-home')).toContainText('Add 3–5 kids, then press Start growing.');
     // Still discovered; no refund.
-    await page.locator('.dex-button').click();
+    await page.locator('[data-nav=dex]').click();
     await expect(page.getByRole('button', { name: 'Fire Kid, Tier 1' })).toBeVisible();
     const after = await page.evaluate(() => window.__PK__!.wallet());
     expect(after.potatokens).toBe(wallet.potatokens);
@@ -1967,8 +2003,9 @@ test.describe('Planting, drag path (D-061, GUI_MVP §15.1)', () => {
     await page.mouse.move(t.x, t.y, { steps: 8 });
     await expect.poll(() => page.evaluate(() => window.__PK__!.home().state)).toBe('ready');
     // In one task, with no frame between: the camera moves a world unit, then release.
+    // Sideways: vertically the view is clamped at the world's top edge here.
     await page.evaluate(([x, y]) => {
-      window.__PK__!.centerOn(1080, 761);
+      window.__PK__!.centerOn(1081, 760);
       document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: x, clientY: y, bubbles: true }));
     }, [t.x, t.y] as const);
     await page.waitForTimeout(300);
@@ -2009,7 +2046,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await boot(page, '?seed=3&debug=1&calm=1');
     await allPlots(page);
     const ids = await page.evaluate(() => [window.__PK__!.debugAdd!('fire', 300, 1500), window.__PK__!.debugAdd!('fire', 800, 1500)]);
-    await page.locator('.dex-button').click();
+    await page.locator('[data-nav=dex]').click();
     await dialog(page).getByRole('button', { name: 'Fire Kid, Tier 1' }).click();
     return ids;
   }
@@ -2026,7 +2063,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await dialog(page).getByRole('button', { name: 'Fire Kid, kid 1 on your map' }).click();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('.dex-button')).toBeFocused();
+    await expect(page.locator('[data-nav=dex]')).toBeFocused();
   });
 
   test('a named copy leads with its name, its type and number beside it, and follows a new name at once (Codex review, FEED-NAME)', async ({ page }) => {
@@ -2077,7 +2114,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
       pk.debugCommand!({ type: 'plant', kidIds: [pk.debugAdd!('fire', 800, 1500)], plot: 0 });
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(0);
-    await page.locator('.dex-button').click();
+    await page.locator('[data-nav=dex]').click();
     await dialog(page).locator('[data-kid="fire"]').click();
     await expect(dialog(page).locator('.dex-home-heading')).toHaveText('On your map · 0');
     await expect(dialog(page).locator('.dex-home')).toContainText('None on your map.');
@@ -2093,7 +2130,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('.dex-button')).toBeFocused();
+    await expect(page.locator('[data-nav=dex]')).toBeFocused();
   });
 
   test('a 24-letter name wraps inside the Dex row and the picker row (Codex review round 4, FEED-NAME)', async ({ page }) => {
@@ -2111,7 +2148,7 @@ test.describe("The Dex opens a live kid's card (GUI_MVP §15.6, §18.1)", () => 
       }),
     ).toBe(true);
     await page.keyboard.press('Escape');
-    await page.locator('.tray-cell').nth(0).click();
+    await page.locator('[data-nav=garden]').click();
     await page.getByRole('dialog').getByRole('button', { name: 'Add kids' }).first().click();
     const picker = page.getByRole('dialog').locator('.picker-row').nth(0);
     await expect(picker.locator('.picker-row-name')).toHaveText('W'.repeat(24));
@@ -2237,7 +2274,7 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
   async function garden(page: Page, kids: string[] = []): Promise<number[]> {
     await boot(page, '?seed=3&debug=1&calm=1');
     const ids = await page.evaluate((types) => types.map((t, i) => window.__PK__!.debugAdd!(t, 300 + (i % 4) * 300, 1500 + Math.floor(i / 4) * 300)), kids);
-    await page.locator('.tray-cell').nth(0).click();
+    await page.locator('[data-nav=garden]').click();
     return ids;
   }
 
@@ -2785,7 +2822,7 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
       window.__PK__!.debugAdd!('hero', 600, 1400);
       window.__PK__!.debugAdd!('fire', 900, 1400);
     });
-    await page.locator('.tray-cell').nth(0).click();
+    await page.locator('[data-nav=garden]').click();
     await page.getByRole('button', { name: 'Add kids' }).first().click();
     const rows = page.getByRole('dialog').locator('.picker-row');
     await expect(rows.filter({ hasText: 'Hero' })).toContainText('Rare');
@@ -2797,7 +2834,7 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await page.locator('.dex-button').click();
+    await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.locator('[data-kid="hero"]').click();
     await expect(dex.locator('.dex-detail-name')).toHaveText(/Hero/);
@@ -2950,7 +2987,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     // Closed, focus goes to the Dex button.
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.locator('.dex-button')).toBeFocused();
+    await expect(page.locator('[data-nav=dex]')).toBeFocused();
     // A drag moves the kid and opens nothing.
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
     await page.mouse.move(k.x, k.y - 20);
@@ -2984,7 +3021,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
   test("the Dex detail shows the type's personality too, before the live copies (§18.1)", async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugAdd!('fire', 800, 1500));
-    await page.locator('.dex-button').click();
+    await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.locator('[data-kid="fire"]').click();
     const blocks = dex.locator('.dex-personality');
@@ -3753,5 +3790,105 @@ test.describe('pinch-to-zoom (D-071)', () => {
     await page.waitForTimeout(500);
     await page.evaluate((at) => document.querySelector('canvas')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -200, clientX: at.x, clientY: at.y, bubbles: true, cancelable: true })), at);
     expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(zoomed * Math.exp(0.3), 5);
+  });
+});
+
+test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', () => {
+  test('the strip shows Materials, Potatokens and population; a full map swaps in a warning', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const pop = page.locator('.hud-population');
+    const n = await page.evaluate(() => window.__PK__!.kids().length);
+    await expect(pop).toHaveAttribute('aria-label', `${n} of 12 kids on the map`);
+    await expect(pop.locator('img')).toHaveAttribute('src', /icon%20kids/);
+    // Nothing in the strip is a control (§19.1).
+    await expect(page.locator('.hud button')).toHaveCount(0);
+    await page.evaluate((n) => {
+      for (let i = n; i < 12; i++) window.__PK__!.debugAdd!('plain', 200 + (i % 6) * 280, 1500 + Math.floor(i / 6) * 300);
+    }, n);
+    await expect(pop).toHaveAttribute('aria-label', 'Map is full: 12 of 12 kids');
+    await expect(pop.locator('img')).toHaveAttribute('src', /title%3eAttention/);
+    await expect(pop).toContainText('12/12');
+  });
+
+  test('the Garden opens on Arrivals, then Plots, then Spawn rate', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=garden]').click();
+    const order = await page.evaluate(() =>
+      [...document.querySelectorAll('.sheet[role=dialog] .sheet-body > *')].map((e) => e.className.split(' ')[0]).filter((c) => c !== 'garden-plot-helpers'),
+    );
+    expect(order.indexOf('garden-arrivals')).toBeLessThan(order.indexOf('garden-plots'));
+    expect(order.indexOf('garden-plots')).toBeLessThan(order.indexOf('garden-rate'));
+    await expect(page.getByRole('navigation', { name: 'Garden sections' }).getByRole('button')).toHaveText(['Arrivals', 'Plots', 'Spawn rate']);
+    await expect(page.locator('[data-nav=garden]')).toHaveClass(/is-selected/);
+  });
+
+  test('a Notebook tool replaces the Notebook in place; Back to Notebook returns with its row focused', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=notebook]').click();
+    const nb = page.getByRole('dialog', { name: 'Notebook' });
+    await expect(nb).toContainText('Tools for your garden.');
+    await expect(nb.locator('.notebook-row')).toHaveText(['Capacity', 'Spawn bias', 'Compendium', 'Map view', 'Settings']);
+    for (const [row, title] of [
+      ['Capacity', 'Capacity'],
+      ['Spawn bias', 'Spawn bias'],
+      ['Compendium', 'Compendium'],
+      ['Map view', 'Map view'],
+      ['Settings', 'Settings'],
+    ] as const) {
+      await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: row, exact: true }).click();
+      // A page swaps in at once: the Notebook doesn't linger fading out (§19.2).
+      expect(await page.locator('.sheet').count()).toBe(1);
+      await expect(page.getByRole('dialog', { name: title })).toBeVisible();
+      await expect(page.locator('[data-nav=notebook]')).toHaveClass(/is-selected/);
+      await page.getByRole('button', { name: 'Back to Notebook' }).click();
+      expect(await page.locator('.sheet').count()).toBe(1);
+      await expect(page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: row, exact: true })).toBeFocused();
+    }
+    // Closing returns focus to the Notebook control.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-nav=notebook]')).toBeFocused();
+  });
+
+  test('Map view zooms in √2 steps about the play band, stops at its limits, resets, and finds the Garden', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1080, 2400));
+    await openTool(page, 'Map view');
+    const sheet = page.getByRole('dialog', { name: 'Map view' });
+    await expect(sheet).toContainText('Pinch the map with two fingers.');
+    const level = sheet.locator('.mapview-level');
+    await expect(level).toHaveText('Zoom 100%');
+    const zin = sheet.getByRole('button', { name: 'Zoom in' });
+    const out = sheet.getByRole('button', { name: 'Zoom out' });
+    await zin.click();
+    await expect(level).toHaveText('Zoom 141%');
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(Math.SQRT2, 9);
+    await zin.click();
+    await expect(level).toHaveText('Zoom 200%');
+    await expect(zin).toHaveAttribute('aria-disabled', 'true');
+    await expect(zin).toHaveAttribute('aria-describedby', 'mapview-near');
+    await zin.click({ force: true }); // a deliberate tap on the disabled control
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBeCloseTo(2, 9);
+    await sheet.getByRole('button', { name: 'Reset · 100%' }).click();
+    await expect(level).toHaveText('Zoom 100%');
+    await out.click();
+    await out.click();
+    await expect(level).toHaveText('Zoom 50%');
+    await expect(out).toHaveAttribute('aria-disabled', 'true');
+    await expect(zin).toHaveAttribute('aria-disabled', 'false');
+    // Find Garden keeps the zoom, brings the Garden (off screen at 100 % from here) into the
+    // play band, and closes.
+    await sheet.getByRole('button', { name: 'Reset · 100%' }).click();
+    const garden = () => page.evaluate(() => window.__PK__!.worldToScreen(1080, 870));
+    const band = await page.evaluate(() => ({
+      top: document.querySelector('.top-stack')!.getBoundingClientRect().bottom,
+      bottom: document.querySelector('.tray')!.getBoundingClientRect().top,
+    }));
+    expect((await garden()).y).toBeLessThan(band.top);
+    await sheet.getByRole('button', { name: 'Find Garden' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__PK__!.zoom())).toBe(1);
+    const at = await garden();
+    expect(at.y).toBeGreaterThan(band.top);
+    expect(at.y).toBeLessThan(band.bottom);
   });
 });
