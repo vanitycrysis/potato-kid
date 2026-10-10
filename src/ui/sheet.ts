@@ -323,7 +323,9 @@ export class Sheets {
     const footer = c.sheet.querySelector<HTMLElement>(':scope > .sheet-footer');
     c.sheet.dataset.tight = 'false';
     c.sheet.dataset.flow = 'false';
-    const crowded = c.bar.childElementCount > 0 || (footer?.childElementCount ?? 0) > 0;
+    // A Notebook page's way back takes height above the body too (Codex review round 5, PR #87).
+    const pageNav = c.sheet.querySelector(':scope > .sheet-page-nav') !== null;
+    const crowded = pageNav || c.bar.childElementCount > 0 || (footer?.childElementCount ?? 0) > 0;
     const tight = crowded && c.body.clientHeight < BODY_MIN;
     c.sheet.dataset.tight = String(tight);
     const flow = tight && c.sheet.clientHeight - (header?.offsetHeight ?? 0) - (footer?.offsetHeight ?? 0) < BODY_MIN;
