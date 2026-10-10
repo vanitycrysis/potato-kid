@@ -299,19 +299,20 @@ export function createBot(
     // 3b'. Start a plot growing once it holds the most kids (D-061: the best odds).
     const ready = s.plots.findIndex((p) => p.seed && !p.seed.sprout && p.seed.planted.length >= content.balance.planting.maxKids);
     if (plant && ready >= 0) return [{ type: 'startGrowing', plot: ready }];
-    // 3c. Still full: plant (D-061) the kid with the fewest untried pairings on the map (a
-    //     dead end, or a spare copy) into the plot that is filling, if any takes it.
-    // 3c'. Still full: a spare kid (every pairing on the map tried) goes to farm, if a
-    //      field has room and grows a food it doesn't hate; it comes back only if needed.
+    // 3c'. Still full: a spare kid (every pairing with the other kids on the map tried) goes to
+    //      farm, if a field has room and grows a food it doesn't hate; it comes back only if needed.
     if (full && farm && free.length) {
-      const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
+      // With each other kid: a kid can't pair with itself (Codex review, #90).
+      const untried = (kid: (typeof free)[number]) => free.filter((k) => k.id !== kid.id && !tried.has(pairKey(kid.type, k.type))).length;
       const fm = content.balance.farming;
       for (const [i, f] of s.fields.entries()) {
         if (f.food === null || f.workers.length >= fm.kidsPerField) continue;
-        const spare = free.find((k) => !specials.has(k.type) && untried(k.type) === 0 && content.personality[k.type]?.hatedFood !== f.food);
+        const spare = free.find((k) => !specials.has(k.type) && untried(k) === 0 && content.personality[k.type]?.hatedFood !== f.food);
         if (spare) return [{ type: 'farm', field: i, kidIds: [spare.id] }];
       }
     }
+    // 3c. Still full: plant (D-061) the kid with the fewest untried pairings on the map (a
+    //     dead end, or a spare copy) into the plot that is filling, if any takes it.
     if (full && plant && free.length && game.plotForDrop() !== null) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
       // A player keeps a special kid while any other dead end can go first (a found

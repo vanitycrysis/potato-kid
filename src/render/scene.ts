@@ -902,8 +902,9 @@ export class MapScene {
     const start = this.placing.get(kidId) ?? { x: kid.x, y: kid.y };
     this.placing.delete(kidId);
     this.drag = { kidId, pointerId: e.pointerId, startX: start.x, startY: start.y, x: w.x, y: w.y - HOLD_LIFT, spot: start };
-    // A new gesture starts with no dwell (§13.1).
+    // A new gesture starts with no dwell (§13.1), on the Garden or any field (Codex review, #90).
     this.home?.reset();
+    for (const t of this.fieldTargets) t.reset();
     this.pending.push({ type: 'pickUp', kidId });
     this.views.get(kidId)?.pickedUp();
     this.kidTap = { pointerId: e.pointerId, kidId, x: e.global.x, y: e.global.y, t: performance.now(), view: this.viewKey(), ...(candidates && candidates.length > 1 ? { candidates } : {}) };
@@ -1124,6 +1125,7 @@ export class MapScene {
     // A cancelled press resolves as nothing: never a tap, never a later drag (Codex review).
     this.kidTap = null;
     this.home?.reset();
+    for (const t of this.fieldTargets) t.reset();
     if (!this.drag) return;
     const { kidId, startX, startY } = this.drag;
     this.finishDrag({ type: 'cancelDrag', kidId, x: startX, y: startY, ...(safe ? { safe } : {}) });

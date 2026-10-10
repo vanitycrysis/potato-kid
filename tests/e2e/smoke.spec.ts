@@ -5101,6 +5101,37 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
   });
 
+  test('an armed drag cancelled, and a new one released over the field before a frame: no farming (Codex review, #90)', async ({ page }) => {
+    const id = await setup(page, 'apple');
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), TARGET);
+    await touchTask(page, [['pointerdown', k.x, k.y - 20]]);
+    await touchTask(page, [['pointermove', k.x - 40, k.y - 40]]);
+    await page.waitForTimeout(100);
+    await touchTask(page, [['pointermove', t.x, t.y]]);
+    await page.waitForTimeout(600);
+    await expect(label(page)).toContainText('Release to start farming');
+    // Cancelled, then picked up again where it is drawn (still over the field until the next
+    // frame) and let go over the field, all before the next frame.
+    await page.evaluate(
+      ([id, t]) => {
+        const canvas = document.querySelector('canvas')!;
+        const send = (type: string, x: number, y: number) => canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, buttons: type === 'pointerup' || type === 'pointercancel' ? 0 : 1, bubbles: true }));
+        send('pointercancel', t.x, t.y);
+        const at = window.__PK__!.screenPointOf(id)!;
+        send('pointerdown', at.x, at.y - 20);
+        // Past the tap's slop, staying inside the field's target (leaving it would end a dwell).
+        send('pointermove', t.x + 30, t.y);
+        send('pointermove', t.x, t.y);
+        send('pointerup', t.x, t.y);
+      },
+      [id, t] as const,
+    );
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+  });
+
   test('released before the dwell, the kid stays on the map', async ({ page }) => {
     const id = await setup(page, 'apple');
     const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);

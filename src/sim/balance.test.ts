@@ -262,6 +262,15 @@ describe('the bot farms (D-069)', () => {
     bot.tried.add(pairKey('plain', 'plain'));
     const act = bot.decide();
     expect(act?.[0]).toMatchObject({ type: 'farm', field: 1 });
+    // One copy of each type: a kid's pairing with itself needs another copy, so it never
+    // holds farming back (Codex review, #90).
+    const solo = quiet(['plain', 'fire'], (c) => {
+      c.balance.spawn.capacity = 2;
+    });
+    solo.state.fields.push({ food: 'apple', workers: [], progress: 0 });
+    const soloBot = createBot(solo, content, false);
+    soloBot.tried.add(pairKey('plain', 'fire'));
+    expect(soloBot.decide()?.[0]).toMatchObject({ type: 'farm', field: 0 });
     // Farming off: never.
     const off = createBot(g, content, true, false);
     for (const k of bot.tried) off.tried.add(k);
