@@ -583,6 +583,42 @@ export class MapScene {
     return this.zoomFactor;
   }
 
+  /** The world point at the centre of the play band, between the HUD and the navigation (§19.1). */
+  bandCentre(): { x: number; y: number } {
+    const { width, height } = this.app.screen;
+    const sy = this.insets.top + (height - this.insets.top - this.insets.bottom) / 2;
+    return { x: this.cam.x + width / 2 / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom };
+  }
+
+  /** Zooms to `factor` (clamped) with world point `at` at the play band's centre (Map view, §20.1). */
+  zoomAround(at: { x: number; y: number }, factor: number): void {
+    const { width, height } = this.app.screen;
+    this.zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor));
+    this.cam.zoom = this.fitZoom * this.zoomFactor;
+    const sy = this.insets.top + (height - this.insets.top - this.insets.bottom) / 2;
+    this.cam.x = at.x - width / 2 / this.cam.zoom;
+    this.cam.y = at.y - sy / this.cam.zoom;
+    this.applyCamera();
+  }
+
+  /** The Garden as Find Garden frames it: its building's drawn top down to its outlet (§20.1). */
+  get gardenFrame(): { x: number; top: number; bottom: number } {
+    const g = this.art.map.garden;
+    const building = this.art.map.instances.find((i) => i.asset === 'building_garden');
+    const [gx, gy] = g.worldGround;
+    return { x: gx, top: building ? gy + (building.boundsPx[1] - building.sourcePivot[1]) * building.scale : gy, bottom: g.spawnOutlet[1] };
+  }
+
+  /**
+   * Find Garden (§20.1), at the current zoom: the Garden's frame centred in the play band if
+   * it fits, else the building first (Codex review, PR #87).
+   */
+  findGarden(): void {
+    const { x, top, bottom } = this.gardenFrame;
+    const band = (this.app.screen.height - this.insets.top - this.insets.bottom) / this.cam.zoom;
+    this.zoomAround({ x, y: bottom - top <= band ? (top + bottom) / 2 : top + band / 2 }, this.zoomFactor);
+  }
+
   /** Zooms to `factor` (clamped), keeping the world point under screen (sx, sy) where it is. */
   zoomAt(sx: number, sy: number, factor: number): void {
     const anchor = { x: this.cam.x + sx / this.cam.zoom, y: this.cam.y + sy / this.cam.zoom };

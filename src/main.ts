@@ -45,6 +45,8 @@ declare global {
       centerOn: (x: number, y: number) => void;
       /** The player's zoom on top of the fitted zoom (D-071). */
       zoom: () => number;
+      /** The Garden as Find Garden frames it, world units (GUI_MVP §20.1). */
+      gardenFrame: () => { x: number; top: number; bottom: number };
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
       debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
@@ -246,6 +248,7 @@ async function boot(): Promise<void> {
     worldToScreen: (x, y) => scene.worldToScreen(x, y),
     centerOn: (x, y) => scene.centerOn(x, y),
     zoom: () => scene.zoom,
+    gardenFrame: () => scene.gardenFrame,
     ...(params.get('debug') === '1'
       ? {
           debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => scene.debugAdd(t, x, y, look),
