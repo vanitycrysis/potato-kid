@@ -1,5 +1,34 @@
 # Asset list
 
+## FARM-DESIGN delivery (2026-10-09; round 2, Claude review pending)
+
+Current contract GUI_MVP §22, farm-design-2. Sixteen additive sources in art/src/farm, unchanged exporter/palette/face/font. One shared bed plus matching snack-sprout stamps and actual existing-rig workers. Locked sites stay absent from map; the paper sign illustrates locked Garden rows.
+
+| Source ID | Source canvas / cropped export | Status |
+| --- | --- | --- |
+| building_food_field | 512 × 512 SVG / 418 × 446 PNG | final for Claude review |
+| fx_crop_apple | 256 × 256 SVG / 96 × 109 PNG | final for Claude review |
+| fx_crop_berries | 256 × 256 SVG / 94 × 105 PNG | final for Claude review |
+| fx_crop_berry_jam | 256 × 256 SVG / 83 × 105 PNG | final for Claude review |
+| fx_crop_carrot | 256 × 256 SVG / 82 × 109 PNG | final for Claude review |
+| fx_crop_cheese | 256 × 256 SVG / 95 × 103 PNG | final for Claude review |
+| fx_crop_cocoa | 256 × 256 SVG / 99 × 118 PNG | final for Claude review |
+| fx_crop_corn | 256 × 256 SVG / 99 × 104 PNG | final for Claude review |
+| fx_crop_cracker | 256 × 256 SVG / 91 × 107 PNG | final for Claude review |
+| fx_crop_mushroom | 256 × 256 SVG / 105 × 109 PNG | final for Claude review |
+| fx_crop_pickle | 256 × 256 SVG / 98 × 109 PNG | final for Claude review |
+| fx_crop_soup | 256 × 256 SVG / 100 × 109 PNG | final for Claude review |
+| fx_crop_toast | 256 × 256 SVG / 95 × 113 PNG | final for Claude review |
+| fx_farm_locked | 256 × 256 SVG / 135 × 191 PNG | final for Claude review |
+| icon_fields, icon_pantry | 128 × 128 native SVG / assets/ui SVG | final for Claude review; zero Pixi bytes |
+
+Normal exports: assets/sprites/buildings, assets/sprites/fx and assets/ui. Authored/exported farm_v1.json declares geometry, crop transforms, work presentation, named placeholders and twenty scenery relocations over unchanged v3. Crop food silhouettes reuse existing approved icons with shorter stems/leaves and round cheese holes; no ingredient/cooking assets or new audio.
+
+**238 → 238 runtime PNGs; 16,481,264 → 16,086,860 decoded RGBA bytes (15.71776 → 15.34163 MiB), −394,404 bytes / −0.37613 MiB**. Conservative inventory includes DOM-used sign; actual device allocation/culling remains under 32 MiB. Export passes 309 sources/seven sidecars. Unrelated raster/source art, rig/map/personality and engine/tests stay byte-identical. [315-screen gallery](../art/previews/ui/farm_review.html), [handoff/questions](../.codex-out/farm-design-notes.md), [audit](../.codex-out/farm-round2-audit.json). Claude review and implementation remain pending; no owner gate acceptance.
+
+
+Round 2 addresses B1/B2 and N1/N2 only: warm tan soil (#bca480) with brown furrows (#86765a), an extended upper bed and rear feet at y −275 inside it; two short-stem crops at scale 0.9, pivot (128, 240), grounds (±140, +94), with food silhouettes about 28–32 CSS px at 1× (individual dimensions in the size report); round cheese holes in the crop and shared food icon; all map navigation labels accompanied by their 24 px glyphs. The four grounds, reserve, map/relocations, full saved worker sizes, flows and other accepted choices stay unchanged. Claude accepted farmers being off map capacity, with no wandering, fusion or Materials and room required on return; partial progress kept when workers leave and reset after a reviewed food change; compatible workers staying and haters returning all or none; feeding farmers with happiness counting down and its Materials boost applying after return; at most four workers per field; no MVP pantry cap for now, pending simulator hoarding review. Successful unlock relocates ordinary kids from the new bay plus 16-unit clearance to the nearest clear spots anywhere, clear of recipe partners, without fusion, using refused-planting placement. Unlock fails only for price, save state or noRoom anywhere; placement, payment and unlock are atomic.
+
 ## LAYOUT-DESIGN round 2 (2026-10-09; Claude review pending)
 
 Current layout/composition contract: GUI_MVP §§19–21, `layout-design-2`. The accepted UI/planting sidecars, HUD, sheets and D-074 flow are unchanged; cancellation text uses ink with a danger border. `map_garden_v3.json`, revision `layout-design-map-3-round2`, places Garden/outlet/camera near the centre, reuses the three ground/six small-decor textures and supplies connected path loops, 250 accents and twelve outer landmarks. Claude owns save migration and selecting v3 in every reader.
