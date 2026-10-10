@@ -125,7 +125,9 @@ describe('a long absence (D-053)', () => {
     for (const seed of [1, 11, 42]) {
       for (const body of ['round', 'tall', 'squat', 'bean']) {
         const g = new Game(testContent(), options, seed);
-        const kid = g.debugAddKid('plain', 1475.75, 620, { body, scale: 1 }); // against the Garden's reserve
+        // Against the Garden's reserve, wherever the map puts the Garden (Codex review, PR #88).
+        const [gx, gy] = map.garden.worldGround;
+        const kid = g.debugAddKid('plain', gx + 395.75, gy, { body, scale: 1 });
         const start = { x: kid.x, y: kid.y };
         g.reconcile(T0 + 100);
         expect(dist(kid, start), `seed ${seed}, ${body}`).toBeLessThanOrEqual(w.speed * 0.1 + 1e-9);
