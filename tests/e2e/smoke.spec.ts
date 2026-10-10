@@ -5013,6 +5013,16 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
 
   const label = (page: Page) => page.locator('.home-label:not(.home-probe)');
 
+  /**
+   * Touch pointer events to the canvas, in one page task: no frame runs between them, so a
+   * dwell can't start in between however slow the machine (CI).
+   */
+  const touchTask = (page: Page, steps: ['pointerdown' | 'pointermove' | 'pointerup', number, number][]) =>
+    page.evaluate((steps) => {
+      const canvas = document.querySelector('canvas')!;
+      for (const [type, x, y] of steps) canvas.dispatchEvent(new PointerEvent(type, { pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
+    }, steps);
+
   test('held near a field it can farm, the label says so; held over it, then released, the kid goes to work', async ({ page }) => {
     const id = await setup(page, 'apple');
     await pick(page, id);
@@ -5067,8 +5077,24 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     await moveTo(page, TARGET);
     await page.waitForTimeout(600);
     await expect(label(page)).toContainText('Release to start farming');
-    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'setFieldFood', field: 0, food: 'corn' }));
-    await expect(label(page)).toContainText(/Keep holding…|Farm Corn in Field 1/);
+    // The food changes; two frames later (the change applied, the hold restarted, far less than
+    // 400 ms), the release.
+    const at = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), TARGET);
+    const shown = await page.evaluate(
+      (at) =>
+        new Promise<string>((done) => {
+          window.__PK__!.debugCommand!({ type: 'setFieldFood', field: 0, food: 'corn' });
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              const text = document.querySelector('.home-label:not(.home-probe)')?.textContent ?? '';
+              document.querySelector('canvas')!.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, pointerType: 'mouse', isPrimary: true, clientX: at.x, clientY: at.y, buttons: 0, bubbles: true }));
+              done(text);
+            }),
+          );
+        }),
+      at,
+    );
+    expect(shown).toMatch(/Keep holding…|Farm Corn in Field 1/);
     await page.mouse.up();
     await page.waitForTimeout(300);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
@@ -5077,9 +5103,17 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
 
   test('released before the dwell, the kid stays on the map', async ({ page }) => {
     const id = await setup(page, 'apple');
-    await pick(page, id);
-    await moveTo(page, TARGET);
-    await page.mouse.up();
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), TARGET);
+    await touchTask(page, [['pointerdown', k.x, k.y - 20]]);
+    // Out past the tap's slop first: a drag, not a tap.
+    await touchTask(page, [['pointermove', k.x - 40, k.y - 40]]);
+    await page.waitForTimeout(100);
+    // Onto the field and off the screen at once: no frame, so no dwell.
+    await touchTask(page, [
+      ['pointermove', t.x, t.y],
+      ['pointerup', t.x, t.y],
+    ]);
     await page.waitForTimeout(300);
     expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
     expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
