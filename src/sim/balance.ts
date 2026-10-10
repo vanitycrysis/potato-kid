@@ -209,7 +209,8 @@ export function createBot(
 ): { decide: () => Command[] | null; learn: (events: GameEvent[]) => void; tried: Set<string> } {
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const tried = new Set<string>();
-  const specials = new Set(content.kids.filter((k) => k.special).map((k) => k.id));
+  // Specials and rares alike: planting-only, never bought (Codex review, PR #84).
+  const specials = new Set(content.kids.filter((k) => k.special || k.rare).map((k) => k.id));
   let pending: Drop | null = null;
   /** The bot's one action this turn, or null when it has nothing useful to do. */
   const decide = (): Command[] | null => {

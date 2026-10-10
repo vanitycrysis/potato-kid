@@ -13,6 +13,7 @@ import { KidCard, type CardSnapshot } from './kidCard';
 import { PlantingNotes } from './plantingNotes';
 import { el, icon, ui } from './dom';
 import { openOfflineSummary } from './offline';
+import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
 import { openSettings } from './settings';
 import { Sheets, type SheetSnapshot } from './sheet';
@@ -556,12 +557,10 @@ export class Hud {
     switch (item.kind) {
       case 'discovery':
       case 'newKid': {
-        // A planting-only special found for the first time says so (GUI_MVP §15.5).
-        const special = this.content.kids.find((k) => k.id === item.childType)?.special === true;
-        const heading = item.kind === 'newKid' ? (special ? 'Special found' : 'New kid discovered') : item.newKid ? 'New discovery' : 'New recipe found';
+        // A planting-only special or rare found for the first time says so (GUI_MVP §15.5, D-072).
+        const kind = kindMark(this.content.kids.find((k) => k.id === item.childType));
+        const heading = item.kind === 'newKid' ? (kind ? `${kind} found` : 'New kid discovered') : item.newKid ? 'New discovery' : 'New recipe found';
         const lines: Node[] = [el('span', 'card-heading', heading), el('span', 'card-name', this.name(item.childType)), this.tier(item.childType)];
-        // New type and new variant at once: one card for both (§15.5).
-        if (item.kind === 'newKid' && item.variant) lines.push(el('span', 'card-line', `${item.variant[0]!.toUpperCase()}${item.variant.slice(1)} found`));
         if (item.kind === 'discovery' && item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
         if (item.milestone > 0) lines.push(el('span', 'card-line', `Dex milestone · +${formatExact(item.milestone)} Potatokens`));
         // The whole card opens this kid in the Potato-Dex (GUI_MVP §9).
@@ -622,20 +621,12 @@ export class Hud {
           el('span', 'card-heading', item.name ? `Named ${item.name}.` : `Called ${this.name(item.kidType)} again.`),
         );
       case 'sprouted': {
-        // The four reveals (GUI_MVP §15.5): by the actual kid, never by which roll hit.
-        const special = this.content.kids.find((k) => k.id === item.kidType)?.special === true;
-        const variant = item.variant ? `${item.variant[0]!.toUpperCase()}${item.variant.slice(1)} ` : '';
+        // The reveals (GUI_MVP §15.5): by the actual kid, never by which roll hit. A type new to
+        // the Dex gets the discovery card instead.
+        const kind = kindMark(this.content.kids.find((k) => k.id === item.kidType));
         const from = `From Plot ${item.plot + 1}.`;
-        const helper = special ? (item.variant ? `Rare special kid · ${from}` : `Special kid · ${from}`) : item.variant ? `Rare variant · ${from}` : from;
-        // A variant new to the Dex reads as its discovery, "{variant} found · {type}", and like
-        // any discovery the whole card opens that kid in the Dex (§9; Codex review, PR #77).
-        const heading = item.found ? `${variant.trim()} found · ${this.name(item.kidType)}` : `${variant}${this.name(item.kidType)} sprouted!`;
-        const parts = [portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', heading), el('span', 'card-line', helper))];
-        if (!item.found) return el('div', 'toast toast-short', ...parts);
-        const card = el('button', 'toast toast-reward toast-button', ...parts);
-        card.type = 'button';
-        card.addEventListener('click', () => this.dex.open(card, item.kidType));
-        return card;
+        const helper = kind ? `${kind} kid · ${from}` : from;
+        return el('div', 'toast toast-short', portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', `${this.name(item.kidType)} sprouted!`), el('span', 'card-line', helper)));
       }
     }
   }

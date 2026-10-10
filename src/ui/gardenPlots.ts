@@ -6,6 +6,7 @@ import { el, icon } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatTimeLeft } from './format';
 import { chance, oddsLines, type PlantingNotes } from './plantingNotes';
+import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
 import type { OpenSheet } from './sheet';
 
@@ -46,9 +47,6 @@ interface Note {
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
-/** A rare variant's label, "Rare: Rainbow" (GUI_MVP §15.3). */
-export const rareLabel = (variant: string | undefined) => (variant ? `Rare: ${variant[0]!.toUpperCase()}${variant.slice(1)}` : null);
-
 export class GardenPlots {
   private view: { kind: 'overview' } | { kind: 'detail'; plot: number } | { kind: 'picker'; plot: number } = { kind: 'overview' };
   private pending: Pending | null = null;
@@ -83,20 +81,21 @@ export class GardenPlots {
     return this.content.kids.find((k) => k.id === type)?.name ?? type;
   }
 
-  private special(type: KidId): boolean {
-    return !!this.content.kids.find((k) => k.id === type)?.special;
+  /** Special (D-063) or rare (D-072), the planting-only kinds; null for an ordinary type. */
+  private kind(type: KidId): 'Rare' | 'Special' | null {
+    return kindMark(this.content.kids.find((k) => k.id === type));
   }
 
   /**
-   * Tier, then happiness, then the rare and special marks: "Tier 2 · Happy · Counts as Tier 3 ·
-   * Rare: Rainbow · Special" (GUI_MVP §15.3). `happy`: 'live' for a kid on the map happy now,
-   * 'added' for one that was happy when added (its tier stays counted, the kid is gone).
+   * Tier, then happiness, then the kind: "Tier 2 · Happy · Counts as Tier 3 · Special"
+   * (GUI_MVP §15.3). `happy`: 'live' for a kid on the map happy now, 'added' for one that was
+   * happy when added (its tier stays counted, the kid is gone).
    */
-  private marks(type: KidId, variant: string | undefined, extra: string[] = [], happy: 'live' | 'added' | null = null): string {
-    const rare = rareLabel(variant);
+  private marks(type: KidId, extra: string[] = [], happy: 'live' | 'added' | null = null): string {
+    const kind = this.kind(type);
     const tier = this.tierOf.get(type) ?? 1;
     const mood = happy === 'live' ? ['Happy', `Counts as Tier ${tier + 1}`] : happy === 'added' ? [`Counted as Tier ${tier + 1} when added`] : [];
-    return [`Tier ${tier}`, ...mood, ...extra, ...(rare ? [rare] : []), ...(this.special(type) ? ['Special'] : [])].join(' · ');
+    return [`Tier ${tier}`, ...mood, ...extra, ...(kind ? [kind] : [])].join(' · ');
   }
 
   private info(i: number): PlotInfo {
@@ -251,9 +250,9 @@ export class GardenPlots {
       const k = planted[i];
       const slot = el('div', 'plot-slot');
       if (k) {
-        slot.append(portrait(kidRig!, k.type, 32, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined));
+        slot.append(portrait(kidRig!, k.type, 32, k.look));
         slot.setAttribute('role', 'img');
-        slot.setAttribute('aria-label', `${this.name(k.type)}, ${this.marks(k.type, k.variant, [], k.happy ? 'added' : null)}`);
+        slot.setAttribute('aria-label', `${this.name(k.type)}, ${this.marks(k.type, [], k.happy ? 'added' : null)}`);
       } else {
         slot.append(el('span', 'plot-slot-empty'));
         slot.setAttribute('role', 'img');
@@ -419,7 +418,7 @@ export class GardenPlots {
           status.hidden = locked;
         }
         if (locked) return;
-        const sig = p.planted.map((k) => `${k.type}:${k.variant ?? ''}`).join(',');
+        const sig = p.planted.map((k) => k.type).join(',');
         if (sig !== slotsFor) {
           slotsFor = sig;
           slotHost.replaceChildren(this.slots(p.planted));
@@ -476,8 +475,8 @@ export class GardenPlots {
         el(
           'div',
           'plot-kid',
-          portrait(kidRig!, k.type, 48, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined),
-          el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', this.name(k.type)), el('span', 'sheet-helper', this.marks(k.type, k.variant, [], k.happy ? 'added' : null))),
+          portrait(kidRig!, k.type, 48, k.look),
+          el('span', 'dex-home-row-text', el('span', 'dex-home-row-name', this.name(k.type)), el('span', 'sheet-helper', this.marks(k.type, [], k.happy ? 'added' : null))),
         ),
       );
     if (withEmpty) for (let i = planted.length; i < this.planting.maxKids; i++) list.append(el('p', 'sheet-helper plot-space', `Space ${i + 1} · Empty`));
@@ -527,8 +526,7 @@ export class GardenPlots {
       } else {
         parts.push(
           el('div', 'plot-odds', ...this.rolls(p.planted).map((l) => el('p', 'sheet-body-text', l))),
-          el('p', 'sheet-helper', 'Two separate rolls. A sprout can be both special and rare.'),
-          el('p', 'sheet-helper', "A rare sprout can also take a planted special's type."),
+          el('p', 'sheet-helper', 'Two separate rolls. If both hit, the sprout is the rare kid.'),
           el('p', 'sheet-helper', `One kid sprouts after ${formatDuration(this.game.growSeconds)}.`),
         );
         if (p.count < max) parts.push(this.button('Add kids', 'plot-action-full', () => this.show({ kind: 'picker', plot: i })));
@@ -579,7 +577,7 @@ export class GardenPlots {
 
     const refresh = () => {
       const p = this.info(i);
-      const sig = `${p.state}|${p.planted.map((k) => `${k.type}:${k.variant ?? ''}`).join(',')}`;
+      const sig = `${p.state}|${p.planted.map((k) => k.type).join(',')}`;
       // The plot changed under an open review: it closes, and says so (§15.4).
       if (review !== null && review !== sig && !(this.pending?.type === 'startGrowing' && this.pending.plot === i)) {
         review = null;
@@ -631,9 +629,8 @@ export class GardenPlots {
       `One kid sprouts after ${formatDuration(this.game.growSeconds)}.`,
       'These kids have already left your map. No refund.',
       'Their names and happy effects have ended. One new kid will sprout.',
-      'Rare looks are not carried over automatically.',
-      ...(p.planted.some((k) => this.special(k.type)) ? ['Special kids cannot be bought back.'] : []),
-      ...(p.planted.some((k) => k.variant) ? ['Rare variants cannot be bought back.'] : []),
+      ...(p.planted.some((k) => this.kind(k.type) === 'Special') ? ['Special kids cannot be bought back.'] : []),
+      ...(p.planted.some((k) => this.kind(k.type) === 'Rare') ? ['Rare kids cannot be bought back.'] : []),
     ];
     const keep = this.button('Keep filling', 'plot-action-full', keepFilling);
     return el('div', 'plot-review ui-surface', heading, this.kidRows(p.planted, false), ...lines.map((l) => el('p', 'sheet-body-text', l)), keep);
@@ -674,8 +671,7 @@ export class GardenPlots {
       el('p', 'sheet-helper', 'Added kids leave the map right away. They cannot be taken back.'),
       el('p', 'sheet-helper', 'Their names, income and happy effects end when you press Add.'),
       el('p', 'sheet-helper', 'Selections stay on the map until Add.'),
-      el('p', 'sheet-helper', 'Two separate rolls. A sprout can be both special and rare.'),
-      el('p', 'sheet-helper', "A rare sprout can also take a planted special's type."),
+      el('p', 'sheet-helper', 'Two separate rolls. If both hit, the sprout is the rare kid.'),
     );
     const searchLabel = el('label', 'picker-search-label', 'Find a kid on your map');
     const search = el('input', 'picker-search');
@@ -728,7 +724,7 @@ export class GardenPlots {
       const node = el(
         'label',
         'ui-surface picker-row',
-        portrait(kidRig!, k.type, 48, k.look, k.variant ? { variant: k.variant, miniScale: this.planting.miniScale } : undefined),
+        portrait(kidRig!, k.type, 48, k.look),
         el('span', 'picker-row-text', nameEl, typeEl, detailEl),
         box,
       );
@@ -741,12 +737,12 @@ export class GardenPlots {
         named: (name: string | undefined, happy = false) => {
           if (nameEl.textContent !== (name ?? typeName)) nameEl.textContent = name ?? typeName;
           typeEl.hidden = !name;
-          const detail = this.marks(k.type, k.variant, [kidNumber], happy ? 'live' : null);
+          const detail = this.marks(k.type, [kidNumber], happy ? 'live' : null);
           if (detailEl.textContent !== detail) detailEl.textContent = detail;
           row.text = `${name ?? ''} ${typeName} ${detail}`.toLowerCase();
         },
-        rare: !!k.variant,
-        special: this.special(k.type),
+        rare: this.kind(k.type) === 'Rare',
+        special: this.kind(k.type) === 'Special',
       };
       row.named(k.name, !!k.happy);
       box.addEventListener('change', () => {
@@ -863,7 +859,7 @@ export class GardenPlots {
       }
       const chosenKinds = draft.map((id) => kinds.get(id));
       const extra = [
-        ...(chosenKinds.some((k) => k?.rare) ? ['Rare variants cannot be bought back.'] : []),
+        ...(chosenKinds.some((k) => k?.rare) ? ['Rare kids cannot be bought back.'] : []),
         ...(chosenKinds.some((k) => k?.special) ? ['Special kids cannot be bought back.'] : []),
       ];
       if (notices.dataset.text !== extra.join('\n')) {

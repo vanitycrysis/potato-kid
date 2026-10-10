@@ -1,4 +1,4 @@
-import { gate4Data, kidRig } from '../content/artData';
+import { kidRig } from '../content/artData';
 import type { Content, FoodDef, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { GameEvent, RejectReason } from '../sim/game';
@@ -9,7 +9,7 @@ import { el, icon } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatRate, formatTimeLeft } from './format';
 import type { PlantingNotes } from './plantingNotes';
-import { chosenPlotRefusal, plotRoute } from './plotRoute';
+import { chosenPlotRefusal, kindMark, plotRoute } from './plotRoute';
 import { portrait } from './portrait';
 import type { OpenSheet, Sheets } from './sheet';
 
@@ -48,10 +48,8 @@ interface Seen {
   type: KidId;
   name: string | undefined;
   look: Kid['look'];
-  variant: string | undefined;
 }
 
-const cap = (s: string) => `${s[0]!.toUpperCase()}${s.slice(1)}`;
 
 /**
  * A type's Personality blocks (GUI_MVP §18.1): its description, then Likes and Hates (each
@@ -185,7 +183,7 @@ export class KidCard {
     this.kidId = kidId;
     this.launcher = launcher;
     this.backTo = back ?? null;
-    this.seen = kid ? { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant } : seen!;
+    this.seen = kid ? { type: kid.type, name: kid.name, look: { ...kid.look } } : seen!;
     this.kidOrdinal = ordinal ?? this.ordinalNow(kidId, this.seen.type);
     this.view = 'card';
     this.kept = null;
@@ -253,7 +251,7 @@ export class KidCard {
   private update(): void {
     const kid = this.kid();
     // Still here: keep what the card shows current (a name, a look). Gone: keep the last.
-    if (kid && this.seen) this.seen = { type: kid.type, name: kid.name, look: { ...kid.look }, variant: kid.variant };
+    if (kid && this.seen) this.seen = { type: kid.type, name: kid.name, look: { ...kid.look } };
     if (this.status && this.status.until < performance.now()) this.status = null;
     this.current?.update();
   }
@@ -403,42 +401,21 @@ export class KidCard {
     const seen = this.seen!;
     const type = seen.type;
     const def = this.content.kids.find((k) => k.id === type);
-    const special = !!def?.special;
-    const variant = seen.variant;
+    // Special (D-063) or rare (D-072): planting-only kinds, marked alike.
+    const kind = kindMark(def);
     const status = this.statusBox();
-    const pic = el(
-      'div',
-      'kid-card-portrait',
-      portrait(kidRig!, type, 96, seen.look, variant ? { variant, miniScale: this.content.balance.planting.miniScale } : undefined),
-    );
+    const pic = el('div', 'kid-card-portrait', portrait(kidRig!, type, 96, seen.look));
     const marks = el('div', 'kid-card-marks');
-    if (variant) marks.append(el('span', 'kid-card-mark', icon(`icon_variant_${variant}`, '', 'ui-icon-24'), `Rare · ${cap(variant)}`));
-    if (special) marks.append(el('span', 'kid-card-mark', 'Special kid'));
+    if (kind) marks.append(el('span', 'kid-card-mark', `${kind} kid`));
     const income = el('p', 'sheet-helper kid-card-income');
     const tier = el('div', 'kid-card-tier', this.tierLine(type), income);
-
-    // The rare profile (§16.3).
-    const rare: HTMLElement[] = [];
-    if (variant) {
-      const profile = (gate4Data as { rareProfiles?: Record<string, { name: string; flavor: string }> } | undefined)?.rareProfiles?.[variant];
-      const mult = this.content.balance.planting.rareIncomeMultiplier;
-      rare.push(
-        el('h3', 'sheet-section kid-card-heading', `${profile?.name ?? cap(variant)} profile`),
-        el('p', 'sheet-body-text', profile?.flavor ?? ''),
-        el('p', 'sheet-body-text', 'Found by planting.'),
-        el('p', 'sheet-body-text', `Materials ×${mult}`),
-        ...(special
-          ? [el('p', 'sheet-helper', 'Special kids have no fusion recipes.'), el('p', 'sheet-helper', 'Special kids cannot be bought back.')]
-          : [el('p', 'sheet-helper', 'Fusion uses up this rare look; the new kid is ordinary.'), el('p', 'sheet-helper', 'Planting uses this kid up. Rare variants cannot be bought back.')]),
-      );
-    }
 
     // Happiness (§17.2): how long, and what it does.
     const happy = el('div', 'kid-card-happy');
     happy.setAttribute('aria-live', 'off');
 
     const personality = [
-      ...(special && !variant ? [el('p', 'sheet-helper', 'Found only through planting. No fusion recipes. Special kids cannot be bought.')] : []),
+      ...(kind ? [el('p', 'sheet-helper', `Found only through planting. No fusion recipes. ${kind} kids cannot be bought.`)] : []),
       ...personalityBlocks(this.content, type),
     ];
 
@@ -486,7 +463,7 @@ export class KidCard {
     // From the Dex: "Back to {type}", first in the body (§18.1).
     const backTo = this.backTo;
     const toDex = backTo ? [this.button(backTo.label, 'plot-back', () => backTo.go())] : [];
-    s.body.replaceChildren(...toDex, status.node, pic, marks, tier, ...rare, happy, ...personality, planting);
+    s.body.replaceChildren(...toDex, status.node, pic, marks, tier, happy, ...personality, planting);
     const feed = this.button('Feed', 'sheet-action kid-card-action', () => this.show('feed'));
     feed.dataset.action = 'feed';
     const name = this.button('Name', 'sheet-action kid-card-action', () => this.show('name'));
@@ -690,7 +667,7 @@ export class KidCard {
     s.body.replaceChildren(
       this.back('card'),
       status.node,
-      el('div', 'kid-card-portrait name-portrait', portrait(kidRig!, type, 64, this.seen!.look, this.seen!.variant ? { variant: this.seen!.variant, miniScale: this.content.balance.planting.miniScale } : undefined)),
+      el('div', 'kid-card-portrait name-portrait', portrait(kidRig!, type, 64, this.seen!.look)),
       label,
       input,
       count,

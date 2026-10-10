@@ -446,8 +446,8 @@ export class MapScene {
   }
 
   /** Debug/test hook (only exposed with `?debug=1`): place a kid at a world point. */
-  debugAdd(type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }, variant?: string): number {
-    const kid = this.game.debugAddKid(type, x, y, look, variant);
+  debugAdd(type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }): number {
+    const kid = this.game.debugAddKid(type, x, y, look);
     this.addView(kid);
     return kid.id;
   }
@@ -532,11 +532,12 @@ export class MapScene {
     if (this.pan) this.tap = null;
     if (this.drag) this.promoteToDrag();
     if (this.drag || this.pan || this.inputPaused) return;
-    // A press near a Mini picks it up: its target is at least 44 CSS px each way (§16.1).
-    // Its own body, any other kid's and real soil all come first: they took the press already.
-    const mini = this.miniAt(this.toWorld(e));
-    if (mini !== null) {
-      this.startDrag(mini, e);
+    // A press near a kid drawn smaller than 44 CSS px picks it up: its target is at least that
+    // each way (§16.1, first for Minis; now for any kid, as at far zoom, D-071). Its own body,
+    // any other kid's and real soil all come first: they took the press already.
+    const small = this.smallKidAt(this.toWorld(e));
+    if (small !== null) {
+      this.startDrag(small, e);
       return;
     }
     // A press that stops a moving map is no tap: the camera was moving (§15.2).
@@ -547,18 +548,19 @@ export class MapScene {
   }
 
   /**
-   * The Mini whose pickup target holds world point `p`, or null (GUI_MVP §16.1): its drawn box
-   * grown to at least 44 CSS px each way, about its centre. Never over real soil; where two
+   * The small kid whose pickup target holds world point `p`, or null (GUI_MVP §16.1): a kid
+   * drawn under 44 CSS px either way has its box grown to at least that, about its centre. Never over real soil; where two
    * overlap, the nearest centre wins, then the lower id. Only for picking up: drops and
    * fusions use the drawn box.
    */
-  private miniAt(p: { x: number; y: number }): number | null {
+  private smallKidAt(p: { x: number; y: number }): number | null {
     if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return null;
     const min = TAP_TARGET / this.cam.zoom;
     let best: number | null = null;
     let bestD = Infinity;
     for (const k of this.game.state.world.kids) {
-      if (k.variant !== 'mini' || !this.views.has(k.id)) continue;
+      if (!this.views.has(k.id)) continue;
+      if (k.box.right - k.box.left >= min && k.box.bottom - k.box.top >= min) continue;
       const at = this.drawn.get(k.id) ?? k;
       const cx = at.x + (k.box.left + k.box.right) / 2;
       const cy = at.y + (k.box.top + k.box.bottom) / 2;
@@ -1101,10 +1103,11 @@ export class MapScene {
     const rares: RareKid[] = [];
     for (const k of kids) {
       const special = this.game.isSpecial(k.type);
-      if (!k.variant && !special && !k.happy) continue;
+      const rare = this.game.isRare(k.type);
+      if (!rare && !special && !k.happy) continue;
       if (!this.views.has(k.id)) continue;
       const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
-      rares.push({ id: k.id, variant: k.variant, special, x: at.x, y: at.y, box: k.box, normalScale: this.game.normalScale(k), happy: !!k.happy });
+      rares.push({ id: k.id, rare, special, x: at.x, y: at.y, box: k.box, scale: k.look.scale, happy: !!k.happy });
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
   }
@@ -1177,7 +1180,7 @@ export class MapScene {
       case 'spawned':
         this.addView(e.kid).play('spawn');
         // A rare or special newborn's burst, once it is on the map (GUI_MVP §15.5).
-        if (e.source === 'sprout' && (e.kid.variant || this.game.isSpecial(e.kid.type))) this.rareLayer.born(e.kid.id);
+        if (e.source === 'sprout' && (this.game.isRare(e.kid.type) || this.game.isSpecial(e.kid.type))) this.rareLayer.born(e.kid.id);
         break;
       case 'planted': {
         // Gone from the sim and the map at once (GUI_MVP §15.5: no ghost or wave); its plot

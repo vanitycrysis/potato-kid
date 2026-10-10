@@ -42,13 +42,9 @@ function layer(name: string, src: string, at: Attachment | undefined, pivot: [nu
 
 /**
  * A portrait of `type` at `sizePx` CSS px. Throws if any layer is missing: a discovered
- * kid without art is a validation error, never a seed packet (GUI_MVP §7). `rare`: a rare
- * kid's own look (GUI_MVP §16.1-16.2; small portraits omit the sleeve). A Mini at its saved
- * scale about the ground point, its pebbles at their normal placement; any other variant
- * with its mark placed as on the map (centred, 36/55 of the canvas wide, its visible bottom
- * 4/55 above the body's box), kid and mark then fitted together into the box.
+ * kid without art is a validation error, never a seed packet (GUI_MVP §7).
  */
-export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }, rare?: { variant: string; miniScale: number }): HTMLElement {
+export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }): HTMLElement {
   const url = (name: string) => {
     const u = assetUrl(name);
     if (!u) throw new Error(`Missing art "${name}" for the ${type} portrait`);
@@ -74,28 +70,6 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body
   canvas.append(layer(frame.asset, url(frame.asset), undefined, [0, 0]));
   canvas.append(layer(face.states.open!, url(face.states.open!), frame.attachments.face_centre, face.sourcePivot));
   for (const c of costume?.components ?? []) if (c.layer === 'front') canvas.append(part(c));
-  if (rare?.variant === 'mini') {
-    // The kid's own layers shrink about the ground point; the pebbles keep their place.
-    const kid = document.createElement('div');
-    kid.className = 'portrait-layer';
-    const [gx, gy] = rig.groundAnchor;
-    kid.style.transform = `translate(${gx}px, ${gy}px) scale(${rare.miniScale}) translate(${-gx}px, ${-gy}px)`;
-    kid.append(...canvas.childNodes);
-    canvas.append(kid, layer('fx_variant_mini', url('fx_variant_mini'), undefined, [0, 0]));
-  } else if (rare) {
-    const name = `fx_variant_${rare.variant}`;
-    const t = trimOf(name) ?? [0, 0, cw, ch, cw, ch];
-    const [bl, bt, br] = rig.bodies[bodyId]!.boundsPx;
-    const width = (cw * 36) / 55;
-    const k = width / t[2];
-    const markTop = bt - (cw * 4) / 55 - t[3] * k;
-    // Its visible bottom centre lands 4/55 of the canvas above the box, centred on it.
-    canvas.append(layer(name, url(name), { position: [(bl + br) / 2, bt - (cw * 4) / 55], rotationDeg: 0, scale: [k, k] }, [t[0] + t[2] / 2, t[1] + t[3]]));
-    // Kid and mark fitted into the box together, centred across.
-    const tall = ch - Math.min(0, markTop);
-    const f = sizePx / tall;
-    canvas.style.transform = `scale(${f}) translate(${(sizePx / f - cw) / 2}px, ${-Math.min(0, markTop)}px)`;
-  }
 
   const box = document.createElement('div');
   box.className = 'portrait';

@@ -576,7 +576,8 @@ export class BuildingSheets {
           const discovered = new Set(g.state.discoveredKids);
           let prev: HTMLElement | null = null;
           for (const kid of this.content.kids) {
-            if (!discovered.has(kid.id)) continue;
+            // Ordinary kids only: specials and rares are never sold (D-063, D-072; GUI_MVP §16.4).
+            if (!discovered.has(kid.id) || kid.special || kid.rare) continue;
             let c = cards.get(kid.id);
             if (!c) {
               c = this.compendiumCard(kid.id);

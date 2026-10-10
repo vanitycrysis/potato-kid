@@ -58,8 +58,6 @@ export interface Kid {
   held: boolean;
   box: Box;
   look: Look;
-  /** A rare variant (D-062), from planting; absent for an ordinary kid. */
-  variant?: string;
   /** The name the player gave this kid (D-057); it ends when the kid fuses or is planted. */
   name?: string;
   /** Happy from a bite (D-056): seconds left, and whether it was its favourite food. */

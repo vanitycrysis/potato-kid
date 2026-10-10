@@ -7,7 +7,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 6;
+export const SAVE_SCHEMA = 7;
 
 export interface SaveRecord {
   schema: number;
@@ -87,8 +87,8 @@ export function validateState(state: unknown, content: Content): string[] {
       const seed = plot.seed as Record<string, unknown> | null;
       if (seed === null) return;
       if (typeof seed !== 'object') return void p.push(`plot ${i} seed is invalid`);
-      // Each kid as planted: its id, a known type, a look, maybe a known rare variant, and the
-      // name and happiness it takes back to the map if it comes out (D-074).
+      // Each kid as planted: its id, a known type, a look, and the name and happiness it takes
+      // back to the map if it comes out (D-074). Rare variants are retired (D-072).
       const plantedOk = (k: unknown) => {
         const o = k as Record<string, unknown> | null;
         const look = o?.look as Record<string, unknown> | undefined;
@@ -105,7 +105,7 @@ export function validateState(state: unknown, content: Content): string[] {
           typeof look.face === 'string' &&
           finite(look.scale) &&
           (look.scale as number) > 0 &&
-          (!('variant' in o) || (typeof o.variant === 'string' && plan.rareVariants.includes(o.variant))) &&
+          !('variant' in o) &&
           (!('happy' in o) || o.happy === true) &&
           (!('name' in o) || (typeof o.name === 'string' && storedNameOk(o.name, content.balance.naming.maxLength))) &&
           (!('happiness' in o) ||
@@ -122,8 +122,7 @@ export function validateState(state: unknown, content: Content): string[] {
         if (seed.grown !== 0) p.push(`plot ${i} grew before it started`);
         return;
       }
-      if (typeof sprout !== 'object' || typeof sprout.type !== 'string' || !kidIds.has(sprout.type)) p.push(`plot ${i} sprout is invalid`);
-      else if (sprout.variant !== null && !(typeof sprout.variant === 'string' && plan.rareVariants.includes(sprout.variant))) p.push(`plot ${i} sprout variant is invalid`);
+      if (typeof sprout !== 'object' || typeof sprout.type !== 'string' || !kidIds.has(sprout.type) || 'variant' in sprout) p.push(`plot ${i} sprout is invalid`);
       else if (Array.isArray(planted) && planted.length < plan.minKids) p.push(`plot ${i} started with too few kids`);
     });
   }
@@ -131,16 +130,8 @@ export function validateState(state: unknown, content: Content): string[] {
   if (s.biasTarget !== null && !(typeof s.biasTarget === 'string' && s.biasTarget in content.balance.spawnWeights)) p.push('biasTarget is invalid');
   if (!Array.isArray(s.discoveredKids) || !s.discoveredKids.every((k) => typeof k === 'string' && kidIds.has(k))) p.push('discoveredKids has unknown kids');
   if (!Array.isArray(s.discoveredRecipes) || !s.discoveredRecipes.every((k) => typeof k === 'string')) p.push('discoveredRecipes is invalid');
-  // Rare variants found, by type (D-062): known types, known variants, each once.
-  const dv = s.discoveredVariants;
-  if (typeof dv !== 'object' || dv === null || Array.isArray(dv)) p.push('discoveredVariants is invalid');
-  else {
-    const known = content.balance.planting.rareVariants;
-    for (const [type, list] of Object.entries(dv as Record<string, unknown>)) {
-      const ok = kidIds.has(type) && Array.isArray(list) && list.every((v) => typeof v === 'string' && known.includes(v)) && new Set(list).size === list.length;
-      if (!ok) p.push(`discoveredVariants for ${type} is invalid`);
-    }
-  }
+  // Rare variants are retired (D-072): a state still recording them wasn't migrated.
+  if ('discoveredVariants' in s) p.push('discoveredVariants is retired');
 
   const b = s.buildings as Record<string, unknown> | undefined;
   if (typeof b !== 'object' || b === null) p.push('buildings is missing');
@@ -179,7 +170,7 @@ export function validateState(state: unknown, content: Content): string[] {
     if (typeof look !== 'object' || look === null || typeof look.body !== 'string' || typeof look.face !== 'string' || !finite(look.scale) || (look.scale as number) <= 0) {
       p.push(`kid ${String(id)} look is invalid`);
     }
-    if ('variant' in k && !(typeof k.variant === 'string' && content.balance.planting.rareVariants.includes(k.variant))) p.push(`kid ${String(id)} variant is invalid`);
+    if ('variant' in k) p.push(`kid ${String(id)} variant is retired`);
     // A name exactly as the sim stores one: already normalized and allowed (D-057).
     if ('name' in k && !(typeof k.name === 'string' && storedNameOk(k.name, content.balance.naming.maxLength))) p.push(`kid ${String(id)} name is invalid`);
     // Happiness: time left, no more than a favourite lasts, and which kind (D-056).

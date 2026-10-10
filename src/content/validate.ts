@@ -54,11 +54,14 @@ export function validateContent(content: Content): string[] {
   errors.push(...validatePlanting(content.balance));
   errors.push(...validateFeeding(content));
 
-  // Special kids (D-063): apex, tier 5 or above, in no recipe, never from the Garden.
-  for (const k of content.kids.filter((x) => x.special)) {
-    if (k.tier < 5) errors.push(`special kid "${k.id}" must be tier 5 or above`);
-    if (content.recipes.some((r) => r.a === k.id || r.b === k.id || r.result === k.id)) errors.push(`special kid "${k.id}" must not be in a recipe`);
-    if (k.id in content.balance.spawnWeights) errors.push(`special kid "${k.id}" must not be in the spawn pool`);
+  // Special kids (D-063) and rare kids (D-072): apex, tier 5 or above, in no recipe, never
+  // from the Garden; a kid is one or the other.
+  for (const k of content.kids.filter((x) => x.special || x.rare)) {
+    const kind = k.special ? 'special' : 'rare';
+    if (k.special && k.rare) errors.push(`kid "${k.id}" can't be both special and rare`);
+    if (k.tier < 5) errors.push(`${kind} kid "${k.id}" must be tier 5 or above`);
+    if (content.recipes.some((r) => r.a === k.id || r.b === k.id || r.result === k.id)) errors.push(`${kind} kid "${k.id}" must not be in a recipe`);
+    if (k.id in content.balance.spawnWeights) errors.push(`${kind} kid "${k.id}" must not be in the spawn pool`);
   }
 
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
@@ -78,9 +81,9 @@ export function validateContent(content: Content): string[] {
       errors.push(`recipe ${r.a} + ${r.b} → ${r.result} is unreachable`);
     }
   }
-  // Special kids come only from planting (D-063), so they're reachable that way.
+  // Special and rare kids come only from planting (D-063, D-072), so they're reachable that way.
   for (const k of content.kids) {
-    if (!k.special && !reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
+    if (!k.special && !k.rare && !reachable.has(k.id)) errors.push(`kid "${k.id}" can never be obtained`);
   }
 
   return errors;
@@ -170,12 +173,6 @@ function validatePlanting(balance: unknown): string[] {
     const ok = Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1) && v[0] <= v[1];
     if (!ok) errors.push(`balance.planting.${key} must be [floor, ceiling] chances in 0..1, floor <= ceiling`);
   }
-  const variants = p.rareVariants;
-  if (!Array.isArray(variants) || !variants.every((v) => typeof v === 'string' && v.length > 0) || new Set(variants).size !== variants.length) {
-    errors.push('balance.planting.rareVariants must be distinct, non-empty ids');
-  }
-  num('rareIncomeMultiplier', (v) => v >= 1, 'a finite number >= 1');
-  num('miniScale', (v) => v > 0 && v <= 1, 'a finite number in (0, 1]');
   return errors;
 }
 
