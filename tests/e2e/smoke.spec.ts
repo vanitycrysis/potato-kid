@@ -4579,6 +4579,9 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     expect(await page.evaluate(() => window.__PK__!.pantry().apple)).toBe(2);
     await page.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
     await expect(card.locator('.kid-card-happy')).toContainText('Happy income applies after this kid returns to the map. Farming still earns no Materials.');
+    // Its happy sun shows in the field, where it stands (Codex review, #90).
+    const id = await page.evaluate(() => window.__PK__!.fields()[0]!.kids[0]!.id);
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.rares().some((r) => r.id === i && r.happy), id)).toBe(true);
     // View field: the field's page, where taking back is done.
     await card.getByRole('button', { name: 'View field' }).click();
     await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
@@ -4664,6 +4667,22 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await page.getByRole('button', { name: 'Back to fields' }).click();
     await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
+  });
+
+  test('the Garden opened from the Pantry keeps Back to Pantry over the return summary (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Pantry', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Pantry' }).getByRole('button', { name: 'View fields' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    // Through a field and back, too.
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('button', { name: 'Back to fields' }).click();
+    await page.getByRole('button', { name: 'Back to Pantry' }).click();
+    await expect(page.getByRole('dialog', { name: 'Pantry' })).toBeVisible();
   });
 
   test('after the return summary, Pick kids comes back with its choices and search; the Pantry with Back to feeding (Codex review, #90)', async ({ page }) => {

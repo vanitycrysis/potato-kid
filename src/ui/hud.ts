@@ -90,7 +90,7 @@ export class Hud {
   private readonly trayCells = new Map<'garden' | 'dex' | 'notebook', HTMLButtonElement>();
   /** The offline summary is up; and the sheet it interrupted, to bring back after (§8). */
   private summaryOpen = false;
-  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null; farm: ((scrollTop: number) => void) | null }) | null = null;
+  private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null; farm: ((scrollTop: number) => void) | null; gardenBack: { label: string; run: () => void } | null }) | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -295,7 +295,7 @@ export class Hud {
     if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot() };
+      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
     }
     this.summaryOpen = true;
     openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, this.content.balance.feeding.foods, (replaced) => {
@@ -314,7 +314,8 @@ export class Hud {
       else if (back.key === 'field' || back.key === 'field-food' || back.key === 'field-pick') this.buildings.openFields(back.launcher);
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
-      else if (back.key === 'garden') this.buildings.open('garden', back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
+      // With the way back its Fields were opened with, if any (the Pantry, feeding).
+      else if (back.key === 'garden') this.buildings.reopenGarden(back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots }, back.gardenBack);
     });
   }
 

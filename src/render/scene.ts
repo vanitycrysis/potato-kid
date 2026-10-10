@@ -1356,7 +1356,21 @@ export class MapScene {
       const at = this.drag?.kidId === k.id ? this.drag.spot : (drawn.get(k.id) ?? k);
       rares.push({ id: k.id, rare, special, x: at.x, y: at.y, box: k.box, scale: k.look.scale, happy: !!k.happy });
     }
-    this.rareLayer.update(rares, this.cam.zoom, this.clock, new Set(kids.map((k) => k.id)));
+    // Farming kids keep their marks where they stand: the happy sun, a rare's sparkle (§22.6;
+    // Codex review, #90).
+    const alive = new Set(kids.map((k) => k.id));
+    for (const f of this.game.state.fields) {
+      for (const w of f.workers) {
+        alive.add(w.id);
+        const special = this.game.isSpecial(w.type);
+        const rare = this.game.isRare(w.type);
+        if (!rare && !special && !w.happiness) continue;
+        const at = this.fieldsView?.feetOf(w.id);
+        if (!at) continue;
+        rares.push({ id: w.id, rare, special, x: at.x, y: at.y, box: this.game.boxOf(w.look), scale: w.look.scale, happy: !!w.happiness });
+      }
+    }
+    this.rareLayer.update(rares, this.cam.zoom, this.clock, alive);
   }
 
   /** Test hook: the rares drawn now. */

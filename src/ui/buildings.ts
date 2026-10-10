@@ -89,6 +89,13 @@ export class BuildingSheets {
     h?.focus({ preventScroll: true });
   }
 
+  /** The Garden as it was before the return summary, with the way back it had (§8; Codex review, #90). */
+  reopenGarden(launcher: HTMLElement | null, restore: SheetRestore, back: { label: string; run: () => void } | null): void {
+    this.sheets.asPage(back);
+    this.open('garden', launcher, restore);
+    this.fieldsBack = back;
+  }
+
   /** Opens a building's sheet; `restore` brings back where it was (GUI_MVP §8). */
   open(building: BuildingId, launcher: HTMLElement | null, restore?: SheetRestore, onClose?: (replaced: boolean) => void): void {
     if (building === 'garden') this.gardenLauncher = launcher;

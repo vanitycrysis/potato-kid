@@ -1322,6 +1322,11 @@ export class Game {
     return null;
   }
 
+  /** A look's box in the current art (a farming kid's, for its marks). */
+  boxOf(look: Look): Box {
+    return this.lookWithBox(look).box;
+  }
+
   /** A look with its box from the current art; a body or face it doesn't have maps to the first. */
   private lookWithBox(look: Look): Look & { box: Box } {
     const body = this.looks.bodies.find((b) => b.id === look.body) ?? this.looks.bodies[0]!;
