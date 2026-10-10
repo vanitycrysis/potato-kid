@@ -1,31 +1,45 @@
-# Session handoff (2026-10-10, for the next Claude session)
+# Session handoff (2026-10-10, evening, for the next Claude session)
 
 **To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**), `docs/TASKS.md`, and `docs/GUI_MVP.md` §§19–22 (Codex's LAYOUT-DESIGN and FARM-DESIGN).
 
 ## Where we are
 
-- **`main`** has everything from both gate-4 rounds except what's listed under open work: the owner's second round (#81), PLOT-REMOVE's sim (#82), MAP-ZOOM (#83), RARE-KIDS' rules (#84), Codex's LAYOUT-DESIGN (#85), FARM-DESIGN (#86) and WILD-ART with the specials (#76), and LAYOUT parts 1 and 2 (#87, #88). Its save schema is 8.
-- **Codex has no open design task.** Its art and designs for this round are all merged. TROPHY-MAP (D-064) waits until after gate 4.
+- **`main` has all of the owner's second gate-4 round (D-068..D-074).** Its save schema is 9. Merged since the last handoff:
+  - **FARMING (#90, Codex review in 16 rounds):** fields, farming kids, the pantry, every farming sheet, the working kid's card, drag-to-assign, the offline "Food grown" lines, and the balance bot farming.
+  - **Codex's scenery relocations out of the Garden block (#92).**
+  - **WILD-KIDS (#93):** the twenty specials and ten rares, drawn from their own bodies, plus tier-6 text with no invented badge.
+  - **DEX-SEGMENTS (#94):** Ordinary, Specials and Rares in the Dex.
+  - **RARE-TIER (#95):** rares stay at tier 6, and the simulator counts rares apart.
+- **Codex has no open design task.** TROPHY-MAP (D-064) waits until after gate 4.
 - **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
 
 ## Open work at handoff
 
-1. **LAYOUT is done:** #87, #88 and #89 (Kids on map, Which kid?, taking kids out of plots, §21) are all on `main`.
-2. **#90, FARMING, a draft that carries all of it.** Codex's P1: the sim alone would leave feeding with nothing to feed (the pantry fills only by farming), so the PR merges only when a player can farm through the shipped UI. Done on `claude/farming-sim`: the sim (fields, farming kids, the pantry, food changes, offline growth), save schema 9, the field bays from `farm_v1.json`, and the kid card's pantry feeding page (§22.6). **Next on the same branch:**
-   - **The map:** beds, two crop stamps and working kids on their pads (Codex's step loop; static in reduced motion), with the twenty scenery relocations in `farm_v1.json` applied; a tap on a field; drag a kid onto a field with the 400 ms dwell and labels (§22.4).
-   - **The sheets:** Garden → Fields (unlock, rows, Find fields), field detail, Choose food with its change review, Pick kids, Take back and Take all back, Pantry first in the Notebook, and the working kid's card (§§22.2–22.7).
-   - **e2e that farm through the UI**, then Codex's review, then the balance bot farming and the numbers tuned (first estimates: 4 fields at 300 / 3,000 / 15,000 / 60,000; 4 kids a field; a bite every 600 s; favourite ×2).
-3. **Then:** the twenty specials' and ten rares' content entries and the wild-body renderer (`art/data/kid_wild_v1.json`: one body frame per type, the shared face at its anchor, bob clips with recorded fallbacks, collision from the type's bounds); the rare tiers (simulator); the Dex's segments (§16.4); the T6 tier text; then the gate-4 build to the owner.
-4. **For the owner** (ask when the build is ready, or sooner if they're around):
-   - **HOME-RANGE:** on the 4 × 4 map, kids wander everywhere. The simulator (#88) shows a casual player completing the roster on day 8.6 instead of 6.4, the first-hour worst seed 9 % deadlocked, and the casual tutorial ending at 3 h instead of 10 min. Codex proposes a soft home range (LAYOUT-DESIGN notes). The owner chooses: keep whole-map wandering, or try the home range in the simulator first.
-   - D-067's happiness durations and the name price are still "proposed".
-5. **Polish notes** (owner's polish pass, not now): Seashell Kid reads closer to a teapot at 55 px; the farm and map paths are quite rectilinear.
+1. **The gate-4 build goes to the owner.** `main`'s CI run publishes `potato-kid-debug-apk`; send the link and what to try (below), then wait for feedback. Turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building. What to try:
+   - **Farming:** Garden → Fields → unlock, choose a food, assign kids (by dragging a kid onto a field, or Assign kids); take them back; the pantry (Notebook → Pantry); feed a kid from its card.
+   - **Map and zoom:** the less busy screen, the 4 × 4 map, pinch to zoom.
+   - **Plants:** taking a kid back out of a filling plot; cancelling a growing plot.
+   - **New kids:** the ten rares and twenty specials (sparkle for rares, profiles, the Dex's three segments).
+2. **For the owner** (with the build):
+   - **HOME-RANGE:** kids wander the whole 4 × 4 map. After #92 a casual player completes the 64-kid roster on day 6.4 without farming and day 6.0 with it, no slower than the old map, so the soft home range is less pressing. Keep whole-map wandering, or try it?
+   - **D-067:** the happiness durations and the name price are still "proposed".
+   - **Farming numbers (Claude's, tunable):** 4 fields at 300 / 3,000 / 15,000 / 60,000 Materials; 4 kids a field; a bite an hour per kid, two on its favourite. In the simulator growth roughly matches feeding (casual: 4,559 grown, 4,295 fed, at most 327 stored), so there's no pantry cap.
+   - **The Dex's long tail:** in 14 casual days the bot finds 7 of the 20 special types and a few of the 10 rares. Completing all 94 takes much longer, as D-063 intends.
+3. **Small follow-ups (not blocking):**
+   - The 96 px rare card portrait's sparkle envelope (GUI_MVP §16.2). The card shows the body without the sleeve today.
+   - The drawn-position obstacle source and the drag's captured food have no killing tests (explained in #90).
+4. **Polish notes** (owner's polish pass, not now): Seashell Kid reads closer to a teapot at 55 px; the farm and map paths are quite rectilinear.
 
-## Decisions I made in reviews (engine rules are Claude's)
+## Decisions I made this session (engine and tuning rules are Claude's)
 
-- **FARM-DESIGN (#86):** farmers are off the map's count, don't wander or fuse, earn no Materials, and need room to come back. Partial progress is kept when workers leave, and reset on a reviewed food change. Haters return all or none. A farming kid can be fed (its happiness timer runs; the income boost waits for the map). No pantry cap for now. At most four workers a field. **Unlocking moves kids out of the bay** (I rejected Codex's "refuse while a kid stands there").
-- **LAYOUT (#87):** Notebook tools are pages of the Notebook (`Sheets.asPage`, no fade, Back to Notebook). The Notebook stays usable in read-only mode (Settings, Map view), with its building rows disabled.
-- **Map v3 (#88):** save schema 8 moves kids by the Garden's offset (+1080, +2880). Loading moves any kid overlapping scenery, clear of partners. Compact-landscape fit floor: 65 CSS px per 180 world units.
+- **Farming (#90):**
+  - A release over a field that doesn't take the kid (early, refused, or no label room) puts it down clear of partners, with newborn grace.
+  - A second finger, a change of food or of places, or a cancel restarts or ends a field's dwell.
+  - Commands carry what was reviewed (`farm.food`, `emptyField.kidIds`, `setFieldFood.from` and `kidIds`); anything stale is refused with `changed`.
+  - Farming kids draw above the rare marks. Field results not shown on a page become world cards.
+  - `biteSeconds` 3600, so there's no hoarding.
+- **Wild kids (#93):** a wild kid's collision box is its type's lifetime bounds. Newborns are Classic; saved faces stay. A fallback clip borrows its alias's frames. Tier marks show a badge only if its art exists.
+- **Rares at tier 6 (#95):** level with the tier-6 specials, since the rare roll is half as likely. Pacing barely moves.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -99,12 +113,20 @@
 - **The sim answers a command before the next HUD frame,** so "a frame while pending" can't be staged in e2e. Design so it doesn't matter (update in place rather than rebuild on pending).
 - **Codex reviews in rounds:** #87 took 6 rounds, #89 two, #88 two. Each found real things: a11y live regions, focus across rebuilds, page-mode scroll, content-sized observers.
 
+### Learned this session (2026-10-10)
+
+- **Codex finds a long tail on big UI PRs.** #90 took 16 rounds of one to five findings each, mostly stale-state and navigation edge cases. Expect it, and mutation-check every fix.
+- **A test that passes without its fix tests nothing.** Twice this session a new e2e test passed with the bug in place. Revert the fix (or apply the mutant) and confirm the test fails before trusting it.
+- **The sim steps on its own clock,** not every animation frame. A test that changes state and checks the result "two frames later" must wait for the state to change.
+- **The balance run's children load `src/` as they start.** Do UI work in the second worktree while a balance run uses this one, or run the balance there.
+- **The probe pitfall:** reloading in one page keeps the save in localStorage, so state from earlier iterations leaks into later ones.
+
 ## Housekeeping
 
 - **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout, on `claude/farming-sim` (#90) at handoff.
-  - `potato-kid-hud`: a second checkout with `node_modules`, on `claude/layout-plots` (#89).
-  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/specials` (merged as #76).
+  - `potato-kid-claude`: Claude's main checkout, on `claude/rare-tier` (#95) at handoff; switch to `main`.
+  - `potato-kid-hud`: a second checkout with `node_modules`, on the handoff branch; its untracked `pw4174.config.ts` serves e2e on port 4174.
+  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/farm-relocations` (merged as #92).
   - `potato-kid-review-50` (with `node_modules`) and `potato-kid-review-82`, `-83`, `-84`: Codex review worktrees; check one out per review with `git fetch origin && git checkout --detach origin/<branch>`.
   - `potato-kid-docs`: docs branches.
 - **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
