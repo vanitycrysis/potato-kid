@@ -61,6 +61,8 @@ describe('fields (D-069, GUI_MVP §22.1-22.3)', () => {
     const r = { minX: plain.x + plain.box.left, maxX: plain.x + plain.box.right, minY: plain.y + plain.box.top, maxY: plain.y + plain.box.bottom };
     expect(r.maxX <= bay.box.minX || r.minX >= bay.box.maxX || r.maxY <= bay.box.minY || r.minY >= bay.box.maxY).toBe(true);
     expect(g.state.world.obstacles).toContain(bay);
+    // With a newborn's grace, so a partner walking up can't take it at once (Codex review, #90).
+    expect(plain.grace).toBe(content.balance.spawn.newbornGraceSeconds);
   });
 
   it('a food is chosen, and choosing it again changes nothing; an unknown food is refused', () => {

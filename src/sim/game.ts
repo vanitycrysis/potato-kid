@@ -1141,9 +1141,9 @@ export class Game {
     if (this.state.materials < price) return reject('cost');
     const world = this.state.world;
     const bay = this.fieldBays[n];
+    const moved: { kid: Kid; x: number; y: number }[] = [];
     if (bay) {
       world.obstacles.push(bay);
-      const moved: { kid: Kid; x: number; y: number }[] = [];
       for (const kid of world.kids) {
         if (isFree(world, kid.box, kid.x, kid.y, kid.id)) continue;
         const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
@@ -1156,6 +1156,9 @@ export class Game {
         [kid.x, kid.y] = [spot.x, spot.y];
       }
     }
+    // Moved kids get a newborn's grace, as from a refused planting: a partner walking up in
+    // this same step can't take them (Codex review, #90).
+    for (const m of moved) m.kid.grace = Math.max(m.kid.grace, this.content.balance.spawn.newbornGraceSeconds);
     this.state.materials -= price;
     this.state.fields.push({ food: null, workers: [], progress: 0 });
     events.push({ type: 'fieldUnlocked', fields: this.state.fields.length });
