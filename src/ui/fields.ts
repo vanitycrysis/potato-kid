@@ -287,16 +287,19 @@ export class FieldSheets {
    * Garden's Fields were opened with, kept through this field's pages (Codex review, #90).
    * `review`, `scrollTop`: as it was, coming back after the return summary.
    */
-  openField(i: number, launcher: HTMLElement | null, options: { gardenBack?: { label: string; run: () => void } | null; review?: boolean; scrollTop?: number } = {}): void {
+  openField(i: number, launcher: HTMLElement | null, options: { gardenBack?: { label: string; run: () => void } | null; review?: boolean; scrollTop?: number; focus?: string } = {}): void {
     const gardenBack = options.gardenBack === undefined ? this.fieldsBack() : options.gardenBack;
     this.sheets.asPage({ label: 'Back to fields', run: () => this.openGardenFields(launcher, gardenBack ?? undefined) });
     const sheet = this.sheets.open({ key: 'field', icon: 'icon_fields', title: `Field ${i + 1}`, requestedHeight: 624, update: () => update() }, launcher);
-    /** This page's way back to itself, from its own pages. */
-    const self = () => this.openField(i, launcher, { gardenBack });
+    /** This page's way back to itself, from its own pages: where it was, focus on `focus` (§22.2). */
+    const self = (focus?: string) => {
+      const scrollTop = this.sheets.snapshot()?.scrollTop ?? 0;
+      return () => this.openField(i, launcher, { gardenBack, scrollTop, ...(focus ? { focus } : {}) });
+    };
     this.page = { key: 'field', field: i, restore: (scrollTop) => this.openField(i, launcher, { gardenBack, review, scrollTop }) };
     const note = this.noteBox();
     const foodLine = el('div', 'field-food');
-    const changeFood = this.button('Choose food', 'plot-action-full field-change-food', () => this.openChooseFood(i, launcher, self));
+    const changeFood = this.button('Choose food', 'plot-action-full field-change-food', () => this.openChooseFood(i, launcher, self('.field-change-food')));
     const kidsHeading = el('h4', 'dex-home-confirm-title', 'Kids farming');
     kidsHeading.tabIndex = -1;
     const count = el('p', 'sheet-body-text');
@@ -307,7 +310,7 @@ export class FieldSheets {
     rail.setAttribute('role', 'progressbar');
     rail.setAttribute('aria-valuemin', '0');
     rail.setAttribute('aria-valuemax', '100');
-    const assign = this.button('Assign kids', 'plot-action-full field-assign', () => this.openPicker(i, launcher, self));
+    const assign = this.button('Assign kids', 'plot-action-full field-assign', () => this.openPicker(i, launcher, self('.field-assign')));
     const roster = el('div', 'plot-kids field-roster');
     const takeAll = this.button('Take all back', 'plot-action-full field-take-all', () => {
       reviewed = this.game.state.fields[i]?.workers.map((w) => w.id) ?? [];
@@ -317,7 +320,7 @@ export class FieldSheets {
       body().querySelector<HTMLElement>('.field-review-heading')?.focus();
     });
     const reviewBox = el('div', 'plot-review ui-surface field-review');
-    const pantry = this.button('Open pantry', 'plot-action-full', () => this.openPantry(launcher, { label: `Back to Field ${i + 1}`, run: self }));
+    const pantry = this.button('Open pantry', 'plot-action-full field-open-pantry', () => this.openPantry(launcher, { label: `Back to Field ${i + 1}`, run: self('.field-open-pantry') }));
     const find = this.button('Find this field', 'plot-action-full', () => {
       const site = this.scene.fieldSite(i);
       if (site) this.scene.zoomAround(site, this.scene.zoom);
@@ -356,7 +359,8 @@ export class FieldSheets {
             const who = w.name ?? this.kidName(w.type);
             const ordinal = this.game.ownedOrdinal(w.type, w.id);
             // Back to this field as it was opened, with its own way back (Codex review, #90).
-            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: self }));
+            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: self(`.field-view-kid[data-kid="${w.id}"]`) }));
+            view.dataset.kid = String(w.id);
             view.setAttribute('aria-label', `View kid: ${who}`);
             const b = this.button('Take back', 'field-take-back', () => this.send({ type: 'unfarm', field: i, kidId: w.id, name: who }));
             b.setAttribute('aria-label', `Take back ${who}`);
@@ -449,6 +453,8 @@ export class FieldSheets {
     };
     update();
     if (options.scrollTop) sheet.scrollTo(options.scrollTop);
+    // Back from a page of its own: on the control that went there, if it is still here.
+    if (options.focus) sheet.body.querySelector<HTMLElement>(options.focus)?.focus({ preventScroll: true });
   }
 
   // --- Choose food and change it (§22.3) ----------------------------------------------------

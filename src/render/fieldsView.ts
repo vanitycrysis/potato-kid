@@ -1,7 +1,7 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
 import type { FarmData, FarmField, KidRig } from '../content/artData';
 import type { Field } from '../sim/game';
-import { defaultBox, type Kid } from '../sim/world';
+import { defaultBox, type Box, type Kid, type Look } from '../sim/world';
 import { KidRigView } from './rigView';
 
 // The food fields on the map (D-069, GUI_MVP §22.1, Codex's farm_v1): a bought field's bed,
@@ -99,7 +99,20 @@ export class FieldsView {
     private readonly reducedMotion: boolean,
     /** Whether a kid type's costume is loaded (and asks for it if not). */
     private readonly ready: (type: string) => boolean,
+    /** A look's box in the current art: a farming kid's hit area (its body, not its shadow). */
+    private readonly boxOf: (look: Look) => Box = () => defaultBox(60),
   ) {}
+
+  /** Farming kid `id`'s box on screen (global coordinates), from its look's box at its feet. */
+  private screenBox(n: FieldNode, id: number, view: KidRigView): { minX: number; minY: number; maxX: number; maxY: number } {
+    const b = this.boxOf(this.looks.get(id) ?? { body: '', face: '', scale: 1 });
+    const a = n.kids.toGlobal({ x: view.root.x + b.left, y: view.root.y + b.top });
+    const c = n.kids.toGlobal({ x: view.root.x + b.right, y: view.root.y + b.bottom });
+    return { minX: Math.min(a.x, c.x), minY: Math.min(a.y, c.y), maxX: Math.max(a.x, c.x), maxY: Math.max(a.y, c.y) };
+  }
+
+  /** Each farming kid's look, for its hit box. */
+  private readonly looks = new Map<number, Look>();
 
   update(fields: readonly Field[], dt: number): void {
     this.clock += dt * 1000;
@@ -132,6 +145,7 @@ export class FieldsView {
         node.views.delete(id);
       }
       for (const w of field.workers) {
+        this.looks.set(w.id, w.look);
         const pad = node.pads.get(w.id);
         if (pad === undefined) continue;
         let view = node.views.get(w.id);
@@ -181,7 +195,7 @@ export class FieldsView {
     let hit: { id: number; front: number } | null = null;
     for (const n of this.nodes) {
       for (const [id, view] of n.views) {
-        const b = view.root.getBounds();
+        const b = this.screenBox(n, id, view);
         if (p.x < b.minX || p.x > b.maxX || p.y < b.minY || p.y > b.maxY) continue;
         const front = n.root.y + view.root.y;
         if (!hit || front > hit.front || (front === hit.front && id < hit.id)) hit = { id, front };
@@ -199,7 +213,7 @@ export class FieldsView {
     const hits: { id: number; d: number }[] = [];
     for (const n of this.nodes) {
       for (const [id, view] of n.views) {
-        const b = view.root.getBounds();
+        const b = this.screenBox(n, id, view);
         const cx = (b.minX + b.maxX) / 2;
         const cy = (b.minY + b.maxY) / 2;
         const hw = Math.max(b.maxX - b.minX, minPx) / 2;

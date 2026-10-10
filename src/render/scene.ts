@@ -277,7 +277,7 @@ export class MapScene {
           if (art.textures.ready(type)) return true;
           void art.textures.ensure(type).catch(() => {});
           return false;
-        })
+        }, (look) => this.game.boxOf(look))
       : null;
     if (this.fieldsView) {
       this.fieldsView.root.eventMode = 'none';

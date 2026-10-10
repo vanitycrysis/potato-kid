@@ -4593,6 +4593,39 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a tap on the soil just below a farming kid opens the field, not the kid (Codex review, #90)', async ({ page }) => {
+    const id = await setup(page);
+    await page.waitForTimeout(300);
+    const feet = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const perUnit = await page.evaluate(() => window.__PK__!.worldToScreen(100, 0).x - window.__PK__!.worldToScreen(0, 0).x) / 100;
+    // 15 world units below its feet: its shadow and canvas padding, not the kid.
+    await page.mouse.click(feet.x, feet.y + 15 * perUnit);
+    await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
+  });
+
+  test('back from a kid’s card, the field is where it was, on that kid’s View kid (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    const second = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const id = pk.debugAdd!('plain', 2300, 4300);
+      pk.debugCommand!({ type: 'farm', field: 0, kidIds: [id] });
+      return id;
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]!.kids.length)).toBe(2);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    const view = field.locator(`.field-view-kid[data-kid="${second}"]`);
+    await view.scrollIntoViewIfNeeded();
+    const scrolled = await field.locator('.sheet-body').evaluate((e) => e.scrollTop);
+    expect(scrolled).toBeGreaterThan(0);
+    await view.click();
+    await page.getByRole('button', { name: 'Back to Field 1' }).click();
+    await expect(field.locator(`.field-view-kid[data-kid="${second}"]`)).toBeFocused();
+    expect(await field.locator('.sheet-body').evaluate((e) => e.scrollTop)).toBe(scrolled);
+  });
+
   test('a tap on a farming kid opens its card; its favourite says so', async ({ page }) => {
     const id = await setup(page, 'toast', {});
     await page.waitForTimeout(300);
