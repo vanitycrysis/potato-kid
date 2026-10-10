@@ -39,6 +39,11 @@ export class Arrivals {
     this.spawn.dataset.cue = 'success'; // the spawn cue is its sound
     this.spawn.append(el('span', 'hud-spawn-label', 'Spawn now'), el('span', 'hud-spawn-price', icon('icon_potatokens', '', 'ui-icon-18'), this.spawnCost));
     this.spawn.addEventListener('click', () => this.instantSpawn());
+    // Why Spawn now is unavailable, or the engine's refusal: announced, and tied to the button
+    // (Codex review, PR #87).
+    this.reason.id = 'arrivals-reason';
+    this.reason.setAttribute('role', 'status');
+    this.spawn.setAttribute('aria-describedby', this.reason.id);
     this.node = el('section', 'garden-arrivals', this.heading, this.population, this.next, this.track, this.spawn, this.reason);
   }
 

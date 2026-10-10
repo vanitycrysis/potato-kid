@@ -37,6 +37,9 @@ export class Notebook {
     private readonly readOnly: () => boolean,
   ) {}
 
+  /** The Notebook's scroll when its open tool was opened. */
+  private returnScroll = 0;
+
   /** Opens the Notebook; coming back from a tool, that tool's row has focus. */
   open(launcher: HTMLElement | null, from?: Row, scrollTop = 0): void {
     // A read-only save can't change its buildings: their rows are unavailable, with the
@@ -74,7 +77,10 @@ export class Notebook {
    * A tool as a page of the Notebook (same shell, `Back to Notebook`). `restore` brings a
    * tool back where it was after the offline summary, still a page (Codex review, PR #87).
    */
-  openRow(row: Row, launcher: HTMLElement | null, scrollTop = 0, restore?: SheetRestore): void {
+  openRow(row: Row, launcher: HTMLElement | null, scrollTop = this.returnScroll, restore?: SheetRestore): void {
+    // Where the Notebook was, for its way back: a tool restored after the offline summary
+    // returns there too (Codex review, PR #87).
+    this.returnScroll = scrollTop;
     this.sheets.asPage({
       label: 'Back to Notebook',
       run: () => {
