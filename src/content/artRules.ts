@@ -1,6 +1,6 @@
 import type { Ambient, LookTable } from '../sim/game';
 import type { Obstacle } from '../sim/world';
-import type { BoundsPx, FarmData, KidRig, MapData, MapInstance, UiData } from './artData';
+import type { BoundsPx, FarmData, KidRig, MapData, MapInstance, UiData, WildData } from './artData';
 import type { KidDef } from './types';
 
 // Pure derivations from ChatGPT/Codex's art data into what the simulation needs.
@@ -18,13 +18,23 @@ export function bodyBox(rig: KidRig, bounds: BoundsPx): { left: number; top: num
   return { left: (bounds[0] - gx) * k, top: (bounds[1] - gy) * k, right: (bounds[2] - gx) * k, bottom: (bounds[3] - gy) * k };
 }
 
-export function lookTable(rig: KidRig): LookTable {
+export function lookTable(rig: KidRig, wild?: WildData): LookTable {
   const a = rig.appearance;
   return {
     bodies: Object.entries(a.bodyWeights).map(([id, weight]) => ({ id, weight, box: bodyBox(rig, rig.bodies[id]!.boundsPx) })),
     faces: Object.entries(a.faceWeights).map(([id, weight]) => ({ id, weight })),
     sizes: a.sizes.map((s) => ({ scale: s.scale, weight: s.weight })),
+    // A wild kid's box is its type's lifetime bounds, through the same ground anchor and
+    // scale as its drawing (kid_wild_v1 renderer.collision).
+    ...(wild ? { types: Object.fromEntries(Object.entries(wild.types).map(([id, t]) => [id, wildBox(wild, t.lifetimeBoundsPx)])) } : {}),
   };
+}
+
+/** A wild kid's box at scale 1, in world units about its ground point. */
+export function wildBox(wild: WildData, bounds: BoundsPx): { left: number; top: number; right: number; bottom: number } {
+  const k = wild.worldCanvasSize / wild.canvas[0];
+  const [gx, gy] = wild.groundAnchor;
+  return { left: (bounds[0] - gx) * k, top: (bounds[1] - gy) * k, right: (bounds[2] - gx) * k, bottom: (bounds[3] - gy) * k };
 }
 
 /** Ambient rest timings from the rig's scheduler and its clips' real lengths. */
@@ -119,13 +129,25 @@ export function worldBox(i: MapInstance): { minX: number; minY: number; maxX: nu
  * Art coverage (D-036): every roster type must resolve through delivered art. Missing
  * art is an error, never a reason for the engine to draw something itself.
  */
-export function rigCoverage(rig: KidRig, kids: KidDef[], delivered: Set<string>): string[] {
+export function rigCoverage(rig: KidRig, kids: KidDef[], delivered: Set<string>, wild?: WildData): string[] {
   const problems: string[] = [];
   const need = (what: string, asset: string | undefined) => {
     if (!asset) problems.push(`${what}: no asset`);
     else if (!delivered.has(asset)) problems.push(`${what}: "${asset}" was not exported`);
   };
   for (const kid of kids) {
+    // A wild kid (D-072, D-073) is its own body: its stand frame instead of a costume.
+    const own = wild?.types[kid.id];
+    if (own) {
+      if (!own.frames.stand) problems.push(`wild kid "${kid.id}" has no "stand" frame`);
+      for (const [name, f] of Object.entries(own.frames)) need(`wild kid "${kid.id}" frame "${name}"`, f.asset);
+      continue;
+    }
+    // Specials and rares must be drawn wild: no legacy costume stands in (kid_wild_v1 selection).
+    if (kid.special || kid.rare) {
+      problems.push(`${kid.special ? 'special' : 'rare'} kid "${kid.id}" has no entry in kid_wild_v1.json`);
+      continue;
+    }
     const costume = rig.costumes[kid.id];
     if (!costume) {
       problems.push(`kid type "${kid.id}" has no costume entry in kid_rig_v2.json`);

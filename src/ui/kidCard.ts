@@ -1,4 +1,4 @@
-import { kidRig } from '../content/artData';
+import { kidRig, kidWild } from '../content/artData';
 import type { Content, FoodDef, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { Field, GameEvent, RejectReason } from '../sim/game';
@@ -439,7 +439,17 @@ export class KidCard {
     happy.setAttribute('aria-live', 'off');
 
     const personality = [
-      ...(kind ? [el('p', 'sheet-helper', `Found only through planting. No fusion recipes. ${kind} kids cannot be bought.`)] : []),
+      // A rare's profile (GUI_MVP §16.3): labelled, its own flavour, then what it is.
+      ...(def?.rare
+        ? [
+            el('h4', 'kid-card-trait kid-card-profile-label', 'Rare · From planting'),
+            el('p', 'sheet-body-text kid-card-profile', kidWild?.rareProfiles[type] ?? ''),
+            el('p', 'sheet-helper', 'Planting only. Cannot be bought.'),
+            el('p', 'sheet-helper', 'No fusion recipes.'),
+          ]
+        : kind
+          ? [el('p', 'sheet-helper', `Found only through planting. No fusion recipes. ${kind} kids cannot be bought.`)]
+          : []),
       ...personalityBlocks(this.content, type),
     ];
 

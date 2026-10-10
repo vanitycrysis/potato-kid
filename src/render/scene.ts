@@ -1,5 +1,5 @@
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
-import type { FarmData, KidRig, MapData, PlantingArt } from '../content/artData';
+import type { FarmData, KidRig, MapData, PlantingArt, WildData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
 import { STEP, type Kid, type Obstacle } from '../sim/world';
@@ -26,6 +26,8 @@ const LANDSCAPE_FIT_FLOOR = 65 / 180;
 /** Everything the scene needs from ChatGPT/Codex's art (D-036: the engine draws none itself). */
 export interface SceneArt {
   rig: KidRig;
+  /** Wild kids, the rares and specials (kid_wild_v1, D-072/D-073): drawn from their own bodies. */
+  wild?: WildData | undefined;
   map: MapData;
   /** Shared art resident; costumes per type, on demand (ROSTER-SCALE). */
   textures: TextureStore;
@@ -285,7 +287,7 @@ export class MapScene {
           if (art.textures.ready(type)) return true;
           void art.textures.ensure(type).catch(() => {});
           return false;
-        }, (look) => this.game.boxOf(look))
+        }, (look, type) => this.game.boxOf(look, type), art.wild)
       : null;
     if (this.fieldsView) {
       this.fieldsView.root.eventMode = 'none';
@@ -854,7 +856,7 @@ export class MapScene {
   }
 
   private createView(kid: Kid): KidRigView {
-    const view = new KidRigView(kid, this.art.rig, this.art.textures.map, this.art.reducedMotion);
+    const view = new KidRigView(kid, this.art.rig, this.art.textures.map, this.art.reducedMotion, this.art.wild);
     view.root.eventMode = 'static';
     view.root.cursor = 'grab';
     view.root.on('pointerdown', (e) => {
@@ -1401,7 +1403,7 @@ export class MapScene {
         if (!rare && !special && !w.happiness) continue;
         const at = this.fieldsView?.feetOf(w.id);
         if (!at) continue;
-        rares.push({ id: w.id, rare, special, x: at.x, y: at.y, box: this.game.boxOf(w.look), scale: w.look.scale, happy: !!w.happiness });
+        rares.push({ id: w.id, rare, special, x: at.x, y: at.y, box: this.game.boxOf(w.look, w.type), scale: w.look.scale, happy: !!w.happiness });
       }
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, alive);

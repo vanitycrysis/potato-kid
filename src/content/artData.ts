@@ -164,6 +164,48 @@ function pick<T>(name: string): T | undefined {
 }
 
 export const kidRig = pick<KidRig>('kid_rig_v2.json');
+
+/** One wild clip frame (kid_wild_v1, D-072/D-073): the stand body, bobbed; the face's state. */
+export interface WildFrame {
+  durationMs: number;
+  frame: string;
+  offsetPx: Vec2;
+  faceState: string;
+  opacity: number;
+}
+
+/**
+ * Codex's wild kids (kid_wild_v1.json): the ten rares and twenty specials keep only the
+ * shared face (D-072, D-073). Each draws one stand body of its own, the face at its anchor,
+ * and simple bob clips; its collision box comes from its own lifetime bounds.
+ */
+export interface WildData {
+  canvas: Vec2;
+  groundAnchor: Vec2;
+  worldCanvasSize: number;
+  /**
+   * Per clip name: its frames, or a `fallback` clip whose frames it borrows (only the frames:
+   * its timing stays the scheduler's, `fallbackTiming`). A clip not listed shows the stand.
+   */
+  clips: Record<string, { loop: boolean; frames?: WildFrame[]; fallback?: string }>;
+  /** Per clip name: the still frame under reduced motion. */
+  reducedMotion: Record<string, { frame: string; offsetPx: Vec2; faceState: string; opacity: number }>;
+  /** A rare's profile line (§16.2). */
+  rareProfiles: Record<string, string>;
+  types: Record<
+    string,
+    {
+      name: string;
+      collection: 'rare' | 'special';
+      frames: Record<string, { asset: string; boundsPx: BoundsPx }>;
+      faceAnchorPx: Vec2;
+      faceScale: number;
+      /** The box every clip stays inside, in source px: collision, at the saved scale. */
+      lifetimeBoundsPx: BoundsPx;
+    }
+  >;
+}
+export const kidWild = pick<WildData>('kid_wild_v1.json');
 const rawMap = pick<MapData>('map_garden_v3.json');
 
 /** One of Codex's four field sites (farm_v1, GUI_MVP §22.1): the bed, its pads, crops and target. */

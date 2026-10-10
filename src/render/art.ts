@@ -1,5 +1,5 @@
 import { Assets, Rectangle, Texture } from 'pixi.js';
-import { trimData, type KidRig } from '../content/artData';
+import { trimData, type KidRig, type WildData } from '../content/artData';
 import type { KidId } from '../content/types';
 
 // Every exported runtime PNG (kids, buildings, FX, map tiles and decor), keyed by asset
@@ -79,13 +79,19 @@ export class TextureStore {
     private readonly rig: KidRig,
     private readonly loader: TextureLoader = pixiLoader,
     private readonly urlOf: (name: string) => string | undefined = (n) => byName.get(n),
+    /** Wild kids (kid_wild_v1): each type's own body frames stand in for its costume, loaded alike. */
+    wild?: WildData,
   ) {
     this.costumeAssets = new Map(Object.entries(rig.costumes).map(([type, c]) => [type, c.components.map((x) => x.asset)]));
+    for (const [type, t] of Object.entries(wild?.types ?? {})) this.costumeAssets.set(type, Object.values(t.frames).map((f) => f.asset));
   }
 
   /** Loads every non-costume asset: the shared art that is always on screen. */
   async loadShared(): Promise<void> {
+    // Per-type art waits for its type: costumes, wild bodies, and legacy special costumes a
+    // wild body replaced (never drawn, so never loaded).
     const costume = new Set([...this.costumeAssets.values()].flat());
+    for (const c of Object.values(this.rig.costumes)) for (const x of c.components) costume.add(x.asset);
     await Promise.all(
       [...byName.keys()]
         .filter((n) => !costume.has(n))

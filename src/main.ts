@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { farmData, gate4Data, kidRig, mapData, uiData } from './content/artData';
+import { farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
 import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
@@ -106,7 +106,7 @@ async function boot(): Promise<void> {
   // D-036: the engine never draws art of its own. If ChatGPT/Codex's art doesn't cover
   // the roster, stop with a clear message instead of inventing placeholders.
   if (!kidRig || !mapData) throw new Error('Art data missing: run `npm run art:export` (kid_rig_v2.json, map_garden_v3.json).');
-  const coverage = [...rigCoverage(kidRig, content.kids, exportedNames), ...uiPaletteCoverage(uiData)];
+  const coverage = [...rigCoverage(kidRig, content.kids, exportedNames, kidWild), ...uiPaletteCoverage(uiData)];
   if (coverage.length) throw new Error(`Art coverage incomplete:\n${coverage.join('\n')}`);
 
   const app = new Application();
@@ -143,7 +143,7 @@ async function boot(): Promise<void> {
   settings.persist = saves.mode !== 'readOnly';
   // Shared art, plus the costumes the map will show first: the Garden's spawn pool and
   // every type in the save (ROSTER-SCALE). Others load when a kid of that type appears.
-  const textures = new TextureStore(kidRig);
+  const textures = new TextureStore(kidRig, undefined, undefined, kidWild);
   const firstTypes = new Set([...Object.keys(gameContent.balance.spawnWeights), ...(loaded.state?.world.kids.map((k) => k.type) ?? [])]);
   await Promise.all([textures.loadShared(), ...[...firstTypes].map((t) => textures.ensure(t))]);
   const scene = new MapScene(
@@ -152,9 +152,10 @@ async function boot(): Promise<void> {
     Number.isFinite(seed) ? seed : 1,
     {
       rig: kidRig,
+      wild: kidWild,
       map: mapData,
       textures,
-      looks: lookTable(kidRig),
+      looks: lookTable(kidRig, kidWild),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
       obstacles: obstaclesFrom(mapData),
       fieldBays: farmData ? fieldBaysFrom(farmData, mapData) : [],

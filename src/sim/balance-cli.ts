@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, withFarmRelocations } from '../content/artRules';
-import type { FarmData, KidRig, MapData } from '../content/artData';
+import type { FarmData, KidRig, MapData, WildData } from '../content/artData';
 import { content } from '../content';
 import { median, simulate, type Report, type Scenario } from './balance';
 import type { GameOptions } from './game';
@@ -13,13 +13,14 @@ const farm = JSON.parse(readFileSync('art/data/farm_v1.json', 'utf8')) as FarmDa
 // The map as the game has it: Codex's farm relocations applied (GUI_MVP §22.1).
 const map = withFarmRelocations(JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData, farm);
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
+const wild = JSON.parse(readFileSync('art/data/kid_wild_v1.json', 'utf8')) as WildData;
 const [w, h] = map.worldSize;
 export const options: GameOptions = {
   bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
   spawnAt: { x: map.garden.spawnOutlet[0], y: map.garden.spawnOutlet[1] },
   obstacles: obstaclesFrom(map),
   fieldBays: fieldBaysFrom(farm, map),
-  looks: lookTable(rig),
+  looks: lookTable(rig, wild),
   // The shipped rests (look, wave, sit, sleep), as main.ts sets up (Codex review, PR #45).
   ambient: ambientFrom(rig, content.balance.wander.ambientChance),
 };
@@ -47,8 +48,11 @@ export function incomeDays(sc: Scenario): number[] {
  */
 function tuned(): typeof content {
   const raw = process.env.PK_BALANCE;
-  if (!raw && !process.env.PK_SPECIALS) return content;
+  if (!raw && !process.env.PK_SPECIALS && !process.env.PK_RARE_TIER) return content;
   const c = structuredClone(content);
+  // PK_RARE_TIER=n tries the ten rares at another tier (D-072: their tier is the simulator's).
+  const rareTier = Number(process.env.PK_RARE_TIER ?? 0);
+  if (rareTier > 0) for (const k of c.kids) if (k.rare) k.tier = rareTier;
   // PK_SPECIALS=n adds n stand-in special kids (tier 5, in no recipe) for planting to sprout.
   const n = Number(process.env.PK_SPECIALS ?? 0);
   for (let i = 1; i <= n; i++) c.kids.push({ id: `special_${i}`, tier: 5, name: `Special ${i}`, special: true });
@@ -81,6 +85,7 @@ export function summarize(reports: Report[][], seeds: number): string {
   lines.push(`Roster ${content.kids.length} kids, ${content.recipes.length} recipes; ${seeds} seeds per scenario.`);
   if (process.env.PK_BALANCE) lines.push(`Balance overrides: ${process.env.PK_BALANCE}`);
   if (process.env.PK_SPECIALS) lines.push(`Stand-in special kids: ${process.env.PK_SPECIALS}`);
+  if (process.env.PK_RARE_TIER) lines.push(`Rare kids at tier ${process.env.PK_RARE_TIER}.`);
   if (process.env.PK_FARM === '0') lines.push('Farming off.');
   lines.push(`Garden: ${sp.tutorialSpawns} tutorial spawns every ${fmt(sp.tutorialIntervalSeconds)}, then ${fmt(sp.intervalSeconds)} at L1.`);
   scenarios.forEach((sc, i) => {

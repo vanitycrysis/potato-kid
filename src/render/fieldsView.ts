@@ -1,5 +1,5 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import type { FarmData, FarmField, KidRig } from '../content/artData';
+import type { FarmData, FarmField, KidRig, WildData } from '../content/artData';
 import type { Field } from '../sim/game';
 import { defaultBox, type Box, type Kid, type Look } from '../sim/world';
 import { KidRigView } from './rigView';
@@ -99,20 +99,23 @@ export class FieldsView {
     private readonly reducedMotion: boolean,
     /** Whether a kid type's costume is loaded (and asks for it if not). */
     private readonly ready: (type: string) => boolean,
-    /** A look's box in the current art: a farming kid's hit area (its body, not its shadow). */
-    private readonly boxOf: (look: Look) => Box = () => defaultBox(60),
+    /** A kid's box in the current art, by look and type: a farming kid's hit area (its body, not its shadow). */
+    private readonly boxOf: (look: Look, type: string) => Box = () => defaultBox(60),
+    /** Wild kids' own bodies (kid_wild_v1). */
+    private readonly wild?: WildData,
   ) {}
 
   /** Farming kid `id`'s box on screen (global coordinates), from its look's box at its feet. */
   private screenBox(n: FieldNode, id: number, view: KidRigView): { minX: number; minY: number; maxX: number; maxY: number } {
-    const b = this.boxOf(this.looks.get(id) ?? { body: '', face: '', scale: 1 });
+    const w = this.looks.get(id);
+    const b = this.boxOf(w?.look ?? { body: '', face: '', scale: 1 }, w?.type ?? '');
     const a = n.kids.toGlobal({ x: view.root.x + b.left, y: view.root.y + b.top });
     const c = n.kids.toGlobal({ x: view.root.x + b.right, y: view.root.y + b.bottom });
     return { minX: Math.min(a.x, c.x), minY: Math.min(a.y, c.y), maxX: Math.max(a.x, c.x), maxY: Math.max(a.y, c.y) };
   }
 
-  /** Each farming kid's look, for its hit box. */
-  private readonly looks = new Map<number, Look>();
+  /** Each farming kid's look and type, for its hit box. */
+  private readonly looks = new Map<number, { look: Look; type: string }>();
 
   update(fields: readonly Field[], dt: number): void {
     this.clock += dt * 1000;
@@ -145,14 +148,14 @@ export class FieldsView {
         node.views.delete(id);
       }
       for (const w of field.workers) {
-        this.looks.set(w.id, w.look);
+        this.looks.set(w.id, { look: w.look, type: w.type });
         const pad = node.pads.get(w.id);
         if (pad === undefined) continue;
         let view = node.views.get(w.id);
         if (!view) {
           if (!this.ready(w.type)) continue;
           const kid = { ...w, x: 0, y: 0, heading: 0, activity: { kind: 'pause', left: 1e9 }, grace: 0, held: false, box: defaultBox(60) } as Kid;
-          view = new KidRigView(kid, this.rig, this.textures, this.reducedMotion);
+          view = new KidRigView(kid, this.rig, this.textures, this.reducedMotion, this.wild);
           view.root.eventMode = 'none';
           node.views.set(w.id, view);
           node.kids.addChild(view.root);
