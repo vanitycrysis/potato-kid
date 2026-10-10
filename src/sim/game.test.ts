@@ -326,7 +326,9 @@ describe('a save from another map (D-071)', () => {
     // A plain in the rock with a water beside it (plain + water is a recipe), and two fire
     // kids overlapping (no recipe: a v2 save can't hold overlapping partners, they'd have fused).
     const plain = before.debugAddKid('plain', 500, 500);
-    const water = before.debugAddKid('water', 720, 500);
+    // The water stands just clear of the first free spot the plain's search finds, (700, 500):
+    // landing there it would touch, and fuse.
+    const water = before.debugAddKid('water', 700 + plain.box.right - plain.box.left + 4, 500);
     const fire = before.debugAddKid('fire', 200, 650);
     const fire2 = before.debugAddKid('fire', 240, 650);
     const free = before.debugAddKid('snow', 200, 850);

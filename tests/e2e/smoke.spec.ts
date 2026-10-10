@@ -1536,8 +1536,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
     // Fuse Potato and Water: two kids placed on one spot end up touching.
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
     await dexButton(page).click();
@@ -1554,8 +1554,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('a kid’s detail: income and found recipes; Back returns to its tile', async ({ page }) => {
     await twoKnown(page);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     await expect.poll(() => page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
     await dexButton(page).click();
@@ -1634,8 +1634,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('a discovery card opens that kid in the Dex', async ({ page }) => {
     await twoKnown(page);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     const card = page.locator('.feedback .toast-button');
     await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
@@ -1663,8 +1663,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dialog(page).getByRole('button', { name: 'Water Kid, Tier 1' }).click();
     await expect(dialog(page).getByText('No recipes found for this kid yet.')).toBeVisible();
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     await expect(dialog(page).locator('.dex-detail .dex-recipe')).toHaveAttribute('aria-label', 'Potato Kid plus Water Kid makes Firefighter Kid');
     await expect(dialog(page).getByRole('button', { name: 'Back to kids' })).toBeFocused();
@@ -1698,8 +1698,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await dialog(page).getByLabel('Find a discovered kid').fill('wat');
     await page.keyboard.press('Escape');
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     const card = page.locator('.feedback .toast-button');
     await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
@@ -1725,8 +1725,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
   test('closing a Dex opened from a discovery card returns focus to the card (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     const card = page.locator('.feedback .toast-button');
     await expect(card).toContainText('Firefighter Kid', { timeout: 10_000 });
@@ -1774,8 +1774,8 @@ test.describe('audio runtime (ART_AUDIO_PLAN)', () => {
     // A first discovery plays the discovery cue (it replaces the fusion cue).
     await page.waitForTimeout(500); // cue buffers decode after the unlock
     await page.evaluate(() => {
-      window.__PK__!.debugAdd!('plain', 1620, 5480);
-      window.__PK__!.debugAdd!('water', 1620, 5480);
+      window.__PK__!.debugAdd!('plain', 1800, 4300);
+      window.__PK__!.debugAdd!('water', 1800, 4300);
     });
     await expect.poll(async () => (await audio(page)).lastCue).toBe('sfx_discovery');
     // Hiding the app stops it, rather than freezing it to finish later (Codex review, PR #53).
@@ -4024,5 +4024,37 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     const at = await garden();
     expect(at.y).toBeGreaterThan(band.top);
     expect(at.y).toBeLessThan(band.bottom);
+  });
+});
+
+test.describe('the 4 × 4 map and its fitted zoom (D-071, GUI_MVP §§20.1-20.2)', () => {
+  const scale = (page: Page) => page.evaluate(() => window.__PK__!.worldToScreen(180, 0).x - window.__PK__!.worldToScreen(0, 0).x);
+
+  test('a compact landscape screen keeps a kid canvas at 65 CSS px at 1×; portrait fits 1080 units across', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // min(640/1080, 360/1920) would be 33.75 px per 180 units: the floor is 65 (§20.1).
+    expect(await scale(page)).toBeCloseTo(65, 6);
+    // Portrait keeps its plain fit, even below the floor (at 390 wide they're equal).
+    await page.setViewportSize({ width: 360, height: 780 });
+    await expect.poll(() => scale(page)).toBeCloseTo((360 / 1080) * 180, 6);
+    // A tall landscape window (not compact) keeps the plain fit.
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await expect.poll(() => scale(page)).toBeCloseTo(Math.min(1200 / 1080, 700 / 1920) * 180, 6);
+  });
+
+  test('the world is 4320 × 7680 and the game starts beside the Garden in its middle', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const frame = await page.evaluate(() => window.__PK__!.gardenFrame());
+    expect(frame.x).toBe(2160);
+    // The view starts on the Garden: its outlet is on screen.
+    const outlet = await page.evaluate((y) => window.__PK__!.worldToScreen(2160, y), frame.bottom);
+    const size = page.viewportSize()!;
+    expect(outlet.y).toBeGreaterThan(0);
+    expect(outlet.y).toBeLessThan(size.height);
+    // As far as the camera goes: the world's far corner.
+    await page.evaluate(() => window.__PK__!.centerOn(99999, 99999));
+    const corner = await page.evaluate(() => window.__PK__!.worldToScreen(4320, 7680));
+    expect(corner.x).toBeCloseTo(size.width, 0);
   });
 });
