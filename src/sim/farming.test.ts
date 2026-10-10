@@ -177,6 +177,20 @@ describe('farming kids (D-069, GUI_MVP §22.4-22.5)', () => {
     g.step([{ type: 'name', kidId: k.id, name: 'Digger' }], 0);
     expect(g.state.fields[0]!.workers[0]!.name).toBe('Digger');
   });
+
+  it('a farming kid’s card: its own rate, and its number among copies on the map and farming (§22.6)', () => {
+    const g = withField();
+    const a = place(g, 'plain', 500, 1500);
+    const b = place(g, 'plain', 800, 1500);
+    const c = place(g, 'plain', 1100, 1500);
+    g.step([{ type: 'farm', field: 0, kidIds: [b.id] }], 0);
+    // b is Kid 2: a is on the map, c farther on; a farming copy before c counts for c too.
+    expect(g.ownedOrdinal('plain', b.id)).toBe(2);
+    expect(g.ownedOrdinal('plain', c.id)).toBe(3);
+    expect(g.ownedOrdinal('plain', a.id)).toBe(1);
+    expect(g.farmRate('plain', ordinary)).toBe(1 / fm.biteSeconds);
+    expect(g.farmRate('plain', likes.favouriteFood)).toBe(fm.favouriteFactor / fm.biteSeconds);
+  });
 });
 
 describe('farming in saves (D-069)', () => {

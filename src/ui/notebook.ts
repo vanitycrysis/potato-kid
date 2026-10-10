@@ -7,6 +7,7 @@ import type { Sheets } from './sheet';
 
 /** Notebook's tools, in order (GUI_MVP §19.2). */
 const ROWS = [
+  { key: 'pantry', label: 'Pantry' },
   { key: 'capacity', label: 'Capacity' },
   { key: 'bias', label: 'Spawn bias' },
   { key: 'compendium', label: 'Compendium' },
@@ -35,6 +36,8 @@ export class Notebook {
     private readonly buildings: BuildingSheets,
     private readonly settings: SettingsStore,
     private readonly readOnly: () => boolean,
+    /** The Pantry, as a page of the Notebook (D-069). */
+    private readonly openPantry?: (launcher: HTMLElement | null) => void,
   ) {}
 
   /** The Notebook's scroll when its open tool was opened. */
@@ -90,6 +93,7 @@ export class Notebook {
     });
     if (row === 'settings') openSettings(this.sheets, this.settings, launcher, restore?.scrollTop);
     else if (row === 'mapview') this.openMapView(launcher, restore?.scrollTop);
+    else if (row === 'pantry') this.openPantry?.(launcher);
     else this.buildings.open(row, launcher, restore);
   }
 

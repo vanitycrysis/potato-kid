@@ -4039,7 +4039,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     );
     expect(order.indexOf('garden-arrivals')).toBeLessThan(order.indexOf('garden-plots'));
     expect(order.indexOf('garden-plots')).toBeLessThan(order.indexOf('garden-rate'));
-    await expect(page.getByRole('navigation', { name: 'Garden sections' }).getByRole('button')).toHaveText(['Arrivals', 'Plots', 'Spawn rate']);
+    await expect(page.getByRole('navigation', { name: 'Garden sections' }).getByRole('button')).toHaveText(['Arrivals', 'Plots', 'Fields', 'Spawn rate']);
     await expect(page.locator('[data-nav=garden]')).toHaveClass(/is-selected/);
   });
 
@@ -4048,8 +4048,9 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await page.locator('[data-nav=notebook]').click();
     const nb = page.getByRole('dialog', { name: 'Notebook' });
     await expect(nb).toContainText('Tools for your garden.');
-    await expect(nb.locator('.notebook-row')).toHaveText(['Capacity', 'Spawn bias', 'Compendium', 'Map view', 'Settings']);
+    await expect(nb.locator('.notebook-row')).toHaveText(['Pantry', 'Capacity', 'Spawn bias', 'Compendium', 'Map view', 'Settings']);
     for (const [row, title] of [
+      ['Pantry', 'Pantry'],
       ['Capacity', 'Capacity'],
       ['Spawn bias', 'Spawn bias'],
       ['Compendium', 'Compendium'],
@@ -4425,3 +4426,277 @@ test.describe('taking kids out of a plot, and cancelling a growing one (D-074, G
     await expect(dialog.getByRole('button', { name: /Cancel growing/ })).toHaveCount(0);
   });
 });
+
+test.describe('farming through the UI (D-069, GUI_MVP §22)', () => {
+  test('unlock a field, choose its food, assign kids, and the pantry fills; then a kid eats what was grown', async ({ page }) => {
+    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugGive!({ materials: 5000 });
+      return [pk.debugAdd!('plain', 1800, 4300), pk.debugAdd!('chef', 2100, 4300), pk.debugAdd!('fire', 2400, 4300)];
+    });
+    // Garden → Fields → Unlock.
+    await page.locator('[data-nav=garden]').click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: 'Fields', exact: true }).click();
+    await sheet.getByRole('button', { name: /Unlock field · 300 Materials/ }).click();
+    await expect(sheet.locator('.garden-fields .plot-note')).toContainText('Field 1 unlocked. Choose a food to grow.');
+    // View field → Choose food → Apple (no review: nothing farming yet).
+    await sheet.locator('.field-view[data-field="0"]').click();
+    await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
+    await page.getByRole('button', { name: 'Choose food' }).click();
+    await page.getByRole('dialog', { name: 'Food for Field 1' }).locator('.field-choose[data-food="apple"]').click();
+    await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Field 1' }).locator('.plot-note')).toContainText('Field 1 now grows Apple.');
+    // Assign kids → check two → Assign 2 kids.
+    await page.getByRole('button', { name: 'Assign kids' }).click();
+    const pick = page.getByRole('dialog', { name: 'Pick kids for Field 1' });
+    await pick.locator(`.picker-check[data-kid="${ids[0]}"]`).check();
+    await pick.locator(`.picker-check[data-kid="${ids[1]}"]`).check();
+    await expect(pick.locator('.field-pick-count')).toHaveText('2 selected · 4 spaces');
+    await pick.getByRole('button', { name: 'Assign 2 kids' }).click();
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    await expect(field.locator('.plot-note')).toContainText('2 kids are farming Apple in Field 1.');
+    await expect(field.locator('.field-take-back')).toHaveCount(2);
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(1);
+    // Time passes (offline): bites go to the pantry.
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.__PK__!.debugAway!(1800_000));
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    if (await summary.isVisible()) await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    const apples = await page.evaluate(() => window.__PK__!.pantry().apple ?? 0);
+    expect(apples).toBeGreaterThanOrEqual(5);
+    // Notebook → Pantry shows them.
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Pantry', exact: true }).click();
+    const pantry = page.getByRole('dialog', { name: 'Pantry' });
+    await expect(pantry.locator('.pantry-row[data-food="apple"]')).toContainText(`${apples} bites`);
+    await page.keyboard.press('Escape');
+    // The fire kid on the map eats a farmed apple.
+    await page.evaluate((id) => window.__PK__!.centerOn(window.__PK__!.kids().find((k) => k.id === id)!.x, window.__PK__!.kids().find((k) => k.id === id)!.y), ids[2]!);
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, ids[2]!);
+    await page.mouse.click(k.x, k.y - 20);
+    const card = page.getByRole('dialog', { name: 'Fire Kid' });
+    await card.getByRole('button', { name: 'Feed', exact: true }).click();
+    await page.getByRole('button', { name: 'Feed Apple to Fire Kid, uses 1 pantry bite' }).click();
+    await expect(page.getByRole('dialog').locator('.kid-status')).toContainText('1 bite used from the pantry.');
+    expect(await page.evaluate(() => window.__PK__!.pantry().apple)).toBe(apples - 1);
+    expect(errors).toEqual([]);
+  });
+
+  test('changing a field’s food reviews the loss and sends haters home; Take all back reviews, then brings them all back', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugGive!({ materials: 5000 });
+      pk.debugCommand!({ type: 'unlockField' });
+      pk.debugCommand!({ type: 'setFieldFood', field: 0, food: 'apple' });
+      const ids = [pk.debugAdd!('plain', 1800, 4300), pk.debugAdd!('chef', 2100, 4300)];
+      pk.debugCommand!({ type: 'farm', field: 0, kidIds: ids });
+      return ids;
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]?.kids.length ?? 0)).toBe(2);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('button', { name: 'Change food' }).click();
+    // Carrot: Chef Kid hates it, Potato Kid doesn't.
+    const food = page.getByRole('dialog', { name: 'Food for Field 1' });
+    await food.locator('.field-choose[data-food="carrot"]').click();
+    const review = food.locator('.field-change-review');
+    await expect(review.locator('.field-review-heading')).toHaveText('Change Field 1 to Carrot?');
+    await expect(review).toContainText('Progress toward the next bite will be lost.');
+    await expect(review).toContainText('1 kid won’t farm Carrot. They will return by the Garden.');
+    await review.getByRole('button', { name: 'Change food' }).click();
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    await expect(field.locator('.plot-note')).toContainText('Field 1 now grows Carrot.');
+    await expect(field.locator('.plot-note')).toContainText('1 kid is back by the Garden.');
+    expect(await page.evaluate((id) => window.__PK__!.kids().some((k) => k.id === id), ids[1]!)).toBe(true);
+    // Take all back: a review first, then everyone.
+    await field.getByRole('button', { name: 'Take all back', exact: true }).click();
+    await expect(field.locator('.field-review-heading')).toHaveText('Take all kids back from Field 1?');
+    await field.getByRole('button', { name: /Take all back · 1 kid/ }).click();
+    await expect(field.locator('.plot-note')).toContainText('All 1 kids are back by the Garden. Field 1 has no kids farming.');
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
+  });
+});
+
+test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
+  /** Field 1 grows `food`; a Potato Kid farms it; `pantry` stocked; the camera on the field. */
+  async function setup(page: Page, food = 'apple', pantry: Record<string, number> = { apple: 3 }): Promise<number> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(
+      ([food, pantry]) => {
+        const pk = window.__PK__!;
+        pk.debugGive!({ materials: 5000, pantry });
+        pk.debugCommand!({ type: 'unlockField' });
+        pk.debugCommand!({ type: 'setFieldFood', field: 0, food });
+        const id = pk.debugAdd!('plain', 2200, 4700);
+        pk.debugCommand!({ type: 'farm', field: 0, kidIds: [id] });
+        pk.centerOn(1790, 4650);
+        return id;
+      },
+      [food, pantry] as const,
+    );
+    await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]?.kids.length ?? -1)).toBe(1);
+    // Drawn in its field only: no map figure left behind.
+    expect(await page.evaluate((i) => window.__PK__!.presentationOf(i), id)).toBeUndefined();
+    return id;
+  }
+
+  async function openFromRoster(page: Page): Promise<void> {
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'View kid: Potato Kid' }).click();
+  }
+
+  test('from its field’s roster: what it farms and how fast, no Materials, View field in place of planting; fed from the pantry', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await setup(page);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    const field = page.getByRole('dialog', { name: 'Field 1' });
+    // Codex's roster row: who, its number and what it farms; View kid and Take back.
+    await expect(field.locator('.field-worker')).toContainText('Tier 1 · Kid 1');
+    await expect(field.locator('.field-worker')).toContainText('Farming Apple');
+    await field.getByRole('button', { name: 'View kid: Potato Kid' }).click();
+    const card = page.getByRole('dialog', { name: 'Potato Kid' });
+    await expect(card.locator('.sheet-subtitle')).toHaveText('Farming Apple · Field 1 · Kid 1');
+    await expect(card.locator('.kid-card-income')).toHaveText('0 Materials while farming.');
+    await expect(card.locator('.kid-card-farming-lines')).toHaveText('Farms Apple · 6 bites per hour.');
+    await expect(card.getByRole('button', { name: 'Choose a plot' })).toBeHidden();
+    await expect(card.getByRole('button', { name: 'View field' })).toBeVisible();
+    // Fed while farming: its happiness counts down; the boost waits for the map.
+    await card.getByRole('button', { name: 'Feed', exact: true }).click();
+    await page.getByRole('button', { name: 'Feed Apple to Potato Kid, uses 1 pantry bite' }).click();
+    await expect(page.getByRole('dialog').locator('.kid-status')).toContainText('1 bite used from the pantry.');
+    expect(await page.evaluate(() => window.__PK__!.pantry().apple)).toBe(2);
+    await page.getByRole('dialog').getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(card.locator('.kid-card-happy')).toContainText('Happy income applies after this kid returns to the map. Farming still earns no Materials.');
+    // View field: the field's page, where taking back is done.
+    await card.getByRole('button', { name: 'View field' }).click();
+    await expect(page.getByRole('dialog', { name: 'Field 1' })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test('a tap on a farming kid opens its card; its favourite says so', async ({ page }) => {
+    const id = await setup(page, 'toast', {});
+    await page.waitForTimeout(300);
+    const feet = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.click(feet.x, feet.y - 25);
+    const card = page.getByRole('dialog', { name: 'Potato Kid' });
+    await expect(card.locator('.sheet-subtitle')).toHaveText('Farming Toast · Field 1 · Kid 1');
+    await expect(card.locator('.kid-card-farming-lines')).toHaveText('Favourite · Farms Toast faster · 12 bites per hour.');
+  });
+
+  test('taken back while its card is open, the card becomes a map kid’s again', async ({ page }) => {
+    const id = await setup(page);
+    await openFromRoster(page);
+    const card = page.getByRole('dialog', { name: 'Potato Kid' });
+    await expect(card.getByRole('button', { name: 'View field' })).toBeVisible();
+    await page.evaluate((i) => window.__PK__!.debugCommand!({ type: 'unfarm', field: 0, kidId: i }), id);
+    await expect(card.locator('.sheet-subtitle')).toHaveText(/^On your map · Kid \d+$/);
+    // Drawn on the map again, by the Garden.
+    expect(await page.evaluate((i) => window.__PK__!.presentationOf(i), id)).toBeDefined();
+    await expect(card.locator('.kid-card-income')).toContainText('Materials / h');
+    await expect(card.getByRole('button', { name: 'Choose a plot' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'View field' })).toBeHidden();
+  });
+
+  test('the return summary says how much food grew, and of what', async ({ page }) => {
+    await setup(page, 'apple', {});
+    await page.evaluate(() => window.__PK__!.debugAway!(1800_000));
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary.locator('.offline-food')).toHaveText(/^Food grown: \d+ bites?\.$/);
+    const bites = await page.evaluate(() => window.__PK__!.pantry().apple ?? 0);
+    expect(bites).toBeGreaterThanOrEqual(3);
+    await expect(summary.locator('.offline-food')).toHaveText(`Food grown: ${bites} bites.`);
+    await expect(summary.locator('.offline-food-lines .stat-row')).toHaveCount(1);
+    await expect(summary.locator('.offline-food-lines')).toContainText('Apple');
+    await expect(summary.locator('.offline-food-lines')).toContainText(`+${bites} bites`);
+  });
+});
+
+test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () => {
+  /** Field 1's drop target's middle, in world units (Codex's dragRelative about its ground, 1790, 4740). */
+  const TARGET = { x: 1790, y: 4740 - 112 };
+
+  /** A bought field growing `food`, the camera on it, and a kid of `type` beside it. */
+  async function setup(page: Page, food: string, type = 'plain'): Promise<number> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(
+      ([food, type]) => {
+        const pk = window.__PK__!;
+        pk.debugGive!({ materials: 5000 });
+        pk.debugCommand!({ type: 'unlockField' });
+        pk.debugCommand!({ type: 'setFieldFood', field: 0, food });
+        pk.centerOn(1790, 4700);
+        return pk.debugAdd!(type, 2200, 4700);
+      },
+      [food, type] as const,
+    );
+    await page.waitForTimeout(300);
+    return id;
+  }
+
+  /** Moves the finger to world point `w`, read at the moment of moving (the camera may have scrolled). */
+  async function moveTo(page: Page, w: { x: number; y: number }): Promise<void> {
+    const p = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), w);
+    await page.mouse.move(p.x, p.y, { steps: 4 });
+  }
+
+  async function pick(page: Page, id: number): Promise<void> {
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+  }
+
+  const label = (page: Page) => page.locator('.home-label:not(.home-probe)');
+
+  test('held near a field it can farm, the label says so; held over it, then released, the kid goes to work', async ({ page }) => {
+    const id = await setup(page, 'apple');
+    await pick(page, id);
+    // Beside the field (the Garden's target is off screen): its entry label shows.
+    await moveTo(page, { x: 2150, y: 4650 });
+    await expect(label(page)).toContainText('Farm Apple in Field 1');
+    await moveTo(page, TARGET);
+    await expect(label(page)).toContainText(/Keep holding…|Release to start farming/);
+    await page.waitForTimeout(500);
+    await expect(label(page)).toContainText('Release to start farming');
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]?.kids.length ?? 0)).toBe(1);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(false);
+    // Its map figure goes with it; the field draws it now.
+    expect(await page.evaluate((i) => window.__PK__!.presentationOf(i), id)).toBeUndefined();
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.fields()[0]!.kids.some((k) => k.id === i), id)).toBe(true);
+  });
+
+  test('released before the dwell, the kid stays on the map', async ({ page }) => {
+    const id = await setup(page, 'apple');
+    await pick(page, id);
+    await moveTo(page, TARGET);
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
+  });
+
+  test('over a field growing a food it hates, the label says why, it never arms, and the kid stays', async ({ page }) => {
+    // Potato Kid hates pickles.
+    const id = await setup(page, 'pickle');
+    await pick(page, id);
+    await moveTo(page, TARGET);
+    await page.waitForTimeout(700);
+    await expect(label(page)).toContainText('Potato Kid won’t farm Pickle.');
+    await expect(page.locator('.home-target')).toHaveAttribute('data-refused', 'true');
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate((i) => window.__PK__!.kids().some((k) => k.id === i), id)).toBe(true);
+    expect(await page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([]);
+  });
+});
+

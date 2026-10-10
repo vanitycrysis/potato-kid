@@ -41,6 +41,8 @@ export class FieldSheets {
     private readonly readOnly: () => boolean,
     /** Opens the Garden scrolled to its Fields section (Back from a field page, View fields). */
     private readonly openGardenFields: (launcher: HTMLElement | null) => void,
+    /** Opens a farming kid's card, with its way back (View kid, §22.2). */
+    private readonly openKid: (kidId: number, launcher: HTMLElement | null, back: { label: string; go: () => void }) => void,
   ) {}
 
   private get game() {
@@ -226,7 +228,8 @@ export class FieldSheets {
         unlock.hidden = bought || i !== fields.length;
         shortfall.hidden = bought;
         if (f) {
-          const s = f.food ? `${this.foodName(f.food)} · ${f.workers.length === 0 ? 'No kids farming' : `${f.workers.length} / ${this.fm.kidsPerField} kids farming`}` : 'Choose a food to grow.';
+          // The food, then the count on its own line (§22.2).
+          const s = f.food ? this.foodName(f.food) : 'Choose a food to grow.';
           if (status.textContent !== s) status.textContent = s;
           const c = `${f.workers.length} / ${this.fm.kidsPerField} kids farming`;
           if (count.textContent !== c) count.textContent = c;
@@ -301,20 +304,29 @@ export class FieldSheets {
         roster.replaceChildren(
           ...f.workers.map((w) => {
             const fav = this.content.personality[w.type]?.favouriteFood === f.food;
-            const b = this.button('Take back', 'plot-take-out field-take-back', () => this.send({ type: 'unfarm', field: i, kidId: w.id, name: w.name ?? this.kidName(w.type) }));
-            b.setAttribute('aria-label', `Take back ${w.name ?? this.kidName(w.type)}`);
+            const who = w.name ?? this.kidName(w.type);
+            const ordinal = this.game.ownedOrdinal(w.type, w.id);
+            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: () => this.openField(i, launcher) }));
+            view.setAttribute('aria-label', `View kid: ${who}`);
+            const b = this.button('Take back', 'field-take-back', () => this.send({ type: 'unfarm', field: i, kidId: w.id, name: who }));
+            b.setAttribute('aria-label', `Take back ${who}`);
             takeBack.set(w.id, b);
             return el(
               'div',
-              'plot-kid',
-              portrait(kidRig!, w.type, 48, w.look),
+              'ui-surface field-worker',
               el(
-                'span',
-                'dex-home-row-text',
-                el('span', 'dex-home-row-name', w.name ?? this.kidName(w.type)),
-                el('span', 'sheet-helper', `${w.name ? `${this.kidName(w.type)} · ` : ''}Tier ${this.tier(w.type)}${fav ? ' · Favourite · Farms faster' : ''}`),
+                'div',
+                'plot-kid field-worker-identity',
+                portrait(kidRig!, w.type, 48, w.look),
+                el(
+                  'span',
+                  'dex-home-row-text',
+                  el('span', 'dex-home-row-name', who),
+                  el('span', 'sheet-helper', `${w.name ? `${this.kidName(w.type)} · ` : ''}Tier ${this.tier(w.type)} · Kid ${ordinal}`),
+                  el('span', 'sheet-helper', fav ? 'Favourite · Farms faster' : `Farming ${f.food ? this.foodName(f.food) : ''}`),
+                ),
               ),
-              b,
+              el('div', 'plot-confirm-actions', view, b),
             );
           }),
         );
@@ -341,7 +353,9 @@ export class FieldSheets {
           );
         }
       }
-      // Live: the rate, the next bite, the room, and what can be pressed now.
+      // Live: the count, the rate, the next bite, the room, and what can be pressed now.
+      const c = `${f.workers.length} / ${this.fm.kidsPerField} kids farming`;
+      if (count.textContent !== c) count.textContent = c;
       const perHour = this.game.fieldRate(i) * 3600;
       const r = !f.food ? 'Choose a food to start.' : f.workers.length === 0 ? 'Paused · Assign a kid to keep farming.' : `${perHour % 1 === 0 ? perHour : perHour.toFixed(1)} bites per hour · Next bite in ${formatDuration(Math.ceil((1 - f.progress) / this.game.fieldRate(i)))}`;
       if (rate.textContent !== r) rate.textContent = r;
@@ -398,6 +412,7 @@ export class FieldSheets {
         // No review when nothing is lost: no kids and no progress (§22.3).
         if (f.workers.length === 0 && f.progress === 0) {
           this.send({ type: 'setFieldFood', field: i, food: food.id, returning: 0 });
+          sent = true;
           return;
         }
         proposing = food.id;
@@ -411,7 +426,8 @@ export class FieldSheets {
     });
     list.append(...rows.map((r) => r.node));
     let shown = '';
-    let wasPending = false;
+    /** A food was sent from this page: when it's answered, back to the field (which says so). */
+    let sent = false;
     const update = () => {
       const f = this.game.state.fields[i];
       if (!f) return;
@@ -425,13 +441,14 @@ export class FieldSheets {
         r.node.classList.toggle('is-selected', current);
         this.setEnabled(r.choose, !current && !this.pending && !this.readOnly() && proposing === null);
       }
-      // A food set: back to the field's page, which says so.
-      if (wasPending && !this.pending && this.notes.has(i) && !this.notes.get(i)!.warn) {
-        wasPending = false;
-        this.openField(i, launcher);
-        return;
+      // A food set: back to the field's page, which says so. A refusal stays here.
+      if (sent && !this.pending) {
+        sent = false;
+        if (!this.notes.get(i)?.warn) {
+          this.openField(i, launcher);
+          return;
+        }
       }
-      wasPending = this.pending?.type === 'setFieldFood' && this.pending.field === i;
       const key = `${proposing}|${f.food}|${f.workers.map((w) => w.id).join(',')}`;
       if (key !== shown) {
         shown = key;
@@ -447,7 +464,10 @@ export class FieldSheets {
             shown = '';
             update();
           });
-          const change = this.button('Change food', 'sheet-action plot-confirm-action field-change-go', () => this.send({ type: 'setFieldFood', field: i, food: to, returning: haters.length }));
+          const change = this.button('Change food', 'sheet-action plot-confirm-action field-change-go', () => {
+            this.send({ type: 'setFieldFood', field: i, food: to, returning: haters.length });
+            sent = true;
+          });
           reviewBox.replaceChildren(
             heading,
             el('p', 'sheet-body-text', `${f.food ? this.foodName(f.food) : 'Nothing'} → ${this.foodName(to)}`),
@@ -496,23 +516,24 @@ export class FieldSheets {
     go.addEventListener('click', () => {
       if (go.getAttribute('aria-disabled') === 'true' || draft.length === 0) return;
       this.send({ type: 'farm', field: i, kidIds: [...draft] });
+      sent = true;
     });
     sheet.footer.append(lines, go);
     const rows = new Map<number, { node: HTMLElement; box: HTMLInputElement; text: string; hated: boolean }>();
-    let wasPending = false;
+    /** Kids were sent from this page: when it's answered, back to the field (which says so). */
+    let sent = false;
     const update = () => {
       const f = this.game.state.fields[i];
       if (!f) return;
       sheet.setSubtitle(`${f.food ? this.foodName(f.food) : ''} · ${f.workers.length} / ${this.fm.kidsPerField} farming`);
-      // Accepted: back to the field's page, which says so.
-      if (wasPending && !this.pending) {
-        wasPending = false;
+      // Accepted: back to the field's page, which says so. A refusal stays here.
+      if (sent && !this.pending) {
+        sent = false;
         if (!this.notes.get(i)?.warn) {
           this.openField(i, launcher);
           return;
         }
       }
-      wasPending = this.pending?.type === 'farm' && this.pending.field === i;
       const kids = [...this.game.state.world.kids].sort((a, b) => a.id - b.id);
       for (const [id, r] of rows) {
         if (kids.some((k) => k.id === id)) continue;

@@ -168,6 +168,32 @@ export class FieldsView {
     return node;
   }
 
+  /**
+   * The farming kid drawn under global point `p`, the frontmost (lowest feet) first, or null:
+   * an actual working kid's tap opens its card (GUI_MVP §22.2).
+   */
+  workerAt(p: { x: number; y: number }): number | null {
+    let hit: { id: number; front: number } | null = null;
+    for (const n of this.nodes) {
+      for (const [id, view] of n.views) {
+        const b = view.root.getBounds();
+        if (p.x < b.minX || p.x > b.maxX || p.y < b.minY || p.y > b.maxY) continue;
+        const front = n.root.y + view.root.y;
+        if (!hit || front > hit.front || (front === hit.front && id < hit.id)) hit = { id, front };
+      }
+    }
+    return hit?.id ?? null;
+  }
+
+  /** A farming kid's feet in world units, or undefined (test hook). */
+  feetOf(id: number): { x: number; y: number } | undefined {
+    for (const n of this.nodes) {
+      const view = n.views.get(id);
+      if (view) return { x: n.root.x + view.root.x, y: n.root.y + view.root.y };
+    }
+    return undefined;
+  }
+
   /** Test hook: what each bought field shows. */
   shown(): { food: string | null; crops: number; kids: { id: number; pad: number }[] }[] {
     return this.nodes.map((n) => ({ food: n.food ?? null, crops: n.crops.children.length, kids: [...n.views.keys()].map((id) => ({ id, pad: n.pads.get(id)! })) }));

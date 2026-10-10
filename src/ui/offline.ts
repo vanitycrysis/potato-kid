@@ -7,7 +7,7 @@ import type { Sheets } from './sheet';
 // the catch-up already credited; dismissing it changes nothing.
 
 /** One report, shown once. `onClose` runs when the player dismisses it, by any path. */
-export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHours: number, onClose: (replaced: boolean) => void): void {
+export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHours: number, foods: readonly { id: string; name: string }[], onClose: (replaced: boolean) => void): void {
   const s = sheets.open({ key: 'offline', icon: 'icon_timer', title: 'Welcome back', requestedHeight: 480, onClose }, null);
   s.setSubtitle('Your garden kept growing.');
 
@@ -18,6 +18,13 @@ export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHou
     const row = el('div', 'stat-row', icon(iconName, '', 'ui-icon-24'), text, el('span', 'stat-value', value));
     return row;
   };
+  // Food the fields grew (GUI_MVP §22.6): the total, then each food, in the pantry's order.
+  const grown = foods.filter((f) => (report.food[f.id] ?? 0) > 0);
+  const bites = (n: number) => `${formatExact(n)} ${n === 1 ? 'bite' : 'bites'}`;
+  const total = grown.reduce((a, f) => a + report.food[f.id]!, 0);
+  const food = total
+    ? [el('p', 'sheet-body-text offline-food', `Food grown: ${bites(total)}.`), el('div', 'stats offline-food-lines', ...grown.map((f) => stat(`icon_food_${f.id}`, f.name, `+${bites(report.food[f.id]!)}`)))]
+    : [];
   const materials = formatCount(report.materials);
   const exact = formatExact(report.materials);
   s.body.append(el('h3', 'sheet-section', `Time credited: ${formatDuration(report.seconds)}`));
@@ -34,6 +41,7 @@ export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHou
         ? [stat('icon_garden', 'Kids sprouted', formatExact(report.sprouted.length)), stat('icon_timer', 'Plots ready', formatExact(report.plotsWaiting))]
         : []),
     ),
+    ...food,
     el('p', 'sheet-body-text', 'Kids wandered in. Recipes wait for you.'),
   );
   const done = el('button', 'ui-button ui-primary sheet-action', el('span', 'action-label', 'Back to the garden'));

@@ -926,6 +926,13 @@ export class Game {
   }
 
   /** Materials to unlock the next plot, or null when every plot is unlocked. */
+  /** The next field's price (D-069), or null at the most fields. */
+  get fieldUnlockCost(): number | null {
+    const fm = this.content.balance.farming;
+    const n = this.state.fields.length;
+    return n >= fm.maxFields ? null : (fm.unlockPrices[n] ?? null);
+  }
+
   get plotUnlockCost(): number | null {
     const p = this.content.balance.planting;
     const n = this.state.plots.length;
@@ -1227,13 +1234,47 @@ export class Game {
     for (const kid of back) events.push({ type: 'unfarmed', kid, field: c.field, count: field.workers.length });
   }
 
+  /** Kids a field takes (D-069). */
+  get kidsPerField(): number {
+    return this.content.balance.farming.kidsPerField;
+  }
+
+  /** A type's favourite and hated foods (D-058). */
+  likes(type: KidId): { favouriteFood: string; hatedFood: string } | undefined {
+    return this.content.personality[type];
+  }
+
+  /** A food's name. */
+  foodName(id: string): string {
+    return this.content.balance.feeding.foods.find((f) => f.id === id)?.name ?? id;
+  }
+
+  /** A type's name. */
+  kidName(type: KidId): string {
+    return this.content.kids.find((k) => k.id === type)?.name ?? type;
+  }
+
+  /**
+   * Kid n among a type's copies on the map and farming, by id: how a farming kid is numbered
+   * on its card and in its field (GUI_MVP §22.2, §22.6).
+   */
+  ownedOrdinal(type: KidId, id: number): number {
+    const ids = [...this.state.world.kids, ...this.state.fields.flatMap((f) => f.workers)].filter((k) => k.type === type && k.id <= id);
+    return ids.length || 1;
+  }
+
+  /** How many bites a second one kid of `type` grows of `food`: faster on its favourite (D-069). */
+  farmRate(type: KidId, food: string): number {
+    const fm = this.content.balance.farming;
+    return (this.content.personality[type]?.favouriteFood === food ? fm.favouriteFactor : 1) / fm.biteSeconds;
+  }
+
   /** How many bites a second a field grows: each kid's rate, faster on its favourite (D-069). */
   fieldRate(i: number): number {
     const field = this.state.fields[i];
     if (!field?.food) return 0;
-    const fm = this.content.balance.farming;
     let rate = 0;
-    for (const k of field.workers) rate += (this.content.personality[k.type]?.favouriteFood === field.food ? fm.favouriteFactor : 1) / fm.biteSeconds;
+    for (const k of field.workers) rate += this.farmRate(k.type, field.food);
     return rate;
   }
 

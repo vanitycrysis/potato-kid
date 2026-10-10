@@ -7,6 +7,7 @@ import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { formatCount, formatDuration, formatExact } from './format';
 import { Arrivals } from './arrivals';
 import { BuildingSheets } from './buildings';
+import { FieldSheets } from './fields';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
 import type { PlotsSnapshot } from './gardenPlots';
@@ -82,6 +83,7 @@ export class Hud {
   private readonly notes: PlantingNotes;
   private readonly kidCard: KidCard;
   private readonly notebook: Notebook;
+  private readonly fields: FieldSheets;
   private readonly kidsOnMap: KidsOnMap;
   private readonly arrivals: Arrivals;
   /** The navigation row: Garden, Dex, Notebook (GUI_MVP §19.1). */
@@ -131,18 +133,31 @@ export class Hud {
     );
     this.notes = new PlantingNotes(settings);
     this.arrivals = new Arrivals(scene, content, () => this.save.readOnly);
-    this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals);
-    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly);
+    // Food fields and the pantry (D-069, GUI_MVP §22).
+    this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher) => this.buildings.openFields(launcher), (kidId, launcher, back) => this.kidCard.open(kidId, launcher, back));
+    this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
+    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) =>
+      this.fields.openPantry(launcher, {
+        label: 'Back to Notebook',
+        run: () => {
+          this.sheets.asPage();
+          this.notebook.open(launcher, 'pantry');
+        },
+      }),
+    );
     this.dex = new Dex(scene, content, this.sheets, this.buildings, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.save.readOnly, (launcher, back) => this.kidsOnMap.open(launcher, { back }));
     // A tap on a kid opens its card (GUI_MVP §18.1). Closed, focus goes to the Dex control
     // (world kids are no focus targets); a read-only save can still browse it.
-    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly);
+    this.kidCard = new KidCard(scene, content, this.sheets, this.buildings, this.notes, () => this.save.readOnly, (field, launcher) => this.fields.openField(field, launcher));
     scene.listenKidTap((kidId) => this.kidCard.open(kidId, dex));
     // Every kid on the map, and a tap's candidates (GUI_MVP §§19.2, 20.1).
     this.kidsOnMap = new KidsOnMap(scene, content, this.sheets, (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal));
     scene.listenKidChoice((ids) => this.kidsOnMap.open(dex, { ids }));
     // A tap on a plot opens the Garden on it (GUI_MVP §15.2); a read-only save changes nothing.
     const gardenCell = this.trayCells.get('garden')!;
+    // A tap on a bought field opens its page (GUI_MVP §22.2).
+    scene.listenFieldTap((field) => this.fields.openField(field, gardenCell));
+    scene.listenWorkerTap((kidId) => this.kidCard.open(kidId, dex));
     scene.listenPlotTap((plot) => {
       if (!this.save.readOnly) this.buildings.openPlot(plot, gardenCell);
     });
@@ -280,7 +295,7 @@ export class Hud {
       this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot() };
     }
     this.summaryOpen = true;
-    openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, (replaced) => {
+    openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, this.content.balance.feeding.foods, (replaced) => {
       if (replaced) return;
       this.summaryOpen = false;
       const back = this.interrupted;
@@ -290,6 +305,8 @@ export class Hud {
       else if (back.key === 'kid' && back.card) this.kidCard.restore(back.card, back.launcher, back.scrollTop);
       else if (back.key === 'notebook') this.notebook.open(back.launcher, undefined, back.scrollTop);
       else if (KidsOnMap.isList(back.key)) this.kidsOnMap.reopen(back.scrollTop);
+      // A field's pages come back as the Garden's Fields (D-069).
+      else if (back.key === 'field' || back.key === 'field-food' || back.key === 'field-pick') this.buildings.openFields(back.launcher);
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
       else if (back.key === 'garden') this.buildings.open('garden', back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
@@ -376,7 +393,7 @@ export class Hud {
 
   private onStep(events: GameEvent[]): void {
     // A sheet shows its own command's refusal inline; the world never repeats it (GUI_MVP §9).
-    const inSheet = new Set([...this.buildings.onStep(events), ...this.kidCard.onStep(events), ...this.arrivals.onStep(events)]);
+    const inSheet = new Set([...this.buildings.onStep(events), ...this.kidCard.onStep(events), ...this.arrivals.onStep(events), ...this.fields.onStep(events)]);
     const items = feedbackFor(
       events.filter((e) => !inSheet.has(e)),
       this.known,

@@ -13,6 +13,8 @@ export interface Scenario {
   name: string;
   /** Whether the bot may plant kids (D-054); off measures the map clogging. */
   plant?: boolean;
+  /** Whether the bot may farm (D-069): buy fields, send spare kids to them, feed from the pantry. */
+  farm?: boolean;
   /** Play sessions: each is `play` seconds of active play, then `away` seconds offline. */
   sessions: { play: number; away: number }[];
   /** Seconds between the bot's actions (one drag or one purchase). */
@@ -37,6 +39,12 @@ export interface Report {
   /** Kids planted, and kids that sprouted. */
   planted: number;
   sprouted: number;
+  /**
+   * Farming (D-069): when each number of fields was bought, bites grown and fed, the most
+   * bites the pantry held at once (the hoarding check, GUI_MVP §22.6) and kids farming at
+   * the end.
+   */
+  farming: { fieldsAt: Record<number, { play: number; clock: number }>; grown: number; fed: number; peakPantry: number; farmers: number };
   /** Wall-clock seconds at which the tutorial's last spawn arrived (null: not reached). */
   tutorialDone: number | null;
   /**
@@ -72,6 +80,7 @@ export interface Report {
 export function simulate(content: Content, options: GameOptions, scenario: Scenario, seed: number): Report {
   const game = new Game(content, { ...options, now: 0 }, seed);
   const plant = scenario.plant ?? true;
+  const farm = scenario.farm ?? true;
   const tiers = new Map(content.kids.map((k) => [k.id, k.tier]));
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   // The roster: the recipe kids; planting-only specials are counted apart.
@@ -86,6 +95,10 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
   const plotsAt: Report['plotsAt'] = {};
   let planted = 0;
   let sprouted = 0;
+  const fieldsAt: Report['farming']['fieldsAt'] = {};
+  let grown = 0;
+  let fed = 0;
+  let peakPantry = 0;
   const income: Report['income'] = [];
   let firstRecipe: number | null = null;
   let play = 0;
@@ -114,10 +127,12 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     for (const [b, level] of Object.entries(s.buildings) as [BuildingId, number][]) levelAt[b][level] ??= { play, clock };
     if (tutorialDone === null && s.gardenSpawns >= content.balance.spawn.tutorialSpawns) tutorialDone = clock;
     plotsAt[s.plots.length] ??= { play, clock };
+    fieldsAt[s.fields.length] ??= { play, clock };
+    peakPantry = Math.max(peakPantry, Object.values(s.pantry).reduce((a, n) => a + n, 0));
   };
   note();
 
-  const bot = createBot(game, content, plant);
+  const bot = createBot(game, content, plant, farm);
   const decide = bot.decide;
 
   /** Where the sessions put the clock: summed exactly, so no step drift builds up (Codex review, PR #68). */
@@ -140,6 +155,8 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       for (const e of events) {
         if (e.type === 'planted') planted++;
         else if (e.type === 'spawned' && e.source === 'sprout') sprouted++;
+        else if (e.type === 'harvested') grown += e.bites;
+        else if (e.type === 'fed') fed++;
       }
       bot.learn(events);
       play += STEP;
@@ -155,7 +172,9 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       const before = { spawns: game.state.gardenSpawns, progress: game.state.spawnProgress, interval: game.interval };
       planned += session.away;
       clock = planned;
-      sprouted += game.reconcile(clock * 1000).sprouted.length;
+      const away = game.reconcile(clock * 1000);
+      sprouted += away.sprouted.length;
+      grown += Object.values(away.food).reduce((a, n) => a + n, 0);
       // A tutorial that ends while away ends at its last spawn's arrival, not at the
       // return (Codex review, PR #68). Tutorial spawns are evenly spaced from the first due.
       const need = content.balance.spawn.tutorialSpawns - before.spawns;
@@ -180,6 +199,7 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
     plotsAt,
     planted,
     sprouted,
+    farming: { fieldsAt, grown, fed, peakPantry, farmers: s.fields.reduce((a, f) => a + f.workers.length, 0) },
     income,
     starvation: play ? starvedTime / play : 0,
     stuck: turns ? stuckTurns / turns : 0,
@@ -206,6 +226,7 @@ export function createBot(
   game: Game,
   content: Content,
   plant = true,
+  farm = true,
 ): { decide: () => Command[] | null; learn: (events: GameEvent[]) => void; tried: Set<string> } {
   const recipes = new Map(content.recipes.map((r) => [pairKey(r.a, r.b), r.result]));
   const tried = new Set<string>();
@@ -216,9 +237,17 @@ export function createBot(
   const decide = (): Command[] | null => {
     const s = game.state;
     // 1. Buy: the cheaper of Garden and Capacity, the Compendium once a few kids are known.
-    const buy = purchase(game);
+    const buy = purchase(game, farm);
     if (buy) return [buy];
     const free = s.world.kids.filter((k) => !k.held && k.grace === 0);
+    if (farm) {
+      // 1b. A bought field with no food: the favourite of the most kids on the map.
+      const bare = s.fields.findIndex((f) => f.food === null);
+      if (bare >= 0) return [{ type: 'setFieldFood', field: bare, food: favouriteOfMost(game, content) }];
+      // 1c. Food in the pantry: feed an unhappy kid on the map, its favourite first.
+      const meal = feeding(game, content);
+      if (meal) return [meal];
+    }
     // Either kid may be the one dragged: a pair is skipped only if neither direction lands
     // touching (Codex review, PR #45).
     // A drag counts only if its landing reaches the partner; a crowded partner is skipped
@@ -272,6 +301,17 @@ export function createBot(
     if (plant && ready >= 0) return [{ type: 'startGrowing', plot: ready }];
     // 3c. Still full: plant (D-061) the kid with the fewest untried pairings on the map (a
     //     dead end, or a spare copy) into the plot that is filling, if any takes it.
+    // 3c'. Still full: a spare kid (every pairing on the map tried) goes to farm, if a
+    //      field has room and grows a food it doesn't hate; it comes back only if needed.
+    if (full && farm && free.length) {
+      const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
+      const fm = content.balance.farming;
+      for (const [i, f] of s.fields.entries()) {
+        if (f.food === null || f.workers.length >= fm.kidsPerField) continue;
+        const spare = free.find((k) => !specials.has(k.type) && untried(k.type) === 0 && content.personality[k.type]?.hatedFood !== f.food);
+        if (spare) return [{ type: 'farm', field: i, kidIds: [spare.id] }];
+      }
+    }
     if (full && plant && free.length && game.plotForDrop() !== null) {
       const untried = (t: string) => free.filter((k) => !tried.has(pairKey(t, k.type))).length;
       // A player keeps a special kid while any other dead end can go first (a found
@@ -364,8 +404,46 @@ export function drag(game: Game, kidId: number, partner: { id: number; x: number
   ];
 }
 
-/** The bot's shopping: Compendium once 6 kids are known, then the cheaper of Garden and Capacity. */
-function purchase(game: Game): Command | null {
+/** The food the most kids on the map love (D-058), for a new field; the first food if none. */
+function favouriteOfMost(game: Game, content: Content): string {
+  const votes = new Map<string, number>();
+  for (const k of game.state.world.kids) {
+    const fav = content.personality[k.type]?.favouriteFood;
+    if (fav) votes.set(fav, (votes.get(fav) ?? 0) + 1);
+  }
+  let best = content.balance.feeding.foods[0]!.id;
+  let most = 0;
+  for (const f of content.balance.feeding.foods) {
+    const n = votes.get(f.id) ?? 0;
+    if (n > most) {
+      best = f.id;
+      most = n;
+    }
+  }
+  return best;
+}
+
+/**
+ * One bite for an unhappy kid on the map (D-056): the earner with the most income first, its
+ * favourite if stored, else any stored food it doesn't hate. Null if none can be fed.
+ */
+function feeding(game: Game, content: Content): Command | null {
+  const pantry = game.state.pantry;
+  const kids = game.state.world.kids.filter((k) => !k.happy).sort((a, b) => game.incomeOfKid(b) - game.incomeOfKid(a) || a.id - b.id);
+  for (const k of kids) {
+    const likes = content.personality[k.type];
+    if (likes && (pantry[likes.favouriteFood] ?? 0) > 0) return { type: 'feed', kidId: k.id, food: likes.favouriteFood };
+    const food = content.balance.feeding.foods.find((f) => (pantry[f.id] ?? 0) > 0 && f.id !== likes?.hatedFood);
+    if (food) return { type: 'feed', kidId: k.id, food: food.id };
+  }
+  return null;
+}
+
+/**
+ * The bot's shopping: Compendium once 6 kids are known, then the cheapest of Garden,
+ * Capacity, the next plot and (farming) the next field.
+ */
+function purchase(game: Game, farm = true): Command | null {
   const s = game.state;
   const afford = (b: BuildingId) => {
     const c = game.upgradeCost(b);
@@ -379,6 +457,8 @@ function purchase(game: Game): Command | null {
     return c === null ? [] : [{ c, cmd: { type: 'upgrade', building: b } as Command }];
   });
   if (plot !== null && s.materials >= plot) options.push({ c: plot, cmd: { type: 'unlockPlot' } });
+  const field = farm ? game.fieldUnlockCost : null;
+  if (field !== null && s.materials >= field) options.push({ c: field, cmd: { type: 'unlockField' } });
   options.sort((x, y) => x.c - y.c);
   return options[0]?.cmd ?? null;
 }

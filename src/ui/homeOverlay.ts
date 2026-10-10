@@ -31,8 +31,24 @@ export function plantLabel(v: Pick<HomeView, 'state' | 'plot' | 'busy'>): [strin
   return [`Add to Plot ${n}`, 'Hold here, then release.', 'Leaves map now. Take out before growing.'];
 }
 
+/** A food field's label (D-069, GUI_MVP §22.4): Codex's exact lines for each state. */
+export function fieldLabel(f: NonNullable<HomeView['field']>, state: HomeView['state']): [string, string, string] {
+  const n = f.index + 1;
+  if (f.kind === 'noFood') return ['Choose a food first.', 'Release to keep this kid.', `Tap Field ${n}, then Choose food.`];
+  if (f.kind === 'hated') return [`${f.kidName} won’t farm ${f.foodName}.`, 'This is a hated food.', 'Release to keep this kid on the map.'];
+  if (f.kind === 'full') return [`Field ${n} is full.`, 'Release to keep this kid.', 'Take a farming kid back to make room.'];
+  if (state === 'ready') return ['Release to start farming', `${f.foodName} · Field ${n}`, 'Take this kid back from the field’s sheet.'];
+  if (state === 'waiting') return ['Keep holding…', 'Release early to keep this kid.', `Field ${n}: ${f.count} / ${f.limit} kids farming.`];
+  if (f.kind === 'favourite') return ['Favourite · Farms faster', `Field ${n}: ${f.foodName}. Hold, then release.`, 'No Materials while farming. Take back any time.'];
+  return [`Farm ${f.foodName} in Field ${n}`, 'Hold here, then release.', 'No Materials while farming. Take back any time.'];
+}
+
 /** Every label the target can show, worst cases included, for sizing it once. */
 const ALL_LABELS: [string, string, string][] = [
+  // A 24-letter name and the longest food (Berry jam), for the fields' labels.
+  fieldLabel({ index: 3, food: 'berry_jam', foodName: 'Berry jam', count: 3, limit: 4, kind: 'hated', kidName: 'W'.repeat(24) }, 'shown'),
+  fieldLabel({ index: 3, food: 'berry_jam', foodName: 'Berry jam', count: 3, limit: 4, kind: 'favourite', kidName: '' }, 'shown'),
+  fieldLabel({ index: 3, food: 'berry_jam', foodName: 'Berry jam', count: 3, limit: 4, kind: 'ok', kidName: '' }, 'shown'),
   ...(['shown', 'waiting', 'ready'] as const).map((state) => plantLabel({ state, plot: { index: 3, count: 4 }, busy: null })),
   plantLabel({ state: 'shown', plot: null, busy: 'full' }),
   plantLabel({ state: 'shown', plot: null, busy: 'growing' }),
@@ -128,13 +144,16 @@ export class HomeOverlay {
     };
     set(this.outer, 1);
     set(this.inner, 5);
-    const want = v.state === 'ready' ? 'icon_check' : v.state === 'waiting' ? 'icon_timer' : '';
+    // A field that won't take the kid shows a warning, never a timer or a check (§22.4).
+    const refused = !!v.field && v.field.kind !== 'ok' && v.field.kind !== 'favourite';
+    this.target.dataset.refused = String(refused);
+    const want = refused ? 'icon_warning' : v.state === 'ready' ? 'icon_check' : v.state === 'waiting' ? 'icon_timer' : '';
     if (this.stateIcon.dataset.icon !== want) {
       this.stateIcon.dataset.icon = want;
       this.stateIcon.replaceChildren(...(want ? [icon(want, '', 'ui-icon-20')] : []));
     }
     if (v.point) Object.assign(this.mark.style, { left: `${v.point.x}px`, top: `${v.point.y}px` });
-    this.setText(plantLabel(v));
+    this.setText(v.field ? fieldLabel(v.field, v.state) : plantLabel(v));
     const at = this.place(t, v.held);
     if (at) Object.assign(this.label.style, { left: `${at.x}px`, top: `${at.y}px` });
   }
