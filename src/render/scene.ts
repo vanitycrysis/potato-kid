@@ -1324,7 +1324,8 @@ export class MapScene {
       const p = this.prev.get(k.id) ?? k;
       interpolated.set(k.id, { x: p.x + (k.x - p.x) * alpha, y: p.y + (k.y - p.y) * alpha });
     }
-    const drawn = resolveDrawn(kids, interpolated, this.placing, this.art.obstacles);
+    // The game's scenery, bought fields' bays included.
+    const drawn = resolveDrawn(kids, interpolated, this.placing, this.game.state.world.obstacles);
     this.drawn.clear();
     for (const [id, pos] of drawn) this.drawn.set(id, pos);
     if (this.drag) {

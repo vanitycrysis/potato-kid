@@ -339,7 +339,8 @@ export class Game {
       sizes: [{ scale: 1, weight: 1 }],
     };
     this.state = {
-      world: createWorld(options.bounds, options.obstacles ?? []),
+      // Its own list: a bought field's bay joins this game's scenery only (Codex review, #90).
+      world: createWorld(options.bounds, [...(options.obstacles ?? [])]),
       rngState: this.rng.state,
       cosmeticRngState: this.cosmetic.state,
       spawnRngState: this.spawnRng.state,

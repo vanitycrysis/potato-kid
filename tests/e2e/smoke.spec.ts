@@ -4669,6 +4669,26 @@ test.describe('a farming kid’s card (GUI_MVP §22.6)', () => {
     await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
   });
 
+  test('a farming kid’s card, Feed → Pantry → View fields and all the way back: the field keeps its own way back (Codex review, #90)', async ({ page }) => {
+    await setup(page);
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fields', exact: true }).click();
+    await page.locator('.field-view[data-field="0"]').click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'View kid: Potato Kid' }).click();
+    await page.getByRole('dialog', { name: 'Potato Kid' }).getByRole('button', { name: 'Feed', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Feed Potato Kid' }).getByRole('button', { name: 'Open pantry' }).click();
+    await page.getByRole('dialog', { name: 'Pantry' }).getByRole('button', { name: 'View fields' }).click();
+    // All the way back: Pantry, feeding, the card, its field, the fields.
+    await page.getByRole('button', { name: 'Back to Pantry' }).click();
+    await page.getByRole('button', { name: 'Back to feeding' }).click();
+    await page.getByRole('dialog', { name: 'Feed Potato Kid' }).getByRole('button', { name: 'Back', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Potato Kid' }).getByRole('button', { name: 'Back to Field 1' }).click();
+    await page.getByRole('dialog', { name: 'Field 1' }).getByRole('button', { name: 'Back to fields' }).click();
+    // The Garden as first opened, from its button: no way back to a Pantry.
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to Pantry' })).toHaveCount(0);
+  });
+
   test('the Garden opened from the Pantry keeps Back to Pantry over the return summary (Codex review, #90)', async ({ page }) => {
     await setup(page);
     await page.locator('[data-nav=notebook]').click();

@@ -349,7 +349,8 @@ export class FieldSheets {
             const fav = this.content.personality[w.type]?.favouriteFood === f.food;
             const who = w.name ?? this.kidName(w.type);
             const ordinal = this.game.ownedOrdinal(w.type, w.id);
-            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: () => this.openField(i, launcher) }));
+            // Back to this field as it was opened, with its own way back (Codex review, #90).
+            const view = this.button('View kid', 'field-view-kid', () => this.openKid(w.id, launcher, { label: `Back to Field ${n}`, go: self }));
             view.setAttribute('aria-label', `View kid: ${who}`);
             const b = this.button('Take back', 'field-take-back', () => this.send({ type: 'unfarm', field: i, kidId: w.id, name: who }));
             b.setAttribute('aria-label', `Take back ${who}`);

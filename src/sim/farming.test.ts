@@ -193,6 +193,21 @@ describe('farming kids (D-069, GUI_MVP §22.4-22.5)', () => {
   });
 });
 
+describe('games built from the same options (Codex review, #90)', () => {
+  it('a field bought in one game is no scenery in the next', () => {
+    const obstacles: Obstacle[] = [];
+    const c = structuredClone(content);
+    c.balance.spawn = { ...c.balance.spawn, tutorialSpawns: 0, startingKids: 0, intervalSeconds: 1e9 };
+    const options = { bounds, spawnAt: { x: 1000, y: 300 }, now: T0, fieldBays: [bay], obstacles };
+    const first = new Game(c, options, 3);
+    first.state.materials = 1e6;
+    first.step([{ type: 'unlockField' }], 0);
+    expect(first.state.world.obstacles).toContain(bay);
+    expect(obstacles).toEqual([]);
+    expect(new Game(c, options, 3).state.world.obstacles).not.toContain(bay);
+  });
+});
+
 describe('a drag kept on the map by a field (Codex review, #90)', () => {
   it('a safe cancel lands clear of a recipe partner, with a newborn’s grace; a plain one can fuse', () => {
     for (const safe of [true, false]) {
