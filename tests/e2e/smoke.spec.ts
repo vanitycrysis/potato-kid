@@ -4174,6 +4174,9 @@ test.describe('food fields on the map (D-069, GUI_MVP §22.1)', () => {
     await page.evaluate((id) => window.__PK__!.debugCommand!({ type: 'unfarm', field: 0, kidId: id }), ids[0]!);
     await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]!.kids)).toEqual([{ id: ids[1], pad: 3 }]);
     expect(errors).toEqual([]);
+  });
+});
+
 test.describe('every kid on the map, and Which kid? (GUI_MVP §§19.2, 20.1)', () => {
   test('Dex → Kids on map lists every kid, even off screen; search narrows; a row opens its card, whose Back returns as it was', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
