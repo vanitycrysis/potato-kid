@@ -15,6 +15,13 @@
 
 ## Open work at handoff
 
+**Start here: the owner's answers.** The build went to the owner on 2026-10-10 with a page for their answers: https://claude.ai/artifact/4LC9S4YA3uiNShuEF7UHr9 (owner-only). Read them with the `ArtifactData` tool (`action: "list"`, `collection: "answers"`):
+- one document per question: `home-range`, `happiness`, `farming`, `dex-pace`, `rare-tier` and `gate4`, each with `choice`, `choiceLabel` and `note`;
+- `tried`, the "What to try" ticks.
+
+Turn each answer into a decision in `DECISIONS.md` and a `TASKS.md` row before building. If the page has no answers yet, ask the owner in chat.
+
+
 1. **The gate-4 build goes to the owner.** `main`'s CI run publishes `potato-kid-debug-apk`; send the link and what to try (below), then wait for feedback. Turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building. What to try:
    - **Farming:** Garden → Fields → unlock, choose a food, assign kids (by dragging a kid onto a field, or Assign kids); take them back; the pantry (Notebook → Pantry); feed a kid from its card.
    - **Map and zoom:** the less busy screen, the 4 × 4 map, pinch to zoom.
