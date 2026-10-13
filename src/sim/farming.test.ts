@@ -210,6 +210,16 @@ describe('farming kids (D-069, GUI_MVP §22.4-22.5)', () => {
     expect(g.state.pantry[ordinary]).toBe(3);
   });
 
+  it('fields grow for all of a long absence: a month away (D-080, no cap)', () => {
+    const g = withField();
+    const k = place(g, 'plain', 500, 1500);
+    g.step([{ type: 'farm', field: 0, kidIds: [k.id] }], 0);
+    const bites = 30 * 24 * (3600 / fm.biteSeconds);
+    const r = g.reconcile(g.state.accountedUntil + 30 * 86400 * S);
+    expect(r.food).toEqual({ [ordinary]: bites });
+    expect(g.state.pantry[ordinary]).toBe(bites);
+  });
+
   it('a farming kid can be fed from the pantry and named; its happiness counts down in the field', () => {
     const g = withField();
     const k = place(g, 'plain', 500, 1500);

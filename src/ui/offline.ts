@@ -7,7 +7,7 @@ import type { Sheets } from './sheet';
 // the catch-up already credited; dismissing it changes nothing.
 
 /** One report, shown once. `onClose` runs when the player dismisses it, by any path. */
-export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHours: number, foods: readonly { id: string; name: string }[], onClose: (replaced: boolean) => void): void {
+export function openOfflineSummary(sheets: Sheets, report: OfflineReport, foods: readonly { id: string; name: string }[], onClose: (replaced: boolean) => void): void {
   const s = sheets.open({ key: 'offline', icon: 'icon_timer', title: 'Welcome back', requestedHeight: 480, onClose }, null);
   s.setSubtitle('Your garden kept growing.');
 
@@ -28,7 +28,6 @@ export function openOfflineSummary(sheets: Sheets, report: OfflineReport, capHou
   const materials = formatCount(report.materials);
   const exact = formatExact(report.materials);
   s.body.append(el('h3', 'sheet-section', `Time credited: ${formatDuration(report.seconds)}`));
-  if (report.discardedSeconds > 0) s.body.append(el('p', 'sheet-helper', `Capped at ${capHours} h; extra time was not credited.`));
   s.body.append(
     el(
       'div',

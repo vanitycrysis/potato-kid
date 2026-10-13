@@ -1275,12 +1275,13 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(page.getByRole('dialog', { name: 'Welcome back' })).toBeVisible();
   });
 
-  test('an absence beyond the cap says what was not credited', async ({ page }) => {
+  test('a long absence is credited in full, with no cap (D-080)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.evaluate(() => window.__PK__!.debugAway!(9 * 3600_000));
+    await page.evaluate(() => window.__PK__!.debugAway!((3 * 24 + 5) * 3600_000));
     const summary = page.getByRole('dialog', { name: 'Welcome back' });
-    await expect(summary).toContainText('Time credited: 8 h 0 m');
-    await expect(summary).toContainText('Capped at 8 h; extra time was not credited.');
+    await expect(summary).toContainText('Time credited: 3 d 5 h');
+    expect(await page.evaluate(() => window.__PK__!.lastOffline()!.seconds)).toBeCloseTo((3 * 24 + 5) * 3600, 0);
+    await expect(summary).not.toContainText('Capped');
     // Abbreviated Materials also show the exact amount.
     await expect(summary.locator('.stat-exact')).toHaveText(/^\([\d,]+ Materials\)$/);
     await page.keyboard.press('Escape');

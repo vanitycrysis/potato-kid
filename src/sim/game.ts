@@ -174,10 +174,8 @@ export type PlotWaiting = 'full' | 'noRoom';
 
 /** What offline catch-up credited (plan §3); the return screen shows it. */
 export interface OfflineReport {
-  /** Seconds credited: wall time since `accountedUntil`, capped. */
+  /** Seconds credited: all the wall time since `accountedUntil` (no cap, D-080). */
   seconds: number;
-  /** Seconds beyond the cap that were discarded. */
-  discardedSeconds: number;
   materials: number;
   /** Potatokens from Dex milestones that offline spawns reached. */
   potatokens: number;
@@ -577,14 +575,14 @@ export class Game {
    * Offline catch-up (plan §3, D-018), for time the app was suspended. Deliberately
    * simpler than online play: no wandering and no fusions. Garden spawns fill free slots
    * on the interval schedule, and every kid earns from the moment it exists. Credits
-   * only time after `accountedUntil`, capped, then advances it to `now`; a clock that
+   * all the time after `accountedUntil`, however long (D-080: no cap), then advances it to
+   * `now`; every step below is closed-form or bounded by capacity and plots, so a long
+   * absence costs no more than a short one. A clock that
    * reads earlier than `accountedUntil` credits nothing and moves nothing back.
    */
   reconcile(now: number): OfflineReport {
     const s = this.state;
-    const capSeconds = this.content.balance.economy.offlineCapHours * 3600;
-    const elapsed = Math.max(0, (now - s.accountedUntil) / 1000);
-    const away = Math.min(elapsed, capSeconds);
+    const away = Math.max(0, (now - s.accountedUntil) / 1000);
     s.accountedUntil = Math.max(s.accountedUntil, now);
 
     const events: GameEvent[] = [];
@@ -669,7 +667,7 @@ export class Game {
     let potatokens = 0;
     for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;
     const plotsWaiting = s.plots.filter((p) => p.seed && p.seed.grown >= grow).length;
-    return { seconds: away, discardedSeconds: elapsed - away, materials, potatokens, spawned, sprouted, plotsWaiting, food };
+    return { seconds: away, materials, potatokens, spawned, sprouted, plotsWaiting, food };
   }
 
   /**

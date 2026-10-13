@@ -6,7 +6,7 @@ Author: Claude. Revision 4 (2026-10-01): rev. 2 answered ChatGPT's round-1 revie
 - Materials are earned passively per kid, scaled by tier.
 - Potatokens are speed-ups only; there are no real-money purchases in the MVP.
 - No fusions happen offline.
-- Offline catch-up is capped at 8 hours.
+- Offline catch-up credits all the time away, with no cap (D-080; the 8-hour cap of D-018 is gone).
 
 ## 1. Tech stack
 
@@ -144,7 +144,7 @@ The tuning comes from those numbers.
 ### Offline catch-up (review §1)
 
 **Inputs:**
-- `away = clamp(now − accountedUntil, 0, 8 h)`. Time beyond 8 h is discarded, and the return summary says "capped at 8 h".
+- `away = max(now − accountedUntil, 0)`, uncapped (D-080). Every catch-up step is closed-form or bounded by capacity and plots, so a long absence costs no more than a short one.
 - **`accountedUntil`** (persisted, wall-clock ms) is the instant up to which spawns and income have been credited. It is the single accounting boundary for online and offline time. See "Accounting boundary" below.
 - The current state: population, `spawnProgress`, RNG state, the current interval, capacity, and the income of each existing kid.
 
