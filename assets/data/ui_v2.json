@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "layout-design-1",
+  "revision": "round3-design-1",
   "status": "final",
   "runtimeMode": "native_dom_svg",
   "palette": {
@@ -88,7 +88,10 @@
     "lock": "icon_lock",
     "check": "icon_check",
     "warning": "icon_warning",
-    "none": "icon_none"
+    "none": "icon_none",
+    "round3Garden": "icon_r3_garden",
+    "round3Dex": "icon_r3_dex",
+    "notebook": "icon_r3_notebook"
   },
   "tierMarks": {
     "1": "badge_tier_1",
@@ -2200,10 +2203,529 @@
         }
       ],
       "mapRevision": "layout-design-map-3"
+    },
+    "round3": {
+      "revision": "round3-design-1",
+      "status": "Claude review pending",
+      "spec": "docs/GUI_MVP.md sections 23-26",
+      "supersedes": [
+        "sections 3/3.1/19 HUD and navigation",
+        "section 14.1",
+        "D-043 collision resolution during held dragging only",
+        "section 16 pending tier labels",
+        "section 8 capped-time copy"
+      ],
+      "geometry": {
+        "hudHeightCss": 44,
+        "hudChipGapCss": 8,
+        "hudIconCss": 24,
+        "hudCountCss": [
+          20,
+          24
+        ],
+        "navigationSizeCss": [
+          156,
+          52
+        ],
+        "navigationControlCss": [
+          44,
+          44
+        ],
+        "navigationXsCss": [
+          8,
+          56,
+          104
+        ],
+        "navigationYCss": 4,
+        "navigationIconCss": 28,
+        "worldGapCss": 8,
+        "minimumTargetCss": 44,
+        "referenceViewports": [
+          {
+            "size": [
+              390,
+              844
+            ],
+            "safe": [
+              24,
+              24
+            ],
+            "hud": [
+              8,
+              24,
+              374,
+              44
+            ],
+            "tray": [
+              117,
+              768,
+              156,
+              52
+            ],
+            "worldBand": [
+              76,
+              760
+            ],
+            "worldShare": 0.8104265402843602
+          },
+          {
+            "size": [
+              640,
+              360
+            ],
+            "safe": [
+              8,
+              8
+            ],
+            "hud": [
+              8,
+              8,
+              624,
+              44
+            ],
+            "tray": [
+              242,
+              300,
+              156,
+              52
+            ],
+            "worldBand": [
+              60,
+              292
+            ],
+            "worldShare": 0.6444444444444445
+          }
+        ]
+      },
+      "hud": [
+        {
+          "id": "materials",
+          "icon": "icon_materials",
+          "accessibleName": "Materials: {fullFlooredBalance}. About Materials",
+          "title": "Materials",
+          "value": "{fullFlooredBalance} Materials",
+          "explanation": "Kids on the map earn these. Spend them on buildings and names."
+        },
+        {
+          "id": "potatokens",
+          "icon": "icon_potatokens",
+          "accessibleName": "Potatokens: {fullBalance}. About Potatokens",
+          "title": "Potatokens",
+          "value": "{fullBalance} Potatokens",
+          "explanation": "Use these for instant Garden spawns. The Garden shows the exact cost before you spend."
+        },
+        {
+          "id": "kids",
+          "icon": "icon_kids",
+          "accessibleName": "Kids on map: {onMap} of {capacity}. About map space",
+          "title": "Kids on map",
+          "value": "{onMap} / {capacity} on the map",
+          "explanation": "Plot kids and farming kids are counted in their own pages. Capacity upgrades add map space.",
+          "full": "The map is full. Make room for another kid."
+        }
+      ],
+      "navigation": [
+        {
+          "name": "Garden",
+          "icon": "icon_r3_garden",
+          "explanation": "Arrivals, planting plots, food fields and spawn-rate upgrades."
+        },
+        {
+          "name": "Potato-Dex",
+          "icon": "icon_r3_dex",
+          "explanation": "Your discoveries, found recipes and kids on the map."
+        },
+        {
+          "name": "Notebook",
+          "icon": "icon_r3_notebook",
+          "explanation": "Pantry, buildings, map view, this guide and Settings."
+        }
+      ],
+      "naming": {
+        "hoverMs": 300,
+        "touchHoldMs": 450,
+        "cancelMoveCss": 8,
+        "keyboardFocus": "immediate",
+        "recognisedHold": "suppress release activation",
+        "statTap": "toggle named nonmodal explanation",
+        "maxWidthCss": 320,
+        "paddingCss": 12,
+        "closeTargetCss": 44,
+        "closeName": "Close",
+        "autoDismissMs": null,
+        "announceTicks": false,
+        "minimumBubbleHeightCss": 104
+      },
+      "routes": {
+        "garden": [
+          "Arrivals",
+          "Spawn now",
+          "Plots",
+          "Fields",
+          "Spawn rate"
+        ],
+        "notebook": [
+          "Pantry",
+          "Capacity",
+          "Spawn bias",
+          "Compendium",
+          "Map view",
+          "Icon guide",
+          "Settings"
+        ],
+        "replay": [
+          "Notebook / Icon guide / Replay tutorial",
+          "Settings / Replay tutorial"
+        ]
+      },
+      "tutorial": {
+        "version": 1,
+        "preferenceKey": "guidedTutorial",
+        "statuses": [
+          "notStarted",
+          "inProgress",
+          "skipped",
+          "completed"
+        ],
+        "stepRange": [
+          1,
+          8
+        ],
+        "autoOffer": "first interactive opening with no record, including existing saves",
+        "priority": "offline summary and recovery before guide; no auto offer in future-schema read-only",
+        "skippable": true,
+        "replayPreservesPersistentRecord": true,
+        "requiresGameActions": false,
+        "changesEconomyOrDex": false,
+        "continuesSimulation": true,
+        "firstRunHeader": "Step {n} of 8",
+        "replayHeader": "Tutorial · Step {n} of 8",
+        "hint": "Replay any time from Notebook → Icon guide or Settings.",
+        "actions": {
+          "skip": "Skip",
+          "skipAccessible": "Skip tutorial",
+          "back": "Back",
+          "next": "Next",
+          "finish": "Finish",
+          "replay": "Replay tutorial"
+        },
+        "card": {
+          "maxWidthCss": 600,
+          "contentInsetCss": 12,
+          "portraitMaxHeightCss": 480,
+          "portraitHeaderCss": 56,
+          "portraitDiagramHeightCss": 76,
+          "compactHeaderCss": 44,
+          "compactDiagramColumnCss": 80,
+          "compactGapCss": 12,
+          "footerMinHeightCss": 60,
+          "bodyTypeCss": [
+            16,
+            22
+          ],
+          "titleTypeCss": [
+            22,
+            28
+          ],
+          "stepTypeCss": [
+            16,
+            22
+          ],
+          "entryMs": 120
+        },
+        "steps": [
+          {
+            "step": 1,
+            "spotlight": "Dex tray",
+            "title": "A garden of discoveries",
+            "paragraphs": [
+              "Fuse kids to discover new kinds and fill your Potato-Dex.",
+              "Kids wander on their own. You choose what to try next."
+            ],
+            "diagramLabels": [
+              "Kids",
+              "Discover",
+              "Potato-Dex"
+            ]
+          },
+          {
+            "step": 2,
+            "spotlight": "card demo only",
+            "title": "Pick up, hover, fuse",
+            "paragraphs": [
+              "Drag a kid over another. A marked partner means they can fuse.",
+              "The little recipe window shows both parents and the result. A dark result is one you haven't found.",
+              "Release on that partner: two kids become one. Other pairs stay separate. Tap a kid to see its card."
+            ],
+            "diagramLabels": [
+              "Parents",
+              "Result"
+            ]
+          },
+          {
+            "step": 3,
+            "spotlight": "HUD group",
+            "title": "Know your numbers",
+            "paragraphs": [
+              "Materials: kids on the map earn these. Spend them on buildings and names.",
+              "Potatokens: use these for instant Garden spawns; check the cost there first.",
+              "Kids on map: the first number is here now; the second is capacity. Tap any number to read its name."
+            ],
+            "diagramLabels": [
+              "Materials",
+              "Potatokens",
+              "Kids on map"
+            ]
+          },
+          {
+            "step": 4,
+            "spotlight": "Garden tray",
+            "title": "The Garden brings new kids",
+            "paragraphs": [
+              "Open the house icon for arrivals, planting plots, food fields and spawn-rate upgrades.",
+              "New kids arrive over time while there is room. Garden upgrades shorten the wait; Capacity in the Notebook adds room.",
+              "Spawn now costs Potatokens. Its button shows the exact cost."
+            ],
+            "diagramLabels": [
+              "Garden",
+              "Arrivals"
+            ]
+          },
+          {
+            "step": 5,
+            "spotlight": "Garden tray",
+            "title": "Plant for a surprise",
+            "paragraphs": [
+              "Add 3–5 kids to a plot by dragging to the Garden or tapping a plot and picking kids. Then choose Start growing.",
+              "Filling never starts by itself. You can take kids out; cancelling growth returns them if the map has room, and loses the growing time.",
+              "One kid sprouts later. Planting can reveal Special or Rare kids. They count in the Dex and have no fusion recipes."
+            ],
+            "diagramLabels": [
+              "Plot",
+              "Add 3–5",
+              "Start growing"
+            ]
+          },
+          {
+            "step": 6,
+            "spotlight": "Garden tray",
+            "title": "Farm food, then feed",
+            "paragraphs": [
+              "Tap a field, choose a food and assign kids. You can also drag a kid to the field, hold, then release.",
+              "Farmers earn food for the pantry, not Materials. Favourite food grows faster; hated food is refused. Take farmers back when the map has room.",
+              "Open Pantry in the Notebook. Feed from a kid's card: one bite makes it happy. The sun means happy; its face stays the same."
+            ],
+            "diagramLabels": [
+              "Field",
+              "Pantry",
+              "Happy"
+            ]
+          },
+          {
+            "step": 7,
+            "spotlight": "Dex tray",
+            "title": "Keep your discoveries",
+            "paragraphs": [
+              "The potato book is your Potato-Dex: ordinary, Special and Rare discoveries, plus found recipes.",
+              "Undiscovered entries stay mysterious. Kids on map opens a list of your wandering kids, even offscreen ones.",
+              "A Rare kid sparkles. Special and Rare badges name their tiers on cards and lists."
+            ],
+            "diagramLabels": [
+              "Potato-Dex",
+              "Special",
+              "Rare"
+            ]
+          },
+          {
+            "step": 8,
+            "spotlight": "Notebook tray",
+            "title": "Your Notebook of tools",
+            "paragraphs": [
+              "The spiral notebook holds Pantry, Capacity, Spawn bias and Compendium. Bias favours a Garden seed; Compendium brings back discovered ordinary kids for its shown fee.",
+              "Map view has zoom controls and Find Garden. Pinch with two fingers to zoom; drag empty ground to pan.",
+              "Settings has sound and motion preferences. Hold any control icon to see its name. Replay this tutorial here any time."
+            ],
+            "diagramLabels": [
+              "Buildings",
+              "Map view",
+              "Settings"
+            ]
+          }
+        ]
+      },
+      "drag": {
+        "liftWorld": 70,
+        "heldCollisionAvoidance": false,
+        "neighbourDisplacement": false,
+        "hitUsesRawPointer": true,
+        "dropUsesExpandedPickupTarget": false,
+        "priority": [
+          "raw Garden/field target including refused or busy",
+          "frontmost actual drawn kid box, then stable ID",
+          "validate selected pair only"
+        ],
+        "mark": {
+          "shape": "loose rounded rectangular loop",
+          "boxOffsetCss": 4,
+          "cornerCss": 8,
+          "paperStrokeCss": 5,
+          "inkStrokeCss": 2,
+          "checkCss": 20,
+          "entryMs": 80,
+          "exitMs": 0,
+          "replacementMs": 0,
+          "reducedMotionMs": 0
+        },
+        "window": {
+          "surface": "ui_toast",
+          "minimumSizeCss": [
+            232,
+            112
+          ],
+          "paddingCss": 12,
+          "portraitCss": 48,
+          "parentAndResultXY": [
+            [
+              12,
+              32
+            ],
+            [
+              92,
+              32
+            ],
+            [
+              172,
+              32
+            ]
+          ],
+          "plusArrowXY": [
+            [
+              68,
+              44
+            ],
+            [
+              148,
+              44
+            ]
+          ],
+          "symbolCss": 16,
+          "heading": "Release to fuse",
+          "found": "{resultTypeName}",
+          "unfound": "Not found yet",
+          "unknownPixelColour": "#1a1a1a",
+          "unknownOpacity": 1,
+          "unknownInternalDetails": false,
+          "unknownNameTierMetadata": false,
+          "fingerRadiusCss": 48,
+          "pointerGapCss": 64,
+          "excludedBoxPaddingCss": 8,
+          "candidateOrder": [
+            "above",
+            "below",
+            "left",
+            "right",
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right"
+          ],
+          "innerSafeGapCss": 8,
+          "retainClearDock": true,
+          "interceptsInput": false,
+          "changesInsets": false,
+          "rail": {
+            "sizeCss": [
+              232,
+              44
+            ],
+            "portraitCss": 32,
+            "portraitXY": [
+              [
+                8,
+                6
+              ],
+              [
+                84,
+                6
+              ],
+              [
+                160,
+                6
+              ]
+            ],
+            "symbolsXY": [
+              [
+                52,
+                14
+              ],
+              [
+                128,
+                14
+              ]
+            ],
+            "dock": "farther of HUD or tray from pointer, verify finger exclusion",
+            "visibleCopy": [],
+            "replacesEntireChosenRow": true
+          }
+        },
+        "accessibleRegionName": "Fusion preview",
+        "foundAnnouncement": "{parentATypeName} plus {parentBTypeName} makes {resultTypeName}. Release on the marked partner to fuse.",
+        "unfoundAnnouncement": "{parentATypeName} plus {parentBTypeName} makes a kid you haven't found. Release on the marked partner to fuse.",
+        "reducedMotion": "direct pointer, static held frame; instant mark/card, no travel or fade",
+        "plotFieldDwellMs": 400
+      },
+      "tiers": {
+        "resolveBy": "type category before numeric ordinary tier",
+        "special": {
+          "badge": "badge_special",
+          "label": "Special",
+          "effectiveTier": 5
+        },
+        "rare": {
+          "badge": "badge_rare",
+          "label": "Rare",
+          "effectiveTier": 6
+        },
+        "ordinaryTier5": {
+          "badge": "badge_tier_5",
+          "label": "Tier 5"
+        },
+        "badgeSourceCss": [
+          64,
+          64
+        ],
+        "badgeCardCss": 24,
+        "badgeDexCss": 20,
+        "unknownHasBadge": false
+      },
+      "export": {
+        "deliveryPngIds": [
+          "icon_r3_garden",
+          "icon_r3_dex",
+          "icon_r3_notebook",
+          "badge_special",
+          "badge_rare"
+        ],
+        "deliveryDirectory": "art/exports/ui-round3",
+        "decodedDeliveryDeltaBytes": 229376,
+        "pixiDeltaBytes": 0,
+        "runtime": "DOM SVG; delivery PNGs optional, never loaded alongside vectors"
+      },
+      "offline": {
+        "summaryThresholdSeconds": 60,
+        "capHelper": null,
+        "heading": "Time credited: {formatted report.seconds}",
+        "usesAuthoritativeUncappedReport": true
+      }
     }
   },
   "stateBorderImageRepeat": {
     "default": "stretch",
     "disabled": "round"
+  },
+  "tierCategoryMarks": {
+    "ordinary": "existing tierMarks by numeric tier",
+    "special": "badge_special",
+    "rare": "badge_rare"
   }
 }
