@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "revision": "farm-map-half-2",
+  "status": "review_pending",
+  "delivery": {
+    "scope": "D-069 MVP design; not runtime rules",
+    "note": "D-076: full-size farm bays below Garden, authored into map-half-4 without additive scenery moves. Claude review pending. Geometry and engine rules unchanged."
+  },
+  "mapRevision": "map-half-4",
+  "fields": [
+    {
+      "id": "field_1",
+      "index": 1,
+      "worldGround": [
+        1166,
+        3588
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -275
+        ],
+        [
+          108,
+          -275
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          94
+        ],
+        [
+          140,
+          94
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    },
+    {
+      "id": "field_2",
+      "index": 2,
+      "worldGround": [
+        1906,
+        3588
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -275
+        ],
+        [
+          108,
+          -275
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          94
+        ],
+        [
+          140,
+          94
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    },
+    {
+      "id": "field_3",
+      "index": 3,
+      "worldGround": [
+        1166,
+        4188
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -275
+        ],
+        [
+          108,
+          -275
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          94
+        ],
+        [
+          140,
+          94
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    },
+    {
+      "id": "field_4",
+      "index": 4,
+      "worldGround": [
+        1906,
+        4188
+      ],
+      "sourcePivot": [
+        256,
+        400
+      ],
+      "scale": 1,
+      "rotationDeg": 0,
+      "asset": "building_food_field",
+      "reserveRelative": [
+        -216,
+        -464,
+        216,
+        104
+      ],
+      "workerFeetRelative": [
+        [
+          -108,
+          -275
+        ],
+        [
+          108,
+          -275
+        ],
+        [
+          -108,
+          -60
+        ],
+        [
+          108,
+          -60
+        ]
+      ],
+      "workerAdmissionPadOrder": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "cropGroundsRelative": [
+        [
+          -140,
+          94
+        ],
+        [
+          140,
+          94
+        ]
+      ],
+      "dragRelative": [
+        -200,
+        -304,
+        200,
+        80
+      ]
+    }
+  ],
+  "sceneryRelocations": [],
+  "findFieldsCentre": [
+    1536,
+    3708
+  ],
+  "render": {
+    "fieldAsset": "building_food_field",
+    "lockedAsset": "fx_farm_locked",
+    "cropAssets": {
+      "toast": "fx_crop_toast",
+      "berry_jam": "fx_crop_berry_jam",
+      "berries": "fx_crop_berries",
+      "apple": "fx_crop_apple",
+      "carrot": "fx_crop_carrot",
+      "corn": "fx_crop_corn",
+      "mushroom": "fx_crop_mushroom",
+      "pickle": "fx_crop_pickle",
+      "cheese": "fx_crop_cheese",
+      "soup": "fx_crop_soup",
+      "cocoa": "fx_crop_cocoa",
+      "cracker": "fx_crop_cracker"
+    },
+    "cropSourcePivot": [
+      128,
+      240
+    ],
+    "cropScale": 0.9,
+    "workerWorldCanvas": 180,
+    "preserveSavedAppearanceScale": true,
+    "maxExistingWorkerWorldCanvas": 198,
+    "workerPadLimit": 4,
+    "workerLoop": {
+      "bodyFrames": [
+        "stand",
+        "step_left",
+        "stand",
+        "step_right"
+      ],
+      "frameMs": [
+        600,
+        160,
+        600,
+        160
+      ],
+      "motion": "In-place existing feet only. Keep face, costume attachments and root stable. Pause between cycles 3000–5000 ms; stable ID phase.",
+      "reducedMotion": "stand / open, normal blink; no step cycle"
+    },
+    "zOrder": [
+      "soil",
+      "crops",
+      "workers by foot y"
+    ],
+    "noMaterialIncome": true
+  },
+  "balancePlaceholders": {
+    "fieldCount": "FARM_FIELD_COUNT (1–4)",
+    "kidsPerField": "FARM_KIDS_PER_FIELD (at most 4; Claude accepted the authored ceiling)",
+    "unlockPrices": "FARM_UNLOCK_PRICE[n] and FARM_UNLOCK_CURRENCY[n]",
+    "biteRate": "FARM_BITE_RATE",
+    "favouriteFactor": "FARM_FAVOURITE_FACTOR",
+    "pantryCap": "No cap in MVP; Claude accepted for now, subject to simulator review and visible redesign if needed",
+    "offlineLimit": "FARM_OFFLINE_LIMIT"
+  },
+  "rulesAccepted": {
+    "unlockBay": "Only unlocked bays exclude ordinary wander/spawn. Successful paid unlock moves ordinary kids inside the bay plus its 16-unit clearance to nearest clear spots, clear of recipe partners, without fusion, using refused-planting placement. All displacement and payment are atomic. Fail only for price, save state or noRoom anywhere; no charge or movement on failure.",
+    "progress": "One fractional bite accumulator per field. Removing kids preserves it. Switching food resets it only after explicit review.",
+    "foodChange": "Keep compatible workers; return haters atomically by Garden. Block if any returning kid cannot fit. Never consume stock.",
+    "return": "Atomic one/all; preserve identity/name/look and original happiness expiry.",
+    "pantry": "Shared integer bites per food, no manual harvest; zero stock still listed. No cap in the MVP for now; simulator hoarding review may require a new visible cap design.",
+    "feeding": "Atomic decrement one bite + replace happiness on captured instance. No Materials charge. Farming kids may be fed; happiness keeps counting down and the Materials boost applies only on return.",
+    "capacity": "Farmers are off the map count and capacity, do not wander or fuse, earn no Materials, and need room on the map to return.",
+    "workerLimit": "At most four workers per field."
+  }
+}
