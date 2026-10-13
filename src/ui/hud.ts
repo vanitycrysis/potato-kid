@@ -14,7 +14,7 @@ import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
 import { KidsOnMap } from './kidsOnMap';
 import { PlantingNotes } from './plantingNotes';
-import { el, icon, tierBadge, ui } from './dom';
+import { el, icon, tierBadge, tierName, tierShort, ui } from './dom';
 import { NOTEBOOK_KEYS, Notebook } from './notebook';
 import { openOfflineSummary } from './offline';
 import { kindMark } from './plotRoute';
@@ -517,9 +517,9 @@ export class Hud {
   }
 
   private tier(type: KidId): HTMLElement {
-    const t = this.content.kids.find((k) => k.id === type)?.tier ?? 1;
-    const mark = el('span', 'tier', ...tierBadge(t, 'ui-icon-20'), `T${t}`);
-    mark.setAttribute('aria-label', `Tier ${t}`);
+    const def = this.content.kids.find((k) => k.id === type) ?? { tier: 1 };
+    const mark = el('span', 'tier', ...tierBadge(def, 'ui-icon-20'), tierShort(def));
+    mark.setAttribute('aria-label', tierName(def));
     return mark;
   }
 

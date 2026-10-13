@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 async function boot(page: Page, query: string): Promise<string[]> {
   const errors: string[] = [];
@@ -5402,7 +5402,8 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await expect(card.locator('.kid-card-profile')).toHaveText('A whole little day painted in six colours.');
     await expect(card).toContainText('Planting only. Cannot be bought.');
     await expect(card).toContainText('No fusion recipes.');
-    await expect(card).toContainText('Tier 6');
+    // The Rare tier by name (D-082), never "Tier 6".
+    await expect(card.locator('.kid-card-tier .tier')).toHaveText('Rare');
     await page.keyboard.press('Escape');
     // The special's card: its own body; no rare profile.
     const g = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, gift);
@@ -5411,24 +5412,32 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await expect(special.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildgift_stand');
     await expect(special.locator('.kid-card-profile-label')).toHaveCount(0);
     await expect(special).toContainText('Special kid');
-    await expect(special).toContainText('Tier 5');
+    // The Special tier by name (D-082), and not the tier-5 badge it earns as.
+    await expect(special.locator('.kid-card-tier .tier')).toHaveText('Special');
+    expect(await special.locator('.kid-card-tier img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon))).not.toContain('badge_tier_5');
     expect(errors).toEqual([]);
   });
 
-  test('a tier-6 kid sprouts, is announced and shows in the Dex as plain Tier 6 text, no badge (Codex review, #93)', async ({ page }) => {
+  test('a Special kid sprouts, is announced and shows in the Dex as the Special tier, with no tier-5 badge (D-082)', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'treasure_chest'));
     const found = page.locator('.feedback').getByRole('button', { name: /found/ });
     await expect(found).toContainText('Treasure Chest');
-    await expect(found).toContainText('T6');
-    await expect(found.locator('img[src*="badge_tier"]')).toHaveCount(0);
+    await expect(found.locator('.tier')).toHaveText('Special');
+    await expect(found.locator('.tier')).toHaveAttribute('aria-label', 'Special');
+    // Never the tier-5 badge it earns as: the Special badge, once drawn (GUI_MVP §26), or none.
+    const icons = (l: Locator) => l.locator('img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon));
+    expect(await icons(found.locator('.tier'))).not.toContain('badge_tier_5');
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.getByRole('button', { name: 'Specials', exact: true }).click();
-    await dex.locator('[data-kid="treasure_chest"]').click();
+    const tile = dex.locator('[data-kid="treasure_chest"]');
+    await expect(tile).toHaveAttribute('aria-label', 'Treasure Chest Kid, Special');
+    await expect(tile.locator('.tier')).toHaveText('Special');
+    await tile.click();
     await expect(dex.locator('.dex-detail-name')).toHaveText(/Treasure Chest/);
-    await expect(dex).toContainText('Tier 6');
-    await expect(dex.locator('img[src*="badge_tier_6"]')).toHaveCount(0);
+    await expect(dex.locator('.dex-detail-tier')).toHaveText('Special');
+    expect(await icons(dex.locator('.dex-detail-tier'))).not.toContain('badge_tier_5');
     expect(errors).toEqual([]);
   });
 });

@@ -612,10 +612,6 @@
 .ui-button.dex-segment[aria-pressed='true'] {
   border-image-source: var(--ui-button-selected);
 }
-.dex-tile-kind {
-  font-size: 16px;
-  line-height: 22px;
-}
 
 /* Kids grid: 148 px cards, 8 px gaps; a long name grows its whole row equally. */
 .dex-grid {
