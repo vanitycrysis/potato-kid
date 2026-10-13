@@ -2,31 +2,23 @@
 
 Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not owner approval. Since D-027, ChatGPT's role is run as Codex (`gpt-6.1-sol`, high effort) by Claude; Claude does no art (D-036).
 
-## Where things stand (Claude, 2026-10-10)
+## Where things stand (Claude, 2026-10-13)
 
-**Gates 1–3 are approved. Gate 4 came back with feedback twice.** The first round (D-050..D-059) is all on `main`. **The second round (D-068..D-074, 2026-10-05) is now all on `main` too:**
-- food farmed by kids in fields;
-- a much less busy screen;
-- a 4 × 4-screen map with pinch-to-zoom;
-- ten rare kids in place of the rare variants;
-- specials drawn wild too;
-- kids taken back out of plots.
-
-**The gate-4 build goes back to the owner next.**
+**Gates 1–3 are approved. Gate 4 came back with feedback three times.** The first two rounds (D-050..D-059, D-068..D-074) are all on `main`. **The third round (D-075..D-083, 2026-10-13):**
+- the map shrinks to half its area (D-076); whole-map wandering stays, so HOME-RANGE closes;
+- an icon HUD that says what everything is (D-077);
+- a first-run tutorial (D-078);
+- happiness, naming and farming numbers approved (D-079);
+- no offline limit (D-080);
+- the Dex pace stays (D-081);
+- Special and Rare tiers (D-082);
+- dragging floats over other kids, highlights a partner and shows the recipe (D-083).
 
 **Order of work**
-- **Done since the second gate-4 round:** the owner's feedback (#81); PLOT-REMOVE's sim (#82); MAP-ZOOM (#83); RARE-KIDS' rules (#84); Codex's LAYOUT-DESIGN (#85), FARM-DESIGN (#86) and WILD-ART with the specials (#76); LAYOUT parts 1 and 2 (#87: stat strip, Garden/Dex/Notebook row, Notebook pages, Map view; #88: the 4 × 4 map v3, save schema 8, landscape fit floor).
-- **Done too:**
-  - LAYOUT part 3 (#89: Kids on map, Which kid?, taking kids out of plots), so all of LAYOUT is in.
-  - FARMING (#90, 16 Codex rounds): fields, farming kids, the pantry and every farming sheet, save schema 9, the balance bot farming, and a bite an hour per kid.
-  - Codex's farm scenery relocations out of the Garden block (#92).
-  - The twenty specials and ten rares, drawn wild, with tier-6 text and no invented badge (#93).
-  - The Dex's Ordinary / Specials / Rares segments (#94).
-  - Rares at tier 6 by the simulator (#95).
-- **Claude, next:** the gate-4 build to the owner.
-- **Codex:** no design task open; TROPHY-MAP (D-064) waits until after gate 4.
-- **For the owner (not urgent):** kids' home range (see the HOME-RANGE row), D-067's happiness and name numbers.
-- **Parked:** expeditions (D-065), an owner idea for later; nothing is built for it.
+- **Codex:** MAP-HALF's composition, and ROUND3-DESIGN (the icon HUD, the tutorial, the drag highlight and recipe window, the Special and Rare badges).
+- **Claude, meanwhile:** OFFLINE-UNCAPPED and TIER-NAMES, then DRAG-HOVER's engine; then MAP-HALF's engine, ICON-HUD and TUTORIAL from Codex's designs.
+- **Then:** the gate-4 build back to the owner.
+- **Parked:** expeditions (D-065); TROPHY-MAP (D-064) after gate 4.
 
 **Built for the MVP so far**
 - **Systems:** economy, offline catch-up, saves and lifecycle (#27, #29–#31).
@@ -61,7 +53,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | BALANCE-SIM | Claude | Balance simulator; tune seed weights, prices and milestones for the 64-kid roster | **done** (simulator #45); the tuning moves to PACING | — |
 | SEND-HOME | ChatGPT (design, art) / Claude (sim, engine, UI) | D-048: drag a kid onto the Garden to send it home | **done**, superseded by PLANTING (D-054) (sim #45, design #49, drag #50, feedback and Dex path #54) | — |
 | MUSIC-LOOP | Claude | Gate-4 bug: the music doesn't always loop on the device. Make the loop seamless and keep it playing (also after app switches) | **done** (#61); the owner checks it on device at gate 4 | The loop has no gap or click and never stops on its own, in tests and on the owner's device |
-| FUSE-DROP | Claude (engine) / ChatGPT (highlight design) | D-051: releasing a kid onto another tries the pair; the kid under the finger is highlighted while dragging | **review** (engine side merged in #66; the highlight from GUI_MVP §14.1 is drawn next) | Drops onto a partner fuse even on a crowded map; drops onto a non-partner slide apart; the highlight never hints at recipes; e2e covered |
+| FUSE-DROP | Claude (engine) / ChatGPT (highlight design) | D-051: releasing a kid onto another tries the pair | **done** (engine #66); the highlight moves to DRAG-HOVER (D-083) | — |
 | PACING | Claude | D-052: tutorial at one kid a minute, then 20 min falling to about 8 min with Garden upgrades; much slower Materials; retune prices and milestones with the simulator | **done** (#68) | `npm run balance` shows the agreed schedule; PR with before and after numbers, reviewed by Codex |
 | OFFLINE-WANDER | Claude | D-053: on return, kids have moved and offline spawns have walked out from the Garden; no offline fusions | **done** (#70) | Unit and e2e tests for positions after a long absence, with no recipe pair left touching |
 | GATE4-DESIGN | ChatGPT | Interaction design and art for D-051..D-058: the drop highlight, planting (plots, seed, growing, sprout), Rainbow and Mini looks, foods, feeding, naming and the kid card; plus a planting sound in the existing audio style | **done** (#67; Claude's review passed in round 2; the owner sees it at gate 4) | Claude's review passes (technical fit, consistency, D-045) |
@@ -79,9 +71,16 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | RARE-KIDS | Claude | D-072: retire the ten variant looks; the rare roll sprouts one of ten rare kid types (apex, plantable, in the Dex, never sold, never in the spawn pool); both rolls hit means the rare kid; old variant kids become ordinary; content entries once WILD-ART lands | **done** (#84: rules and schema 7; #93: the ten rares' entries and wild bodies, profiles; #94: the Rares segment; #95: tier 6 by the simulator) | Unit and save-migration tests; content validation covers the rares; the simulator includes them |
 | FARMING | Claude | D-069: fields, assignment, farming rates (favourite faster, hated refused), the pantry, feeding from it; farmers earn no Materials; remove the food shop; tune numbers with the simulator | **done** (#90, Codex review in 16 rounds; #92 relocations; a bite an hour per kid, favourite ×2: no hoarding in the simulator) | Unit, save and e2e tests; `npm run balance` before and after numbers; reviewed by Codex |
 | LAYOUT | Claude | D-070: implement LAYOUT-DESIGN's HUD and tray | **done** (#87, #88, #89) | e2e covers the new layout at the GUI_MVP viewports; the world share is measured |
-| HOME-RANGE | Owner (decision) / Claude (engine) | On the 4 × 4 map kids wander everywhere (about 1.5 a screen at 24). Codex proposes a soft preference for the Garden's neighbourhood, a kid dropped elsewhere anchoring where it was put, the whole map still open (LAYOUT-DESIGN notes). The simulator (#88): a casual player completes the roster on day 8.6 instead of 6.4 on the larger map. **Update (#92):** with the farm's scenery moved out of the Garden block, the farming-off baseline is back to day 6.4 (6.0 with farming) | **blocked** (owner's choice: keep whole-map wandering, or try the soft home range in the simulator first; less pressing after #92) | The owner decides; if yes, simulator before and after |
+| HOME-RANGE | Owner (decision) / Claude (engine) | On the 4 × 4 map kids wander everywhere; Codex proposed a soft preference for the Garden's neighbourhood | **done** (closed by D-076: the map shrinks to half its area and kids keep wandering the whole map; nothing built) | — |
 | TROPHY-MAP | Both | D-064: a map to display special kids, bought for an absurd price | later (after SPECIALS) | — |
 | WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | **done** (#62, Claude's review passed in round 2; Water's hood is the weakest case, for the owner's device check) | Claude's review passes; the owner sees it on device at the next gate-4 build |
-| GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: D-050..D-059, all done; 2026-10-05: D-068..D-074, all done; the build goes back to the owner next) | Explicit approval before polish |
+| GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: D-050..D-059, all done; 2026-10-05: D-068..D-074, all done; 2026-10-13: D-075..D-083) | Explicit approval before polish |
 | DEX-SEGMENTS | Claude | GUI_MVP §16.4: the Dex's Kids tab in Ordinary / Specials / Rares, each with its own search and scroll; apex kids' detail without recipes | **done** (#94, Codex review in 2 rounds) | e2e per segment; mutation-checked |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |
+| MAP-HALF | ChatGPT (composition) / Claude (engine) | D-076: recompose the map at half its area (about 2.8 × 2.8 phone screens): Garden, plots, fields, landmarks and paths, within the texture budget. Claude: the new world size, save migration (anything outside moves inside), zoom range, and spawning, wandering, offline catch-up and the simulator checked | todo | Claude's review of the composition passes; save-migration and e2e tests; `npm run balance` before and after; reviewed by Codex |
+| ROUND3-DESIGN | ChatGPT | D-077: an icon HUD and tray, each icon readable and named (the player can tell what every icon and number is), drawn in the notebook style. D-078: the first-run tutorial's steps, copy and look (the point of the game, every icon, how to progress, the game's elements), skippable or not, and replayable. D-083: the partner highlight and the recipe window (parents and result as sprites; an unfound result darkened). D-082: a Special and a Rare tier badge | todo | Claude's review passes (technical fit, consistency, D-045); GUI_MVP.md updated |
+| OFFLINE-UNCAPPED | Claude | D-080: credit all time away; bounded catch-up cost for very long absences; drop the summary's "Capped at" line; the simulator's long-absence check | todo | Unit tests for a month away (Materials, spawns, plots, fields, happiness); reviewed by Codex |
+| TIER-NAMES | Claude (rules, labels) / ChatGPT (badges) | D-082: specials are the Special tier (tier 5 for income and odds), rares the Rare tier (tier 6); "Special" and "Rare" shown wherever a tier is; badges from ROUND3-DESIGN | todo | Content validation and unit tests; e2e for the labels; `npm run balance` before and after; reviewed by Codex |
+| DRAG-HOVER | Claude (engine) / ChatGPT (design) | D-083: a held kid floats above the others (drawn on top, no pushing); a partner under it is highlighted, a non-partner isn't; the recipe window with sprites, an unfound result darkened; release over a non-partner puts it down at the nearest free place | todo | Unit and e2e tests (no kid moves while one is dragged over it; highlight only on partners; the window's result darkened until found); reviewed by Codex |
+| ICON-HUD | Claude | D-077: implement ROUND3-DESIGN's icon HUD and tray | todo (after ROUND3-DESIGN) | e2e at the GUI_MVP viewports; the world share measured |
+| TUTORIAL | Claude | D-078: implement ROUND3-DESIGN's tutorial: first run, progress in the save, replayable | todo (after ROUND3-DESIGN) | e2e from a fresh save through the whole tutorial, and a replay on an existing save |
