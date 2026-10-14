@@ -1383,3 +1383,24 @@
   box-shadow: inset 0 0 0 2px var(--ui-danger);
   border-radius: 8px;
 }
+
+/* The Icon guide (§23.3): a 28 px glyph, an 18 px name and a 16 px line per row; rows grow. */
+.icon-guide-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.icon-guide-text p {
+  margin: 0;
+}
+.icon-guide-title {
+  font-size: 18px;
+  line-height: 24px;
+}
+.icon-guide-line {
+  font-size: 16px;
+  line-height: 22px;
+}

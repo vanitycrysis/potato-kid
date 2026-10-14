@@ -613,9 +613,9 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   });
 
   test('a refusal that cannot fit waits, and appears once there is room', async ({ page }) => {
-    // Navigation top 182, HUD bottom 68: a 72 px refusal card and its gap would leave
+    // Navigation top 170, HUD bottom 52 (§23.1): a 72 px refusal card and its gap would leave
     // less than the 44 px band.
-    await page.setViewportSize({ width: 568, height: 250 });
+    await page.setViewportSize({ width: 568, height: 230 });
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
     // Sampled, not retried: a card shown too early would vanish after 2.5 s and pass a retry.
@@ -805,12 +805,12 @@ test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () =>
       };
     });
 
-  // Codex's measured bands (§19.1): 660 of 844 (78.2 %), 208 of 360 (57.8 %).
-  for (const [w, h, band] of [[390, 844, 660], [640, 360, 208]] as const) {
-    test(`${w}x${h} with no sheet: a 60 px strip and a 60 px navigation row leave the world ${band} px`, async ({ page }) => {
+  // Codex's measured bands (§23.1): 684 of 844 (81.0 %), 232 of 360 (64.4 %).
+  for (const [w, h, band] of [[390, 844, 684], [640, 360, 232]] as const) {
+    test(`${w}x${h} with no sheet: a 44 px stat row and a 52 px tray leave the world ${band} px`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
       await boot(page, '?seed=3&debug=1&calm=1');
-      await expect.poll(() => measure(page)).toEqual({ fit: 'usual', hud: 60, nav: 60, band });
+      await expect.poll(() => measure(page)).toEqual({ fit: 'usual', hud: 44, nav: 52, band });
     });
   }
 
@@ -819,12 +819,12 @@ test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () =>
       await page.setViewportSize({ width: 568, height: 320 });
       await boot(page, '?seed=3&debug=1&calm=1');
       await page.evaluate((k) => window.__PK__!.debugSaveStatus!({ unsaved: k === 'unsaved', recovery: k === 'recovery', readOnly: false }), kind);
-      await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual', hud: 60, nav: 60 });
-      // The band follows the banner's actual height B (§19.3): 64 or 72 at least, more if
-      // its copy wraps. Navigation top is H − 8 − 60 = 252.
+      await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual', hud: 44, nav: 52 });
+      // The band follows the banner's actual height B (§23.1): 64 or 72 at least, more if
+      // its copy wraps. The tray's top is H − 8 − 52 = 260.
       const b = await page.locator('.banners').evaluate((e) => e.getBoundingClientRect().bottom);
       expect(b).toBeGreaterThanOrEqual(8 + (kind === 'unsaved' ? 64 : 72));
-      expect((await measure(page)).band).toBe(252 - 8 - (b + 8 + 60 + 8));
+      expect((await measure(page)).band).toBe(260 - 8 - (b + 8 + 44 + 8));
       expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
     });
   }
@@ -864,24 +864,27 @@ test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () =>
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'usual' });
-    // No resize: only the navigation's content grows.
-    await page.addStyleTag({ content: '.tray-cell { min-height: 150px !important; }' });
+    // No resize: only the navigation's content grows, past what leaves the band.
+    await page.addStyleTag({ content: '.tray-cell { min-height: 300px !important; }' });
     await expect.poll(() => measure(page).then((m) => m.fit)).not.toBe('usual');
-    expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
+    // A scroll window keeps the band; else the page takes over and the world hides.
+    const m = await measure(page);
+    if (m.fit === 'window') expect(m.band).toBeGreaterThanOrEqual(44);
+    else await expect(page.locator('#app')).toBeHidden();
   });
 
   test('a scroll window grows to show its tallest control whole, and the page takes over when that leaves no band (Codex review round 2, PR #87)', async ({ page }) => {
-    // Enlarged text: navigation controls 70 px tall instead of 44.
-    await page.setViewportSize({ width: 240, height: 360 });
+    // Enlarged text: stat chips wrap onto rows, each 70 px tall instead of 44 (§23.1).
+    await page.setViewportSize({ width: 240, height: 420 });
     await boot(page, '?seed=3&debug=1&calm=1');
-    await page.addStyleTag({ content: '.tray-cell { min-height: 70px !important; }' });
+    await page.addStyleTag({ content: '.hud-stat { min-height: 70px !important; min-width: 200px !important; }' });
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
-    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window', nav: 70 + 16 });
+    await expect.poll(() => measure(page)).toMatchObject({ fit: 'window', hud: 70 + 16 });
     expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
-    // Every control can be scrolled wholly into the window.
+    // Every chip can be scrolled wholly into the window.
     const whole = await page.evaluate(() => {
-      const tray = document.querySelector('.tray') as HTMLElement;
-      return [...tray.children].every((c) => (c as HTMLElement).offsetHeight <= tray.clientHeight);
+      const hud = document.querySelector('.hud') as HTMLElement;
+      return [...hud.children].every((c) => (c as HTMLElement).offsetHeight <= hud.clientHeight);
     });
     expect(whole).toBe(true);
     // Shorter: the grown windows would leave no band, so the page takes over.
@@ -890,10 +893,11 @@ test.describe('the world band and its fallbacks (GUI_MVP §§19.1, 19.3)', () =>
   });
 
   test('rows that wrap on a narrow screen become 60 px scroll windows, which keep their offset', async ({ page }) => {
-    // Too narrow for three stats or three labels in a row: both wrap, and with a banner
-    // the natural layout leaves no band (§19.3).
+    // Too narrow for three stat chips in a row (counts wide enough to wrap them): they wrap,
+    // and with a banner the natural layout leaves no band (§23.1).
     await page.setViewportSize({ width: 240, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    await page.addStyleTag({ content: '.hud-stat { min-width: 120px !important; }' });
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     await expect.poll(() => measure(page)).toMatchObject({ fit: 'window', hud: 60, nav: 60 });
     expect((await measure(page)).band).toBeGreaterThanOrEqual(44);
@@ -1834,7 +1838,7 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: false, readOnly: true }));
     await expect(dexButton(page)).toBeDisabled();
-    await expect(dexButton(page)).toHaveAttribute('aria-label', 'Dex: Update the game to continue.');
+    await expect(dexButton(page)).toHaveAttribute('aria-label', 'Potato-Dex: Update the game to continue.');
   });
 });
 
@@ -4069,7 +4073,8 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
       // at the band's top (a compact landscape at its fitted zoom, §20.1).
       if ((await y(frame.bottom)) - (await y(frame.top)) <= band.bottom - band.top) expect(await y(frame.bottom)).toBeLessThanOrEqual(band.bottom + 0.5);
       else expect(await y(frame.top)).toBeLessThan(band.top + 2);
-      // At 200 % the frame no longer fits: the building's top is at the band's top.
+      // At 200 %, the same rule: the whole frame if it fits (the icon HUD's taller band fits it
+      // on a 390 x 844 phone, §23.1), else the building's top at the band's top.
       await page.evaluate(() => window.__PK__!.centerOn(99999, 99999));
       await openTool(page, 'Map view');
       const sheet = page.getByRole('dialog', { name: 'Map view' });
@@ -4078,24 +4083,161 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
       await sheet.getByRole('button', { name: 'Find Garden' }).click();
       const top = await y(frame.top);
       expect(top).toBeGreaterThanOrEqual(band.top - 0.5);
-      expect(top).toBeLessThan(band.top + 2);
+      if ((await y(frame.bottom)) - top <= band.bottom - band.top) {
+        expect(await y(frame.bottom)).toBeLessThanOrEqual(band.bottom + 0.5);
+        // Centred in the band.
+        expect(Math.abs((top + (await y(frame.bottom))) / 2 - (band.top + band.bottom) / 2)).toBeLessThan(1);
+      } else expect(top).toBeLessThan(band.top + 2);
     });
   }
 
-  test('the strip shows Materials, Potatokens and population; a full map swaps in a warning', async ({ page }) => {
+  test('three stat chips name themselves on a tap: name, full value and use; a full map keeps the kids glyph (D-077)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 12345 }));
     const pop = page.locator('.hud-population');
     const n = await page.evaluate(() => window.__PK__!.kids().length);
-    await expect(pop).toHaveAttribute('aria-label', `${n} of 12 kids on the map`);
-    await expect(pop.locator('img')).toHaveAttribute('src', /icon%20kids/);
-    // Nothing in the strip is a control (§19.1).
-    await expect(page.locator('.hud button')).toHaveCount(0);
+    await expect(pop).toHaveAttribute('aria-label', `Kids on map: ${n} of 12. About map space`);
+    await expect(page.locator('.hud-materials')).toHaveAttribute('aria-label', /^Materials: 12,345. About Materials$/);
+    const bubble = page.locator('#name-bubble');
+    await page.locator('.hud-materials').click();
+    await expect(bubble).toBeVisible();
+    await expect(bubble.locator('.name-bubble-title')).toHaveText('Materials');
+    await expect(bubble.locator('.name-bubble-value')).toHaveText('12,345 Materials');
+    await expect(bubble.locator('.name-bubble-line')).toHaveText(['Kids on the map earn these. Spend them on buildings, plots, fields, names or Compendium returns.']);
+    await expect(page.locator('.hud-materials')).toHaveAttribute('aria-expanded', 'true');
+    // Only one bubble: another stat replaces it.
+    await page.locator('.hud-potatokens').click();
+    await expect(bubble.locator('.name-bubble-title')).toHaveText('Potatokens');
+    await expect(page.locator('.hud-materials')).toHaveAttribute('aria-expanded', 'false');
+    // The same stat again closes it.
+    await page.locator('.hud-potatokens').click();
+    await expect(bubble).toBeHidden();
+    // A full map: the kids glyph stays; the bubble says so.
     await page.evaluate((n) => {
       for (let i = n; i < 12; i++) window.__PK__!.debugAdd!('plain', 656 + (i % 6) * 280, 3228 + Math.floor(i / 6) * 300);
     }, n);
-    await expect(pop).toHaveAttribute('aria-label', 'Map is full: 12 of 12 kids');
-    await expect(pop.locator('img')).toHaveAttribute('src', /title%3eAttention/);
+    await expect(pop).toHaveAttribute('aria-label', 'Kids on map: 12 of 12. About map space');
+    await expect(pop.locator('img')).toHaveAttribute('src', /icon%20kids/);
     await expect(pop).toContainText('12/12');
+    await pop.click();
+    await expect(bubble.locator('.name-bubble-value')).toHaveText('12 / 12 on the map');
+    await expect(bubble.locator('.name-bubble-line')).toHaveText(['Plot kids and farming kids are counted in their own pages. Capacity upgrades add map space.', 'The map is full. Make room for another kid.']);
+  });
+
+  test('a name bubble closes on Escape (focus back on its stat), on Close, on a world tap that does nothing else, and when a sheet opens (D-077)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const bubble = page.locator('#name-bubble');
+    const chip = page.locator('.hud-materials');
+    await chip.focus();
+    await page.keyboard.press('Enter');
+    await expect(bubble).toBeVisible();
+    await expect(chip).toBeFocused();
+    // From inside the bubble too, Escape returns focus to its stat.
+    await bubble.getByRole('button', { name: 'Close' }).focus();
+    await page.keyboard.press('Escape');
+    await expect(bubble).toBeHidden();
+    await expect(chip).toBeFocused();
+    // Close.
+    await chip.click();
+    await bubble.getByRole('button', { name: 'Close' }).click();
+    await expect(bubble).toBeHidden();
+    // A tap on the world closes it and neither picks up a kid nor pans.
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1620, 3980));
+    await page.waitForTimeout(150);
+    await chip.click();
+    const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980));
+    await page.mouse.move(at.x, at.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(at.x + 120, at.y - 20, { steps: 6 });
+    await expect(bubble).toBeHidden();
+    expect(await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!.held, id)).toBe(false);
+    await page.mouse.up();
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980))).toEqual(before);
+    // A sheet opening closes it (opened from the keyboard: no tap outside to close it first).
+    await chip.click();
+    await expect(bubble).toBeVisible();
+    await page.locator('[data-nav=garden]').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(bubble).toBeHidden();
+  });
+
+  test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('.hud-materials').click();
+    await expect(page.locator('#name-bubble')).toBeVisible();
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
+    for (let i = 0; i < 4; i++) {
+      await page.waitForTimeout(150);
+      // Not shown and not playing out unseen: no card is mounted until the bubble closes.
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+
+  test('the tray is three named icons: a tap opens, a 450 ms hold only names it (D-077)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    for (const [key, name] of [['garden', 'Garden'], ['dex', 'Potato-Dex'], ['notebook', 'Notebook']] as const) {
+      await expect(page.locator(`[data-nav=${key}]`)).toHaveAttribute('aria-label', name);
+      const box = (await page.locator(`[data-nav=${key}]`).boundingBox())!;
+      expect([Math.round(box.width), Math.round(box.height)]).toEqual([44, 44]);
+    }
+    const tray = (await page.locator('.tray').boundingBox())!;
+    expect([Math.round(tray.width), Math.round(tray.height)]).toEqual([156, 52]);
+    expect(Math.round(tray.x + tray.width / 2)).toBe(195);
+    // A touch hold names Potato-Dex, above the tray, and its release opens nothing.
+    const touch = (type: string) =>
+      page.locator('[data-nav=dex]').evaluate((b, type) => {
+        const r = b.getBoundingClientRect();
+        const init = { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 22, clientY: r.top + 22, bubbles: true };
+        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        else b.dispatchEvent(new PointerEvent(type, init));
+      }, type);
+    await touch('pointerdown');
+    await page.waitForTimeout(600);
+    const tip = page.locator('.name-tip');
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText('Potato-Dex');
+    expect((await tip.boundingBox())!.y + (await tip.boundingBox())!.height).toBeLessThanOrEqual(tray.y);
+    await touch('pointerup');
+    await touch('click');
+    await page.waitForTimeout(200);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // A quick tap (no hold) is no naming: its click opens.
+    await touch('pointerdown');
+    await touch('pointerup');
+    await touch('click');
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    // An ordinary tap opens it.
+    await page.locator('[data-nav=dex]').click();
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
+  });
+
+  test('390 x 844: the world band is 684 px tall, 81 % of the screen (§23.1)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const hud = (await page.locator('.hud').boundingBox())!;
+    const tray = (await page.locator('.tray').boundingBox())!;
+    expect(Math.round(hud.height)).toBe(44);
+    const band = tray.y - 8 - (hud.y + hud.height + 8);
+    expect(Math.round(band)).toBe(684);
+  });
+
+  test('the Notebook has an Icon guide naming every HUD and tray icon (§23.3)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=notebook]').click();
+    const rows = await page.getByRole('dialog', { name: 'Notebook' }).locator('.notebook-row').allTextContents();
+    expect(rows).toEqual(['Pantry', 'Capacity', 'Spawn bias', 'Compendium', 'Map view', 'Icon guide', 'Settings']);
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Icon guide', exact: true }).click();
+    const guide = page.getByRole('dialog', { name: 'Icon guide' });
+    await expect(guide.locator('.icon-guide-title')).toHaveText(['Materials', 'Potatokens', 'Kids on map', 'Garden', 'Potato-Dex', 'Notebook']);
+    await expect(guide.locator('.icon-guide-line').nth(3)).toHaveText('Arrivals, planting plots, food fields and spawn-rate upgrades.');
+    await page.getByRole('button', { name: 'Back to Notebook' }).click();
+    await expect(page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Icon guide', exact: true })).toBeFocused();
   });
 
   test('the Garden opens on Arrivals, then Plots, then Spawn rate', async ({ page }) => {
@@ -4115,7 +4257,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await page.locator('[data-nav=notebook]').click();
     const nb = page.getByRole('dialog', { name: 'Notebook' });
     await expect(nb).toContainText('Tools for your garden.');
-    await expect(nb.locator('.notebook-row')).toHaveText(['Pantry', 'Capacity', 'Spawn bias', 'Compendium', 'Map view', 'Settings']);
+    await expect(nb.locator('.notebook-row')).toHaveText(['Pantry', 'Capacity', 'Spawn bias', 'Compendium', 'Map view', 'Icon guide', 'Settings']);
     for (const [row, title] of [
       ['Pantry', 'Pantry'],
       ['Capacity', 'Capacity'],
@@ -4320,7 +4462,7 @@ test.describe('every kid on the map, and Which kid? (GUI_MVP §§19.2, 20.1)', (
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugAdd!('plain', 1176, 3148));
     await page.locator('[data-nav=dex]').click();
-    await page.getByRole('button', { name: /Kids on map/ }).click();
+    await page.getByRole('button', { name: /^Kids on map \(/ }).click();
     await page.evaluate(() => window.__PK__!.debugAway!(120_000));
     await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
     await expect(page.getByRole('dialog', { name: 'Kids on map' })).toBeVisible();
