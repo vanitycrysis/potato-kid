@@ -4339,6 +4339,21 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     } else await expect(page.getByRole('dialog', { name: 'Materials' })).toBeVisible();
   });
 
+  test('the fallback help sheet wraps a long balance inside its header (Codex review round 7, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 160, height: 300 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 123_456_789_012_345 }));
+    await page.locator('.hud-materials').click();
+    const help = page.getByRole('dialog', { name: 'Materials' });
+    await expect(help).toBeVisible();
+    const subtitle = help.locator('.sheet-subtitle');
+    await expect(subtitle).toHaveText(/^123,456,789,012,3\d\d Materials$/);
+    expect(await subtitle.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    const sheet = (await help.boundingBox())!;
+    const box = (await subtitle.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(sheet.x + sheet.width + 1);
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();
