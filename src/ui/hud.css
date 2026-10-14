@@ -293,6 +293,15 @@
   clip-path: none;
   overflow: visible;
 }
+/* Page mode stacks the stat chips full width, as the scroll windows do: three columns already
+   failed the fit check (Codex review, #105). */
+:root[data-hud-fit='page'] .hud {
+  flex-direction: column;
+  align-items: stretch;
+}
+:root[data-hud-fit='page'] .hud-stat {
+  flex: none;
+}
 :root[data-hud-fit='page'] .page-hint {
   display: block;
   margin: 8px var(--ui-mr) 0 var(--ui-ml);
@@ -369,6 +378,8 @@
 .name-bubble-line {
   font-size: 16px;
   line-height: 22px;
+  /* A long full balance wraps rather than running under Close (Codex review, #105). */
+  overflow-wrap: anywhere;
 }
 .ui-button.name-bubble-close {
   position: absolute;

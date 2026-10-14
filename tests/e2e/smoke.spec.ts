@@ -4321,6 +4321,24 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     for (const chip of await page.locator('.hud-stat').all()) expect(await chip.evaluate((c) => c.scrollWidth <= c.clientWidth + 1)).toBe(true);
   });
 
+  test('page mode stacks the chips full width; a long balance wraps inside its bubble (Codex review round 6, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 160, height: 150 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    for (const chip of await page.locator('.hud-stat').all()) expect((await chip.boundingBox())!.width).toBeGreaterThanOrEqual(44);
+    // A narrow window with room below the HUD: the bubble opens, and its value wraps clear of Close.
+    await page.setViewportSize({ width: 160, height: 900 });
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 123_456_789_012_345 }));
+    await page.locator('.hud-materials').click();
+    const bubble = page.locator('#name-bubble');
+    if (await bubble.isVisible()) {
+      const value = (await bubble.locator('.name-bubble-value').boundingBox())!;
+      const close = (await bubble.getByRole('button', { name: 'Close' }).boundingBox())!;
+      expect(await bubble.locator('.name-bubble-value').evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+      expect(value.x + value.width).toBeLessThanOrEqual(close.x + 1);
+    } else await expect(page.getByRole('dialog', { name: 'Materials' })).toBeVisible();
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();
