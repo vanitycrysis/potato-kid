@@ -5268,7 +5268,11 @@ test.describe('assigning a kid to a field by drag (D-069, GUI_MVP §22.4)', () =
     await pick(page, id);
     await page.mouse.move(edge.x - 12, edge.y, { steps: 6 });
     await page.waitForTimeout(700);
-    expect(await page.evaluate(() => window.__PK__!.worldToScreen(0, 0))).toEqual(before);
+    // Held still: an edge scroll would carry it many px in 700 ms. A slow CI frame may let
+    // the first ramp frame through on the way in (a fraction of a px, map v4 run).
+    const after = await page.evaluate(() => window.__PK__!.worldToScreen(0, 0));
+    expect(Math.abs(after.x - before.x)).toBeLessThan(0.5);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(0.5);
     await expect(label(page)).toContainText('Release to start farming');
     await page.mouse.up();
     await expect.poll(() => page.evaluate(() => window.__PK__!.fields()[0]!.kids.length)).toBe(1);
