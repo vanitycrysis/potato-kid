@@ -9,10 +9,10 @@ GUI_MVP §§23–26 and additive `ui_v2.json.mvp.round3` define the icon HUD/tra
 | `icon_r3_garden` | 128 × 128 | Sprout-roof house, tray 28 CSS px; final for Claude review |
 | `icon_r3_dex` | 128 × 128 | Potato-cover tabbed book, tray 28 CSS px; final for Claude review |
 | `icon_r3_notebook` | 128 × 128 | Ruled spiral notebook, tray 28 CSS px; final for Claude review |
-| `badge_special` | 64 × 64 | Blue blossom; live Special text, 20/24 CSS px; final for Claude review |
+| `badge_special` | 64 × 64 | Blue looped ribbon with notched tails; live Special text, 20/24 CSS px; final for Claude review |
 | `badge_rare` | 64 × 64 | Orange faceted gem; live Rare text, 20/24 CSS px; final for Claude review |
 
-Original SVGs: `art/src/ui/round3/`; generated DOM copies: `assets/ui/`; optional PNG delivery derivatives: `art/exports/ui-round3/`, emitted and validated by the existing exporter. These derivatives are not loaded alongside SVGs. Five PNGs add **229,376 decoded RGBA bytes (0.21875 MiB)**; existing game inventory stays **289 PNGs / 21,044,480 bytes (20.06958 MiB)**, delta **0**. Conservative game plus all new derivatives is **20.28833 MiB**; intended Pixi GUI texture delta **0**. Device allocation/atlas slack remains Claude's check under the unchanged 32 MiB ceiling. Ordinary Tier 5 retains its original badge; category Special/Rare gets full words and new badges. Unknown Dex/recipe tiers have no badge.
+Original SVGs: `art/src/ui/round3/`; generated DOM copies: `assets/ui/`, validated and copied by the existing exporter. Round 2 removes the five unused PNG delivery derivatives and their export branch. Existing game inventory stays **289 PNGs / 21,044,480 bytes (20.06958 MiB)**, decoded delta **0**; UI delivery PNG bytes now **0** (−229,376 from round 1). Intended Pixi GUI texture delta **0**. Device allocation/atlas slack remains Claude's check under the unchanged 32 MiB ceiling. Ordinary Tier 5 retains its original blossom; category Special/Rare gets distinct ribbon/gem badges with full words. Unknown Dex/recipe tiers have no badge.
 
 [Handoff and checks](../.codex-out/round3-design-notes.md), [native colour/grayscale gallery](../.codex-out/round3/index.html), [preservation/budget audit](../.codex-out/round3-final-audit.json). Export/check/typecheck pass; all 353 tests pass. Design and art review/implementation remain pending; no owner gate acceptance or task-board completion.
 

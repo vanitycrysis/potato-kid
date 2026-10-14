@@ -11,11 +11,6 @@ const SRC = join(ROOT, 'art/src');
 const PREVIEWS = join(ROOT, 'art/previews');
 const checkOnly = process.argv.includes('--check-only');
 
-// ROUND3-DESIGN: optional delivery rasters, while DOM continues to use the SVGs.
-// Keep these out of assets/ so Pixi never loads a duplicate GUI texture.
-const UI_DELIVERY_PNGS = new Set([
-  'icon_r3_garden', 'icon_r3_dex', 'icon_r3_notebook', 'badge_special', 'badge_rare',
-]);
 
 /** Where each asset family is exported, and its contract. */
 const FAMILIES = [
@@ -179,30 +174,6 @@ for (const file of svgs) {
     }, text);
     if (check) problems.push(`${name}: GUI SVG ${check}`);
     pending.push({ out: join(ROOT, fam.dir, `${name}.svg`), text });
-    if (UI_DELIVERY_PNGS.has(name)) {
-      const raster = await page.evaluate(async (src) => {
-        const doc = new DOMParser().parseFromString(src, 'image/svg+xml');
-        const root = doc.documentElement;
-        const w = Number(root.getAttribute('width')), h = Number(root.getAttribute('height'));
-        if (![64, 128].includes(w) || h !== w) return { problem: 'needs a 64 or 128 px square canvas' };
-        const img = new Image();
-        img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(src)))}`;
-        await img.decode();
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
-        const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-        const { data } = ctx.getImageData(0, 0, w, h);
-        let visible = false;
-        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-          if (!data[(y * w + x) * 4 + 3]) continue;
-          visible = true;
-          if (x < 4 || y < 4 || x >= w - 4 || y >= h - 4) return { problem: 'needs 4 px transparent edge padding' };
-        }
-        if (!visible) return { problem: 'renders nothing visible' };
-        return { png: c.toDataURL('image/png') };
-      }, text);
-      if (raster.problem) problems.push(`${name}: UI delivery PNG ${raster.problem}`);
-      else pending.push({ out: join(ROOT, 'art/exports/ui-round3', `${name}.png`), png: raster.png });
-    }
     continue;
   }
   if (fam.prefix === 'kid_') {

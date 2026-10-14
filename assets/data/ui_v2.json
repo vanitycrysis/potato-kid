@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "round3-design-1",
+  "revision": "round3-design-2",
   "status": "final",
   "runtimeMode": "native_dom_svg",
   "palette": {
@@ -2205,7 +2205,7 @@
       "mapRevision": "layout-design-map-3"
     },
     "round3": {
-      "revision": "round3-design-1",
+      "revision": "round3-design-2",
       "status": "Claude review pending",
       "spec": "docs/GUI_MVP.md sections 23-26",
       "supersedes": [
@@ -2304,7 +2304,7 @@
           "accessibleName": "Materials: {fullFlooredBalance}. About Materials",
           "title": "Materials",
           "value": "{fullFlooredBalance} Materials",
-          "explanation": "Kids on the map earn these. Spend them on buildings and names."
+          "explanation": "Kids on the map earn these. Spend them on buildings, plots, fields, names or Compendium returns."
         },
         {
           "id": "potatokens",
@@ -2312,7 +2312,7 @@
           "accessibleName": "Potatokens: {fullBalance}. About Potatokens",
           "title": "Potatokens",
           "value": "{fullBalance} Potatokens",
-          "explanation": "Use these for instant Garden spawns. The Garden shows the exact cost before you spend."
+          "explanation": "Spend these on instant Garden spawns or Compendium returns. Each action shows its cost before you spend."
         },
         {
           "id": "kids",
@@ -2412,7 +2412,7 @@
         "card": {
           "maxWidthCss": 600,
           "contentInsetCss": 12,
-          "portraitMaxHeightCss": 480,
+          "portraitMaxHeightCss": 400,
           "portraitHeaderCss": 56,
           "portraitDiagramHeightCss": 76,
           "compactHeaderCss": 44,
@@ -2431,7 +2431,9 @@
             16,
             22
           ],
-          "entryMs": 120
+          "entryMs": 120,
+          "compactDiagramNodeGapCss": 2,
+          "hintBottomMarginCss": 0
         },
         "steps": [
           {
@@ -2439,13 +2441,42 @@
             "spotlight": "Dex tray",
             "title": "A garden of discoveries",
             "paragraphs": [
-              "Fuse kids to discover new kinds and fill your Potato-Dex.",
-              "Kids wander on their own. You choose what to try next."
+              "Kids wander and earn Materials. Try pairs to discover new kinds and fill your Potato-Dex.",
+              "Drag empty ground to pan; pinch with two fingers to zoom."
             ],
             "diagramLabels": [
               "Kids",
               "Discover",
               "Potato-Dex"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Kids",
+                "art": [
+                  {
+                    "type": "plain",
+                    "css": 55
+                  }
+                ]
+              },
+              {
+                "label": "Discover",
+                "art": [
+                  {
+                    "icon": "icon_discovery",
+                    "css": 40
+                  }
+                ]
+              },
+              {
+                "label": "Potato-Dex",
+                "art": [
+                  {
+                    "icon": "icon_r3_dex",
+                    "css": 40
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2453,13 +2484,37 @@
             "spotlight": "card demo only",
             "title": "Pick up, hover, fuse",
             "paragraphs": [
-              "Drag a kid over another. A marked partner means they can fuse.",
-              "The little recipe window shows both parents and the result. A dark result is one you haven't found.",
-              "Release on that partner: two kids become one. Other pairs stay separate. Tap a kid to see its card."
+              "Drag a kid over another. Marked partners can fuse: release to turn two kids into one.",
+              "The window shows parents and result. Dark means undiscovered. Tap a kid for its card."
             ],
             "diagramLabels": [
               "Parents",
               "Result"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Parents",
+                "art": [
+                  {
+                    "type": "plain",
+                    "css": 48
+                  },
+                  {
+                    "type": "water",
+                    "css": 48
+                  }
+                ]
+              },
+              {
+                "label": "Result",
+                "art": [
+                  {
+                    "type": "firefighter",
+                    "css": 48,
+                    "dark": true
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2467,14 +2522,42 @@
             "spotlight": "HUD group",
             "title": "Know your numbers",
             "paragraphs": [
-              "Materials: kids on the map earn these. Spend them on buildings and names.",
-              "Potatokens: use these for instant Garden spawns; check the cost there first.",
-              "Kids on map: the first number is here now; the second is capacity. Tap any number to read its name."
+              "Materials pay for buildings, plots, fields, names or Compendium returns. Potatokens buy instant spawns or Compendium returns.",
+              "Kids on map shows population / capacity. Tap a number for its name and details."
             ],
             "diagramLabels": [
               "Materials",
               "Potatokens",
               "Kids on map"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Materials",
+                "art": [
+                  {
+                    "icon": "icon_materials",
+                    "css": 28
+                  }
+                ]
+              },
+              {
+                "label": "Potatokens",
+                "art": [
+                  {
+                    "icon": "icon_potatokens",
+                    "css": 28
+                  }
+                ]
+              },
+              {
+                "label": "Kids on map",
+                "art": [
+                  {
+                    "icon": "icon_kids",
+                    "css": 28
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2482,13 +2565,32 @@
             "spotlight": "Garden tray",
             "title": "The Garden brings new kids",
             "paragraphs": [
-              "Open the house icon for arrivals, planting plots, food fields and spawn-rate upgrades.",
-              "New kids arrive over time while there is room. Garden upgrades shorten the wait; Capacity in the Notebook adds room.",
-              "Spawn now costs Potatokens. Its button shows the exact cost."
+              "Open Garden for arrivals, plots, fields and spawn upgrades. New kids arrive over time when there's room.",
+              "Garden upgrades shorten the wait. Notebook → Capacity adds room. Spawn now shows its Potatoken cost."
             ],
             "diagramLabels": [
               "Garden",
               "Arrivals"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Garden",
+                "art": [
+                  {
+                    "icon": "icon_r3_garden",
+                    "css": 44
+                  }
+                ]
+              },
+              {
+                "label": "Arrivals",
+                "art": [
+                  {
+                    "icon": "icon_timer",
+                    "css": 28
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2496,14 +2598,42 @@
             "spotlight": "Garden tray",
             "title": "Plant for a surprise",
             "paragraphs": [
-              "Add 3–5 kids to a plot by dragging to the Garden or tapping a plot and picking kids. Then choose Start growing.",
-              "Filling never starts by itself. You can take kids out; cancelling growth returns them if the map has room, and loses the growing time.",
-              "One kid sprouts later. Planting can reveal Special or Rare kids. They count in the Dex and have no fusion recipes."
+              "Drag kids to the Garden, or tap a plot and pick 3–5. Choose Start growing; filling never starts itself.",
+              "One kid sprouts later, sometimes Special or Rare."
             ],
             "diagramLabels": [
               "Plot",
               "Add 3–5",
               "Start growing"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Plot",
+                "art": [
+                  {
+                    "icon": "icon_garden",
+                    "css": 32
+                  }
+                ]
+              },
+              {
+                "label": "Add 3–5",
+                "art": [
+                  {
+                    "type": "plain",
+                    "css": 48
+                  }
+                ]
+              },
+              {
+                "label": "Start growing",
+                "art": [
+                  {
+                    "icon": "icon_check",
+                    "css": 28
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2511,14 +2641,42 @@
             "spotlight": "Garden tray",
             "title": "Farm food, then feed",
             "paragraphs": [
-              "Tap a field, choose a food and assign kids. You can also drag a kid to the field, hold, then release.",
-              "Farmers earn food for the pantry, not Materials. Favourite food grows faster; hated food is refused. Take farmers back when the map has room.",
-              "Open Pantry in the Notebook. Feed from a kid's card: one bite makes it happy. The sun means happy; its face stays the same."
+              "Tap a field, choose food and assign kids. Farmers fill the Pantry instead of earning Materials.",
+              "Open Pantry in Notebook. Feed from a kid's card; the sun means happy."
             ],
             "diagramLabels": [
               "Field",
               "Pantry",
               "Happy"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Field",
+                "art": [
+                  {
+                    "icon": "icon_fields",
+                    "css": 32
+                  }
+                ]
+              },
+              {
+                "label": "Pantry",
+                "art": [
+                  {
+                    "icon": "icon_pantry",
+                    "css": 28
+                  }
+                ]
+              },
+              {
+                "label": "Happy",
+                "art": [
+                  {
+                    "icon": "icon_happy",
+                    "css": 28
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2526,14 +2684,42 @@
             "spotlight": "Dex tray",
             "title": "Keep your discoveries",
             "paragraphs": [
-              "The potato book is your Potato-Dex: ordinary, Special and Rare discoveries, plus found recipes.",
-              "Undiscovered entries stay mysterious. Kids on map opens a list of your wandering kids, even offscreen ones.",
-              "A Rare kid sparkles. Special and Rare badges name their tiers on cards and lists."
+              "Potato-Dex keeps your discoveries and found recipes. Kids on map lists every wandering kid, including offscreen ones.",
+              "Special has a ribbon badge; Rare has a gem and sparkles. Unknown entries stay mysterious."
             ],
             "diagramLabels": [
               "Potato-Dex",
               "Special",
               "Rare"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Potato-Dex",
+                "art": [
+                  {
+                    "icon": "icon_r3_dex",
+                    "css": 36
+                  }
+                ]
+              },
+              {
+                "label": "Special",
+                "art": [
+                  {
+                    "icon": "badge_special",
+                    "css": 24
+                  }
+                ]
+              },
+              {
+                "label": "Rare",
+                "art": [
+                  {
+                    "icon": "badge_rare",
+                    "css": 24
+                  }
+                ]
+              }
             ]
           },
           {
@@ -2541,17 +2727,50 @@
             "spotlight": "Notebook tray",
             "title": "Your Notebook of tools",
             "paragraphs": [
-              "The spiral notebook holds Pantry, Capacity, Spawn bias and Compendium. Bias favours a Garden seed; Compendium brings back discovered ordinary kids for its shown fee.",
-              "Map view has zoom controls and Find Garden. Pinch with two fingers to zoom; drag empty ground to pan.",
-              "Settings has sound and motion preferences. Hold any control icon to see its name. Replay this tutorial here any time."
+              "Notebook holds Pantry, Capacity, Spawn bias, Compendium, Map view and Settings. Hold a control icon to see its name.",
+              "Map view has zoom and Find Garden. Settings has sound and motion."
             ],
             "diagramLabels": [
               "Buildings",
               "Map view",
               "Settings"
+            ],
+            "diagramNodes": [
+              {
+                "label": "Buildings",
+                "art": [
+                  {
+                    "icon": "icon_capacity",
+                    "css": 28
+                  }
+                ]
+              },
+              {
+                "label": "Map view",
+                "art": [
+                  {
+                    "icon": "icon_r3_garden",
+                    "css": 28
+                  }
+                ]
+              },
+              {
+                "label": "Settings",
+                "art": [
+                  {
+                    "icon": "icon_settings",
+                    "css": 28
+                  }
+                ]
+              }
             ]
           }
-        ]
+        ],
+        "copyLimits": {
+          "maximumParagraphs": 2,
+          "maximumBodyWords": 35,
+          "countRule": "Whitespace-delimited words; ignore standalone / and →."
+        }
       },
       "drag": {
         "liftWorld": 70,
@@ -2679,7 +2898,8 @@
         "special": {
           "badge": "badge_special",
           "label": "Special",
-          "effectiveTier": 5
+          "effectiveTier": 5,
+          "silhouette": "two broad ribbon loops, central knot and two downward notched tails"
         },
         "rare": {
           "badge": "badge_rare",
@@ -2699,17 +2919,11 @@
         "unknownHasBadge": false
       },
       "export": {
-        "deliveryPngIds": [
-          "icon_r3_garden",
-          "icon_r3_dex",
-          "icon_r3_notebook",
-          "badge_special",
-          "badge_rare"
-        ],
-        "deliveryDirectory": "art/exports/ui-round3",
-        "decodedDeliveryDeltaBytes": 229376,
         "pixiDeltaBytes": 0,
-        "runtime": "DOM SVG; delivery PNGs optional, never loaded alongside vectors"
+        "decodedDeliveryDeltaBytes": 0,
+        "runtime": "DOM SVG only; no UI PNG derivatives",
+        "sourceDirectory": "art/src/ui/round3",
+        "generatedDirectory": "assets/ui"
       },
       "offline": {
         "summaryThresholdSeconds": 60,
