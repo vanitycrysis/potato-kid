@@ -357,6 +357,8 @@ export class Sheets {
   private key(e: KeyboardEvent): void {
     const c = this.current;
     if (!c) return;
+    // The tutorial is open over this sheet (a replay): its keys are the tutorial's (§24.1).
+    if (document.documentElement.dataset.tutorialOpen === 'true') return;
     if (e.key === 'Escape') {
       e.preventDefault();
       if (!c.spec.onEscape?.()) this.close();
