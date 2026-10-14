@@ -753,6 +753,14 @@
 .tutorial-hint {
   flex: none;
 }
+/* All in flow: the whole card scrolls (a very short window). */
+.tutorial-card[data-flow='true'] {
+  overflow-y: auto;
+}
+.tutorial-card[data-flow='true'] .tutorial-main {
+  flex: none;
+  overflow: visible;
+}
 .tutorial-diagram {
   display: flex;
   justify-content: center;

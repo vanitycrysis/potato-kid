@@ -89,6 +89,7 @@ export class Tutorial {
     // The spotlight follows its control when the viewport changes (rotation, resize).
     window.addEventListener('resize', () => {
       if (this.isOpen && this.shown) this.place(this.shown);
+      if (this.isOpen) this.fit();
     });
   }
 
@@ -239,6 +240,7 @@ export class Tutorial {
     this.card.replaceChildren(el('div', 'tutorial-head', stepLine, close), title, el('div', 'tutorial-main', diagram, body), footer, el('p', 'tutorial-hint', t.hint));
     this.shown = s;
     this.place(s);
+    this.fit();
     title.focus({ preventScroll: true });
   }
 
@@ -253,6 +255,16 @@ export class Tutorial {
     const img = icon(a.icon ?? 'icon_check', '', 'tutorial-icon');
     img.style.width = img.style.height = `${size}px`;
     return img;
+  }
+
+  /**
+   * Too short for the fixed header and controls with a readable body: the whole card scrolls
+   * as one, all in flow (§24.2; Codex review, #107).
+   */
+  private fit(): void {
+    this.card.dataset.flow = 'false';
+    const main = this.card.querySelector<HTMLElement>('.tutorial-main');
+    if (main && main.clientHeight < 44) this.card.dataset.flow = 'true';
   }
 
   /** A static outline 3 px around the lesson's control, behind the card (§24.2). */
@@ -275,7 +287,10 @@ export class Tutorial {
   }
 
   private close(): void {
-    const back = this.launcher?.isConnected ? this.launcher : this.home();
+    // A replay's Replay control, or the same control rebuilt in its sheet after the return
+    // summary replaced it (Codex review, #107); else Garden.
+    const rebuilt = this.replaying ? document.querySelector<HTMLElement>('.sheet .tutorial-replay') : null;
+    const back = this.launcher?.isConnected ? this.launcher : (rebuilt ?? this.home());
     this.teardown();
     this.replaying = false;
     this.launcher = null;

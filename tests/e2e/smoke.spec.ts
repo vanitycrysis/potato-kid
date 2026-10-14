@@ -5786,8 +5786,9 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
       await expect(card(page).locator('.tutorial-title')).toHaveAttribute('aria-label', `Step ${i + 1} of 8: ${titles[i]}`);
       expect(await record(page)).toEqual({ version: 1, status: 'inProgress', nextStep: i + 1 });
       if (i === 1) {
-        // The demo recipe's result is dark, unnamed (§25.2's mystery).
+        // The demo recipe's result is dark, unnamed (§25.2's mystery): drawn as a silhouette.
         await expect(card(page).locator('.recipe-unfound')).toHaveCount(1);
+        expect(await card(page).locator('.recipe-unfound').evaluate((e) => getComputedStyle(e).filter)).toContain('brightness(0)');
         await card(page).getByRole('button', { name: 'Back' }).click();
         await expect(card(page).locator('.tutorial-title')).toHaveText(titles[0]!);
         await card(page).getByRole('button', { name: 'Next' }).click();
@@ -5904,6 +5905,32 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     const spot = (await page.locator('.tutorial-spot').boundingBox())!;
     expect(Math.abs(spot.x + 3 - hud.x)).toBeLessThan(2);
     expect(Math.abs(spot.width - 6 - hud.width)).toBeLessThan(2);
+  });
+
+  test('a very short window: the whole card scrolls, its controls reachable (Codex review round 2, #107)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page)).toHaveAttribute('data-flow', 'true');
+    const next = card(page).getByRole('button', { name: 'Next' });
+    await next.scrollIntoViewIfNeeded();
+    await expect(next).toBeInViewport({ ratio: 1 });
+    await next.click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
+  });
+
+  test('a replay interrupted by the return summary returns focus to the rebuilt Replay control (Codex review round 2, #107)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+    await page.keyboard.press('Escape');
+    await expect(card(page)).toBeHidden();
+    await expect(page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' })).toBeFocused();
   });
 
   test('in tests it waits unless asked for; feedback waits while it is open', async ({ page }) => {
