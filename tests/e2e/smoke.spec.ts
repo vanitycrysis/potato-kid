@@ -5404,6 +5404,7 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await expect(card).toContainText('No fusion recipes.');
     // The Rare tier by name (D-082), never "Tier 6".
     await expect(card.locator('.kid-card-tier .tier')).toHaveText('Rare');
+    await expect(card.locator('.kid-card-tier img[data-icon="badge_rare"]')).toHaveCount(1);
     await page.keyboard.press('Escape');
     // The special's card: its own body; no rare profile.
     const g = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, gift);
@@ -5414,20 +5415,20 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await expect(special).toContainText('Special kid');
     // The Special tier by name (D-082), and not the tier-5 badge it earns as.
     await expect(special.locator('.kid-card-tier .tier')).toHaveText('Special');
-    expect(await special.locator('.kid-card-tier img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon))).not.toContain('badge_tier_5');
+    expect(await special.locator('.kid-card-tier img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon))).toEqual(['badge_special']);
     expect(errors).toEqual([]);
   });
 
-  test('a Special kid sprouts, is announced and shows in the Dex as the Special tier, with no tier-5 badge (D-082)', async ({ page }) => {
+  test('a Special kid sprouts, is announced and shows in the Dex as the Special tier, with its own badge (D-082)', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'treasure_chest'));
     const found = page.locator('.feedback').getByRole('button', { name: /found/ });
     await expect(found).toContainText('Treasure Chest');
     await expect(found.locator('.tier')).toHaveText('Special');
     await expect(found.locator('.tier')).toHaveAttribute('aria-label', 'Special');
-    // Never the tier-5 badge it earns as: the Special badge, once drawn (GUI_MVP §26), or none.
+    // Its own Special badge (GUI_MVP §26), never the tier-5 one it earns as.
     const icons = (l: Locator) => l.locator('img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon));
-    expect(await icons(found.locator('.tier'))).not.toContain('badge_tier_5');
+    expect(await icons(found.locator('.tier'))).toEqual(['badge_special']);
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.getByRole('button', { name: 'Specials', exact: true }).click();
@@ -5437,7 +5438,7 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await tile.click();
     await expect(dex.locator('.dex-detail-name')).toHaveText(/Treasure Chest/);
     await expect(dex.locator('.dex-detail-tier')).toHaveText('Special');
-    expect(await icons(dex.locator('.dex-detail-tier'))).not.toContain('badge_tier_5');
+    expect(await icons(dex.locator('.dex-detail-tier'))).toEqual(['badge_special']);
     expect(errors).toEqual([]);
   });
 });
