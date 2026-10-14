@@ -133,6 +133,8 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   let later = 0;
   /** A touch that moved off before naming: its release must not activate (§23.2). */
   let moved = false;
+  /** A finger is down on it (boundary events after its release don't end the gesture). */
+  let down = false;
   let held = false;
   let start: { x: number; y: number; id: number } | null = null;
   const show = () => {
@@ -152,6 +154,7 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   button.addEventListener('pointerdown', (e) => {
     held = false;
     moved = false;
+    down = true;
     start = { x: e.clientX, y: e.clientY, id: e.pointerId };
     clearTimeout(timer);
     if (e.pointerType !== 'mouse')
@@ -170,6 +173,7 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
     }
   });
   button.addEventListener('pointerup', () => {
+    down = false;
     start = null;
     clearTimeout(timer);
     if (held) later = window.setTimeout(hide, 900);
@@ -177,8 +181,10 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   // A cancelled gesture has no release click to swallow: a later activation must go through
   // (Codex review, #105).
   button.addEventListener('pointercancel', () => {
+    down = false;
     start = null;
     held = false;
+    moved = false;
     hide();
   });
   button.addEventListener('pointerenter', (e) => {
@@ -186,8 +192,14 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   });
   button.addEventListener('pointerleave', (e) => {
     start = null;
-    // A finger sliding off ends the gesture: no click follows to swallow.
-    if (e.pointerType !== 'mouse') held = false;
+    // A finger sliding off while down ends the gesture: no click follows to swallow. A leave
+    // after the release (some touch browsers send one before the click) changes nothing
+    // (Codex review, #105).
+    if (e.pointerType !== 'mouse' && down) {
+      held = false;
+      moved = false;
+    }
+    down = false;
     hide();
   });
   button.addEventListener('focus', () => {
@@ -198,6 +210,11 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   button.addEventListener(
     'click',
     (e) => {
+      // A keyboard activation (no pointer: detail 0) is never the gesture's release click.
+      if (e.detail === 0) {
+        held = moved = false;
+        return;
+      }
       if (!held && !moved) return;
       held = false;
       moved = false;

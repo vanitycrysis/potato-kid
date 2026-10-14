@@ -4250,7 +4250,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     const touch = (type: string, dx = 0) =>
       dex.evaluate((b, [type, dx]) => {
         const r = b.getBoundingClientRect();
-        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
         else b.dispatchEvent(new PointerEvent(type as string, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 12 + (dx as number), clientY: r.top + 22, bubbles: true }));
       }, [type, dx] as const);
     await touch('pointerdown');
@@ -4279,6 +4279,34 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await page.evaluate(() => window.__PK__!.debugAway!(120_000));
     await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
     await expect(page.getByRole('dialog', { name: 'Materials' })).toBeVisible();
+  });
+
+  test('a leave after a held release still swallows its click; a move then cancel leaves keyboard activation working (Codex review round 4, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const dex = page.locator('[data-nav=dex]');
+    const send = (type: string, dx = 0) =>
+      dex.evaluate((b, [type, dx]) => {
+        const r = b.getBoundingClientRect();
+        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+        else b.dispatchEvent(new PointerEvent(type as string, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 12 + (dx as number), clientY: r.top + 22, bubbles: true }));
+      }, [type, dx] as const);
+    // Hold, release, then the browser's pointerleave before its click: still only named.
+    await send('pointerdown');
+    await page.waitForTimeout(600);
+    await expect(page.locator('.name-tip')).toHaveText('Potato-Dex');
+    await send('pointerup');
+    await send('pointerleave');
+    await send('click');
+    await page.waitForTimeout(200);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Move off, then the gesture is cancelled: a keyboard Enter afterwards opens.
+    await send('pointerdown');
+    await send('pointermove', 12);
+    await send('pointercancel', 12);
+    await dex.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
   });
 
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
@@ -4311,7 +4339,7 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
       page.locator('[data-nav=dex]').evaluate((b, type) => {
         const r = b.getBoundingClientRect();
         const init = { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 22, clientY: r.top + 22, bubbles: true };
-        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
         else b.dispatchEvent(new PointerEvent(type, init));
       }, type);
     await touch('pointerdown');
