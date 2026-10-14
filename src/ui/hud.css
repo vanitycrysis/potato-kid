@@ -117,26 +117,49 @@
   visibility: hidden;
 }
 
-/* The HUD (GUI_MVP §19.1): one 60 px paper strip of three equal, noninteractive stats.
-   The strip's own 8 px border is its whole inset; the 44 px row sits at local y 8. A stat
-   that doesn't fit wraps onto its own line rather than shrinking (§19.3). */
+/* The HUD (D-077, GUI_MVP §23.1): one 44 px row of three equal paper chips, 8 px apart, with
+   no strip behind them. Each chip is a button: a 24 px glyph, 6 px, and its 20/24 count,
+   centred. A chip that doesn't fit stacks its glyph over its count rather than shrinking. */
 .hud {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  column-gap: 8px;
-  min-height: 60px;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 44px;
   pointer-events: none;
+  font-family: var(--ui-font);
   font-size: 20px;
   line-height: 24px;
 }
 .hud-stat {
   flex: 1 1 0;
-  min-width: max-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  /* Narrower than its glyph and count, a chip stacks them and grows, rather than wrapping the
+     whole row (§23.1; Codex review, #105). */
+  min-width: 0;
   min-height: 44px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 6px;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.hud-stat:focus-visible,
+.tray-cell:focus-visible {
+  outline: 2px solid var(--ui-ink);
+  outline-offset: 2px;
+}
+.hud-stat .hud-count,
+.hud-stat .hud-value {
+  white-space: nowrap;
+}
+.hud-stat[aria-expanded='true'] {
+  background: var(--ui-sage);
 }
 
 .hud-track {
@@ -243,6 +266,42 @@
 :root[data-hud-fit='page'] .tray {
   height: auto;
 }
+/* In the scroll windows and page mode the tray is full width again, with labelled controls
+   (§23.1): a tiny icon tray only belongs to the natural layout. */
+:root[data-hud-fit='window'] .tray,
+:root[data-hud-fit='page'] .tray {
+  left: var(--ui-ml);
+  right: var(--ui-mr);
+  width: auto;
+  transform: none;
+  border-width: 8px;
+}
+:root[data-hud-fit='window'] .tray {
+  /* A vertical scroll window starts at its first control, so all three can be reached. */
+  justify-content: flex-start;
+}
+:root[data-hud-fit='window'] .tray-cell,
+:root[data-hud-fit='page'] .tray-cell {
+  width: auto;
+  gap: 6px;
+}
+:root[data-hud-fit='window'] .tray-label,
+:root[data-hud-fit='page'] .tray-label {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  overflow: visible;
+}
+/* Page mode stacks the stat chips full width, as the scroll windows do: three columns already
+   failed the fit check (Codex review, #105). */
+:root[data-hud-fit='page'] .hud {
+  flex-direction: column;
+  align-items: stretch;
+}
+:root[data-hud-fit='page'] .hud-stat {
+  flex: none;
+}
 :root[data-hud-fit='page'] .page-hint {
   display: block;
   margin: 8px var(--ui-mr) 0 var(--ui-ml);
@@ -252,35 +311,96 @@
   color: var(--ui-ink);
 }
 
-/* --- Navigation (§19.1) ---------------------------------------------------------------
-   One 60 px scalloped tray: Garden, Dex, Notebook, three equal 44 px controls 8 px apart,
-   each an inline 24 px glyph, 6 px gap and an 18/24 label. Labels stay in landscape. */
+/* --- Navigation (D-077, §23.1) ---------------------------------------------------------
+   A 156 × 52 scalloped tray, centred: Garden, Potato-Dex, Notebook as three 44 × 44 icon
+   controls, 4 px apart, each a 28 px glyph. Their names show on hover, focus or a hold. */
 .tray {
   position: fixed;
   bottom: var(--ui-sb);
-  left: var(--ui-ml);
-  right: var(--ui-mr);
-  min-height: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 156px;
+  min-height: 52px;
+  border-width: 4px 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 0 8px;
+  justify-content: center;
+  gap: 0 4px;
   z-index: 10;
 }
 .tray-cell {
-  flex: 1 1 0;
-  min-width: max-content;
+  flex: none;
+  width: 44px;
   min-height: 44px;
   display: inline-flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 0;
+  padding: 0;
   background: none;
   border: none;
   font: inherit;
   font-size: 18px;
   line-height: 24px;
   color: inherit;
+}
+/* The label names the control for assistive tech, and shows in the fallback layouts. */
+.tray-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+/* The name bubble (§23.2): nonmodal, under the HUD, a 44 px Close at its right. */
+.name-bubble {
+  position: fixed;
+  z-index: 20;
+  min-height: 104px;
+  padding: 4px 48px 4px 4px;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.name-bubble[hidden],
+.name-tip[hidden] {
+  display: none;
+}
+.name-bubble p {
+  margin: 0;
+}
+.name-bubble-title {
+  font-size: 18px;
+  line-height: 24px;
+}
+.name-bubble-value,
+.name-bubble-line {
+  font-size: 16px;
+  line-height: 22px;
+  /* A long full balance wraps rather than running under Close (Codex review, #105). */
+  overflow-wrap: anywhere;
+}
+.ui-button.name-bubble-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 22px;
+}
+/* An icon-only control's name, above the tray (§23.2). */
+.name-tip {
+  position: fixed;
+  z-index: 20;
+  padding: 0 4px;
+  font-family: var(--ui-font);
+  font-size: 18px;
+  line-height: 24px;
+  color: var(--ui-ink);
+  pointer-events: none;
+  white-space: nowrap;
 }
 .tray-cell.is-selected {
   background: var(--ui-sage);
@@ -544,6 +664,3 @@
   right: 0;
 }
 
-.hud-count-icon {
-  display: inline-flex;
-}
