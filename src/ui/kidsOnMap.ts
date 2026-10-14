@@ -2,7 +2,7 @@ import { kidRig } from '../content/artData';
 import type { Content } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { Kid } from '../sim/world';
-import { el } from './dom';
+import { el, tierName } from './dom';
 import { portrait } from './portrait';
 import type { Sheets } from './sheet';
 
@@ -48,8 +48,9 @@ export class KidsOnMap {
     return this.content.balance.feeding.foods.find((f) => f.id === id)?.name ?? id;
   }
 
-  private tier(type: string): number {
-    return this.content.kids.find((k) => k.id === type)?.tier ?? 1;
+  /** Its tier as shown (D-082): "Tier n", or the Special or Rare tier by name. */
+  private tier(type: string): string {
+    return tierName(this.content.kids.find((k) => k.id === type) ?? { tier: 1 });
   }
 
   /** The list last opened and from where: the offline summary brings it back (§8). */
@@ -139,8 +140,8 @@ export class KidsOnMap {
           nameEl.textContent = name ?? typeName;
           // A farming candidate says where (§22.2).
           const food = field === null ? null : this.scene.game.state.fields[field]?.food;
-          sub.textContent = field === null ? `${name ? `${typeName} · ` : ''}Tier ${tier} · Kid ${ordinal}` : `Farming ${food ? this.foodName(food) : ''} · Field ${field + 1}`;
-          row.setAttribute('aria-label', `View kid: ${name ? `${name}, ` : ''}${typeName}, tier ${tier}, kid ${ordinal}`);
+          sub.textContent = field === null ? `${name ? `${typeName} · ` : ''}${tier} · Kid ${ordinal}` : `Farming ${food ? this.foodName(food) : ''} · Field ${field + 1}`;
+          row.setAttribute('aria-label', `View kid: ${name ? `${name}, ` : ''}${typeName}, ${tier}, kid ${ordinal}`);
           r.text = `${name ?? ''} ${typeName}`.toLowerCase();
         },
       };

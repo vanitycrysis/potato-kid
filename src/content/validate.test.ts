@@ -130,4 +130,15 @@ describe('planting and special kids (D-061, D-063)', () => {
     expect(validateContent(pooled)).toContain('rare kid "rare_a" must not be in the spawn pool');
     expect(validateContent(withChanges({ kids: [...content.kids, { ...rare, special: true }] }))).toContain(`kid "rare_a" can't be both special and rare`);
   });
+
+  it('holds the Special and Rare tiers (D-082): one tier each, Rare above Special', () => {
+    const kids = (edit: (k: (typeof content.kids)[number]) => object) => withChanges({ kids: content.kids.map((k) => ({ ...k, ...edit(k) })) });
+    // A special out of step with the rest.
+    expect(validateContent(kids((k) => (k.id === 'gift' ? { tier: 6 } : {})))).toContain('special kids must share one tier (the Special tier), found 6, 5');
+    expect(validateContent(kids((k) => (k.id === 'rainbow' ? { tier: 7 } : {})))).toContain('rare kids must share one tier (the Rare tier), found 7, 6');
+    // Rares level with specials, or below them.
+    expect(validateContent(kids((k) => (k.rare ? { tier: 5 } : {})))).toContain('the Rare tier must be above the Special tier');
+    expect(validateContent(kids((k) => (k.special ? { tier: 7 } : {})))).toContain('the Rare tier must be above the Special tier');
+    expect(validateContent(kids((k) => (k.rare ? { tier: 7 } : {})))).toEqual([]);
+  });
 });

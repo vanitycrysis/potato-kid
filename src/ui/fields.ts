@@ -4,7 +4,7 @@ import type { MapScene } from '../render/scene';
 import type { GameEvent, RejectReason } from '../sim/game';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact } from './format';
-import { el, icon } from './dom';
+import { el, icon, tierName } from './dom';
 import { portrait } from './portrait';
 import type { Sheets } from './sheet';
 
@@ -80,8 +80,9 @@ export class FieldSheets {
     return this.content.kids.find((k) => k.id === type)?.name ?? type;
   }
 
-  private tier(type: KidId): number {
-    return this.content.kids.find((k) => k.id === type)?.tier ?? 1;
+  /** Its tier as shown (D-082): "Tier n", or the Special or Rare tier by name. */
+  private tier(type: KidId): string {
+    return tierName(this.content.kids.find((k) => k.id === type) ?? { tier: 1 });
   }
 
   private button(label: string, className: string, onClick: () => void): HTMLButtonElement {
@@ -376,7 +377,7 @@ export class FieldSheets {
                   'span',
                   'dex-home-row-text',
                   el('span', 'dex-home-row-name', who),
-                  el('span', 'sheet-helper', `${w.name ? `${this.kidName(w.type)} · ` : ''}Tier ${this.tier(w.type)} · Kid ${ordinal}`),
+                  el('span', 'sheet-helper', `${w.name ? `${this.kidName(w.type)} · ` : ''}${this.tier(w.type)} · Kid ${ordinal}`),
                   el('span', 'sheet-helper', fav ? 'Favourite · Farms faster' : `Farming ${f.food ? this.foodName(f.food) : ''}`),
                 ),
               ),
@@ -652,7 +653,7 @@ export class FieldSheets {
           'label',
           `ui-surface picker-row${hated ? ' is-warning' : ''}`,
           portrait(kidRig!, k.type, 48, k.look),
-          el('span', 'picker-row-text', el('span', 'picker-row-name', k.name ?? this.kidName(k.type)), el('span', 'sheet-helper', `${k.name ? `${this.kidName(k.type)} · ` : ''}Tier ${this.tier(k.type)} · Kid ${number(k)}`), el('span', 'sheet-helper', relation)),
+          el('span', 'picker-row-text', el('span', 'picker-row-name', k.name ?? this.kidName(k.type)), el('span', 'sheet-helper', `${k.name ? `${this.kidName(k.type)} · ` : ''}${this.tier(k.type)} · Kid ${number(k)}`), el('span', 'sheet-helper', relation)),
           box,
         );
         box.addEventListener('change', () => {

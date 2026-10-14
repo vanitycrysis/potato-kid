@@ -12,13 +12,13 @@ const bounds = { minX: 0, minY: 0, maxX: 4000, maxY: 4000 };
 const options = { bounds, spawnAt: { x: 2000, y: 2000 }, now: 0, looks };
 
 describe('the shipped wild kids (D-063, D-066, D-072)', () => {
-  it('twenty specials (12 at tier 5, 8 at tier 6) and ten rares, all valid content', () => {
+  it('twenty specials in the Special tier (tier 5) and ten rares in the Rare tier (tier 6), all valid content (D-082)', () => {
     const specials = content.kids.filter((k) => k.special);
     const rares = content.kids.filter((k) => k.rare);
     expect(specials).toHaveLength(20);
     expect(rares).toHaveLength(10);
-    expect(specials.filter((k) => k.tier === 5)).toHaveLength(12);
-    expect(specials.filter((k) => k.tier === 6)).toHaveLength(8);
+    expect(specials.every((k) => k.tier === 5)).toBe(true);
+    expect(rares.every((k) => k.tier === 6)).toBe(true);
     for (const k of [...specials, ...rares]) {
       expect(kidWild!.types[k.id]?.name).toBe(k.name);
       expect(kidWild!.types[k.id]?.collection).toBe(k.special ? 'special' : 'rare');

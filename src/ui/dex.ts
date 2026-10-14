@@ -4,7 +4,7 @@ import type { Content, KidId, RecipeDef } from '../content/types';
 import { pairKey } from '../content/validate';
 import type { MapScene } from '../render/scene';
 import type { BuildingSheets } from './buildings';
-import { el, icon, shortName, tierBadge } from './dom';
+import { el, icon, shortName, tierBadge, tierName, tierShort, type TierKid } from './dom';
 import { homeSection, type HomeSection } from './dexHome';
 import { formatRate } from './format';
 import { LazyPortraits, portrait } from './portrait';
@@ -287,8 +287,8 @@ export class Dex {
     return k.rare ? 'rare' : k.special ? 'special' : 'ordinary';
   }
 
-  private tierMark(tier: number, size: 20 | 24, text: string): HTMLElement {
-    return el('span', `tier dex-tier-${size}`, ...tierBadge(tier, `ui-icon-${size}`), text);
+  private tierMark(k: TierKid, size: 20 | 24, text: string): HTMLElement {
+    return el('span', `tier dex-tier-${size}`, ...tierBadge(k, `ui-icon-${size}`), text);
   }
 
   // --- Kids -------------------------------------------------------------------------------
@@ -435,13 +435,12 @@ export class Dex {
       'ui-button dex-tile',
       portraits.add(type),
       el('span', 'dex-tile-name', shortName(k.name)),
-      this.tierMark(k.tier, 20, `T${k.tier}`),
-      // A plain label, never colour alone (§16.4).
-      ...(k.rare || k.special ? [el('span', 'dex-tile-kind', k.rare ? 'Rare' : 'Special')] : []),
+      // The Special and Rare tiers by name (D-082): a plain label, never colour alone (§16.4).
+      this.tierMark(k, 20, tierShort(k)),
     );
     b.type = 'button';
     b.dataset.kid = type;
-    b.setAttribute('aria-label', `${k.name}, ${k.rare ? 'Rare, ' : k.special ? 'Special, ' : ''}Tier ${k.tier}`);
+    b.setAttribute('aria-label', `${k.name}, ${tierName(k)}`);
     b.addEventListener('click', () => this.showDetail(type));
     return b;
   }
@@ -497,7 +496,7 @@ export class Dex {
       back,
       el('div', 'dex-detail-portrait', portrait(kidRig!, type, 96)),
       name,
-      el('div', 'dex-detail-tier', this.tierMark(k.tier, 24, `Tier ${k.tier}`)),
+      el('div', 'dex-detail-tier', this.tierMark(k, 24, tierName(k))),
       // Per hour: at the slow pacing (D-052) a per-second rate would round to 0.
       el('p', 'sheet-helper', `Earns ${formatRate(this.game.incomeOf(type) * 3600)} Materials / h`),
       // The type's personality, as on a kid's card (GUI_MVP §18.1); never one kid's name or mood.
