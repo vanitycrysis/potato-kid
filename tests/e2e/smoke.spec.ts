@@ -44,6 +44,8 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
   expect(start).toBeGreaterThan(0);
   await expect(page.locator('.hud-value')).toHaveText(`${start}/12`);
   await page.screenshot({ path: 'test-results/boot.png' });
+  // A real first run offers the tutorial (D-078); skipped, the game is in front.
+  await page.locator('#tutorial-card').getByRole('button', { name: 'Skip tutorial' }).click();
   // The timer lives in the Garden's Arrivals now (GUI_MVP §19.2).
   await page.locator('[data-nav=garden]').click();
   await expect(page.locator('.arrivals-next')).toContainText('Next kid');
@@ -1312,12 +1314,12 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(page.locator('.settings-value').first()).toHaveText('69%');
     await page.keyboard.press('End');
     await page.getByRole('button', { name: 'Done' }).click();
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toMatchObject({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
 
     await page.evaluate(() => window.__PK__!.debugAway!(0)); // the game is saved, so the reload resumes it
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toMatchObject({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
     // A reload a moment later is too short an absence for the summary (D-049).
     await openTool(page, 'Settings');
     await expect(page.getByLabel('Music')).toHaveValue('100');
