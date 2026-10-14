@@ -3655,17 +3655,17 @@ test.describe('forgiving drop (D-051)', () => {
       const pk = window.__PK__!;
       const out: number[] = [];
       const look = { body: 'round', scale: 1 };
-      const first = pk.debugAdd!('hero', 1620, bottom - 20, look);
+      const first = pk.debugAdd!('hero', 996, bottom - 20, look);
       const k = pk.kids().find((c) => c.id === first)!;
       const w = k.box.right - k.box.left + 2;
       const h = k.box.bottom - k.box.top + 2;
       out.push(first);
       for (let row = 0; row < 3; row++)
-        for (let col = -5; col <= 5; col++) if (row || col) out.push(pk.debugAdd!('hero', 1620 + col * w, bottom - k.box.bottom - 2 - row * h, look));
+        for (let col = -5; col <= 5; col++) if (row || col) out.push(pk.debugAdd!('hero', 996 + col * w, bottom - k.box.bottom - 2 - row * h, look));
       return out;
     }, bottom);
     await page.waitForTimeout(200);
-    const held = await page.evaluate(() => window.__PK__!.debugAdd!('kite', 1620, 3700));
+    const held = await page.evaluate(() => window.__PK__!.debugAdd!('kite', 996, 2548));
     await page.waitForTimeout(200);
     const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, held);
     await page.mouse.move(from.x, from.y - 20);
@@ -3684,7 +3684,7 @@ test.describe('forgiving drop (D-051)', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page, '?seed=3&debug=1&calm=1');
     // An open stretch of map, with free ground above the band (the pinch tests' anchor).
-    await page.evaluate(() => window.__PK__!.centerOn(2160, 5080));
+    await page.evaluate(() => window.__PK__!.centerOn(1536, 3928));
     // Zoomed in, the visible band is small enough to fill.
     await page.evaluate(() => {
       const c = document.querySelector('canvas')!;
@@ -3741,10 +3741,11 @@ test.describe('forgiving drop (D-051)', () => {
     await page.mouse.up();
     await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type)), { timeout: 3000 }).toContain('firefighter');
     // Another pair, now that Firefighter Kid is found.
+    // On the open stretch the pinch tests use, in view.
     const again = await page.evaluate(() => {
       const pk = window.__PK__!;
-      const w = pk.kids().find((k) => k.type === 'firefighter')!;
-      return { plain: pk.debugAdd!('plain', w.x, w.y + 600), water: pk.debugAdd!('water', w.x + 400, w.y + 600) };
+      pk.centerOn(1536, 3928);
+      return { plain: pk.debugAdd!('plain', 1386, 3928), water: pk.debugAdd!('water', 1686, 3928) };
     });
     await page.waitForTimeout(200);
     await holdOver(page, again.plain, again.water);
