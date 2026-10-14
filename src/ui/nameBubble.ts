@@ -163,17 +163,25 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
       hide();
     }
   });
-  for (const type of ['pointerup', 'pointercancel'] as const)
-    button.addEventListener(type, () => {
-      start = null;
-      clearTimeout(timer);
-      if (held) later = window.setTimeout(hide, 900);
-    });
+  button.addEventListener('pointerup', () => {
+    start = null;
+    clearTimeout(timer);
+    if (held) later = window.setTimeout(hide, 900);
+  });
+  // A cancelled gesture has no release click to swallow: a later activation must go through
+  // (Codex review, #105).
+  button.addEventListener('pointercancel', () => {
+    start = null;
+    held = false;
+    hide();
+  });
   button.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'mouse') timer = window.setTimeout(show, HOVER_MS);
   });
-  button.addEventListener('pointerleave', () => {
+  button.addEventListener('pointerleave', (e) => {
     start = null;
+    // A finger sliding off ends the gesture: no click follows to swallow.
+    if (e.pointerType !== 'mouse') held = false;
     hide();
   });
   button.addEventListener('focus', () => {

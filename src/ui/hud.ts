@@ -405,7 +405,11 @@ export class Hud {
     // Read-only hides the HUD and freezes the world: nothing to fit.
     if (this.save.readOnly) return;
     const band = () => (tray?.getBoundingClientRect().top ?? h) - 8 - (this.hud.getBoundingClientRect().bottom + 8);
-    if (band() >= PLAY_BAND) return;
+    // Too narrow for the 156 px tray or for three 44 px chips: the labelled scroll windows,
+    // whatever the height (§23.1; Codex review, #105).
+    const safe = this.top.getBoundingClientRect().width;
+    const narrow = safe < 156 || (safe - 16) / 3 < 44;
+    if (!narrow && band() >= PLAY_BAND) return;
     root.dataset.hudFit = 'window';
     // Each window is 60 px, or taller to show its tallest item whole (enlarged text), plus
     // its 16 px of border (§19.3; Codex review, PR #87).

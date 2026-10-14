@@ -4208,6 +4208,41 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await touch('notebook', 'pointerup');
   });
 
+  test('a cancelled hold leaves nothing armed: the next keyboard activation opens (Codex review round 2, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const dex = page.locator('[data-nav=dex]');
+    const touch = (type: string) =>
+      dex.evaluate((b, type) => {
+        const r = b.getBoundingClientRect();
+        b.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 22, clientY: r.top + 22, bubbles: true }));
+      }, type);
+    await touch('pointerdown');
+    await page.waitForTimeout(600);
+    await expect(page.locator('.name-tip')).toHaveText('Potato-Dex');
+    await touch('pointercancel');
+    await dex.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
+  });
+
+  test('too narrow for the tray or three chips: the labelled scroll windows, every control reachable (Codex review round 2, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 160, height: 700 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('window');
+    // The tray is full width with its labels, and scrolls from its first control.
+    const tray = page.locator('.tray');
+    await tray.evaluate((e) => (e.scrollTop = 0));
+    const first = await page.locator('[data-nav=garden]').evaluate((b) => b.getBoundingClientRect().top - b.closest('.tray')!.getBoundingClientRect().top);
+    expect(first).toBeGreaterThanOrEqual(0);
+    for (const key of ['garden', 'dex', 'notebook']) {
+      await page.locator(`[data-nav=${key}]`).scrollIntoViewIfNeeded();
+      await expect(page.locator(`[data-nav=${key}]`)).toBeInViewport({ ratio: 1 });
+      expect((await page.locator(`[data-nav=${key}]`).boundingBox())!.width).toBeGreaterThanOrEqual(44);
+    }
+    for (const chip of await page.locator('.hud-stat').all()) expect((await chip.boundingBox())!.width).toBeGreaterThanOrEqual(44);
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();

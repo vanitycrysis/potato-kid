@@ -276,6 +276,10 @@
   transform: none;
   border-width: 8px;
 }
+:root[data-hud-fit='window'] .tray {
+  /* A vertical scroll window starts at its first control, so all three can be reached. */
+  justify-content: flex-start;
+}
 :root[data-hud-fit='window'] .tray-cell,
 :root[data-hud-fit='page'] .tray-cell {
   width: auto;
