@@ -82,6 +82,8 @@ declare global {
       home: () => { state: string };
       /** Forgiving drop (D-051): the kid under the finger while one is held, else null. */
       dropTarget: () => number | null;
+      /** The recipe a release would make, and whether the partner mark shows (D-083). */
+      recipe: () => { view: import('./render/scene').RecipeView | null; mark: boolean };
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
@@ -247,6 +249,7 @@ async function boot(): Promise<void> {
     audio: () => audio?.state ?? { unlocked: false, musicPlaying: false, music: null, lastCue: null, played: [], active: 0 },
     home: () => ({ state: scene.homeState }),
     dropTarget: () => scene.dropTarget,
+    recipe: () => scene.recipeShown,
     rares: () => scene.raresShown,
     layers: () => scene.layerNames,
     plots: () =>

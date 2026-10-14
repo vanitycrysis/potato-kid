@@ -468,6 +468,11 @@ export class Game {
     return kid.happy.favourite ? f.favouriteMultiplier : f.happyMultiplier;
   }
 
+  /** What two types make together, or null if no recipe joins them (D-083's drag preview). */
+  recipeResult(a: KidId, b: KidId): KidId | null {
+    return this.recipes.get(pairKey(a, b)) ?? null;
+  }
+
   incomeOf(type: KidId): number {
     return this.content.balance.economy.materialsPerSecond * 2 ** ((this.tiers.get(type) ?? 1) - 1);
   }

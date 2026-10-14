@@ -68,6 +68,28 @@ export interface HomeView {
   field?: { index: number; food: string | null; foodName: string; count: number; limit: number; kind: 'ok' | 'favourite' | 'noFood' | 'hated' | 'full'; kidName: string };
 }
 
+/** A screen box, CSS px. */
+type ScreenBox = { left: number; top: number; right: number; bottom: number };
+
+/**
+ * The recipe a release would make (D-083, GUI_MVP §25): the held kid over a partner. Only
+ * a pair a recipe joins has one; the HUD shows it beside the finger.
+ */
+export interface RecipeView {
+  /** The held kid, then its partner: their types and saved looks. */
+  parents: [{ type: KidId; look: Kid['look'] }, { type: KidId; look: Kid['look'] }];
+  result: KidId;
+  /** Whether the player has found the result: if not, it is shown dark, unnamed (§25.2). */
+  found: boolean;
+  /** The pointer, the held kid's drawn box and the partner's, on screen (CSS px). */
+  pointer: { x: number; y: number };
+  held: ScreenBox;
+  target: ScreenBox;
+}
+
+/** The partner mark (§25.1): CSS px, so divided by the zoom; paper under ink. */
+const MARK = { offset: 4, corner: 8, paper: 5, ink: 2, entryMs: 80, paperColour: 0xfff1d5, inkColour: 0x1a1a1a };
+
 /** How far above the finger a held kid floats, so the finger doesn't hide it (world units; y grows downward, so it is subtracted). */
 const HOLD_LIFT = 70;
 /** A costume no kid has needed for this long is released (ROSTER-SCALE). */
@@ -234,6 +256,13 @@ export class MapScene {
   private readonly home: HomeTarget | null;
   private readonly homeLayer = new Graphics();
   private readonly homeListeners = new Set<(v: HomeView) => void>();
+  private readonly recipeListeners = new Set<(v: RecipeView | null) => void>();
+  /** The partner mark, drawn just below the held kid (§25.1). */
+  private readonly partnerMark = new Graphics();
+  /** When the mark appeared (foreground ms), for its 80 ms entry; null while none shows. */
+  private markSince: number | null = null;
+  /** The recipe shown this frame (tests). */
+  private recipeNow: RecipeView | null = null;
   /** Foreground time (ms): it only advances while frames run, never while hidden. */
   private clock = 0;
   /** The view last frame, to tell when the map moved under the finger. */
@@ -309,6 +338,11 @@ export class MapScene {
     );
     this.rareLayer.root.label = 'rareMarks';
     this.kidLayer.label = 'kids';
+    // Above every kid but the held one (zIndex 1e6, rigView), and takes no input (§25.1).
+    this.partnerMark.zIndex = 1e6 - 1;
+    this.partnerMark.eventMode = 'none';
+    this.partnerMark.label = 'partner';
+    this.kidLayer.addChild(this.partnerMark);
     app.stage.addChild(this.camera);
     for (const kid of this.game.state.world.kids) this.addView(kid);
 
@@ -397,6 +431,16 @@ export class MapScene {
   /** Calls `fn` every frame with what the Send home overlay should show (D-048). */
   listenHome(fn: (v: HomeView) => void): void {
     this.homeListeners.add(fn);
+  }
+
+  /** Every frame: the recipe a release would make, or null (D-083, GUI_MVP §25). */
+  listenRecipe(fn: (v: RecipeView | null) => void): void {
+    this.recipeListeners.add(fn);
+  }
+
+  /** The recipe shown now, and whether the partner mark is drawn: it has a loop to show (tests). */
+  get recipeShown(): { view: RecipeView | null; mark: boolean } {
+    return { view: this.recipeNow, mark: this.partnerMark.getLocalBounds().width > 0 };
   }
 
   /** The Send home target's state (tests). */
@@ -1047,11 +1091,12 @@ export class MapScene {
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
     this.resolveHeld();
-    // Drop exactly where the kid is shown: the resolved free spot. Kids it visibly touches
-    // there (their drawn boxes) travel with the command, so a seen touch can fuse, and so
-    // does the kid under the finger at release (D-051).
+    // Put down at the nearest free place to where it floated (D-083, GUI_MVP §25.3), moving
+    // nobody. Kids it touches there (their drawn boxes) travel with the command, so a seen
+    // touch can fuse, and so does the kid under the finger at release (D-051).
     const target = this.dropTargetAt(w);
-    const { kidId, spot } = this.drag;
+    const { kidId } = this.drag;
+    const spot = this.game.landingSpot(kidId, this.drag.spot.x, this.drag.spot.y, this.drawn) ?? this.drag.spot;
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     const slack = this.game.touchSlack;
     const seen = kid
@@ -1081,7 +1126,76 @@ export class MapScene {
     return this.drag?.target ?? null;
   }
 
-  /** Moves the held kid's drawn position to the nearest free spot to the finger (D-039). */
+  /**
+   * The partner mark and the recipe view (D-083, GUI_MVP §25): only while the held kid is
+   * over a kid a recipe joins it with, rechecked every frame against the current kids.
+   */
+  private updateRecipe(): void {
+    const g = this.partnerMark;
+    g.clear();
+    const view = this.recipeView();
+    this.recipeNow = view;
+    if (!view || !this.drag || this.drag.target === undefined) {
+      this.markSince = null;
+    } else {
+      // A new mark fades in over 80 ms; a change of partner keeps the opacity (§25.1).
+      this.markSince ??= this.clock;
+      const target = this.game.state.world.kids.find((k) => k.id === this.drag!.target)!;
+      const at = this.drawn.get(target.id) ?? target;
+      const z = this.cam.zoom;
+      const o = MARK.offset / z;
+      const [x0, y0, x1, y1] = [at.x + target.box.left - o, at.y + target.box.top - o, at.x + target.box.right + o, at.y + target.box.bottom + o];
+      const r = Math.min(MARK.corner / z, (x1 - x0) / 4, (y1 - y0) / 4);
+      const mid = (x0 + x1) / 2;
+      // A loose hand-drawn loop: the top bows 1 px up, the bottom 1 px down.
+      const loop = () =>
+        g
+          .moveTo(x0 + r, y0)
+          .quadraticCurveTo(mid, y0 - 2 / z, x1 - r, y0)
+          .arcTo(x1, y0, x1, y0 + r, r)
+          .lineTo(x1, y1 - r)
+          .arcTo(x1, y1, x1 - r, y1, r)
+          .quadraticCurveTo(mid, y1 + 2 / z, x0 + r, y1)
+          .arcTo(x0, y1, x0, y1 - r, r)
+          .lineTo(x0, y0 + r)
+          .arcTo(x0, y0, x0 + r, y0, r)
+          .closePath();
+      loop().stroke({ width: MARK.paper / z, color: MARK.paperColour, cap: 'round', join: 'round' });
+      loop().stroke({ width: MARK.ink / z, color: MARK.inkColour, cap: 'round', join: 'round' });
+      g.alpha = this.art.reducedMotion ? 1 : Math.min(1, (this.clock - this.markSince) / MARK.entryMs);
+    }
+    for (const fn of this.recipeListeners) fn(view);
+  }
+
+  /** What a release would make now, if the held kid is over a partner (§25.1). */
+  private recipeView(): RecipeView | null {
+    if (!this.drag || this.drag.target === undefined || this.inputPaused) return null;
+    const kids = this.game.state.world.kids;
+    const held = kids.find((k) => k.id === this.drag!.kidId);
+    const partner = kids.find((k) => k.id === this.drag!.target);
+    if (!held || !partner) return null;
+    const result = this.game.recipeResult(held.type, partner.type);
+    if (result === null) return null;
+    const box = (x: number, y: number, b: Kid['box']): ScreenBox => {
+      const a = this.camera.toGlobal({ x: x + b.left, y: y + b.top });
+      const c = this.camera.toGlobal({ x: x + b.right, y: y + b.bottom });
+      return { left: a.x, top: a.y, right: c.x, bottom: c.y };
+    };
+    const at = this.drawn.get(partner.id) ?? partner;
+    return {
+      parents: [
+        { type: held.type, look: held.look },
+        { type: partner.type, look: partner.look },
+      ],
+      result,
+      found: this.game.state.discoveredKids.includes(result),
+      pointer: { x: this.dragScreen.x, y: this.dragScreen.y },
+      held: box(this.drag.spot.x, this.drag.spot.y, held.box),
+      target: box(at.x, at.y, partner.box),
+    };
+  }
+
+  /** Keeps the held kid inside the visible play area, where the finger holds it (D-083). */
   private resolveHeld(): void {
     if (!this.drag) return;
     // Keep the held kid's whole silhouette inside the visible play area (between HUD and
@@ -1102,14 +1216,15 @@ export class MapScene {
       // If the band is shorter than the kid, keep its top just below the HUD rather than
       // letting an impossible limit be ignored (Codex review, PR #15).
       if (limit.minY > limit.maxY) limit.maxY = limit.minY;
+      if (limit.minX > limit.maxX) limit.maxX = limit.minX;
+      this.drag.x = Math.min(limit.maxX, Math.max(limit.minX, this.drag.x));
       this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
     }
-    const spot = this.game.landingSpot(this.drag.kidId, this.drag.x, this.drag.y, this.drawn, limit);
-    // A full visible area keeps the last valid spot, and updateCamera stops edge scrolling
-    // until there is room again, so the held kid can't be scrolled out of view or dropped
-    // somewhere stale (Codex review, PR #15).
-    this.drag.noRoom = !spot;
-    if (spot) this.drag.spot = spot;
+    // The held kid floats over the other kids and scenery (D-083, GUI_MVP §25.1): drawn where
+    // the finger holds it, never pushed to a free spot while held, and pushing nobody. The
+    // release finds the nearest free place (endDrag).
+    this.drag.noRoom = false;
+    this.drag.spot = { x: this.drag.x, y: this.drag.y };
   }
 
   /** The held kid's silhouette box on screen (CSS px), from where the finger wants it. */
@@ -1367,6 +1482,7 @@ export class MapScene {
       this.resolveHeld();
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
+    this.updateRecipe();
     this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
     this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();

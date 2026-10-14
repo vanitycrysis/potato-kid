@@ -3525,6 +3525,89 @@ test.describe('forgiving drop (D-051)', () => {
     expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBeNull();
   });
 
+  const recipe = (page: Page) => page.evaluate(() => window.__PK__!.recipe());
+  const boxesMeet = (a: { left: number; top: number; right: number; bottom: number }, b: typeof a) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+  test('held over a partner: it floats over the kids, moving nobody; the partner is marked; the window shows the dark result (D-083)', async ({ page }) => {
+    const { plain, water, ring } = await crowd(page);
+    await page.waitForTimeout(200);
+    const before = await page.evaluate(() => window.__PK__!.kids().map((k) => [k.id, k.x, k.y]));
+    await holdOver(page, plain, water);
+    const r = await recipe(page);
+    expect(r.mark).toBe(true);
+    expect(r.view).toMatchObject({ result: 'firefighter', found: false, parents: [{ type: 'plain' }, { type: 'water' }] });
+    // Floating, not snapped to a free spot: the held body, lifted above the finger, is drawn
+    // over the kid above the partner (§25.1). A free-spot preview never overlaps anyone.
+    const others = await page.evaluate(() =>
+      window.__PK__!.kids()
+        .filter((k) => !k.held)
+        .map((k) => {
+          const a = window.__PK__!.worldToScreen(k.x + k.box.left, k.y + k.box.top);
+          const b = window.__PK__!.worldToScreen(k.x + k.box.right, k.y + k.box.bottom);
+          return { left: a.x, top: a.y, right: b.x, bottom: b.y };
+        }),
+    );
+    expect(others.some((o) => boxesMeet(r.view!.held, o))).toBe(true);
+    // And nobody moved for it, in the sim or on screen.
+    expect(await page.evaluate(() => window.__PK__!.kids().filter((k) => !k.held).map((k) => [k.id, k.x, k.y]))).toEqual(before.filter(([id]) => id !== plain));
+    const win = page.locator('.recipe-window');
+    await expect(win).toBeVisible();
+    await expect(win.locator('.recipe-heading')).toHaveText('Release to fuse');
+    await expect(win.locator('.recipe-name')).toHaveText('Not found yet');
+    await expect(win.locator('.recipe-sprite')).toHaveCount(3);
+    await expect(win.locator('.recipe-unfound')).toHaveCount(1);
+    // The hidden result's name is nowhere: not shown, not announced (§25.2).
+    const status = page.getByRole('status', { name: 'Fusion preview' });
+    await expect(status).toHaveText("Potato Kid plus Water Kid makes a kid you haven't found. Release on the marked partner to fuse.");
+    expect(await page.evaluate(() => document.body.innerHTML)).not.toContain('Firefighter');
+    // Clear of the finger: the window never covers the pointer (§25.3).
+    const box = (await win.boundingBox())!;
+    const pointer = r.view!.pointer;
+    const nx = Math.min(Math.max(pointer.x, box.x), box.x + box.width);
+    const ny = Math.min(Math.max(pointer.y, box.y), box.y + box.height);
+    expect(Math.hypot(nx - pointer.x, ny - pointer.y)).toBeGreaterThanOrEqual(48);
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type)), { timeout: 3000 }).toContain('firefighter');
+    await expect(win).toBeHidden();
+    expect(await recipe(page)).toEqual({ view: null, mark: false });
+    await expect(status).toHaveText('');
+    for (const id of ring) expect(await ids(page)).toContain(id);
+  });
+
+  test('a found result shows its name, in the window and the announcement (D-083)', async ({ page }) => {
+    const { plain, water } = await crowd(page);
+    await page.waitForTimeout(200);
+    await holdOver(page, plain, water);
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type)), { timeout: 3000 }).toContain('firefighter');
+    // Another pair, now that Firefighter Kid is found.
+    const again = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const w = pk.kids().find((k) => k.type === 'firefighter')!;
+      return { plain: pk.debugAdd!('plain', w.x, w.y + 600), water: pk.debugAdd!('water', w.x + 400, w.y + 600) };
+    });
+    await page.waitForTimeout(200);
+    await holdOver(page, again.plain, again.water);
+    expect((await recipe(page)).view).toMatchObject({ result: 'firefighter', found: true });
+    const win = page.locator('.recipe-window');
+    await expect(win.locator('.recipe-name')).toHaveText('Firefighter Kid');
+    await expect(win.locator('.recipe-unfound')).toHaveCount(0);
+    await expect(page.getByRole('status', { name: 'Fusion preview' })).toHaveText('Potato Kid plus Water Kid makes Firefighter Kid. Release on the marked partner to fuse.');
+    await page.mouse.up();
+  });
+
+  test('held over a kid it can\'t fuse with: no mark and no window, though it is the drop target (D-083)', async ({ page }) => {
+    const { plain, ring } = await crowd(page);
+    await page.waitForTimeout(200);
+    const right = ring[6]!;
+    await holdOver(page, plain, right);
+    expect(await page.evaluate(() => window.__PK__!.dropTarget())).toBe(right);
+    expect(await recipe(page)).toEqual({ view: null, mark: false });
+    await expect(page.locator('.recipe-window')).toBeHidden();
+    await expect(page.locator('.recipe-rail')).toBeHidden();
+    await page.mouse.up();
+  });
+
   test('dropping onto a non-partner in a crowd lands it apart, with no fusion', async ({ page }) => {
     const { plain, water, ring } = await crowd(page);
     await page.waitForTimeout(200);
