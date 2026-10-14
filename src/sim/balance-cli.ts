@@ -9,9 +9,9 @@ import type { GameOptions } from './game';
 // and prints the medians (ENGINEERING_PLAN §3). Run by scripts/balance.mjs through Vite,
 // one process per seed and scenario.
 
-const farm = JSON.parse(readFileSync('art/data/farm_v1.json', 'utf8')) as FarmData;
+const farm = JSON.parse(readFileSync('art/data/farm_v2.json', 'utf8')) as FarmData;
 // The map as the game has it: Codex's farm relocations applied (GUI_MVP §22.1).
-const map = withFarmRelocations(JSON.parse(readFileSync('art/data/map_garden_v3.json', 'utf8')) as MapData, farm);
+const map = withFarmRelocations(JSON.parse(readFileSync('art/data/map_garden_v4.json', 'utf8')) as MapData, farm);
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
 const wild = JSON.parse(readFileSync('art/data/kid_wild_v1.json', 'utf8')) as WildData;
 const [w, h] = map.worldSize;

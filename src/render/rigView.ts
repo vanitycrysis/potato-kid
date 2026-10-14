@@ -7,7 +7,7 @@ const DEG = Math.PI / 180;
 const OPEN = 'open';
 /** A wild kid's frame when its clip has none of its own: the stand, still (kid_wild_v1 fallbackTiming). */
 const WILD_STAND: WildFrame = { durationMs: 0, frame: 'stand', offsetPx: [0, 0], faceState: 'inherit', opacity: 1 };
-/** A farming kid's steps (Codex's farm_v1 `workerLoop`): body frames and their times. */
+/** A farming kid's steps (Codex's farm_v2 `workerLoop`): body frames and their times. */
 const FARM_STEPS = [
   { frame: 'stand', ms: 600 },
   { frame: 'step_left', ms: 160 },
@@ -180,7 +180,7 @@ export class KidRigView {
   }
 
   /**
-   * A kid farming (D-069, Codex's farm_v1 `workerLoop`): fixed on its pad, its feet tend the
+   * A kid farming (D-069, Codex's farm_v2 `workerLoop`): fixed on its pad, its feet tend the
    * furrow, stand → step_left → stand → step_right for 600 / 160 / 600 / 160 ms, then a pause
    * of 3 to 5 s that depends on its id, so a field's kids never step together. It blinks as
    * usual. Reduced motion: standing, blinking only. `ms`: the field's clock.

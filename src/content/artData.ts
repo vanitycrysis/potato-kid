@@ -206,9 +206,10 @@ export interface WildData {
   >;
 }
 export const kidWild = pick<WildData>('kid_wild_v1.json');
-const rawMap = pick<MapData>('map_garden_v3.json');
+// The map at half its area (D-076): Codex's v4 and its fields (farm_v2).
+const rawMap = pick<MapData>('map_garden_v4.json');
 
-/** One of Codex's four field sites (farm_v1, GUI_MVP §22.1): the bed, its pads, crops and target. */
+/** One of Codex's four field sites (farm_v2, GUI_MVP §22.1): the bed, its pads, crops and target. */
 export interface FarmField {
   worldGround: Vec2;
   sourcePivot: Vec2;
@@ -225,7 +226,7 @@ export interface FarmField {
   dragRelative: [number, number, number, number];
 }
 
-/** Codex's food fields (farm_v1): the sites, the scenery they push aside, and how they're drawn. */
+/** Codex's food fields (farm_v2): the sites, the scenery they push aside, and how they're drawn. */
 export interface FarmData {
   fields: FarmField[];
   sceneryRelocations: { instanceId: string; from: Vec2; to: Vec2 }[];
@@ -237,7 +238,7 @@ export interface FarmData {
     cropScale: number;
   };
 }
-export const farmData = pick<FarmData>('farm_v1.json');
+export const farmData = pick<FarmData>('farm_v2.json');
 
 /** The map as the game has it: Codex's farm relocations applied (GUI_MVP §22.1). */
 export const mapData = rawMap && withFarmRelocations(rawMap, farmData);
