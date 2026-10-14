@@ -343,7 +343,7 @@ export class GardenPlots {
 
   private waitingText(i: number): string {
     const w = this.game.plotWaiting(i);
-    return w === 'full' ? 'Waiting for room on the map.' : w === 'noRoom' ? 'Waiting for a clear spot by the Garden.' : 'Sprouting…';
+    return w === 'noRoom' ? 'Waiting for a clear spot by the Garden.' : 'Sprouting…';
   }
 
   private buildOverview(spawnRate: HTMLElement[]): { nodes: HTMLElement[]; update(): void } {

@@ -3669,7 +3669,7 @@ test('starting a plot growing is saved at once, with its decided sprout (Codex r
 test.describe('plots on the map (D-061, GUI_MVP §15.2)', () => {
   const plot0 = (page: Page) => page.evaluate(() => window.__PK__!.plots()[0]!);
 
-  test('a plot fills with a stamp per kid, then shows its stages, then the waiting sign when the map is full', async ({ page }) => {
+  test('a plot fills with a stamp per kid, then shows its stages; ripe on a full map, it still sprouts (D-084)', async ({ page }) => {
     const errors = await boot(page, '?seed=3&debug=1&calm=1');
     await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_filling']);
     // Fill the map but for three places, then plant three (from the far side of the map).
@@ -3688,13 +3688,15 @@ test.describe('plots on the map (D-061, GUI_MVP §15.2)', () => {
     await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_shoot']);
     await page.evaluate((s) => window.__PK__!.debugAway!(s * 1000), grow * 0.4);
     await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_leaves']);
-    // Fill the three free places, so the ripe seed has to wait.
+    // Fill the three free places: the ripe seed comes up all the same, over capacity (D-084).
     await page.evaluate(() => {
       for (let i = 0; i < 3; i++) window.__PK__!.debugAdd!('plain', 756 + i * 260, 4428);
     });
+    const full = await page.evaluate(() => window.__PK__!.kids().length);
     await page.evaluate((s) => window.__PK__!.debugAway!(s * 1000), grow * 0.3);
-    await expect.poll(async () => (await plot0(page)).waiting).toBe('full');
-    await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_waiting']);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.kids().length)).toBe(full + 1);
+    expect((await plot0(page)).waiting).toBeNull();
+    await expect.poll(async () => (await plot0(page)).shown).toEqual(['fx_plant_plot', 'fx_plant_filling']);
     expect(errors).toEqual([]);
   });
 });
