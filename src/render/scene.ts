@@ -162,6 +162,8 @@ export class MapScene {
       this.pan = undefined;
       this.pinch = undefined;
       this.panVelocity = { x: 0, y: 0 };
+      // No recipe preview under a sheet, from this moment (§25.1).
+      this.updateRecipe();
     }
   }
   private readonly listeners = new Set<(e: GameEvent) => void>();
@@ -1066,7 +1068,7 @@ export class MapScene {
         this.pending.push({ type: 'farm', field: fieldIndex, kidIds: [kidId], ...(info.food ? { food: info.food } : {}) });
         this.placing.set(kidId, spot);
         this.views.get(kidId)?.dropped();
-        this.drag = undefined;
+        this.endHeld();
         target.reset();
         return;
       }
@@ -1084,7 +1086,7 @@ export class MapScene {
       this.pending.push({ type: 'plant', kidIds: [kidId] });
       this.placing.set(kidId, spot);
       this.views.get(kidId)?.dropped();
-      this.drag = undefined;
+      this.endHeld();
       this.home.reset();
       return;
     }
@@ -1096,7 +1098,10 @@ export class MapScene {
     // touch can fuse, and so does the kid under the finger at release (D-051).
     const target = this.dropTargetAt(w);
     const { kidId } = this.drag;
-    const spot = this.game.landingSpot(kidId, this.drag.spot.x, this.drag.spot.y, this.drawn) ?? this.drag.spot;
+    // Inside the visible band, so a kid let go near an edge never lands behind the HUD or the
+    // tray (Codex review, #103).
+    const held = this.game.state.world.kids.find((k) => k.id === kidId);
+    const spot = this.game.landingSpot(kidId, this.drag.spot.x, this.drag.spot.y, this.drawn, held && this.visibleLimit(held)) ?? this.drag.spot;
     const kid = this.game.state.world.kids.find((k) => k.id === kidId);
     const slack = this.game.touchSlack;
     const seen = kid
@@ -1124,6 +1129,16 @@ export class MapScene {
   /** The kid a release would try the held kid with right now (D-051), for the highlight and tests. */
   get dropTarget(): number | null {
     return this.drag?.target ?? null;
+  }
+
+  /**
+   * The held kid is let go (drop, cancel, consumed, suspended): its recipe preview and mark
+   * clear at once, not a frame later, before any sheet opens or the ticker stops (§25.1;
+   * Codex review, #103).
+   */
+  private endHeld(): void {
+    this.drag = undefined;
+    this.updateRecipe();
   }
 
   /**
@@ -1195,6 +1210,25 @@ export class MapScene {
     };
   }
 
+  /**
+   * Where a kid's ground point may be for its whole silhouette to show between the HUD and the
+   * tray, in world units. If the band is shorter than the kid, its top stays just below the HUD
+   * rather than an impossible limit being ignored (Codex review, PR #15).
+   */
+  private visibleLimit(kid: Kid): { minX: number; minY: number; maxX: number; maxY: number } {
+    const z = this.cam.zoom;
+    const { width, height } = this.app.screen;
+    const limit = {
+      minX: this.cam.x - kid.box.left,
+      maxX: this.cam.x + width / z - kid.box.right,
+      minY: this.cam.y + this.insets.top / z - kid.box.top,
+      maxY: this.cam.y + (height - this.insets.bottom) / z - kid.box.bottom,
+    };
+    if (limit.minY > limit.maxY) limit.maxY = limit.minY;
+    if (limit.minX > limit.maxX) limit.maxX = limit.minX;
+    return limit;
+  }
+
   /** Keeps the held kid inside the visible play area, where the finger holds it (D-083). */
   private resolveHeld(): void {
     if (!this.drag) return;
@@ -1203,20 +1237,8 @@ export class MapScene {
     // The free-spot search is limited to that area too: otherwise scenery (e.g. the Garden)
     // can push the nearest free spot up behind the HUD (Codex review, PR #15).
     const kid = this.game.state.world.kids.find((k) => k.id === this.drag!.kidId);
-    let limit: { minX: number; minY: number; maxX: number; maxY: number } | undefined;
-    if (kid) {
-      const z = this.cam.zoom;
-      const { width, height } = this.app.screen;
-      limit = {
-        minX: this.cam.x - kid.box.left,
-        maxX: this.cam.x + width / z - kid.box.right,
-        minY: this.cam.y + this.insets.top / z - kid.box.top,
-        maxY: this.cam.y + (height - this.insets.bottom) / z - kid.box.bottom,
-      };
-      // If the band is shorter than the kid, keep its top just below the HUD rather than
-      // letting an impossible limit be ignored (Codex review, PR #15).
-      if (limit.minY > limit.maxY) limit.maxY = limit.minY;
-      if (limit.minX > limit.maxX) limit.maxX = limit.minX;
+    const limit = kid && this.visibleLimit(kid);
+    if (limit) {
       this.drag.x = Math.min(limit.maxX, Math.max(limit.minX, this.drag.x));
       this.drag.y = Math.min(limit.maxY, Math.max(limit.minY, this.drag.y));
     }
@@ -1256,7 +1278,7 @@ export class MapScene {
     const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn) ?? { x: cmd.x, y: cmd.y };
     this.placing.set(this.drag.kidId, spot);
     this.views.get(this.drag.kidId)?.dropped();
-    this.drag = undefined;
+    this.endHeld();
   }
 
   // --- Send home (D-048, GUI_MVP §13) ---------------------------------------
@@ -1606,7 +1628,7 @@ export class MapScene {
       case 'planted': {
         // Gone from the sim and the map at once (GUI_MVP §15.5: no ghost or wave); its plot
         // shows the new stamp.
-        if (this.drag?.kidId === e.kid.id) this.drag = undefined;
+        if (this.drag?.kidId === e.kid.id) this.endHeld();
         this.removeView(e.kid.id);
         break;
       }
@@ -1616,7 +1638,7 @@ export class MapScene {
         break;
       case 'farming':
         // Off the map, into its field, at once (GUI_MVP §22.1): the field draws it from now.
-        if (this.drag?.kidId === e.kid.id) this.drag = undefined;
+        if (this.drag?.kidId === e.kid.id) this.endHeld();
         this.placing.delete(e.kid.id);
         this.removeView(e.kid.id);
         break;
@@ -1628,7 +1650,7 @@ export class MapScene {
         // Parents are consumed at once, never fading or converging (rig: fusion onStart);
         // the child is born where the sim resolved it, with the fusion effect behind it.
         for (const p of e.parents) {
-          if (this.drag?.kidId === p.id) this.drag = undefined;
+          if (this.drag?.kidId === p.id) this.endHeld();
           this.removeView(p.id);
         }
         const child = this.addView(e.child);

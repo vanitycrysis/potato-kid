@@ -103,6 +103,8 @@ export class RecipePreview {
   private placed: Placed | null = null;
   /** The panel's height with its current content, measured while out of sight (§25.3). */
   private panelHeight = PANEL.h;
+  /** A font or size change since the last measurement: measure again, announcing nothing. */
+  private stale = false;
   private railRow: 'hud' | 'tray' | null = null;
 
   constructor(
@@ -117,6 +119,14 @@ export class RecipePreview {
     this.status.setAttribute('aria-live', 'polite');
     this.status.setAttribute('aria-label', 'Fusion preview');
     document.body.append(this.panel, this.rail, this.status);
+    // The panel's height can change with the same pair targeted: the bundled font arriving,
+    // or text enlarged. Placement must test the real size (Codex review, #103).
+    new ResizeObserver(() => {
+      if (!this.panel.hidden) this.panelHeight = Math.max(PANEL.h, this.panel.offsetHeight);
+    }).observe(this.panel);
+    const remeasure = () => (this.stale = true);
+    document.fonts?.addEventListener('loadingdone', remeasure);
+    window.addEventListener('resize', remeasure);
   }
 
   private name(type: string): string {
@@ -152,17 +162,11 @@ export class RecipePreview {
         el('p', 'recipe-name', v.found ? this.name(v.result) : 'Not found yet'),
       );
       this.rail.replaceChildren(el('div', 'recipe-equation', ...this.equation(v, 32)));
-      // Its real height (enlarged text, a wrapped name) is what placement must test, even
-      // while it is hidden; otherwise it would flicker with the rail (Codex review, #103).
-      const hidden = this.panel.hidden;
-      this.panel.style.visibility = 'hidden';
-      this.panel.hidden = false;
-      this.panelHeight = Math.max(PANEL.h, this.panel.offsetHeight);
-      this.panel.hidden = hidden;
-      this.panel.style.visibility = '';
+      this.stale = true;
       const made = v.found ? this.name(v.result) : "a kid you haven't found";
       this.status.textContent = `${this.name(a.type)} plus ${this.name(b.type)} makes ${made}. Release on the marked partner to fuse.`;
     }
+    if (this.stale) this.measure();
     const frame = this.frame();
     const p = placePanel(v, frame.band, { w: PANEL.w, h: this.panelHeight }, this.placed);
     if (p) {
@@ -175,6 +179,20 @@ export class RecipePreview {
     this.placed = null;
     this.panel.hidden = true;
     this.showRail(placeRail(v.pointer, frame));
+  }
+
+  /**
+   * The panel's real height (enlarged text, a wrapped name) is what placement must test, even
+   * while it is hidden; otherwise it would flicker with the rail (Codex review, #103).
+   */
+  private measure(): void {
+    this.stale = false;
+    const hidden = this.panel.hidden;
+    this.panel.style.visibility = 'hidden';
+    this.panel.hidden = false;
+    this.panelHeight = Math.max(PANEL.h, this.panel.offsetHeight);
+    this.panel.hidden = hidden;
+    this.panel.style.visibility = '';
   }
 
   private showRail(at: ReturnType<typeof placeRail>): void {

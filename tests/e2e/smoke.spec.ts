@@ -3604,6 +3604,82 @@ test.describe('forgiving drop (D-051)', () => {
     await page.mouse.up();
   });
 
+  test('text enlarged while the same pair is held: the panel is measured again and still clears the finger (Codex review, #103)', async ({ page }) => {
+    const { plain, water } = await crowd(page);
+    await page.waitForTimeout(200);
+    await holdOver(page, plain, water);
+    await expect(page.locator('.recipe-window')).toBeVisible();
+    await page.addStyleTag({ content: '.recipe-heading, .recipe-name { font-size: 48px !important; line-height: 56px !important; }' });
+    await frames(page, 4);
+    const pointer = (await recipe(page)).view!.pointer;
+    const win = page.locator('.recipe-window');
+    if (await win.isVisible()) {
+      const box = (await win.boundingBox())!;
+      const nx = Math.min(Math.max(pointer.x, box.x), box.x + box.width);
+      const ny = Math.min(Math.max(pointer.y, box.y), box.y + box.height);
+      expect(Math.hypot(nx - pointer.x, ny - pointer.y)).toBeGreaterThanOrEqual(48);
+    } else await expect(page.locator('.recipe-rail')).toBeVisible();
+    await page.mouse.up();
+  });
+
+  test('suspending clears the window, the mark and the announcement at once, before any frame (Codex review, #103)', async ({ page }) => {
+    const { plain, water } = await crowd(page);
+    await page.waitForTimeout(200);
+    await holdOver(page, plain, water);
+    await expect(page.locator('.recipe-window')).toBeVisible();
+    // Read in the same task as the suspend: no frame has run since.
+    const after = await page.evaluate(async () => {
+      const pk = window.__PK__!;
+      const done = pk.debugAway!(1000);
+      const now = { hidden: document.querySelector<HTMLElement>('.recipe-window')!.hidden, status: document.querySelector('[aria-label="Fusion preview"]')!.textContent, recipe: pk.recipe() };
+      await done;
+      return now;
+    });
+    expect(after).toEqual({ hidden: true, status: '', recipe: { view: null, mark: false } });
+    await page.mouse.up();
+  });
+
+  test('let go near the bottom edge over a crowd, the kid lands where it can be seen, never behind the tray (Codex review, #103)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // World y of a screen y, from the origin (absolute).
+    const worldY = (sy: number) => page.evaluate((sy) => {
+      const pk = window.__PK__!;
+      const y0 = pk.worldToScreen(0, 0).y;
+      return (sy - y0) / ((pk.worldToScreen(0, 100).y - y0) / 100);
+    }, sy);
+    const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
+    const bottom = await worldY(trayTop - 8);
+    // A wall of kids filling the band's bottom, three rows deep, across the screen.
+    const ids = await page.evaluate((bottom) => {
+      const pk = window.__PK__!;
+      const out: number[] = [];
+      const look = { body: 'round', scale: 1 };
+      const first = pk.debugAdd!('hero', 1620, bottom - 20, look);
+      const k = pk.kids().find((c) => c.id === first)!;
+      const w = k.box.right - k.box.left + 2;
+      const h = k.box.bottom - k.box.top + 2;
+      out.push(first);
+      for (let row = 0; row < 3; row++)
+        for (let col = -5; col <= 5; col++) if (row || col) out.push(pk.debugAdd!('hero', 1620 + col * w, bottom - k.box.bottom - 2 - row * h, look));
+      return out;
+    }, bottom);
+    await page.waitForTimeout(200);
+    const held = await page.evaluate(() => window.__PK__!.debugAdd!('kite', 1620, 3700));
+    await page.waitForTimeout(200);
+    const from = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, held);
+    await page.mouse.move(from.x, from.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(195, trayTop - 30, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    const kid = await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!, held);
+    const feet = await page.evaluate((k) => window.__PK__!.worldToScreen(k.x, k.y + k.box.bottom).y, kid);
+    const trayNow = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
+    expect(feet).toBeLessThanOrEqual(trayNow + 1);
+    expect(ids.length).toBe(33);
+  });
+
   test('a found result shows its name, in the window and the announcement (D-083)', async ({ page }) => {
     const { plain, water } = await crowd(page);
     await page.waitForTimeout(200);
