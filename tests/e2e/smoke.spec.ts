@@ -4243,6 +4243,44 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     for (const chip of await page.locator('.hud-stat').all()) expect((await chip.boundingBox())!.width).toBeGreaterThanOrEqual(44);
   });
 
+  test('a touch that moves off before it is named neither names nor activates on release (Codex review round 3, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const dex = page.locator('[data-nav=dex]');
+    const touch = (type: string, dx = 0) =>
+      dex.evaluate((b, [type, dx]) => {
+        const r = b.getBoundingClientRect();
+        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        else b.dispatchEvent(new PointerEvent(type as string, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 12 + (dx as number), clientY: r.top + 22, bubbles: true }));
+      }, [type, dx] as const);
+    await touch('pointerdown');
+    await touch('pointermove', 12); // still inside the 44 px control
+    await page.waitForTimeout(600);
+    await expect(page.locator('.name-tip')).toBeHidden();
+    await touch('pointerup', 12);
+    await touch('click');
+    await page.waitForTimeout(200);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // The next ordinary tap opens.
+    await touch('pointerdown');
+    await touch('pointerup');
+    await touch('click');
+    await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
+  });
+
+  test('a stat help sheet keeps its value current, and comes back after the return summary (Codex review round 3, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 230 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('.hud-materials').click();
+    const help = page.getByRole('dialog', { name: 'Materials' });
+    await expect(help).toBeVisible();
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 4321 }));
+    await expect(help.locator('.sheet-subtitle')).toHaveText(/^4,3\d\d Materials$/);
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog', { name: 'Materials' })).toBeVisible();
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();

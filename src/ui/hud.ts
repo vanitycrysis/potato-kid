@@ -315,12 +315,31 @@ export class Hud {
     return b;
   }
 
-  /** A stat's name as an ordinary help sheet, when its bubble can't fit (§23.2). */
-  private statHelp(key: string, trigger: HTMLElement, content: BubbleContent): void {
-    const glyph = key === 'materials' ? 'icon_materials' : key === 'potatokens' ? 'icon_potatokens' : 'icon_kids';
-    const sheet = this.sheets.open({ key: 'stathelp', icon: glyph, title: content.title, requestedHeight: 480 }, trigger);
-    sheet.setSubtitle(content.value);
-    sheet.body.append(...content.lines.map((l) => el('p', 'sheet-body-text', l)));
+  /** The stat whose help sheet is open (or was, before the offline summary interrupted it). */
+  private helpKey: 'materials' | 'potatokens' | 'kids' = 'materials';
+
+  /**
+   * A stat's name as an ordinary help sheet, when its bubble can't fit (§23.2). Its value and
+   * lines stay current, quietly, as the game runs (Codex review, #105).
+   */
+  private statHelp(key: string, trigger: HTMLElement | null, content: BubbleContent, scrollTop = 0): void {
+    const stat = key as 'materials' | 'potatokens' | 'kids';
+    this.helpKey = stat;
+    const glyph = stat === 'materials' ? 'icon_materials' : stat === 'potatokens' ? 'icon_potatokens' : 'icon_kids';
+    const lines = el('div', 'stat-help-lines');
+    let shown = '';
+    const render = () => {
+      const now = this.statContent(stat);
+      sheet.setSubtitle(now.value);
+      const text = now.lines.join('|');
+      if (text === shown) return;
+      shown = text;
+      lines.replaceChildren(...now.lines.map((l) => el('p', 'sheet-body-text', l)));
+    };
+    const sheet = this.sheets.open({ key: 'stathelp', icon: glyph, title: content.title, requestedHeight: 480, update: () => render() }, trigger);
+    sheet.body.append(lines);
+    render();
+    sheet.scrollTo(scrollTop);
   }
 
   /** A stat's bubble (§23.2): Codex's exact title, value and explanation. */
@@ -376,6 +395,8 @@ export class Hud {
       else if (back.key === 'field' || back.key === 'field-food' || back.key === 'field-pick') this.buildings.openFields(back.launcher);
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
+      // A stat's help sheet comes back on the same stat (Codex review, #105).
+      else if (back.key === 'stathelp') this.statHelp(this.helpKey, back.launcher, this.statContent(this.helpKey), back.scrollTop);
       // With the way back its Fields were opened with, if any (the Pantry, feeding).
       else if (back.key === 'garden') this.buildings.reopenGarden(back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots }, back.gardenBack);
     });

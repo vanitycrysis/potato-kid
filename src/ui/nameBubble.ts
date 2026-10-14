@@ -131,6 +131,8 @@ export class NameBubble {
 export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLElement, place: (b: Box) => void): void {
   let timer = 0;
   let later = 0;
+  /** A touch that moved off before naming: its release must not activate (§23.2). */
+  let moved = false;
   let held = false;
   let start: { x: number; y: number; id: number } | null = null;
   const show = () => {
@@ -149,6 +151,7 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   };
   button.addEventListener('pointerdown', (e) => {
     held = false;
+    moved = false;
     start = { x: e.clientX, y: e.clientY, id: e.pointerId };
     clearTimeout(timer);
     if (e.pointerType !== 'mouse')
@@ -159,6 +162,9 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   });
   button.addEventListener('pointermove', (e) => {
     if (start && e.pointerId === start.id && Math.hypot(e.clientX - start.x, e.clientY - start.y) > SLOP) {
+      // A touch moving more than 8 px cancels the gesture: no naming, and no activation on its
+      // release (Codex review, #105). A mouse press is an ordinary click.
+      if (e.pointerType !== 'mouse') moved = true;
       start = null;
       hide();
     }
@@ -192,8 +198,9 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
   button.addEventListener(
     'click',
     (e) => {
-      if (!held) return;
+      if (!held && !moved) return;
       held = false;
+      moved = false;
       e.stopImmediatePropagation();
       e.preventDefault();
     },
