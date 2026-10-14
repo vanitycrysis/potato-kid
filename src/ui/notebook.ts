@@ -20,6 +20,14 @@ type Row = (typeof ROWS)[number]['key'];
 /** Every sheet the Notebook's navigation control stands for while it is open. */
 export const NOTEBOOK_KEYS: ReadonlySet<string> = new Set(['notebook', ...ROWS.map((r) => r.key)]);
 
+/** A labelled 48 px `Replay tutorial` action (§23.3). */
+export function replayButton(replay: (launcher: HTMLElement) => void): HTMLButtonElement {
+  const b = el('button', 'ui-button sheet-action tutorial-replay', 'Replay tutorial');
+  b.type = 'button';
+  b.addEventListener('click', () => replay(b));
+  return b;
+}
+
 /** Map view's zoom step: in or out by √2 (GUI_MVP §20.1). */
 const STEP = Math.SQRT2;
 /** Within this of a limit, the zoom is at it (√2 steps don't land exactly). */
@@ -37,6 +45,8 @@ export class Notebook {
     private readonly buildings: BuildingSheets,
     private readonly settings: SettingsStore,
     private readonly readOnly: () => boolean,
+    /** Replays the tutorial, from the Icon guide or Settings (D-078, §23.3). */
+    private readonly replay: (launcher: HTMLElement) => void,
     /** The Pantry, as a page of the Notebook (D-069). */
     private readonly openPantry?: (launcher: HTMLElement | null) => void,
   ) {}
@@ -92,7 +102,7 @@ export class Notebook {
         this.open(launcher, row, scrollTop);
       },
     });
-    if (row === 'settings') openSettings(this.sheets, this.settings, launcher, restore?.scrollTop);
+    if (row === 'settings') openSettings(this.sheets, this.settings, launcher, restore?.scrollTop, this.replay);
     else if (row === 'mapview') this.openMapView(launcher, restore?.scrollTop);
     else if (row === 'pantry') this.openPantry?.(launcher);
     else if (row === 'iconguide') this.openIconGuide(launcher, restore?.scrollTop);
@@ -118,6 +128,7 @@ export class Notebook {
       ...entries.map(([glyph, title, text]) =>
         el('div', 'icon-guide-row', icon(glyph, '', 'ui-icon'), el('div', 'icon-guide-text', el('p', 'icon-guide-title', title), el('p', 'icon-guide-line', text))),
       ),
+      replayButton(this.replay),
     );
     sheet.scrollTo(scrollTop);
   }

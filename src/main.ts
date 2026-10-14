@@ -135,8 +135,8 @@ async function boot(): Promise<void> {
   const storage = new PreferencesStorage();
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
-  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained'> } } | undefined)?.settings?.defaults;
-  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false };
+  const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained' | 'guidedTutorial'> } } | undefined)?.settings?.defaults;
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 } };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -166,7 +166,9 @@ async function boot(): Promise<void> {
     },
     loaded.state ?? undefined,
   );
-  const hud = new Hud(scene, content, settings);
+  // The first-run tutorial (D-078) waits in tests (`debug`, `calm`) unless asked for.
+  const testing = params.get('debug') === '1' || params.get('calm') === '1';
+  const hud = new Hud(scene, content, settings, { tutorialAuto: !testing || params.get('tutorial') === '1' });
   // Codex's cues and music (ART_AUDIO_PLAN): one cue per sim step, volumes from Settings.
   // Not in read-only mode: the game is frozen there and has no lifecycle to pause it
   // (Codex review, PR #53).

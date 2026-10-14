@@ -2,15 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { parseSettings, SettingsStore } from './settings';
 import { MemoryStorage, type SaveStorage } from './storage';
 
-const DEFAULTS = { audio: true, music: 70, sfx: 80, plantV2Explained: false };
+const T0 = { version: 1 as const, status: 'notStarted' as const, nextStep: 1 };
+const DEFAULTS = { audio: true, music: 70, sfx: 80, plantV2Explained: false, guidedTutorial: T0 };
 
 describe('settings', () => {
   it('fills missing or invalid fields from the defaults, and clamps volumes', () => {
     expect(parseSettings(null, DEFAULTS)).toEqual(DEFAULTS);
     expect(parseSettings('not json', DEFAULTS)).toEqual(DEFAULTS);
     expect(parseSettings('[1,2]', DEFAULTS)).toEqual(DEFAULTS);
-    expect(parseSettings('{"audio":"no","music":140,"sfx":-3}', DEFAULTS)).toEqual({ audio: true, music: 100, sfx: 0, plantV2Explained: false });
-    expect(parseSettings('{"audio":false,"music":33.6,"plantV2Explained":true}', DEFAULTS)).toEqual({ audio: false, music: 34, sfx: 80, plantV2Explained: true });
+    expect(parseSettings('{"audio":"no","music":140,"sfx":-3}', DEFAULTS)).toEqual({ audio: true, music: 100, sfx: 0, plantV2Explained: false, guidedTutorial: T0 });
+    expect(parseSettings('{"audio":false,"music":33.6,"plantV2Explained":true}', DEFAULTS)).toEqual({ audio: false, music: 34, sfx: 80, plantV2Explained: true, guidedTutorial: T0 });
+  });
+
+  it('keeps a valid tutorial record (D-078, §24.1), and falls back for a broken one', () => {
+    const rec = (r: unknown) => parseSettings(JSON.stringify({ guidedTutorial: r }), DEFAULTS).guidedTutorial;
+    expect(rec({ version: 1, status: 'inProgress', nextStep: 4 })).toEqual({ version: 1, status: 'inProgress', nextStep: 4 });
+    expect(rec({ version: 1, status: 'skipped', nextStep: 99 })).toEqual({ version: 1, status: 'skipped', nextStep: 8 });
+    expect(rec({ version: 1, status: 'completed', nextStep: 'x' })).toEqual({ version: 1, status: 'completed', nextStep: 1 });
+    expect(rec({ version: 2, status: 'completed', nextStep: 1 })).toEqual(T0);
+    expect(rec({ version: 1, status: 'maybe', nextStep: 1 })).toEqual(T0);
+    expect(rec('done')).toEqual(T0);
   });
 
   it('round-trips through storage', async () => {
@@ -22,7 +33,7 @@ describe('settings', () => {
     await a.flushed();
     const b = new SettingsStore(storage, DEFAULTS);
     await b.load();
-    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false });
+    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false, guidedTutorial: T0 });
   });
 
   it('keeps the defaults when storage fails, and survives failed writes', async () => {

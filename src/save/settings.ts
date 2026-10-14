@@ -11,6 +11,28 @@ export interface Settings {
   sfx: number;
   /** The first Send home explanation has been shown (GUI_MVP §13.3). */
   plantV2Explained: boolean;
+  /** The first-run tutorial's progress (D-078, GUI_MVP §24.1): offered until skipped or done. */
+  guidedTutorial: TutorialRecord;
+}
+
+/** The tutorial's saved progress (§24.1, `guidedTutorial`, version 1). */
+export interface TutorialRecord {
+  version: 1;
+  status: 'notStarted' | 'inProgress' | 'skipped' | 'completed';
+  /** The step to show next, 1-8. */
+  nextStep: number;
+}
+
+const TUTORIAL_STEPS = 8;
+const STATUSES: readonly TutorialRecord['status'][] = ['notStarted', 'inProgress', 'skipped', 'completed'];
+
+/** A stored tutorial record made valid, or the fallback. */
+function tutorialRecord(v: unknown, fallback: TutorialRecord): TutorialRecord {
+  if (!v || typeof v !== 'object') return fallback;
+  const r = v as Partial<Record<keyof TutorialRecord, unknown>>;
+  if (r.version !== 1 || !STATUSES.includes(r.status as TutorialRecord['status'])) return fallback;
+  const step = typeof r.nextStep === 'number' && Number.isInteger(r.nextStep) ? Math.min(TUTORIAL_STEPS, Math.max(1, r.nextStep)) : 1;
+  return { version: 1, status: r.status as TutorialRecord['status'], nextStep: step };
 }
 
 const KEY = 'settings';
@@ -34,6 +56,7 @@ export function parseSettings(text: string | null, defaults: Settings): Settings
     music: volume(raw.music, defaults.music),
     sfx: volume(raw.sfx, defaults.sfx),
     plantV2Explained: typeof raw.plantV2Explained === 'boolean' ? raw.plantV2Explained : defaults.plantV2Explained,
+    guidedTutorial: tutorialRecord(raw.guidedTutorial, defaults.guidedTutorial),
   };
 }
 

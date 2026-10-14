@@ -664,3 +664,160 @@
   right: 0;
 }
 
+
+/* --- The first-run tutorial (D-078, GUI_MVP §24) -----------------------------------------
+   A paper card at the bottom over a light ink scrim, above sheets (a replay opens over the
+   one it was asked from) and below banners; a static outline marks the lesson's control. */
+.tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  transition: opacity 120ms ease-out;
+}
+.tutorial[hidden],
+.tutorial-spot[hidden] {
+  display: none;
+}
+.tutorial.is-entering {
+  opacity: 0;
+}
+.tutorial-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.24);
+}
+.tutorial-spot {
+  position: fixed;
+  box-sizing: border-box;
+  border: 2px solid var(--ui-ink);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1.5px var(--ui-paper), inset 0 0 0 1.5px var(--ui-paper);
+  pointer-events: none;
+}
+.tutorial-card {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--ui-sb) + 8px);
+  width: min(600px, calc(100vw - var(--ui-ml) - var(--ui-mr)));
+  max-height: calc(100vh - var(--ui-st) - var(--ui-sb) - 16px);
+  /* The body scrolls when it must; the header and the controls stay in view (§24.2). */
+  overflow: hidden;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.tutorial-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+.tutorial-step,
+.tutorial-text,
+.tutorial-hint,
+.tutorial-label {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.tutorial-title:focus {
+  outline: none;
+}
+.tutorial-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: normal;
+}
+.ui-button.tutorial-close {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 22px;
+}
+.tutorial-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.tutorial-head,
+.tutorial-title,
+.tutorial-footer,
+.tutorial-hint {
+  flex: none;
+}
+/* All in flow: the whole card scrolls (a very short window). */
+.tutorial-card[data-flow='true'] {
+  overflow-y: auto;
+}
+.tutorial-card[data-flow='true'] .tutorial-main {
+  flex: none;
+  overflow: visible;
+}
+.tutorial-diagram {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 16px;
+  min-height: 76px;
+}
+.tutorial-node {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tutorial-art {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.tutorial-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tutorial-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 60px;
+}
+.tutorial-footer .ui-button {
+  min-height: 44px;
+  font-size: 18px;
+  line-height: 24px;
+}
+.tutorial-skip {
+  min-width: 44px;
+}
+.tutorial-back {
+  min-width: 64px;
+}
+.tutorial-next,
+.tutorial-finish {
+  min-width: 72px;
+  margin-left: auto;
+}
+/* A compact landscape: an 80 px illustration column beside the text (§24.2). */
+@media (max-height: 520px) and (orientation: landscape) {
+  .tutorial-main {
+    flex-direction: row;
+    gap: 12px;
+  }
+  .tutorial-diagram {
+    flex: none;
+    width: 80px;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+}
