@@ -28,8 +28,10 @@ export class NameBubble {
   private key: string | null = null;
 
   constructor(
-    /** Where it may go: the screen's safe sides and the HUD's bottom. */
-    private readonly frame: () => { left: number; right: number; below: number },
+    /** Where it may go: the screen's safe sides, the HUD's bottom and how far down it may reach. */
+    private readonly frame: () => { left: number; right: number; below: number; bottom: number },
+    /** It doesn't fit (a short screen, enlarged text): the same content as a help sheet (§23.2). */
+    private readonly overflow: (key: string, trigger: HTMLElement, content: BubbleContent) => void,
   ) {
     this.root.id = 'name-bubble';
     this.root.hidden = true;
@@ -88,6 +90,13 @@ export class NameBubble {
     this.value.textContent = content.value;
     this.lines.replaceChildren(...content.lines.map((l) => el('p', 'name-bubble-line', l)));
     this.place();
+    // Every line and its Close must be reachable: if it would run past the room below the
+    // HUD, it becomes an ordinary help sheet instead (§23.2; Codex review, #105).
+    if (this.root.getBoundingClientRect().bottom > this.frame().bottom) {
+      const trigger = this.trigger!;
+      this.hide(false);
+      this.overflow(key, trigger, content);
+    }
   }
 
   /** 8 px below the HUD, centred on its stat, kept inside the safe sides (§23.2). */
@@ -121,17 +130,22 @@ export class NameBubble {
  */
 export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLElement, place: (b: Box) => void): void {
   let timer = 0;
+  let later = 0;
   let held = false;
   let start: { x: number; y: number; id: number } | null = null;
   const show = () => {
+    clearTimeout(later);
+    tip.dataset.owner = label;
     tip.textContent = label;
     tip.hidden = false;
     const r = button.getBoundingClientRect();
     place({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
   };
+  // Hides this control's name only: another control may own the shared tip by now.
   const hide = () => {
     clearTimeout(timer);
-    tip.hidden = true;
+    clearTimeout(later);
+    if (tip.dataset.owner === label) tip.hidden = true;
   };
   button.addEventListener('pointerdown', (e) => {
     held = false;
@@ -153,7 +167,7 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
     button.addEventListener(type, () => {
       start = null;
       clearTimeout(timer);
-      if (held) window.setTimeout(hide, 900);
+      if (held) later = window.setTimeout(hide, 900);
     });
   button.addEventListener('pointerenter', (e) => {
     if (e.pointerType === 'mouse') timer = window.setTimeout(show, HOVER_MS);

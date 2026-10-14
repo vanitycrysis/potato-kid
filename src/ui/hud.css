@@ -133,7 +133,9 @@
 }
 .hud-stat {
   flex: 1 1 0;
-  min-width: max-content;
+  /* Narrower than its glyph and count, a chip stacks them and grows, rather than wrapping the
+     whole row (§23.1; Codex review, #105). */
+  min-width: 0;
   min-height: 44px;
   display: inline-flex;
   flex-wrap: wrap;
@@ -151,6 +153,10 @@
 .tray-cell:focus-visible {
   outline: 2px solid var(--ui-ink);
   outline-offset: 2px;
+}
+.hud-stat .hud-count,
+.hud-stat .hud-value {
+  white-space: nowrap;
 }
 .hud-stat[aria-expanded='true'] {
   background: var(--ui-sage);

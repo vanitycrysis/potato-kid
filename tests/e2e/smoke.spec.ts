@@ -4163,6 +4163,51 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await expect(bubble).toBeHidden();
   });
 
+  test('a bubble that cannot fit below the HUD opens as a help sheet instead (Codex review, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 230 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('.hud-materials').click();
+    const help = page.getByRole('dialog', { name: 'Materials' });
+    await expect(help).toBeVisible();
+    await expect(help).toContainText('Kids on the map earn these.');
+    await expect(page.locator('#name-bubble')).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(help).toBeHidden();
+    await expect(page.locator('.hud-materials')).toBeFocused();
+  });
+
+  test('enlarged text stacks a chip’s glyph over its count, keeping three equal chips in one row (Codex review, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 123456789 }));
+    await page.addStyleTag({ content: '.hud { font-size: 30px !important; line-height: 34px !important; }' });
+    await frames(page, 3);
+    const chips = await page.locator('.hud-stat').evaluateAll((cs) => cs.map((c) => c.getBoundingClientRect()).map((r) => ({ top: r.top, width: r.width, height: r.height })));
+    expect(new Set(chips.map((c) => Math.round(c.top))).size).toBe(1);
+    expect(Math.max(...chips.map((c) => c.width)) - Math.min(...chips.map((c) => c.width))).toBeLessThan(1);
+    expect(Math.max(...chips.map((c) => c.height))).toBeGreaterThan(44);
+  });
+
+  test('a delayed hide from one held icon never hides the next icon’s name (Codex review, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const touch = (key: string, type: string) =>
+      page.locator(`[data-nav=${key}]`).evaluate((b, type) => {
+        const r = b.getBoundingClientRect();
+        b.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 22, clientY: r.top + 22, bubbles: true }));
+      }, type);
+    await touch('garden', 'pointerdown');
+    await page.waitForTimeout(550);
+    await touch('garden', 'pointerup');
+    // Within the first name's 900 ms delayed hide, hold the next icon past 450 ms.
+    await touch('notebook', 'pointerdown');
+    await page.waitForTimeout(1200);
+    const tip = page.locator('.name-tip');
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText('Notebook');
+    await touch('notebook', 'pointerup');
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();

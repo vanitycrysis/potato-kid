@@ -105,11 +105,15 @@ export class Hud {
     this.known = new Set(scene.game.state.discoveredKids);
 
     // Three stat chips (D-077, §23.1): a glyph and a count each; one tap opens its name bubble.
-    this.bubble = new NameBubble(() => ({
-      left: this.top.getBoundingClientRect().left,
-      right: this.top.getBoundingClientRect().right,
-      below: this.hud.getBoundingClientRect().bottom,
-    }));
+    this.bubble = new NameBubble(
+      () => ({
+        left: this.top.getBoundingClientRect().left,
+        right: this.top.getBoundingClientRect().right,
+        below: this.hud.getBoundingClientRect().bottom,
+        bottom: (document.querySelector('.tray')?.getBoundingClientRect().top ?? window.innerHeight) - 8,
+      }),
+      (key, trigger, content) => this.statHelp(key, trigger, content),
+    );
     this.hud.append(
       this.stat('materials', 'hud-materials', 'icon_materials', this.materials),
       this.stat('potatokens', 'hud-potatokens', 'icon_potatokens', this.potatokens),
@@ -309,6 +313,14 @@ export class Hud {
     b.addEventListener('click', () => this.bubble.toggle(key, b, this.statContent(key)));
     this.stats.set(key, b);
     return b;
+  }
+
+  /** A stat's name as an ordinary help sheet, when its bubble can't fit (§23.2). */
+  private statHelp(key: string, trigger: HTMLElement, content: BubbleContent): void {
+    const glyph = key === 'materials' ? 'icon_materials' : key === 'potatokens' ? 'icon_potatokens' : 'icon_kids';
+    const sheet = this.sheets.open({ key: 'stathelp', icon: glyph, title: content.title, requestedHeight: 480 }, trigger);
+    sheet.setSubtitle(content.value);
+    sheet.body.append(...content.lines.map((l) => el('p', 'sheet-body-text', l)));
   }
 
   /** A stat's bubble (§23.2): Codex's exact title, value and explanation. */
