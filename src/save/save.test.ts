@@ -40,10 +40,16 @@ class TestStorage implements SaveStorage {
 const revisionOf = (s: SaveStorage & { data: Map<string, string> }, key: string) => decode(s.data.get(key)!)!.revision;
 
 
-/** A pre-schema-8 state's kids where schema 8 puts them: beside the moved Garden (D-071). */
-function v3<T extends { world: { kids: { x: number; y: number }[] } }>(old: T): T {
-  return { ...old, world: { ...old.world, kids: old.world.kids.map((k) => ({ ...k, x: k.x + 1080, y: k.y + 2880 })) } };
+/** A state's kids moved by (dx, dy): where a map change puts them, beside the moved Garden. */
+function shifted<T extends { world: { kids: { x: number; y: number }[] } }>(old: T, dx: number, dy: number): T {
+  return { ...old, world: { ...old.world, kids: old.world.kids.map((k) => ({ ...k, x: k.x + dx, y: k.y + dy })) } };
 }
+
+/** Schema 10's move (D-076): the Garden from (2160, 3500) on map v3 to (1536, 2348) on v4. */
+const v4 = <T extends { world: { kids: { x: number; y: number }[] } }>(old: T): T => shifted(old, -624, -1152);
+
+/** A pre-schema-8 state's kids where schemas 8 and 10 put them: beside the twice-moved Garden (D-071, D-076). */
+const v3 = <T extends { world: { kids: { x: number; y: number }[] } }>(old: T): T => v4(shifted(old, 1080, 2880));
 
 describe('saving and loading', () => {
   it('a new player starts fresh; a saved game loads back exactly', async () => {
@@ -508,22 +514,53 @@ describe('schema 7: rare variants retired (D-072)', () => {
     const storage = new TestStorage();
     storage.data.set('slotA', encode(7, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
-    // The Garden went from (1080, 620) to (2160, 3500).
-    expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x + 1080, k.y + 2880]));
+    // The Garden went from (1080, 620) to (2160, 3500), then to (1536, 2348) with map v4 (D-076).
+    expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x + 1080 - 624, k.y + 2880 - 1152]));
     // Planted kids have no position; everything else is as it was.
     expect(r.state!.plots).toEqual(old.plots);
     expect({ ...r.state!, world: null, fields: null, pantry: null }).toEqual({ ...old, world: null, fields: null, pantry: null });
   });
 
   it('a schema-8 save loads with no fields and an empty pantry, all else as it was (D-069)', async () => {
-    expect(SAVE_SCHEMA).toBe(9);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(9);
     const old: Partial<PersistedState> = newGame().persisted();
     delete old.fields;
     delete old.pantry;
     const storage = new TestStorage();
     storage.data.set('slotA', encode(8, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual({ ...old, fields: [], pantry: {} });
+    expect(r.state).toEqual({ ...v4(old as PersistedState), fields: [], pantry: {} });
+  });
+
+  it('a schema-9 save keeps its kids beside the Garden, which moved with map v4 (D-076); fields and plots as they were', async () => {
+    expect(SAVE_SCHEMA).toBe(10);
+    const g = newGame();
+    g.state.materials = 1e6;
+    g.step([{ type: 'unlockField' }, { type: 'setFieldFood', field: 0, food: content.balance.feeding.foods[0]!.id }], 0);
+    const old = g.persisted();
+    const storage = new TestStorage();
+    storage.data.set('slotA', encode(9, 4, 1, old));
+    const r = await new SaveManager(storage, content).load();
+    expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x - 624, k.y - 1152]));
+    expect(r.state).toEqual(v4(old));
+  });
+
+  it('loading puts a kid the smaller map left outside (D-076) back inside, on a free spot', () => {
+    const v4Bounds = { minX: 0, minY: 0, maxX: 3072, maxY: 5376 };
+    const saved = newGame().persisted();
+    // Where a kid far out on the v3 map lands after schema 10's move: past the v4 world's corner.
+    const outside = saved.world.kids[0]!;
+    outside.x = 3700;
+    outside.y = 6100;
+    const g = new Game(structuredClone(content), { ...options, bounds: v4Bounds }, 5, saved);
+    for (const k of g.state.world.kids) {
+      const r = { minX: k.x + k.box.left, maxX: k.x + k.box.right, minY: k.y + k.box.top, maxY: k.y + k.box.bottom };
+      expect(r.minX >= 0 && r.minY >= 0 && r.maxX <= 3072 && r.maxY <= 5376, `kid ${k.id} at ${k.x}, ${k.y}`).toBe(true);
+    }
+    const moved = g.state.world.kids.find((k) => k.id === outside.id)!;
+    // The nearest place inside, by the corner it was beyond.
+    expect(moved.x).toBeGreaterThan(2500);
+    expect(moved.y).toBeGreaterThan(4800);
   });
 
   it('a schema-3 Mini comes through every step at its normal size', async () => {

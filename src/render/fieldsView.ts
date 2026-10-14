@@ -4,7 +4,7 @@ import type { Field } from '../sim/game';
 import { defaultBox, type Box, type Kid, type Look } from '../sim/world';
 import { KidRigView } from './rigView';
 
-// The food fields on the map (D-069, GUI_MVP §22.1, Codex's farm_v1): a bought field's bed,
+// The food fields on the map (D-069, GUI_MVP §22.1, Codex's farm_v2): a bought field's bed,
 // its two crop stamps once it has a food, and its kids on their pads, working. Locked
 // fields don't exist on the map. Workers are drawn by the same rig as every kid, with the
 // farming step loop; their pads stay put while others come and go.

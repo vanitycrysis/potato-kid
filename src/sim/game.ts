@@ -304,7 +304,7 @@ export interface GameOptions {
   /** Wall-clock ms at creation: a new save is accounted up to now. */
   now?: number;
   /**
-   * Each food field's bay, in field order (Codex's farm_v1): a bought field is scenery, so
+   * Each food field's bay, in field order (Codex's farm_v2): a bought field is scenery, so
    * nothing wanders, spawns or lands in it (GUI_MVP §22.1).
    */
   fieldBays?: Obstacle[];
@@ -412,7 +412,7 @@ export class Game {
       const { body, face, scale } = this.lookWithBox(worker.look, worker.type);
       worker.look = { body, face, scale };
     }
-    // A save from another map (schema 8 moved kids beside the v3 Garden, D-071), or a box
+    // A save from another map (schemas 8 and 10 moved kids with the Garden, D-071, D-076), or a box
     // grown with new art, may leave a kid in scenery or another kid: it moves to the nearest
     // free spot clear of recipe partners, so loading never fuses it.
     for (const kid of this.state.world.kids) {

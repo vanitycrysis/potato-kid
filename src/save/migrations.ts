@@ -7,6 +7,9 @@ const MINI_SCALE_V4 = 0.72;
 /** Where the Garden moved from map v2 to v3 (D-071): (1080, 620) to (2160, 3500). */
 const V3_GARDEN_SHIFT = { x: 1080, y: 2880 };
 
+/** Where the Garden moved from map v3 to v4 (D-076): (2160, 3500) to (1536, 2348). */
+const V4_GARDEN_SHIFT = { x: -624, y: -1152 };
+
 /**
  * `migrations(content)[n]` upgrades a schema-n state to n+1 (plan §4). A shipped step is
  * never edited: a new format adds the next one and bumps SAVE_SCHEMA.
@@ -81,5 +84,17 @@ export function migrations(content: Content): Record<number, Migration> {
     },
     // Schema 9 (D-069): food is farmed, not bought. No fields yet, and an empty pantry.
     8: (state) => ({ ...(state as object), fields: [], pantry: {} }),
+    // Schema 10 (D-076): the map shrinks to half its area (map v4), the Garden still in its
+    // middle. Kids on the map move with the Garden, as in schema 8; the fields moved with it
+    // too (farm_v2), and farming and planted kids have no position. A kid now outside the
+    // smaller world, or in its scenery, is moved inside by loading, clear of partners.
+    9: (state) => {
+      const s = structuredClone(state) as { world?: { kids?: { x: number; y: number }[] } };
+      for (const k of s.world?.kids ?? []) {
+        k.x += V4_GARDEN_SHIFT.x;
+        k.y += V4_GARDEN_SHIFT.y;
+      }
+      return s;
+    },
   };
 }

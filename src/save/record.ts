@@ -7,7 +7,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 9;
+export const SAVE_SCHEMA = 10;
 
 export interface SaveRecord {
   schema: number;

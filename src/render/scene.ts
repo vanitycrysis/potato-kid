@@ -511,7 +511,7 @@ export class MapScene {
     }
   }
 
-  /** Where Find fields centres the view (Codex's farm_v1, GUI_MVP §22.2). */
+  /** Where Find fields centres the view (Codex's farm_v2, GUI_MVP §22.2). */
   get farmCentre(): [number, number] | undefined {
     return this.art.farm?.findFieldsCentre;
   }
