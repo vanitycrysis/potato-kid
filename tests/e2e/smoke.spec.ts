@@ -4142,18 +4142,18 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await bubble.getByRole('button', { name: 'Close' }).click();
     await expect(bubble).toBeHidden();
     // A tap on the world closes it and neither picks up a kid nor pans.
-    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1620, 3980));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 996, 2828));
     await page.waitForTimeout(150);
     await chip.click();
     const at = await page.evaluate((k) => window.__PK__!.screenPointOf(k)!, id);
-    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980));
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(996, 2828));
     await page.mouse.move(at.x, at.y - 20);
     await page.mouse.down();
     await page.mouse.move(at.x + 120, at.y - 20, { steps: 6 });
     await expect(bubble).toBeHidden();
     expect(await page.evaluate((k) => window.__PK__!.kids().find((c) => c.id === k)!.held, id)).toBe(false);
     await page.mouse.up();
-    expect(await page.evaluate(() => window.__PK__!.worldToScreen(1620, 3980))).toEqual(before);
+    expect(await page.evaluate(() => window.__PK__!.worldToScreen(996, 2828))).toEqual(before);
     // A sheet opening closes it (opened from the keyboard: no tap outside to close it first).
     await chip.click();
     await expect(bubble).toBeVisible();
