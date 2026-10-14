@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Special tier badge</title>
+  <desc>Original Potato Kid notebook badge, round3-design-2. Two broad ribbon loops and two notched tails; silhouette distinct from every numeric badge and Rare at 20 CSS px. Pair with live Special text. Final art for Claude review.</desc>
+  <g stroke="#1a1a1a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="#96bbc0">
+    <path d="M24 29 L17 55 L27 49 L32 57 L36 31 Z"/>
+    <path d="M34 29 L32 53 L41 48 L48 53 L41 28 Z"/>
+    <path d="M29 24 C18 8 7 6 8 20 C8 35 17 39 29 30 Z"/>
+    <path d="M35 23 C46 8 57 7 56 21 C56 35 46 37 35 30 Z"/>
+    <path d="M28 22 Q32 20 37 23 L37 31 Q32 34 27 31 Z" fill="#fff1d5"/>
+  </g>
+</svg>

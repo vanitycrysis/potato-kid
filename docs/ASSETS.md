@@ -1,5 +1,21 @@
 # Asset list
 
+## ROUND3-DESIGN delivery (2026-10-13; Claude review pending)
+
+GUI_MVP §§23–26 and additive `ui_v2.json.mvp.round3` define the icon HUD/tray, eight-step saved/skippable/replayable tutorial, hovering valid-partner/sprite recipe preview and category tier labels. Existing Materials/Potatokens/kids pictograms are reused. No original kid, face, rig, map, farming or motion art changes.
+
+| New source / generated output ID | Source canvas | Use / status |
+| --- | --- | --- |
+| `icon_r3_garden` | 128 × 128 | Sprout-roof house, tray 28 CSS px; final for Claude review |
+| `icon_r3_dex` | 128 × 128 | Potato-cover tabbed book, tray 28 CSS px; final for Claude review |
+| `icon_r3_notebook` | 128 × 128 | Ruled spiral notebook, tray 28 CSS px; final for Claude review |
+| `badge_special` | 64 × 64 | Blue looped ribbon with notched tails; live Special text, 20/24 CSS px; final for Claude review |
+| `badge_rare` | 64 × 64 | Orange faceted gem; live Rare text, 20/24 CSS px; final for Claude review |
+
+Original SVGs: `art/src/ui/round3/`; generated DOM copies: `assets/ui/`, validated and copied by the existing exporter. Round 2 removes the five unused PNG delivery derivatives and their export branch. Existing game inventory stays **289 PNGs / 21,044,480 bytes (20.06958 MiB)**, decoded delta **0**; UI delivery PNG bytes now **0** (−229,376 from round 1). Intended Pixi GUI texture delta **0**. Device allocation/atlas slack remains Claude's check under the unchanged 32 MiB ceiling. Ordinary Tier 5 retains its original blossom; category Special/Rare gets distinct ribbon/gem badges with full words. Unknown Dex/recipe tiers have no badge.
+
+[Handoff and checks](../.codex-out/round3-design-notes.md), [native colour/grayscale gallery](../.codex-out/round3/index.html), [preservation/budget audit](../.codex-out/round3-final-audit.json). Export/check/typecheck pass; all 353 tests pass. Design and art review/implementation remain pending; no owner gate acceptance or task-board completion.
+
 ## FARM-DESIGN delivery (2026-10-09; round 2, Claude review pending)
 
 Current contract GUI_MVP §22, farm-design-2. Sixteen additive sources in art/src/farm, unchanged exporter/palette/face/font. One shared bed plus matching snack-sprout stamps and actual existing-rig workers. Locked sites stay absent from map; the paper sign illustrates locked Garden rows.

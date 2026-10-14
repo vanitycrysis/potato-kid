@@ -11,6 +11,7 @@ const SRC = join(ROOT, 'art/src');
 const PREVIEWS = join(ROOT, 'art/previews');
 const checkOnly = process.argv.includes('--check-only');
 
+
 /** Where each asset family is exported, and its contract. */
 const FAMILIES = [
   { prefix: 'kid_', dir: 'assets/sprites/kids', size: [256, 256], padding: 8, opaque: false },
