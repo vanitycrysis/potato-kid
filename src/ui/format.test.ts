@@ -33,6 +33,9 @@ describe('number display (GUI_MVP §3)', () => {
 
   it('durations floor to h/m/s', () => {
     expect(formatDuration(8040.9)).toBe('2 h 14 m');
+    expect(formatDuration(86399)).toBe('23 h 59 m');
+    expect(formatDuration(86400)).toBe('1 d 0 h');
+    expect(formatDuration(30 * 86400 + 5 * 3600 + 59 * 60)).toBe('30 d 5 h');
     expect(formatDuration(242)).toBe('4 m 02 s');
     expect(formatDuration(12.9)).toBe('12 s');
     expect(formatDuration(0)).toBe('0 s');

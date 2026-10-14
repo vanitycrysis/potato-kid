@@ -154,15 +154,23 @@ describe('the accounting boundary (plan §3)', () => {
     expect(g.state.materials).toBeCloseTo(materials);
   });
 
-  it('caps an absence at offlineCapHours and reports what was discarded', () => {
-    const g = game((c) => (c.balance.spawn.intervalSeconds = 1e9));
-    place(g, 'plain', 300, 2200);
-    const cap = e.offlineCapHours * 3600;
-    const r = g.reconcile(T0 + (cap + 600) * S);
-    expect(r.seconds).toBe(cap);
-    expect(r.discardedSeconds).toBeCloseTo(600);
-    expect(g.state.materials).toBeCloseTo(e.materialsPerSecond * cap);
-    expect(g.state.accountedUntil).toBe(T0 + (cap + 600) * S);
+  it('credits an absence in full, however long: a month away (D-080, no cap)', () => {
+    const g = game((c) => (c.balance.spawn.intervalSeconds = 3600));
+    const kid = place(g, 'plain', 300, 2200);
+    kid.happy = { left: 600, favourite: false };
+    const month = 30 * 86400;
+    const r = g.reconcile(T0 + month * S);
+    expect(r.seconds).toBe(month);
+    expect(r).not.toHaveProperty('discardedSeconds');
+    // Its base rate for the whole month, plus the happy extra for its 10 minutes.
+    const base = g.incomeOf('plain');
+    const happyExtra = base * (content.balance.feeding.happyMultiplier - 1) * 600;
+    expect(r.materials).toBeGreaterThan(base * month + happyExtra);
+    expect(kid.happy).toBeUndefined();
+    // Spawns stop at capacity, so the catch-up stays bounded.
+    expect(g.state.world.kids).toHaveLength(g.capacity);
+    expect(r.spawned).toHaveLength(g.capacity - 1);
+    expect(g.state.accountedUntil).toBe(T0 + month * S);
   });
 
   it('suspended time never fuses: a touching recipe pair stays apart offline', () => {

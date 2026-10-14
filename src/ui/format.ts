@@ -57,8 +57,11 @@ export function formatTimeLeft(seconds: number): string {
 /** A duration, floored to whole seconds: `2 h 14 m`, `4 m 02 s`, `12 s`. */
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
+  const d = Math.floor(s / 86400);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
+  // A long absence (D-080: no offline cap) reads in days.
+  if (d > 0) return `${d} d ${h % 24} h`;
   if (h > 0) return `${h} h ${m} m`;
   if (m > 0) return `${m} m ${String(s % 60).padStart(2, '0')} s`;
   return `${s} s`;

@@ -293,13 +293,13 @@ export class Hud {
    */
   private offlineSummary(report: OfflineReport): void {
     if (this.save.readOnly) return;
-    if (report.seconds + report.discardedSeconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
+    if (report.seconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
       this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
     }
     this.summaryOpen = true;
-    openOfflineSummary(this.sheets, report, this.content.balance.economy.offlineCapHours, this.content.balance.feeding.foods, (replaced) => {
+    openOfflineSummary(this.sheets, report, this.content.balance.feeding.foods, (replaced) => {
       if (replaced) return;
       this.summaryOpen = false;
       const back = this.interrupted;

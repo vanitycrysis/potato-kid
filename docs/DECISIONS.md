@@ -90,7 +90,7 @@ Consolidated on 2026-10-01 from Claude's PR #1 and ChatGPT's PR #2; both collabo
 | D-015 | Agreed | Pure simulation core separate from rendering; fixed 10 Hz step; offline is a deliberately simplified rule set (was D2) | Testable rules; ChatGPT's correction on offline accepted |
 | D-016 | Agreed | Kids composited from up to four layers (back, body, face, front) with procedural wander animation; performance measured at four layers per kid (was D3) | One or two static images per new type; the roster scales cheaply |
 | D-017 | Agreed | Kids, recipes, buildings and balance in JSON, validated in CI: result tier above both parents, reachability, valid weights (was D4) | Design doc §8; ChatGPT added checks |
-| D-018 | Approved (owner) | Offline: closed-form catch-up capped at 8 h (excess discarded and shown); no offline fusions; persisted spawn progress; idempotent reconcile (was D5) | Owner, 2026-10-01; details in the plan §3 |
+| D-018 | Approved (owner); the cap is removed by D-080 | Offline: closed-form catch-up capped at 8 h (excess discarded and shown); no offline fusions; persisted spawn progress; idempotent reconcile (was D5) | Owner, 2026-10-01; details in the plan §3 |
 | D-019 | Approved (owner) | Potatokens: instant spawn and an alternative payment for compendium respawns; earned from discoveries and milestones; no IAP and no construction timers in the MVP (was D6) | Owner, 2026-10-01 |
 | D-020 | Approved (owner) | Materials faucet: passive income per kid, `0.5 · 2^(tier-1)` per second (was D7) | Owner, 2026-10-01 |
 | D-021 | Approved (owner) | Android first; iOS later (needs a Mac with Xcode; distribution needs a paid membership) | Owner, 2026-10-01; ChatGPT's platform correction |
