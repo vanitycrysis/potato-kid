@@ -4354,6 +4354,50 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     expect(box.x + box.width).toBeLessThanOrEqual(sheet.x + sheet.width + 1);
   });
 
+  test('tiny screens: a help sheet whose header fills it still shows its explanation; the Icon guide never scrolls sideways; a shown name follows a resize (Codex review round 8, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 160, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 123_456_789_012_345 }));
+    await page.locator('.hud-materials').click();
+    const help = page.getByRole('dialog', { name: 'Materials' });
+    const line = help.getByText('Kids on the map earn these.', { exact: false });
+    await line.scrollIntoViewIfNeeded();
+    // All of it, inside the sheet, not spilling past it.
+    await expect(line).toBeInViewport({ ratio: 1 });
+    const sheetBox = (await help.boundingBox())!;
+    const lineBox = (await line.boundingBox())!;
+    expect(lineBox.y + lineBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height + 1);
+    expect(lineBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
+    // Not covered by a pinned header: it is what a tap at its centre reaches.
+    expect(await line.evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      return e.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+    })).toBe(true);
+    await page.keyboard.press('Escape');
+    // The Icon guide at 160 px: no sideways scrolling.
+    await page.setViewportSize({ width: 160, height: 700 });
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Icon guide', exact: true }).click();
+    const guide = page.getByRole('dialog', { name: 'Icon guide' });
+    await expect(guide).toBeVisible();
+    expect(await guide.evaluate((e) => [...e.querySelectorAll('.icon-guide-row')].every((r) => r.scrollWidth <= r.clientWidth + 1))).toBe(true);
+    expect(await guide.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    // A keyboard-focused tray control's name, then a resize: it stays above the tray, in view.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.keyboard.press('Tab');
+    await page.locator('[data-nav=dex]').focus();
+    const tip = page.locator('.name-tip');
+    await expect(tip).toHaveText('Potato-Dex');
+    await page.setViewportSize({ width: 640, height: 360 });
+    await page.waitForTimeout(200);
+    const tray = (await page.locator('.tray').boundingBox())!;
+    const box = (await tip.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(tray.y + 1);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();

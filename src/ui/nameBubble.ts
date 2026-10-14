@@ -206,6 +206,10 @@ export function nameOnHold(button: HTMLButtonElement, label: string, tip: HTMLEl
     if (button.matches(':focus-visible')) show();
   });
   button.addEventListener('blur', hide);
+  // A name still showing (keyboard focus) follows its control when the viewport changes.
+  window.addEventListener('resize', () => {
+    if (!tip.hidden && tip.dataset.owner === label) show();
+  });
   // A recognised hold names the control and suppresses this release's activation.
   button.addEventListener(
     'click',
