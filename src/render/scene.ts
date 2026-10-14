@@ -1101,8 +1101,16 @@ export class MapScene {
     // Inside the visible band, so a kid let go near an edge never lands behind the HUD or the
     // tray (Codex review, #103).
     const held = this.game.state.world.kids.find((k) => k.id === kidId);
-    const spot = this.game.landingSpot(kidId, this.drag.spot.x, this.drag.spot.y, this.drawn, held && this.visibleLimit(held)) ?? this.drag.spot;
-    const kid = this.game.state.world.kids.find((k) => k.id === kidId);
+    const visible = held ? this.game.landingSpot(kidId, this.drag.spot.x, this.drag.spot.y, this.drawn, this.visibleLimit(held)) : null;
+    // No free place in sight: onto a partner it fuses all the same (the kid goes); any other
+    // release goes back where it came from, safely, rather than out of sight (Codex review, #103).
+    const fuses = target !== undefined && this.game.dropResult(kidId, target) !== null;
+    if (!visible && !fuses) {
+      this.cancelActiveDrag(true);
+      return;
+    }
+    const spot = visible ?? this.drag.spot;
+    const kid = held;
     const slack = this.game.touchSlack;
     const seen = kid
       ? [...this.drawn].filter(([id, at]) => {

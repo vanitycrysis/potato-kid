@@ -3680,6 +3680,60 @@ test.describe('forgiving drop (D-051)', () => {
     expect(ids.length).toBe(33);
   });
 
+  test('let go with no free place in sight and no partner, the kid goes back where it came from (Codex review, #103)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    // An open stretch of map, with free ground above the band (the pinch tests' anchor).
+    await page.evaluate(() => window.__PK__!.centerOn(2160, 5080));
+    // Zoomed in, the visible band is small enough to fill.
+    await page.evaluate(() => {
+      const c = document.querySelector('canvas')!;
+      const r = c.getBoundingClientRect();
+      c.dispatchEvent(new WheelEvent('wheel', { deltaY: -1, deltaMode: 2, clientX: r.width / 2, clientY: r.height / 2, bubbles: true, cancelable: true }));
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.zoom())).toBe(2);
+    // The band filled with heroes, top row flush with the HUD (nothing above it), bottom row
+    // half behind the tray. The held kid is one of that bottom row: its own spot is out of sight.
+    const { held, rows } = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const look = { body: 'round', scale: 1 };
+      const trayTop = document.querySelector('.tray')!.getBoundingClientRect().top;
+      const hudBottom = document.querySelector('.top-stack')!.getBoundingClientRect().bottom;
+      const o = pk.worldToScreen(0, 0);
+      const per = (pk.worldToScreen(100, 0).x - o.x) / 100;
+      const wx = (sx: number) => (sx - o.x) / per;
+      const wy = (sy: number) => (sy - o.y) / per;
+      const probe = pk.debugAdd!('hero', wx(195), wy(400), look);
+      const k = pk.kids().find((c) => c.id === probe)!;
+      const w = k.box.right - k.box.left + 1;
+      const h = k.box.bottom - k.box.top + 1;
+      const rows: number[][] = [];
+      for (let y = wy(hudBottom) - k.box.top; y - h / 2 + k.box.top < wy(trayTop); y += h) {
+        const row: number[] = [];
+        for (let x = wx(0) - k.box.left - w; x < wx(390) + w; x += w) {
+          row.push(pk.debugAdd!('hero', x, y, look));
+        }
+        rows.push(row);
+      }
+      const last = rows[rows.length - 1]!;
+      return { held: last[Math.floor(last.length / 2)]!, rows: rows.length };
+    });
+    expect(rows).toBeGreaterThan(3);
+    await page.waitForTimeout(300);
+    const start = await page.evaluate((i) => window.__PK__!.kids().find((k) => k.id === i)!, held);
+    const from = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, held);
+    const trayTop = await page.locator('.tray').evaluate((e) => e.getBoundingClientRect().top);
+    // Grab it by its visible top, carry it to just under the HUD, let go over a hero there.
+    await page.mouse.move(from.x, Math.min(from.y, trayTop) - 20);
+    await page.mouse.down();
+    await page.mouse.move(195, 200, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    const end = await page.evaluate((i) => window.__PK__!.kids().find((k) => k.id === i)!, held);
+    // Back where it came from (hero + hero is no recipe), not above the HUD out of sight.
+    expect(Math.hypot(end.x - start.x, end.y - start.y)).toBeLessThan(1);
+  });
+
   test('a found result shows its name, in the window and the announcement (D-083)', async ({ page }) => {
     const { plain, water } = await crowd(page);
     await page.waitForTimeout(200);
