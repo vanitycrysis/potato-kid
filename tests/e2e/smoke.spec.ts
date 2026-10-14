@@ -5845,6 +5845,67 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
   });
 
+  test('the return summary comes first: the tutorial steps aside and comes back at its step; then the game is in front (Codex review, #107)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toBeVisible();
+    await expect(card(page)).toBeHidden();
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
+    // Nothing is left inert or paused behind it: a drag on empty ground pans the map.
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(0, 0));
+    await page.mouse.move(200, 600);
+    await page.mouse.down();
+    await page.mouse.move(200, 400, { steps: 6 });
+    await page.mouse.up();
+    await frames(page, 2);
+    expect(before.y - (await page.evaluate(() => window.__PK__!.worldToScreen(0, 0))).y).toBeGreaterThan(100);
+    await page.locator('[data-nav=garden]').click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+  });
+
+  test('keyboard focus stays in the card; a tap outside it skips (Codex review, #107)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page).locator('.tutorial-title')).toBeFocused();
+    // Close is first, Next last: Shift+Tab from Close wraps to Next.
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
+    }
+    await page.mouse.click(10, 300);
+    await expect(card(page)).toBeHidden();
+    expect((await record(page)).status).toBe('skipped');
+  });
+
+  test('640 x 360: the card keeps its controls in view; the spotlight follows a resize (Codex review, #107)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
+    // Enlarged text: the body scrolls, the controls stay in view.
+    await page.addStyleTag({ content: '.tutorial-text { font-size: 30px !important; line-height: 36px !important; }' });
+    await frames(page, 2);
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
+    await expect(card(page).locator('.tutorial-title')).toBeInViewport({ ratio: 1 });
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await expect(card(page).locator('.tutorial-title')).toHaveText('Know your numbers');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(300);
+    const hud = (await page.locator('.hud').boundingBox())!;
+    const spot = (await page.locator('.tutorial-spot').boundingBox())!;
+    expect(Math.abs(spot.x + 3 - hud.x)).toBeLessThan(2);
+    expect(Math.abs(spot.width - 6 - hud.width)).toBeLessThan(2);
+  });
+
   test('in tests it waits unless asked for; feedback waits while it is open', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.waitForTimeout(300);

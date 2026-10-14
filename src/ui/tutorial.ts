@@ -54,9 +54,12 @@ export class Tutorial {
   private replaying = false;
   private launcher: HTMLElement | null = null;
   private offered = false;
-  /** What it made inert, and whether world input was already paused (a sheet beneath). */
+  /** What it made inert (anything already inert belongs to a sheet beneath). */
   private quieted: HTMLElement[] = [];
-  private wasPaused = false;
+  /** Put aside for the return summary (§24.1), to come back at the same step. */
+  private aside: { step: number; replaying: boolean; launcher: HTMLElement | null } | null = null;
+  /** The step on screen, for re-placing the spotlight. */
+  private shown: Step | null = null;
 
   constructor(
     private readonly scene: MapScene,
@@ -66,6 +69,8 @@ export class Tutorial {
     /** Where focus goes after a first-run tutorial: the Garden control (§24.1). */
     private readonly home: () => HTMLElement | null,
     private readonly reducedMotion: boolean,
+    /** Whether a sheet owns world input now: closing hands it back to that, not to a snapshot. */
+    private readonly sheetOpen: () => boolean,
   ) {
     this.root.hidden = true;
     this.card.setAttribute('role', 'dialog');
@@ -77,8 +82,51 @@ export class Tutorial {
       if (e.key === 'Escape') {
         e.stopPropagation();
         this.skip();
-      }
+      } else if (e.key === 'Tab') this.trapTab(e);
     });
+    // A tap outside the card skips, as Close does (§24.1).
+    this.scrim.addEventListener('click', () => this.skip());
+    // The spotlight follows its control when the viewport changes (rotation, resize).
+    window.addEventListener('resize', () => {
+      if (this.isOpen && this.shown) this.place(this.shown);
+    });
+  }
+
+  /** Keyboard focus stays in the card: Tab wraps from the last control to the first (§2). */
+  private trapTab(e: KeyboardEvent): void {
+    const items = [...this.card.querySelectorAll<HTMLElement>('button, [tabindex="0"], .tutorial-title')].filter((b) => !b.hidden);
+    if (!items.length) return;
+    const first = items[0]!;
+    const last = items[items.length - 1]!;
+    const at = document.activeElement;
+    if (e.shiftKey && (at === first || !this.card.contains(at))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (at === last || !this.card.contains(at))) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  /** The return summary comes first (§24.1): the tutorial steps aside until it is dismissed. */
+  stepAside(): void {
+    if (!this.isOpen) return;
+    this.aside = { step: this.step, replaying: this.replaying, launcher: this.launcher };
+    this.teardown();
+  }
+
+  /** After the summary: back at the same step, in the same mode. */
+  comeBack(): void {
+    const a = this.aside;
+    if (!a || this.isOpen) return;
+    this.aside = null;
+    this.replaying = a.replaying;
+    this.launcher = a.launcher;
+    this.show(a.step);
+  }
+
+  get waiting(): boolean {
+    return this.aside !== null;
   }
 
   get isOpen(): boolean {
@@ -131,7 +179,6 @@ export class Tutorial {
     this.save({ status: 'inProgress', nextStep: this.step });
     if (first) {
       this.scene.cancelDrag();
-      this.wasPaused = this.scene.inputPaused;
       this.scene.inputPaused = true;
       // A replay opens over the sheet it was asked from: that waits too, and gets focus back.
       this.quieted = [...this.background(), ...document.querySelectorAll<HTMLElement>('.sheet-layer, .sheet, .scrim')].filter((b) => !b.inert);
@@ -190,18 +237,21 @@ export class Tutorial {
         : button(t.actions.finish, 'ui-primary tutorial-finish', () => this.finish()),
     );
     this.card.replaceChildren(el('div', 'tutorial-head', stepLine, close), title, el('div', 'tutorial-main', diagram, body), footer, el('p', 'tutorial-hint', t.hint));
+    this.shown = s;
     this.place(s);
     title.focus({ preventScroll: true });
   }
 
-  /** One diagram picture: a kid's portrait (dark if an unfound result) or a GUI icon. */
+  /**
+   * One diagram picture: a kid's portrait (dark if an unfound result) or a GUI icon. A compact
+   * landscape's 80 px column draws them smaller, so the card's controls stay in view (§24.2).
+   */
   private art(a: Art): HTMLElement {
-    if (a.type && kidRig) {
-      const p = el('span', `tutorial-kid${a.dark ? ' recipe-unfound' : ''}`, portrait(kidRig, a.type, a.css));
-      return p;
-    }
+    const compact = typeof matchMedia === 'function' && matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
+    const size = compact ? Math.min(a.css, 32) : a.css;
+    if (a.type && kidRig) return el('span', `tutorial-kid${a.dark ? ' recipe-unfound' : ''}`, portrait(kidRig, a.type, size));
     const img = icon(a.icon ?? 'icon_check', '', 'tutorial-icon');
-    img.style.width = img.style.height = `${a.css}px`;
+    img.style.width = img.style.height = `${size}px`;
     return img;
   }
 
@@ -225,14 +275,21 @@ export class Tutorial {
   }
 
   private close(): void {
-    this.root.hidden = true;
-    delete document.documentElement.dataset.tutorialOpen;
-    for (const b of this.quieted) b.inert = false;
-    this.quieted = [];
-    this.scene.inputPaused = this.wasPaused;
     const back = this.launcher?.isConnected ? this.launcher : this.home();
+    this.teardown();
     this.replaying = false;
     this.launcher = null;
     back?.focus({ preventScroll: true });
+  }
+
+  /** Off screen, and everything it held back handed to its current owner again. */
+  private teardown(): void {
+    this.root.hidden = true;
+    this.shown = null;
+    delete document.documentElement.dataset.tutorialOpen;
+    for (const b of this.quieted) b.inert = false;
+    this.quieted = [];
+    // A sheet open now (one beneath, or one that opened meanwhile) keeps world input paused.
+    this.scene.inputPaused = this.sheetOpen();
   }
 }

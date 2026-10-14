@@ -150,6 +150,7 @@ export class Hud {
       () => [this.top, tray, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
       () => this.trayCells.get('garden') ?? null,
       matchMedia('(prefers-reduced-motion: reduce)').matches,
+      () => this.sheets.isOpen,
     );
     const dex = this.trayCells.get('dex')!;
     document.body.append(this.shield, this.banners, this.top, tray, this.tip);
@@ -390,6 +391,8 @@ export class Hud {
   private offlineSummary(report: OfflineReport): void {
     if (this.save.readOnly) return;
     if (report.seconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
+    // The summary comes first: an open tutorial steps aside until it is dismissed (§24.1).
+    this.tutorial.stepAside();
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
       this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
@@ -499,6 +502,8 @@ export class Hud {
     // or a name bubble to be out of the way; a read-only save gets none (§24.1).
     if (!this.summaryOpen && this.sheets.openKey === null && this.bubble.openKey === null && !(this.save.recovery && !this.recoveryDismissed))
       this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
+    // One put aside for the summary comes back once it is dismissed (over any sheet it brought back).
+    if (this.tutorial.waiting && !this.summaryOpen) this.tutorial.comeBack();
     this.sheets.tick();
     const sheet = this.sheets.openKey;
     const selected = sheet === null ? null : NOTEBOOK_KEYS.has(sheet) ? 'notebook' : sheet === 'dex' || sheet === 'kid' ? 'dex' : sheet === 'garden' ? 'garden' : null;
