@@ -206,6 +206,8 @@ export class Hud {
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
+    // A count growing (a long amount) can outgrow its chip without the row changing size.
+    for (const c of [this.materials, this.potatokens, this.count]) new ResizeObserver(measure).observe(c);
     // The navigation is sized by its content: a font that loads, or text that wraps, can change
     // it with no other resize (Codex review round 4, PR #87).
     new ResizeObserver(measure).observe(tray);
@@ -429,7 +431,10 @@ export class Hud {
     // Too narrow for the 156 px tray or for three 44 px chips: the labelled scroll windows,
     // whatever the height (§23.1; Codex review, #105).
     const safe = this.top.getBoundingClientRect().width;
-    const narrow = safe < 156 || (safe - 16) / 3 < 44;
+    // A count wider than its chip, even with the glyph stacked above it, doesn't fit either
+    // (enlarged text, a long amount; Codex review, #105).
+    const overflows = [...this.stats.values()].some((c) => c.scrollWidth > c.clientWidth + 1);
+    const narrow = safe < 156 || (safe - 16) / 3 < 44 || overflows;
     if (!narrow && band() >= PLAY_BAND) return;
     root.dataset.hudFit = 'window';
     // Each window is 60 px, or taller to show its tallest item whole (enlarged text), plus

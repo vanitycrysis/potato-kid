@@ -4309,6 +4309,18 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
   });
 
+  test('a count too wide for its chip even stacked takes the full-width scroll windows (Codex review round 5, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 300, height: 900 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.addStyleTag({ content: '.hud { font-size: 32px !important; line-height: 38px !important; }' });
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('usual');
+    // The amount grows during play: the layout follows it, with no resize at all.
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 123_400_000 }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('window');
+    // Every count fits its chip there.
+    for (const chip of await page.locator('.hud-stat').all()) expect(await chip.evaluate((c) => c.scrollWidth <= c.clientWidth + 1)).toBe(true);
+  });
+
   test('feedback waits, out of sight, while a name bubble is open (§23.2)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('.hud-materials').click();
