@@ -35,12 +35,16 @@ function meetsCircle(r: Box, cx: number, cy: number, rad: number): boolean {
 const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const grow = (b: Box, d: number): Box => ({ left: b.left - d, top: b.top - d, right: b.right + d, bottom: b.bottom + d });
 
+/** A placed panel: its candidate and top-left corner. */
+export type Placed = { dock: string; left: number; top: number };
+
 /**
- * The panel's place (§25.3): the last dock if it still fits and is clear, else the first clear
+ * The panel's place (§25.3): where it was, unmoved, while that still fits and is clear (it
+ * doesn't chase the finger; Codex review, #103), else the first clear
  * candidate (above the finger and the held kid, below, left, right of the finger, then the
  * band's corners), each clamped 8 px inside the band. Null if none is clear: the rail is used.
  */
-export function placePanel(v: Pick<RecipeView, 'pointer' | 'held' | 'target'>, band: Box, size: { w: number; h: number }, last: string | null): { dock: string; left: number; top: number } | null {
+export function placePanel(v: Pick<RecipeView, 'pointer' | 'held' | 'target'>, band: Box, size: { w: number; h: number }, last: Placed | null): Placed | null {
   const { x, y } = v.pointer;
   const inner = { left: band.left + PAD, top: band.top + PAD, right: band.right - PAD, bottom: band.bottom - PAD };
   const avoid = [grow(v.held, PAD), grow(v.target, PAD)];
@@ -56,18 +60,18 @@ export function placePanel(v: Pick<RecipeView, 'pointer' | 'held' | 'target'>, b
     ['bottom-left', inner.left, inner.bottom - size.h],
     ['bottom-right', inner.right - size.w, inner.bottom - size.h],
   ];
-  const fit = ([dock, l, t]: [string, number, number]) => {
+  const clear = (left: number, top: number) => {
+    const r = { left, top, right: left + size.w, bottom: top + size.h };
+    return !meetsCircle(r, x, y, FINGER) && !avoid.some((a) => meets(r, a));
+  };
+  const fit = ([dock, l, t]: [string, number, number]): Placed | null => {
     if (inner.right - inner.left < size.w || inner.bottom - inner.top < size.h) return null;
     const left = Math.min(Math.max(l, inner.left), inner.right - size.w);
     const top = Math.min(Math.max(t, inner.top), inner.bottom - size.h);
-    const r = { left, top, right: left + size.w, bottom: top + size.h };
-    if (meetsCircle(r, x, y, FINGER) || avoid.some((a) => meets(r, a))) return null;
-    return { dock, left, top };
+    return clear(left, top) ? { dock, left, top } : null;
   };
-  // A clear dock stays put: the panel doesn't chase the finger (§25.3).
-  const kept = last ? candidates.find((c) => c[0] === last) : undefined;
-  const again = kept && fit(kept);
-  if (again) return again;
+  // Where it was, if that is still inside the band and clear: it stays put (§25.3).
+  if (last && last.left >= inner.left && last.top >= inner.top && last.left + size.w <= inner.right && last.top + size.h <= inner.bottom && clear(last.left, last.top)) return last;
   for (const c of candidates) {
     const p = fit(c);
     if (p) return p;
@@ -96,7 +100,9 @@ export class RecipePreview {
   /** Announces each new pair once (§25.2); never the hidden result's name. */
   private readonly status = el('div', 'visually-hidden');
   private key: string | null = null;
-  private dock: string | null = null;
+  private placed: Placed | null = null;
+  /** The panel's height with its current content, measured while out of sight (§25.3). */
+  private panelHeight = PANEL.h;
   private railRow: 'hud' | 'tray' | null = null;
 
   constructor(
@@ -146,19 +152,27 @@ export class RecipePreview {
         el('p', 'recipe-name', v.found ? this.name(v.result) : 'Not found yet'),
       );
       this.rail.replaceChildren(el('div', 'recipe-equation', ...this.equation(v, 32)));
+      // Its real height (enlarged text, a wrapped name) is what placement must test, even
+      // while it is hidden; otherwise it would flicker with the rail (Codex review, #103).
+      const hidden = this.panel.hidden;
+      this.panel.style.visibility = 'hidden';
+      this.panel.hidden = false;
+      this.panelHeight = Math.max(PANEL.h, this.panel.offsetHeight);
+      this.panel.hidden = hidden;
+      this.panel.style.visibility = '';
       const made = v.found ? this.name(v.result) : "a kid you haven't found";
       this.status.textContent = `${this.name(a.type)} plus ${this.name(b.type)} makes ${made}. Release on the marked partner to fuse.`;
     }
     const frame = this.frame();
-    const p = placePanel(v, frame.band, { w: PANEL.w, h: Math.max(PANEL.h, this.panel.offsetHeight || 0) }, this.dock);
+    const p = placePanel(v, frame.band, { w: PANEL.w, h: this.panelHeight }, this.placed);
     if (p) {
-      this.dock = p.dock;
+      this.placed = p;
       this.panel.hidden = false;
       this.panel.style.transform = `translate(${Math.round(p.left)}px, ${Math.round(p.top)}px)`;
       this.showRail(null);
       return;
     }
-    this.dock = null;
+    this.placed = null;
     this.panel.hidden = true;
     this.showRail(placeRail(v.pointer, frame));
   }
@@ -188,7 +202,7 @@ export class RecipePreview {
   private hide(): void {
     if (this.key === null && this.panel.hidden && this.rail.hidden) return;
     this.key = null;
-    this.dock = null;
+    this.placed = null;
     this.panel.hidden = true;
     this.showRail(null);
     this.status.textContent = '';

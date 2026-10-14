@@ -1174,7 +1174,7 @@ export class MapScene {
     const held = kids.find((k) => k.id === this.drag!.kidId);
     const partner = kids.find((k) => k.id === this.drag!.target);
     if (!held || !partner) return null;
-    const result = this.game.recipeResult(held.type, partner.type);
+    const result = this.game.dropResult(held.id, partner.id);
     if (result === null) return null;
     const box = (x: number, y: number, b: Kid['box']): ScreenBox => {
       const a = this.camera.toGlobal({ x: x + b.left, y: y + b.top });

@@ -3574,6 +3574,36 @@ test.describe('forgiving drop (D-051)', () => {
     for (const id of ring) expect(await ids(page)).toContain(id);
   });
 
+  test('a panel taller with enlarged text is placed by its real height: no flicker with the rail (Codex review, #103)', async ({ page }) => {
+    const { plain, water } = await crowd(page);
+    // Enlarged text makes the panel taller than its 112 px minimum.
+    await page.addStyleTag({ content: '.recipe-heading, .recipe-name { font-size: 48px !important; line-height: 56px !important; }' });
+    await page.waitForTimeout(200);
+    await holdOver(page, plain, water);
+    // Sampled in the page, one state per frame: the panel or the rail, never alternating.
+    const states = await page.evaluate(async () => {
+      const out: string[] = [];
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => requestAnimationFrame(r));
+        const panel = document.querySelector<HTMLElement>('.recipe-window')!;
+        const rail = document.querySelector<HTMLElement>('.recipe-rail')!;
+        out.push(`${panel.hidden ? '-' : 'P'}${rail.hidden ? '-' : 'R'}`);
+      }
+      return out;
+    });
+    expect(new Set(states).size, states.join(' ')).toBe(1);
+    expect(states[0]).not.toBe('--');
+    // Wherever it is, the whole panel clears the finger.
+    if (states[0] === 'P-') {
+      const box = (await page.locator('.recipe-window').boundingBox())!;
+      const pointer = (await recipe(page)).view!.pointer;
+      const nx = Math.min(Math.max(pointer.x, box.x), box.x + box.width);
+      const ny = Math.min(Math.max(pointer.y, box.y), box.y + box.height);
+      expect(Math.hypot(nx - pointer.x, ny - pointer.y)).toBeGreaterThanOrEqual(48);
+    }
+    await page.mouse.up();
+  });
+
   test('a found result shows its name, in the window and the announcement (D-083)', async ({ page }) => {
     const { plain, water } = await crowd(page);
     await page.waitForTimeout(200);

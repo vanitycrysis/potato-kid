@@ -36,9 +36,14 @@ describe('the recipe window (§25.3)', () => {
     expect(clearOfFinger(p, 20, 90)).toBe(true);
   });
 
-  it('keeps a clear dock rather than chasing the finger', () => {
-    const p = placePanel(at(195, 300), band, size, 'below')!;
-    expect(p.dock).toBe('below');
+  it('stays where it was while that is clear, rather than chasing the finger (Codex review, #103)', () => {
+    const first = placePanel(at(195, 500), band, size, null)!;
+    // The finger moves 30 px right: the panel doesn't follow it.
+    expect(placePanel(at(225, 500), band, size, first)).toEqual(first);
+    // Once the finger reaches it, it moves.
+    const moved = placePanel(at(195, first.top + 50), band, size, first)!;
+    expect(moved).not.toEqual(first);
+    expect(clearOfFinger(moved, 195, first.top + 50)).toBe(true);
   });
 
   it('never covers the finger or either kid, wherever the finger is', () => {
