@@ -10,6 +10,7 @@ import { BuildingSheets } from './buildings';
 import { FieldSheets } from './fields';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
+import { RecipePreview } from './recipePreview';
 import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
 import { KidsOnMap } from './kidsOnMap';
@@ -177,6 +178,22 @@ export class Hud {
     });
     scene.homeFits = (t, h) => home.fits(t, h);
     scene.listenHome((v) => home.render(v));
+    // The recipe window beside the finger while a held kid is over a partner (D-083, §25).
+    const recipe = new RecipePreview(
+      content,
+      () => {
+        const top = this.top.getBoundingClientRect();
+        const nav = tray.getBoundingClientRect();
+        const hud = this.hud.getBoundingClientRect();
+        return {
+          band: { left: top.left, right: top.right, top: top.bottom + 8, bottom: nav.top - 8 },
+          hud: { left: hud.left, right: hud.right, top: hud.top, bottom: hud.bottom },
+          tray: { left: nav.left, right: nav.right, top: nav.top, bottom: nav.bottom },
+        };
+      },
+      { hud: this.hud, tray },
+    );
+    scene.listenRecipe((v) => recipe.render(v));
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the navigation at the bottom (GUI_MVP §§2, 19.1; Codex review, PR #15).
