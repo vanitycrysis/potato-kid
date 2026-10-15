@@ -342,7 +342,7 @@ export class GardenPlots {
 
   private waitingText(i: number): string {
     const w = this.game.plotWaiting(i);
-    return w === 'full' ? 'Waiting for room on the map.' : w === 'noRoom' ? 'Waiting for a clear spot by the Garden.' : 'Sprouting…';
+    return w === 'noRoom' ? 'Waiting for a clear spot by the Garden.' : 'Sprouting…';
   }
 
   private buildOverview(spawnRate: HTMLElement[]): { nodes: HTMLElement[]; update(): void } {
@@ -732,8 +732,11 @@ export class GardenPlots {
       // plot turning ready says it can't be cancelled (§21.2).
       const sending = this.pending?.type === 'emptyPlot' && this.pending.plot === i;
       if (confirm && confirm.sig !== sig && !sending) {
+        // A growing plot that empties under its Cancel review has sprouted: since D-084 its kid
+        // comes up the step it ripens, often before a frame shows it ready.
+        const sprouted = confirm.kind === 'cancel' && confirm.sig.startsWith('growing|') && p.state === 'empty';
         const lines =
-          p.state === 'ready'
+          p.state === 'ready' || sprouted
             ? ['This sprout has finished growing and cannot be cancelled.']
             : [confirm.kind === 'cancel' ? 'This plot changed. Review it again before cancelling.' : 'This plot changed. Review it again before emptying it.'];
         confirm = null;

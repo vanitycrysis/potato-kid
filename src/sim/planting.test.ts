@@ -214,15 +214,22 @@ describe('planting 3 to 5 kids (D-061)', () => {
     expect(g.incomeOf('rare_a')).toBeGreaterThan(g.incomeOf('hero'));
   });
 
-  it('a ready seed waits while the map is full, then sprouts as soon as there is room', () => {
-    const g = game((c) => (c.balance.spawn.capacity = 2));
-    g.state.plots = [{ seed: started('water', 99) }];
-    const [a] = [place(g, 'plain', 300, 1500), place(g, 'plain', 900, 1500)];
-    expect(sprouts(run(g, 5))).toEqual([]);
-    expect(g.plotWaiting(0)).toBe('full');
-    g.state.world.kids.splice(g.state.world.kids.indexOf(a!), 1);
-    expect(sprouts(run(g, 1))).toHaveLength(1);
+  it('a ready seed sprouts even on a full map, over capacity; the Garden still waits for room (D-084)', () => {
+    const g = game((c) => {
+      c.balance.spawn.capacity = 2;
+      c.balance.spawn.intervalSeconds = 1;
+    });
+    // Two that fuse with neither each other nor Potato Kid, so all four stay.
+    g.state.plots = [{ seed: started('hero', 99) }, { seed: started('kite', 99) }];
+    place(g, 'plain', 300, 1500);
+    place(g, 'plain', 900, 1500);
+    const events = run(g, 5);
+    expect(sprouts(events).map((e) => e.type === 'spawned' && e.kid.type)).toEqual(['hero', 'kite']);
+    expect(g.state.world.kids).toHaveLength(4);
+    expect(g.state.plots.map((p) => p.seed)).toEqual([null, null]);
     expect(g.plotWaiting(0)).toBeNull();
+    // Over capacity, the Garden sends nobody.
+    expect(events.some((e) => e.type === 'spawned' && e.source !== 'sprout')).toBe(false);
   });
 
   it('with room on the map but no clear spot by the Garden, it waits for one', () => {
@@ -365,14 +372,15 @@ describe('planting while away (D-053, D-061)', () => {
     expect(g.state.plots[0]!.seed).toEqual({ planted, sprout: null, grown: 0 });
   });
 
-  it('with the map full, ripe seeds wait and the report counts them', () => {
+  it('with the map full, ripe seeds still sprout while away; the Garden sends nobody (D-084)', () => {
     const g = game((c) => (c.balance.spawn.capacity = 1));
     place(g, 'plain', 300, 1500);
     g.state.plots = [{ seed: started('water', 0) }, { seed: started('fire', 50) }];
     const r = g.reconcile(T0 + 3600 * S);
-    expect(r.sprouted).toEqual([]);
-    expect(r.plotsWaiting).toBe(2);
-    expect(g.state.plots.map((x) => x.seed?.grown)).toEqual([100, 100]);
+    expect(r.sprouted.map((k) => k.type)).toEqual(['fire', 'water']);
+    expect(r.spawned).toEqual([]);
+    expect(r.plotsWaiting).toBe(0);
+    expect(g.state.world.kids).toHaveLength(3);
   });
 
   it('Garden spawns and sprouts arrive in time order, a sprout first on a tie, until the map is full', () => {
@@ -513,8 +521,10 @@ describe('taking kids back out of a plot (D-074)', () => {
     const g = game((c) => (c.balance.spawn.capacity = 1));
     place(g, 'plain', 300, 1500);
     g.state.plots = [{ seed: started('water', 100) }];
+    // No clear spot by the Garden, so it waits (a full map alone no longer holds it, D-084).
+    g.state.world.obstacles.push({ box: { minX: 0, minY: 0, maxX: 3000, maxY: 3000 }, circle: { x: 0, y: 0, r: 0 } });
     run(g, 1);
-    expect(g.plotWaiting(0)).toBe('full');
+    expect(g.plotWaiting(0)).toBe('noRoom');
     const seed = structuredClone(g.state.plots[0]!.seed);
     expect(g.step([{ type: 'emptyPlot', plot: 0 }], 0)).toEqual([{ type: 'rejected', command: 'emptyPlot', reason: 'ready' }]);
     expect(g.step([{ type: 'unplant', plot: 0, kidId: seed!.planted[0]!.id }], 0)).toEqual([{ type: 'rejected', command: 'unplant', reason: 'ready' }]);
