@@ -95,7 +95,10 @@
   bottom: 0;
   background: var(--ui-paper);
 }
-/* Too short even for that: the footer follows the content (GUI_MVP §15.3, "all in flow"). */
+/* Too short even for that: the header and footer follow the content (GUI_MVP §§15.3, 19.3,
+   "all in flow": no pinned header or footer). A header taller than the sheet would otherwise
+   hide everything below it (Codex review, #105). */
+.sheet[data-flow='true'] .sheet-header,
 .sheet[data-flow='true'] .sheet-footer {
   position: static;
 }
@@ -614,10 +617,6 @@
 }
 .ui-button.dex-segment[aria-pressed='true'] {
   border-image-source: var(--ui-button-selected);
-}
-.dex-tile-kind {
-  font-size: 16px;
-  line-height: 22px;
 }
 
 /* Kids grid: 148 px cards, 8 px gaps; a long name grows its whole row equally. */
@@ -1396,8 +1395,12 @@
   font-family: var(--ui-font);
   color: var(--ui-ink);
 }
+.icon-guide-text {
+  min-width: 0;
+}
 .icon-guide-text p {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 .icon-guide-title {
   font-size: 18px;

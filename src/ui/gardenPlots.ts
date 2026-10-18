@@ -3,7 +3,7 @@ import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { GameEvent, PlantedKid, RejectReason } from '../sim/game';
 import type { Arrivals } from './arrivals';
-import { el, icon } from './dom';
+import { el, icon, tierName } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatTimeLeft } from './format';
 import { chance, oddsLines, type PlantingNotes } from './plantingNotes';
@@ -116,15 +116,14 @@ export class GardenPlots {
   }
 
   /**
-   * Tier, then happiness, then the kind: "Tier 2 · Happy · Counts as Tier 3 · Special"
-   * (GUI_MVP §15.3). `happy`: 'live' for a kid on the map happy now, 'added' for one that was
+   * Tier, then happiness: "Tier 2 · Happy · Counts as Tier 3" (GUI_MVP §15.3). The Special
+   * and Rare tiers show by name (D-082), so the kind isn't repeated: "Special · Happy · …". `happy`: 'live' for a kid on the map happy now, 'added' for one that was
    * happy when added (its tier stays counted, the kid is gone).
    */
   private marks(type: KidId, extra: string[] = [], happy: 'live' | 'added' | null = null): string {
-    const kind = this.kind(type);
-    const tier = this.tierOf.get(type) ?? 1;
-    const mood = happy === 'live' ? ['Happy', `Counts as Tier ${tier + 1}`] : happy === 'added' ? [`Counted as Tier ${tier + 1} when added`] : [];
-    return [`Tier ${tier}`, ...mood, ...extra, ...(kind ? [kind] : [])].join(' · ');
+    const def = this.content.kids.find((k) => k.id === type) ?? { tier: 1 };
+    const mood = happy === 'live' ? ['Happy', `Counts as Tier ${def.tier + 1}`] : happy === 'added' ? [`Counted as Tier ${def.tier + 1} when added`] : [];
+    return [tierName(def), ...mood, ...extra].join(' · ');
   }
 
   private info(i: number): PlotInfo {

@@ -317,8 +317,8 @@
 .tray {
   position: fixed;
   bottom: var(--ui-sb);
-  left: 50%;
-  transform: translateX(-50%);
+  /* Centred, but kept inside ML…W−MR when the side insets differ (§23.1; Codex review, #105). */
+  left: clamp(var(--ui-ml), calc(50% - 78px), calc(100% - var(--ui-mr) - 156px));
   width: 156px;
   min-height: 52px;
   border-width: 4px 8px;
@@ -820,4 +820,65 @@
     align-items: center;
     gap: 2px;
   }
+/* The recipe window and rail (D-083, GUI_MVP §25.2-25.3): beside the finger, above the world and
+   the HUD, below sheets; never takes input. */
+.recipe-window,
+.recipe-rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  box-sizing: border-box;
+  pointer-events: none;
+  border: 8px solid transparent;
+  border-image: var(--ui-toast) 8 fill / 8px stretch;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.recipe-window {
+  width: 232px;
+  min-height: 112px;
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.recipe-rail {
+  width: 232px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.recipe-window[hidden],
+.recipe-rail[hidden] {
+  display: none;
+}
+.recipe-heading,
+.recipe-name {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.recipe-equation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.recipe-window .recipe-equation {
+  gap: 12px;
+}
+.recipe-sign {
+  font-size: 16px;
+  line-height: 16px;
+  width: 16px;
+  text-align: center;
+}
+/* An unfound result: every drawn pixel ink, its outline kept, nothing inside (§25.2). */
+.recipe-unfound {
+  filter: brightness(0) invert(0.102);
 }

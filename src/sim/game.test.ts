@@ -565,3 +565,21 @@ describe('forgiving drop (D-051)', () => {
     expect(types(game)).toEqual(['plain', 'water']);
   });
 });
+
+describe("the drag preview's result (D-083)", () => {
+  it('names what a release would make, only for a pair the fusion step takes: no newborn in its grace (Codex review, #103)', () => {
+    const game = new Game(testContent(), { bounds, spawnAt: garden }, 1);
+    const plain = place(game, 'plain', 200, 600);
+    const water = place(game, 'water', 700, 600);
+    const hero = place(game, 'hero', 450, 900);
+    expect(game.dropResult(plain.id, water.id)).toBe('firefighter');
+    expect(game.dropResult(plain.id, hero.id)).toBeNull();
+    // Either one still in its grace: a release wouldn't fuse, so no preview.
+    water.grace = 1;
+    expect(game.dropResult(plain.id, water.id)).toBeNull();
+    water.grace = 0;
+    plain.grace = 1;
+    expect(game.dropResult(plain.id, water.id)).toBeNull();
+    expect(game.dropResult(plain.id, 9999)).toBeNull();
+  });
+});
