@@ -33,8 +33,7 @@ describe('what a plot shows (GUI_MVP §15.2)', () => {
     expect(stage(1)).toEqual([art.empty, ready]);
   });
 
-  it('a ready seed waiting for room shows the waiting sign, for either reason', () => {
-    expect(plotAssets(art, growing(grow), grow, 'full')).toEqual([art.empty, art.waitingAsset]);
+  it('a ready seed waiting for a clear spot shows the waiting sign (a full map no longer holds it, D-084)', () => {
     expect(plotAssets(art, growing(grow), grow, 'noRoom')).toEqual([art.empty, art.waitingAsset]);
   });
 

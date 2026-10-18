@@ -14,6 +14,8 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 - Special and Rare tiers (D-082);
 - dragging floats over other kids, highlights a partner and shows the recipe (D-083).
 
+Also (2026-10-13): a ripe plot's kid always comes up, even on a full map (D-084), after the simulator found a lock.
+
 **Order of work**
 - **Codex:** MAP-HALF's composition, and ROUND3-DESIGN (the icon HUD, the tutorial, the drag highlight and recipe window, the Special and Rare badges).
 - **Claude, meanwhile:** OFFLINE-UNCAPPED and TIER-NAMES, then DRAG-HOVER's engine; then MAP-HALF's engine, ICON-HUD and TUTORIAL from Codex's designs.
@@ -84,3 +86,4 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | DRAG-HOVER | Claude (engine) / ChatGPT (design) | D-083: a held kid floats above the others (drawn on top, no pushing); a partner under it is highlighted, a non-partner isn't; the recipe window with sprites, an unfound result darkened; release over a non-partner puts it down at the nearest free place | review (#103: the engine, the partner mark and the recipe window from GUI_MVP §25) | Unit and e2e tests (no kid moves while one is dragged over it; highlight only on partners; the window's result darkened until found); reviewed by Codex |
 | ICON-HUD | Claude | D-077: implement ROUND3-DESIGN's icon HUD and tray | todo (after ROUND3-DESIGN) | e2e at the GUI_MVP viewports; the world share measured |
 | TUTORIAL | Claude | D-078: implement ROUND3-DESIGN's tutorial: first run, progress in the save, replayable | todo (after ROUND3-DESIGN) | e2e from a fresh save through the whole tutorial, and a replay on an existing save |
+| SPROUT-OVERFLOW | Claude | D-084: a ripe plot's kid comes up even on a full map (over capacity by up to one per plot); the Garden still waits for room; offline too | review | Unit tests online and offline, e2e for a sprout on a full map; `npm run balance` shows no deadlocked turns; reviewed by Codex |

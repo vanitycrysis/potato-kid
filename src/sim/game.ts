@@ -169,8 +169,11 @@ export interface Plot {
   seed: Seed | null;
 }
 
-/** Why a ready plot hasn't sprouted (GUI_MVP §15.3): the map is full, or no spot by the Garden is clear. */
-export type PlotWaiting = 'full' | 'noRoom';
+/**
+ * Why a ready plot hasn't sprouted (GUI_MVP §15.3): no spot by the Garden is clear. A full map
+ * no longer holds a sprout back (D-084).
+ */
+export type PlotWaiting = 'noRoom';
 
 /** What offline catch-up credited (plan §3); the return screen shows it. */
 export interface OfflineReport {
@@ -634,15 +637,15 @@ export class Game {
     // First spawn when the current interval completes; a banked spawn (progress at the
     // interval) is due at once. The interval is read per spawn: the tutorial can end
     // partway through (D-052). Garden spawns and sprouts share one timeline, a sprout first
-    // on a tie, as online. Nothing leaves the map offline, so once it's full, or no spot
-    // near the outlet is free, nothing more arrives; each turn admits a kid or stops.
+    // on a tie, as online. Nothing leaves the map offline, so once it's full the Garden stops;
+    // sprouts still come up (D-084). Once no spot near the outlet is free, nothing more
+    // arrives; each turn admits a kid or stops.
     let t = Math.max(0, this.interval - s.spawnProgress);
     let last: number | undefined;
     // Tolerance absorbs float drift, as in advanceSpawn.
     for (;;) {
       const seed = ripening[0];
-      const gardenDue = t <= away + 1e-6;
-      if (s.world.kids.length >= this.capacity) break;
+      const gardenDue = s.world.kids.length < this.capacity && t <= away + 1e-6;
       if (seed && (!gardenDue || seed.at <= t + 1e-9)) {
         const kid = this.sproutFrom(seed.i, events);
         if (!kid) break;
@@ -943,7 +946,8 @@ export class Game {
       if (!seed?.sprout) return;
       seed.grown = Math.min(grow, seed.grown + dt);
       if (seed.grown < grow) return;
-      if (this.state.world.kids.length >= this.capacity) return void this.plotWaits.set(i, 'full');
+      // A sprout comes up even on a full map (D-084): a map of kids that can't fuse, with every
+      // plot holding a sprout, would otherwise be stuck for good. Only the Garden waits for room.
       if (!this.sproutFrom(i, events)) return void this.plotWaits.set(i, 'noRoom');
     });
   }
