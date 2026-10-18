@@ -1,4 +1,4 @@
-import { BUILDING_IDS, type Content } from './types';
+import { BUILDING_IDS, type Content, type KidDef } from './types';
 
 /** Unordered pair key, so `a+b` and `b+a` are the same recipe. */
 export function pairKey(a: string, b: string): string {
@@ -63,6 +63,14 @@ export function validateContent(content: Content): string[] {
     if (content.recipes.some((r) => r.a === k.id || r.b === k.id || r.result === k.id)) errors.push(`${kind} kid "${k.id}" must not be in a recipe`);
     if (k.id in content.balance.spawnWeights) errors.push(`${kind} kid "${k.id}" must not be in the spawn pool`);
   }
+  // The Special and Rare tiers (D-082): every special shares one tier, every rare another,
+  // and the Rare tier is above the Special one.
+  const tiersOf = (pick: (k: KidDef) => boolean | undefined) => [...new Set(content.kids.filter(pick).map((k) => k.tier))];
+  const specialTiers = tiersOf((k) => k.special && !k.rare);
+  const rareTiers = tiersOf((k) => k.rare && !k.special);
+  if (specialTiers.length > 1) errors.push(`special kids must share one tier (the Special tier), found ${specialTiers.join(', ')}`);
+  if (rareTiers.length > 1) errors.push(`rare kids must share one tier (the Rare tier), found ${rareTiers.join(', ')}`);
+  if (specialTiers.length && rareTiers.length && Math.min(...rareTiers) <= Math.max(...specialTiers)) errors.push('the Rare tier must be above the Special tier');
 
   // Reachability: walk from the spawn pool, adding results whose parents are both reachable.
   const reachable = new Set(weights.map(([id]) => id));

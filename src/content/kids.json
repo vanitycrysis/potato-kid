@@ -85,12 +85,12 @@
   {"id": "yo_yo", "tier": 5, "name": "Yo-Yo Kid", "special": true},
   {"id": "acorn", "tier": 5, "name": "Acorn Kid", "special": true},
   {"id": "postcard", "tier": 5, "name": "Postcard Kid", "special": true},
-  {"id": "music_box", "tier": 6, "name": "Music Box Kid", "special": true},
-  {"id": "magic_slate", "tier": 6, "name": "Magic Slate Kid", "special": true},
-  {"id": "marble_run", "tier": 6, "name": "Marble Run Kid", "special": true},
-  {"id": "toy_train", "tier": 6, "name": "Toy Train Kid", "special": true},
-  {"id": "puppet_theatre", "tier": 6, "name": "Puppet Theatre Kid", "special": true},
-  {"id": "toy_castle", "tier": 6, "name": "Toy Castle Kid", "special": true},
-  {"id": "paper_town", "tier": 6, "name": "Paper Town Kid", "special": true},
-  {"id": "treasure_chest", "tier": 6, "name": "Treasure Chest Kid", "special": true}
+  {"id": "music_box", "tier": 5, "name": "Music Box Kid", "special": true},
+  {"id": "magic_slate", "tier": 5, "name": "Magic Slate Kid", "special": true},
+  {"id": "marble_run", "tier": 5, "name": "Marble Run Kid", "special": true},
+  {"id": "toy_train", "tier": 5, "name": "Toy Train Kid", "special": true},
+  {"id": "puppet_theatre", "tier": 5, "name": "Puppet Theatre Kid", "special": true},
+  {"id": "toy_castle", "tier": 5, "name": "Toy Castle Kid", "special": true},
+  {"id": "paper_town", "tier": 5, "name": "Paper Town Kid", "special": true},
+  {"id": "treasure_chest", "tier": 5, "name": "Treasure Chest Kid", "special": true}
 ]

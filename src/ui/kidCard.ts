@@ -5,7 +5,7 @@ import type { Field, GameEvent, RejectReason } from '../sim/game';
 import { checkName, graphemes, normalizeName } from '../sim/names';
 import type { Kid } from '../sim/world';
 import type { BuildingSheets } from './buildings';
-import { el, icon, tierBadge } from './dom';
+import { el, icon, tierBadge, tierName } from './dom';
 import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatRate, formatTimeLeft } from './format';
 import type { PlantingNotes } from './plantingNotes';
@@ -413,9 +413,9 @@ export class KidCard {
   }
 
   private tierLine(type: KidId): HTMLElement {
-    const t = this.tierOf.get(type) ?? 1;
-    // A tier with no badge (T6) is plain text; no invented glyph (§18.1).
-    return el('span', 'tier dex-tier-24', ...tierBadge(t, 'ui-icon-24'), `Tier ${t}`);
+    const def = this.content.kids.find((k) => k.id === type) ?? { tier: 1 };
+    // A tier with no badge art is plain text; no invented glyph (§18.1). Special and Rare by name (D-082).
+    return el('span', 'tier dex-tier-24', ...tierBadge(def, 'ui-icon-24'), tierName(def));
   }
 
   // --- the card -------------------------------------------------------------------------
