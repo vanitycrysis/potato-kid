@@ -11,6 +11,7 @@ import { FieldSheets } from './fields';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
 import { NameBubble, nameOnHold, type BubbleContent } from './nameBubble';
+import { Tutorial } from './tutorial';
 import { RecipePreview } from './recipePreview';
 import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
@@ -97,10 +98,15 @@ export class Hud {
   private summaryOpen = false;
   private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null; farm: ((scrollTop: number) => void) | null; gardenBack: { label: string; run: () => void } | null }) | null = null;
 
+  /** The first-run tutorial and its replays (D-078, GUI_MVP §24). */
+  private readonly tutorial: Tutorial;
+
   constructor(
     private readonly scene: MapScene,
     private readonly content: Content,
     private readonly settings: SettingsStore,
+    /** Offer the tutorial on a first run: off in tests unless asked for (`?tutorial=1`). */
+    private readonly options: { tutorialAuto: boolean } = { tutorialAuto: true },
   ) {
     this.applyTokens();
     this.known = new Set(scene.game.state.discoveredKids);
@@ -140,6 +146,14 @@ export class Hud {
       this.trayCell('notebook', 'Notebook', 'icon_r3_notebook', (b) => this.notebook.open(b)),
     );
     tray.setAttribute('aria-label', 'Main');
+    this.tutorial = new Tutorial(
+      scene,
+      settings,
+      () => [this.top, tray, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
+      () => this.trayCells.get('garden') ?? null,
+      matchMedia('(prefers-reduced-motion: reduce)').matches,
+      () => this.sheets.isOpen,
+    );
     const dex = this.trayCells.get('dex')!;
     document.body.append(this.shield, this.banners, this.top, tray, this.tip);
     this.sheets = new Sheets(
@@ -153,7 +167,7 @@ export class Hud {
     // Food fields and the pantry (D-069, GUI_MVP §22).
     this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.buildings.fieldsBack);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
-    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) =>
+    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) => this.tutorial.replay(launcher), (launcher) =>
       this.fields.openPantry(launcher, {
         label: 'Back to Notebook',
         run: () => {
@@ -217,10 +231,14 @@ export class Hud {
       // The top stack starts below any banner (+ 8 px).
       const banner = this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0;
       this.top.style.marginTop = `${banner}px`;
+      // The tutorial's card keeps clear of it too.
+      document.documentElement.style.setProperty('--ui-banner', `${banner}px`);
       this.layout();
       // Page mode changes what scrolls an open sheet.
       this.sheets.place();
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
+      // The tutorial's spotlight is measured on the new layout.
+      this.tutorial.relayout();
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
@@ -378,6 +396,7 @@ export class Hud {
 
   /** Android Back: closes a name bubble, else an open sheet (returns whether it did). */
   back(): boolean {
+    if (this.tutorial.back()) return true;
     if (this.bubble.openKey !== null) {
       this.bubble.hide(true);
       return true;
@@ -394,6 +413,8 @@ export class Hud {
   private offlineSummary(report: OfflineReport): void {
     if (this.save.readOnly) return;
     if (report.seconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
+    // The summary comes first: an open tutorial steps aside until it is dismissed (§24.1).
+    this.tutorial.stepAside();
     if (!this.summaryOpen) {
       const open = this.sheets.snapshot();
       this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
@@ -499,6 +520,12 @@ export class Hud {
 
     this.feedback.style.visibility = this.bubble.openKey !== null ? 'hidden' : '';
     this.tickFeedback(now, dt);
+    // The first-run offer waits for the return summary, an unanswered recovery banner, a sheet
+    // or a name bubble to be out of the way; a read-only save gets none (§24.1).
+    if (!this.summaryOpen && this.sheets.openKey === null && this.bubble.openKey === null && !(this.save.recovery && !this.recoveryDismissed))
+      this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
+    // One put aside for the summary comes back once it is dismissed (over any sheet it brought back).
+    if (this.tutorial.waiting && !this.summaryOpen) this.tutorial.comeBack();
     this.sheets.tick();
     const sheet = this.sheets.openKey;
     const selected = sheet === null ? null : NOTEBOOK_KEYS.has(sheet) ? 'notebook' : sheet === 'dex' || sheet === 'kid' ? 'dex' : sheet === 'garden' ? 'garden' : null;
@@ -564,8 +591,9 @@ export class Hud {
     // While a sheet is open, a visible card keeps its time and nothing new is shown, so no
     // card plays out unseen behind the modal (GUI_MVP §9; Codex review, PR #39).
     if (this.sheets.isOpen) return;
-    // Likewise while a name bubble is open: feedback waits, out of sight (GUI_MVP §23.2).
-    if (this.bubble.openKey !== null) return;
+    // Likewise while a name bubble or the tutorial is open: feedback waits, out of sight
+    // (GUI_MVP §§23.2, 24.1).
+    if (this.bubble.openKey !== null || this.tutorial.isOpen) return;
     const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
     if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
       const r = this.queue.splice(refusal, 1)[0]!;

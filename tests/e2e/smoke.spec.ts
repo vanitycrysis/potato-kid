@@ -44,6 +44,8 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
   expect(start).toBeGreaterThan(0);
   await expect(page.locator('.hud-value')).toHaveText(`${start}/12`);
   await page.screenshot({ path: 'test-results/boot.png' });
+  // A real first run offers the tutorial (D-078); skipped, the game is in front.
+  await page.locator('#tutorial-card').getByRole('button', { name: 'Skip tutorial' }).click();
   // The timer lives in the Garden's Arrivals now (GUI_MVP §19.2).
   await page.locator('[data-nav=garden]').click();
   await expect(page.locator('.arrivals-next')).toContainText('Next kid');
@@ -1312,12 +1314,12 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await expect(page.locator('.settings-value').first()).toHaveText('69%');
     await page.keyboard.press('End');
     await page.getByRole('button', { name: 'Done' }).click();
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toMatchObject({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
 
     await page.evaluate(() => window.__PK__!.debugAway!(0)); // the game is saved, so the reload resumes it
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
-    expect(await page.evaluate(() => window.__PK__!.settings())).toEqual({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
+    expect(await page.evaluate(() => window.__PK__!.settings())).toMatchObject({ audio: true, music: 100, sfx: 80, plantV2Explained: false });
     // A reload a moment later is too short an absence for the summary (D-049).
     await openTool(page, 'Settings');
     await expect(page.getByLabel('Music')).toHaveValue('100');
@@ -6136,5 +6138,228 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await expect(dex.locator('.dex-detail-tier')).toHaveText('Special');
     expect(await icons(dex.locator('.dex-detail-tier'))).toEqual(['badge_special']);
     expect(errors).toEqual([]);
+  });
+});
+
+test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
+  const card = (page: Page) => page.locator('#tutorial-card');
+  const record = (page: Page) => page.evaluate(() => window.__PK__!.settings().guidedTutorial);
+  const titles = ['A garden of discoveries', 'Pick up, hover, fuse', 'Know your numbers', 'The Garden brings new kids', 'Plant for a surprise', 'Farm food, then feed', 'Keep your discoveries', 'Your Notebook of tools'];
+
+  test('a first run offers it at step 1; Next and Back walk the eight cards; Finish closes it for good', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page)).toBeVisible();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 1 of 8');
+    await expect(card(page).locator('.tutorial-title')).toBeFocused();
+    // The world and the HUD wait meanwhile (§2).
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(true);
+    await expect(card(page).getByRole('button', { name: 'Back' })).toHaveCount(0);
+    for (let i = 0; i < 8; i++) {
+      await expect(card(page).locator('.tutorial-title')).toHaveText(titles[i]!);
+      await expect(card(page).locator('.tutorial-title')).toHaveAttribute('aria-label', `Step ${i + 1} of 8: ${titles[i]}`);
+      expect(await record(page)).toEqual({ version: 1, status: 'inProgress', nextStep: i + 1 });
+      if (i === 1) {
+        // The demo recipe's result is dark, unnamed (§25.2's mystery): drawn as a silhouette.
+        await expect(card(page).locator('.recipe-unfound')).toHaveCount(1);
+        expect(await card(page).locator('.recipe-unfound').evaluate((e) => getComputedStyle(e).filter)).toContain('brightness(0)');
+        await card(page).getByRole('button', { name: 'Back' }).click();
+        await expect(card(page).locator('.tutorial-title')).toHaveText(titles[0]!);
+        await card(page).getByRole('button', { name: 'Next' }).click();
+      }
+      if (i < 7) await card(page).getByRole('button', { name: 'Next' }).click();
+    }
+    await expect(card(page).getByRole('button', { name: 'Next' })).toHaveCount(0);
+    await card(page).getByRole('button', { name: 'Finish' }).click();
+    await expect(card(page)).toBeHidden();
+    expect(await record(page)).toEqual({ version: 1, status: 'completed', nextStep: 8 });
+    await expect(page.locator('[data-nav=garden]')).toBeFocused();
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await page.waitForTimeout(300);
+    await expect(card(page)).toBeHidden();
+  });
+
+  test('Escape skips it, for good; an unfinished one resumes at its step', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 3 of 8');
+    await page.keyboard.press('Escape');
+    await expect(card(page)).toBeHidden();
+    expect((await record(page)).status).toBe('skipped');
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await page.waitForTimeout(300);
+    await expect(card(page)).toBeHidden();
+  });
+
+  test('replayed from the Icon guide over its sheet: its own header, the record kept, focus back on Replay', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
+    expect((await record(page)).status).toBe('skipped');
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Icon guide', exact: true }).click();
+    const guide = page.getByRole('dialog', { name: 'Icon guide' });
+    await guide.getByRole('button', { name: 'Replay tutorial' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    // Escape is the tutorial's, not the sheet's beneath it.
+    await page.keyboard.press('Escape');
+    await expect(card(page)).toBeHidden();
+    await expect(guide).toBeVisible();
+    await expect(guide.getByRole('button', { name: 'Replay tutorial' })).toBeFocused();
+    expect(await record(page)).toEqual({ version: 1, status: 'skipped', nextStep: 1 });
+    // Settings has it too.
+    await page.getByRole('button', { name: 'Back to Notebook' }).click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+  });
+
+  test('the return summary comes first: the tutorial steps aside and comes back at its step; then the game is in front (Codex review, #107)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toBeVisible();
+    await expect(card(page)).toBeHidden();
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
+    // Nothing is left inert or paused behind it: a drag on empty ground pans the map.
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(0, 0));
+    await page.mouse.move(200, 600);
+    await page.mouse.down();
+    await page.mouse.move(200, 400, { steps: 6 });
+    await page.mouse.up();
+    await frames(page, 2);
+    expect(before.y - (await page.evaluate(() => window.__PK__!.worldToScreen(0, 0))).y).toBeGreaterThan(100);
+    await page.locator('[data-nav=garden]').click();
+    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+  });
+
+  test('keyboard focus stays in the card; a tap outside it skips (Codex review, #107)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page).locator('.tutorial-title')).toBeFocused();
+    // Close is first, Next last: Shift+Tab from Close wraps to Next.
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
+    }
+    await page.mouse.click(10, 300);
+    await expect(card(page)).toBeHidden();
+    expect((await record(page)).status).toBe('skipped');
+  });
+
+  test('640 x 360: the card keeps its controls in view; the spotlight follows a resize (Codex review, #107)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
+    // Enlarged text: the body scrolls, the controls stay in view.
+    await page.addStyleTag({ content: '.tutorial-text { font-size: 30px !important; line-height: 36px !important; }' });
+    await frames(page, 2);
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
+    await expect(card(page).locator('.tutorial-title')).toBeInViewport({ ratio: 1 });
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    await expect(card(page).locator('.tutorial-title')).toHaveText('Know your numbers');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(300);
+    const hud = (await page.locator('.hud').boundingBox())!;
+    const spot = (await page.locator('.tutorial-spot').boundingBox())!;
+    expect(Math.abs(spot.x + 3 - hud.x)).toBeLessThan(2);
+    expect(Math.abs(spot.width - 6 - hud.width)).toBeLessThan(2);
+    // Vertically too: leaving the compact layout moves the HUD down 16 px (Codex review round 3, #107).
+    expect(Math.abs(spot.y + 3 - hud.y)).toBeLessThan(2);
+    expect(Math.abs(spot.height - 6 - hud.height)).toBeLessThan(2);
+  });
+
+  test('640 x 360: every compact illustration can be reached; a save banner stays clear of the card (Codex review round 4, #107)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    // Step 1's column is taller than the body: it starts at the body's top, so scrolling shows it all.
+    const reach = await card(page).locator('.tutorial-main').evaluate((m) => {
+      m.scrollTop = 0;
+      const first = m.querySelector('.tutorial-diagram')!.firstElementChild!.getBoundingClientRect().top;
+      return [m.scrollHeight > m.clientHeight, first - m.getBoundingClientRect().top];
+    });
+    expect(reach[0]).toBe(true);
+    expect(reach[1] as number).toBeGreaterThanOrEqual(-0.5);
+    // A persistent save banner: the card's header and Close stay below it, in view.
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.querySelector('.tutorial-card')!.getBoundingClientRect().top - document.querySelector('.banner')!.getBoundingClientRect().bottom),
+      )
+      .toBeGreaterThanOrEqual(0);
+    await expect(card(page).getByRole('button', { name: 'Skip tutorial' }).first()).toBeInViewport({ ratio: 1 });
+    // Now too short for the fixed regions: it scrolls as one, and Next comes into view below the banner.
+    const next = card(page).getByRole('button', { name: 'Next' });
+    await next.scrollIntoViewIfNeeded();
+    await expect(next).toBeInViewport({ ratio: 1 });
+    expect((await next.boundingBox())!.y).toBeGreaterThanOrEqual((await page.locator('.banner').boundingBox())!.y + (await page.locator('.banner').boundingBox())!.height);
+  });
+
+  test('a very short window: the whole card scrolls, its controls reachable (Codex review round 2, #107)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await expect(card(page)).toHaveAttribute('data-flow', 'true');
+    // The player can scroll it: taller than the window, and scrollable, not clipped.
+    const scroll = await card(page).evaluate((e) => [getComputedStyle(e).overflowY, e.scrollHeight > e.clientHeight]);
+    expect(scroll).toEqual(['auto', true]);
+    // All in flow: the body keeps its height, so nothing spills over the controls.
+    const main = (await card(page).locator('.tutorial-main').boundingBox())!;
+    const foot = (await card(page).locator('.tutorial-footer').boundingBox())!;
+    expect(main.height).toBeGreaterThanOrEqual(44);
+    expect(main.y + main.height).toBeLessThanOrEqual(foot.y + 0.5);
+    expect(await card(page).locator('.tutorial-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
+    const next = card(page).getByRole('button', { name: 'Next' });
+    await next.scrollIntoViewIfNeeded();
+    await expect(next).toBeInViewport({ ratio: 1 });
+    await next.click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    // The next page starts at its top (Codex review round 3, #107).
+    expect(await card(page).evaluate((e) => e.scrollTop)).toBe(0);
+    await expect(card(page).locator('.tutorial-step')).toBeInViewport({ ratio: 1 });
+  });
+
+  test('a replay interrupted by the return summary returns focus to the rebuilt Replay control (Codex review round 2, #107)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+    await page.keyboard.press('Escape');
+    await expect(card(page)).toBeHidden();
+    await expect(page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' })).toBeFocused();
+  });
+
+  test('in tests it waits unless asked for; feedback waits while it is open', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.waitForTimeout(300);
+    await expect(card(page)).toBeHidden();
+    await page.goto('/?seed=3&debug=1&calm=1&tutorial=1');
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await expect(card(page)).toBeVisible();
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
+    for (let i = 0; i < 3; i++) {
+      await page.waitForTimeout(150);
+      expect(await page.locator('.feedback').textContent()).toBe('');
+    }
+    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
+    await expect(page.locator('.feedback')).toContainText('Not enough');
   });
 });

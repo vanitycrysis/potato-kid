@@ -1,11 +1,12 @@
 import type { SettingsStore } from '../save/settings';
+import { replayButton } from './notebook';
 import { el, icon } from './dom';
 import type { Sheets } from './sheet';
 
 // The Settings sheet (docs/GUI_MVP.md §11, Codex's design, D-036). Choices apply and are
 // stored at once; every way of closing keeps them. There is no audio yet, so nothing plays.
 
-export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTMLElement | null, scrollTop = 0): void {
+export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTMLElement | null, scrollTop = 0, replay?: (launcher: HTMLElement) => void): void {
   const s = sheets.open({ key: 'settings', icon: 'icon_settings', title: 'Settings', requestedHeight: 480 }, launcher);
   s.setSubtitle('Make the garden your own.');
 
@@ -85,6 +86,8 @@ export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTM
   };
 
   s.body.append(audioRow, music.section, sfx.section);
+  // Under the preferences, the tutorial again (D-078, §23.3).
+  if (replay) s.body.append(replayButton(replay));
   const done = el('button', 'ui-button ui-primary sheet-action', el('span', 'action-label', 'Done'));
   done.type = 'button';
   done.addEventListener('click', () => sheets.close());
