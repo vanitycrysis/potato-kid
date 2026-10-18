@@ -4703,6 +4703,56 @@ test.describe('the HUD, navigation and Notebook (GUI_MVP §§19.1-19.2, 20.1)', 
     await expect(page.getByRole('dialog', { name: 'Potato-Dex' })).toBeVisible();
   });
 
+  test('the bubble\'s Close names itself: a hold shows Close and keeps the bubble; a tap closes (Codex review round 10, #105)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('.hud-materials').click();
+    const bubble = page.locator('.name-bubble');
+    await expect(bubble).toBeVisible();
+    const close = bubble.getByRole('button', { name: 'Close' });
+    const touch = (type: string) =>
+      close.evaluate((b, type) => {
+        const r = b.getBoundingClientRect();
+        const init = { pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: r.left + 22, clientY: r.top + 22, bubbles: true };
+        if (type === 'click') b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+        else b.dispatchEvent(new PointerEvent(type, init));
+      }, type);
+    await touch('pointerdown');
+    await page.waitForTimeout(600);
+    const tip = page.locator('.name-tip');
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText('Close');
+    // In the screen, just below the control.
+    const t = (await tip.boundingBox())!;
+    const c = (await close.boundingBox())!;
+    expect(t.y).toBeGreaterThanOrEqual(c.y + c.height);
+    expect(t.x).toBeGreaterThanOrEqual(8 - 0.5);
+    expect(t.x + t.width).toBeLessThanOrEqual(390 - 8 + 0.5);
+    await touch('pointerup');
+    await touch('click');
+    await page.waitForTimeout(200);
+    await expect(bubble).toBeVisible();
+    // A quick tap closes the bubble, and its name goes with it.
+    await quickTap(close);
+    await expect(bubble).toBeHidden();
+    await expect(tip).toBeHidden();
+    // Keyboard focus names it at once; a tap outside closes the bubble and its name with it.
+    await page.locator('.hud-materials').click();
+    await expect(bubble).toBeVisible();
+    await page.keyboard.press('Shift');
+    await close.focus();
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText('Close');
+    await page.locator('canvas').evaluate((c) => {
+      const r = c.getBoundingClientRect();
+      const init = { pointerId: 9, pointerType: 'touch', isPrimary: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true, cancelable: true };
+      c.dispatchEvent(new PointerEvent('pointerdown', init));
+      c.dispatchEvent(new PointerEvent('pointerup', init));
+    });
+    await expect(bubble).toBeHidden();
+    await expect(tip).toBeHidden();
+  });
+
   test('uneven side insets: the centred tray stays inside the safe area (Codex review round 9, #105)', async ({ page }) => {
     await page.setViewportSize({ width: 240, height: 700 });
     await boot(page, '?seed=3&debug=1&calm=1');
