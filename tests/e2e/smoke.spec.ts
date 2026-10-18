@@ -6276,6 +6276,9 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     const spot = (await page.locator('.tutorial-spot').boundingBox())!;
     expect(Math.abs(spot.x + 3 - hud.x)).toBeLessThan(2);
     expect(Math.abs(spot.width - 6 - hud.width)).toBeLessThan(2);
+    // Vertically too: leaving the compact layout moves the HUD down 16 px (Codex review round 3, #107).
+    expect(Math.abs(spot.y + 3 - hud.y)).toBeLessThan(2);
+    expect(Math.abs(spot.height - 6 - hud.height)).toBeLessThan(2);
   });
 
   test('a very short window: the whole card scrolls, its controls reachable (Codex review round 2, #107)', async ({ page }) => {
@@ -6296,6 +6299,9 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     await expect(next).toBeInViewport({ ratio: 1 });
     await next.click();
     await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    // The next page starts at its top (Codex review round 3, #107).
+    expect(await card(page).evaluate((e) => e.scrollTop)).toBe(0);
+    await expect(card(page).locator('.tutorial-step')).toBeInViewport({ ratio: 1 });
   });
 
   test('a replay interrupted by the return summary returns focus to the rebuilt Replay control (Codex review round 2, #107)', async ({ page }) => {

@@ -86,11 +86,16 @@ export class Tutorial {
     });
     // A tap outside the card skips, as Close does (§24.1).
     this.scrim.addEventListener('click', () => this.skip());
-    // The spotlight follows its control when the viewport changes (rotation, resize).
-    window.addEventListener('resize', () => {
-      if (this.isOpen && this.shown) this.place(this.shown);
-      if (this.isOpen) this.fit();
-    });
+  }
+
+  /**
+   * The spotlight follows its control, and the card refits, when the HUD and tray lay out
+   * again (rotation, resize). The HUD calls it after its own layout, so the outline is measured
+   * on the final geometry (Codex review round 3, #107).
+   */
+  relayout(): void {
+    if (this.isOpen && this.shown) this.place(this.shown);
+    if (this.isOpen) this.fit();
   }
 
   /** Keyboard focus stays in the card: Tab wraps from the last control to the first (§2). */
@@ -241,6 +246,8 @@ export class Tutorial {
     this.shown = s;
     this.place(s);
     this.fit();
+    // Each page starts at its top, also when the whole card scrolls (Codex review round 3, #107).
+    this.card.scrollTop = 0;
     title.focus({ preventScroll: true });
   }
 

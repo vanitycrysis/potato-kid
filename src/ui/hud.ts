@@ -235,6 +235,8 @@ export class Hud {
       // Page mode changes what scrolls an open sheet.
       this.sheets.place();
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
+      // The tutorial's spotlight is measured on the new layout.
+      this.tutorial.relayout();
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
