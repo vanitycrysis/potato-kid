@@ -1,52 +1,33 @@
-# Session handoff (2026-10-10, evening, for the next Claude session)
+# Session handoff (2026-10-18, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-050..D-074**), `docs/TASKS.md`, and `docs/GUI_MVP.md` §§19–22 (Codex's LAYOUT-DESIGN and FARM-DESIGN).
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-075..D-084**), `docs/TASKS.md`, and `docs/GUI_MVP.md` §§23–26 (Codex's ROUND3-DESIGN).
+
+**If a session ends abruptly**, the state can be rebuilt without this file: `gh pr list` (open PRs), each PR's last comment (the last Codex round posted), `git log` of each `claude/` worktree, and the Codex plugin's job results in `~/.claude/plugins/data/codex-openai-codex/state/<worktree>/jobs/*.json`. A review that finished but was never posted is there. That is how the 2026-10-14 shutdown was recovered on 2026-10-18.
 
 ## Where we are
 
-- **`main` has all of the owner's second gate-4 round (D-068..D-074).** Its save schema is 9. Merged since the last handoff:
-  - **FARMING (#90, Codex review in 16 rounds):** fields, farming kids, the pantry, every farming sheet, the working kid's card, drag-to-assign, the offline "Food grown" lines, and the balance bot farming.
-  - **Codex's scenery relocations out of the Garden block (#92).**
-  - **WILD-KIDS (#93):** the twenty specials and ten rares, drawn from their own bodies, plus tier-6 text with no invented badge.
-  - **DEX-SEGMENTS (#94):** Ordinary, Specials and Rares in the Dex.
-  - **RARE-TIER (#95):** rares stay at tier 6, and the simulator counts rares apart.
-- **Codex has no open design task.** TROPHY-MAP (D-064) waits until after gate 4.
+- **`main` has all of the owner's third gate-4 round (D-075..D-084).** Merged:
+  - MAP-HALF (#102), OFFLINE-UNCAPPED (#101), ROUND3-DESIGN (#100, Codex), DRAG-HOVER (#103), TIER-NAMES (#104);
+  - SPROUT-OVERFLOW (#106, D-084), ICON-HUD (#105, 11 Codex rounds), TUTORIAL (#107, 5 Codex rounds).
+- **The gate-4 build is with the owner** (third round, sent 2026-10-18). Wait for their feedback; turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building.
+- **Codex has no open design task.** TROPHY-MAP (D-064) and ANIM-POLISH wait until after gate 4.
 - **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
+- **Force pushes are blocked** by the auto-mode classifier. To bring a pushed branch up to date, merge `main` into it (a fast-forward push), don't rebase.
 
 ## Open work at handoff
 
-**Start here: the owner's answers.** The build went to the owner on 2026-10-10 with a page for their answers: https://claude.ai/artifact/4LC9S4YA3uiNShuEF7UHr9 (owner-only). Read them with the `ArtifactData` tool (`action: "list"`, `collection: "answers"`):
-- one document per question: `home-range`, `happiness`, `farming`, `dex-pace`, `rare-tier` and `gate4`, each with `choice`, `choiceLabel` and `note`;
-- `tried`, the "What to try" ticks.
-
-Turn each answer into a decision in `DECISIONS.md` and a `TASKS.md` row before building. If the page has no answers yet, ask the owner in chat.
-
-
-1. **The gate-4 build goes to the owner.** `main`'s CI run publishes `potato-kid-debug-apk`; send the link and what to try (below), then wait for feedback. Turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building. What to try:
-   - **Farming:** Garden → Fields → unlock, choose a food, assign kids (by dragging a kid onto a field, or Assign kids); take them back; the pantry (Notebook → Pantry); feed a kid from its card.
-   - **Map and zoom:** the less busy screen, the 4 × 4 map, pinch to zoom.
-   - **Plants:** taking a kid back out of a filling plot; cancelling a growing plot.
-   - **New kids:** the ten rares and twenty specials (sparkle for rares, profiles, the Dex's three segments).
-2. **For the owner** (with the build):
-   - **HOME-RANGE:** kids wander the whole 4 × 4 map. After #92 a casual player completes the 64-kid roster on day 6.4 without farming and day 6.0 with it, no slower than the old map, so the soft home range is less pressing. Keep whole-map wandering, or try it?
-   - **D-067:** the happiness durations and the name price are still "proposed".
-   - **Farming numbers (Claude's, tunable):** 4 fields at 300 / 3,000 / 15,000 / 60,000 Materials; 4 kids a field; a bite an hour per kid, two on its favourite. In the simulator growth roughly matches feeding (casual: 4,559 grown, 4,295 fed, at most 327 stored), so there's no pantry cap.
-   - **The Dex's long tail:** in 14 casual days the bot finds 7 of the 20 special types and a few of the 10 rares. Completing all 94 takes much longer, as D-063 intends.
-3. **Small follow-ups (not blocking):**
-   - The 96 px rare card portrait's sparkle envelope (GUI_MVP §16.2). The card shows the body without the sleeve today.
+1. **The owner's gate-4 feedback** on the third-round build (what to try is in the chat message and below).
+2. **Small follow-ups (not blocking):**
+   - The 96 px rare card portrait's sparkle envelope (GUI_MVP §16.2).
    - The drawn-position obstacle source and the drag's captured food have no killing tests (explained in #90).
-4. **Polish notes** (owner's polish pass, not now): Seashell Kid reads closer to a teapot at 55 px; the farm and map paths are quite rectilinear.
+3. **Polish notes** (owner's polish pass, not now): Seashell Kid reads closer to a teapot at 55 px; the farm and map paths are quite rectilinear; Water's wiggle hood is the weakest case.
 
-## Decisions I made this session (engine and tuning rules are Claude's)
+**What to try (third round):** the half-size map; the icon HUD (tap a chip for its bubble; hold a tray icon for its name; Notebook → Icon guide); the first-run tutorial (it opens once on the first launch after updating, even with an existing save; replay from Settings or the Icon guide); a long absence (no offline cap); the Special and Rare badges; dragging a kid over others (it floats; a partner is marked; the recipe window); a ripe plot on a full map (its sprout still comes up).
 
-- **Farming (#90):**
-  - A release over a field that doesn't take the kid (early, refused, or no label room) puts it down clear of partners, with newborn grace.
-  - A second finger, a change of food or of places, or a cancel restarts or ends a field's dwell.
-  - Commands carry what was reviewed (`farm.food`, `emptyField.kidIds`, `setFieldFood.from` and `kidIds`); anything stale is refused with `changed`.
-  - Farming kids draw above the rare marks. Field results not shown on a page become world cards.
-  - `biteSeconds` 3600, so there's no hoarding.
-- **Wild kids (#93):** a wild kid's collision box is its type's lifetime bounds. Newborns are Classic; saved faces stay. A fallback clip borrows its alias's frames. Tier marks show a badge only if its art exists.
-- **Rares at tier 6 (#95):** level with the tier-6 specials, since the rare roll is half as likely. Pacing barely moves.
+## Decisions I made this session (engine and UI rules are Claude's)
+
+- **ICON-HUD (#105):** the centred 156 px tray is clamped inside ML…W−MR (`left: clamp(...)`, no transform). The name bubble's Close names itself like the tray icons (hover, focus, 450 ms hold), just below the ×.
+- **TUTORIAL (#107):** the HUD's measure pass calls `tutorial.relayout()` after its own layout (no separate resize listener). It also sets `--ui-banner` (the banner's height + 8), which the card's max height subtracts. A compact column is `justify-content: safe center`. Each page starts scrolled to its top.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -128,13 +109,22 @@ Turn each answer into a decision in `DECISIONS.md` and a `TASKS.md` row before b
 - **The balance run's children load `src/` as they start.** Do UI work in the second worktree while a balance run uses this one, or run the balance there.
 - **The probe pitfall:** reloading in one page keeps the save in localStorage, so state from earlier iterations leaks into later ones.
 
+### Learned this session (2026-10-18)
+
+- **The mutation runner must rebuild after restoring.** It restored `src/` but left `dist/` built from the last mutant, so the next e2e run tested mutant code. `mutate.py` now runs `npm run build` in its `finally`. It also takes several `old|||old2` / `new|||new2` edits for a mutant that needs two changes.
+- **Never rebuild a worktree while its e2e suite runs:** the preview server serves that `dist/`, so the running suite's results are void. It happened once this session.
+- **Resolving a CSS conflict as "keep both" can cut a block open.** A merge left the tutorial's `@media` block unclosed, which swallowed main's recipe-window styles. After any CSS conflict, check the brace balance (strip comments, count `{` and `}`).
+- **`scrollIntoViewIfNeeded` scrolls even an `overflow: hidden` box,** so "Next is reachable" passes on a clipped card. Check `overflowY` and `scrollHeight > clientHeight` for user scrollability.
+- **Quick taps belong in one page task.** Down, up and click as three `evaluate` calls took longer than the 450 ms hold on CI, so the tap named an icon instead of opening it.
+- **A mutant that survives may be equivalent through the browser:** hiding a bubble blurs its focused Close, which already hid the name, so the extra hiding line was removed rather than tested.
+
 ## Housekeeping
 
-- **Worktrees:**
-  - `potato-kid-claude`: Claude's main checkout, on `claude/rare-tier` (#95) at handoff; switch to `main`.
-  - `potato-kid-hud`: a second checkout with `node_modules`, on the handoff branch; its untracked `pw4174.config.ts` serves e2e on port 4174.
-  - `potato-kid-chatgpt`: Codex's worktree, on `chatgpt/farm-relocations` (merged as #92).
-  - `potato-kid-review-50` (with `node_modules`) and `potato-kid-review-82`, `-83`, `-84`: Codex review worktrees; check one out per review with `git fetch origin && git checkout --detach origin/<branch>`.
+- **Worktrees** (each with `node_modules` unless noted; each has an untracked `pw41xx.config.ts` for its own e2e port, never committed):
+  - `potato-kid-claude`: Claude's main checkout (port 4173); switch to `main`.
+  - `potato-kid-hud` (4174), `potato-kid-tut` (4176), `potato-kid-tier` (4175): second checkouts, on the merged `claude/icon-hud`, `claude/tutorial` and `claude/drag-hover`.
+  - `potato-kid-chatgpt` and `potato-kid-chatgpt-map`: Codex's worktrees (`chatgpt/round3-design`, `chatgpt/map-half`, both merged).
+  - `potato-kid-review-50`, `-82`, `-83`, `-84`: Codex review worktrees (no `node_modules` except `-50`); check one out per review with `git fetch origin && git checkout --detach origin/<branch>`.
   - `potato-kid-docs`: docs branches.
 - **Leftover folders** of old worktrees are still locked by stale Codex processes from 2026-10-02; the owner was told how to end them.
 - **Merged remote branches** were never deleted. That's harmless.

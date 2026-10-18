@@ -2,25 +2,21 @@
 
 Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not owner approval. Since D-027, ChatGPT's role is run as Codex (`gpt-6.1-sol`, high effort) by Claude; Claude does no art (D-036).
 
-## Where things stand (Claude, 2026-10-13)
+## Where things stand (Claude, 2026-10-18)
 
-**Gates 1–3 are approved. Gate 4 came back with feedback three times.** The first two rounds (D-050..D-059, D-068..D-074) are all on `main`. **The third round (D-075..D-083, 2026-10-13):**
-- the map shrinks to half its area (D-076); whole-map wandering stays, so HOME-RANGE closes;
-- an icon HUD that says what everything is (D-077);
-- a first-run tutorial (D-078);
+**Gates 1–3 are approved. Gate 4 came back with feedback three times, and all three rounds are on `main`:** D-050..D-059, D-068..D-074, and the third round (D-075..D-084):
+- the map at half its area, with whole-map wandering (D-076, #99/#102);
+- an icon HUD that says what everything is (D-077, #105);
+- a first-run tutorial, skippable and replayable (D-078, #107);
 - happiness, naming and farming numbers approved (D-079);
-- no offline limit (D-080);
+- no offline limit (D-080, #101);
 - the Dex pace stays (D-081);
-- Special and Rare tiers (D-082);
-- dragging floats over other kids, highlights a partner and shows the recipe (D-083).
+- Special and Rare tiers with their badges (D-082, #104);
+- dragging floats over other kids, marks a partner and shows the recipe (D-083, #103);
+- a ripe plot's kid always comes up, even on a full map (D-084, #106).
 
-Also (2026-10-13): a ripe plot's kid always comes up, even on a full map (D-084), after the simulator found a lock.
-
-**Order of work**
-- **Codex:** MAP-HALF's composition, and ROUND3-DESIGN (the icon HUD, the tutorial, the drag highlight and recipe window, the Special and Rare badges).
-- **Claude, meanwhile:** OFFLINE-UNCAPPED and TIER-NAMES, then DRAG-HOVER's engine; then MAP-HALF's engine, ICON-HUD and TUTORIAL from Codex's designs.
-- **Then:** the gate-4 build back to the owner.
-- **Parked:** expeditions (D-065); TROPHY-MAP (D-064) after gate 4.
+**Now:** the third-round gate-4 build is with the owner (2026-10-18). Their feedback becomes decisions and rows here before anything is built.
+**Parked:** expeditions (D-065); TROPHY-MAP (D-064) and ANIM-POLISH after gate 4.
 
 **Built for the MVP so far**
 - **Systems:** economy, offline catch-up, saves and lifecycle (#27, #29–#31).
@@ -76,14 +72,14 @@ Also (2026-10-13): a ripe plot's kid always comes up, even on a full map (D-084)
 | HOME-RANGE | Owner (decision) / Claude (engine) | On the 4 × 4 map kids wander everywhere; Codex proposed a soft preference for the Garden's neighbourhood | **done** (closed by D-076: the map shrinks to half its area and kids keep wandering the whole map; nothing built) | — |
 | TROPHY-MAP | Both | D-064: a map to display special kids, bought for an absurd price | later (after SPECIALS) | — |
 | WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | **done** (#62, Claude's review passed in round 2; Water's hood is the weakest case, for the owner's device check) | Claude's review passes; the owner sees it on device at the next gate-4 build |
-| GATE-4 | Owner | Approve the MVP | **feedback** (2026-10-03: D-050..D-059, all done; 2026-10-05: D-068..D-074, all done; 2026-10-13: D-075..D-083) | Explicit approval before polish |
+| GATE-4 | Owner | Approve the MVP | **with the owner** (feedback 2026-10-03: D-050..D-059; 2026-10-05: D-068..D-074; 2026-10-13: D-075..D-084; all done. The third-round build went to the owner on 2026-10-18) | Explicit approval before polish |
 | DEX-SEGMENTS | Claude | GUI_MVP §16.4: the Dex's Kids tab in Ordinary / Specials / Rares, each with its own search and scroll; apex kids' detail without recipes | **done** (#94, Codex review in 2 rounds) | e2e per segment; mutation-checked |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |
-| MAP-HALF | ChatGPT (composition) / Claude (engine) | D-076: recompose the map at half its area (about 2.8 × 2.8 phone screens): Garden, plots, fields, landmarks and paths, within the texture budget. Claude: the new world size, save migration (anything outside moves inside), zoom range, and spawning, wandering, offline catch-up and the simulator checked | review (#102: Codex's composition #99 plus the engine; Claude's review of the composition passed) | Claude's review of the composition passes; save-migration and e2e tests; `npm run balance` before and after; reviewed by Codex |
-| ROUND3-DESIGN | ChatGPT | D-077: an icon HUD and tray, each icon readable and named (the player can tell what every icon and number is), drawn in the notebook style. D-078: the first-run tutorial's steps, copy and look (the point of the game, every icon, how to progress, the game's elements), skippable or not, and replayable. D-083: the partner highlight and the recipe window (parents and result as sprites; an unfound result darkened). D-082: a Special and a Rare tier badge | todo | Claude's review passes (technical fit, consistency, D-045); GUI_MVP.md updated |
-| OFFLINE-UNCAPPED | Claude | D-080: credit all time away; bounded catch-up cost for very long absences; drop the summary's "Capped at" line; the simulator's long-absence check | review (#101) | Unit tests for a month away (Materials, spawns, plots, fields, happiness); reviewed by Codex |
+| MAP-HALF | ChatGPT (composition) / Claude (engine) | D-076: recompose the map at half its area (about 2.8 × 2.8 phone screens): Garden, plots, fields, landmarks and paths, within the texture budget. Claude: the new world size, save migration (anything outside moves inside), zoom range, and spawning, wandering, offline catch-up and the simulator checked | **done** (#102: Codex's composition #99 plus the engine; Claude's review of the composition passed) | Claude's review of the composition passes; save-migration and e2e tests; `npm run balance` before and after; reviewed by Codex |
+| ROUND3-DESIGN | ChatGPT | D-077: an icon HUD and tray, each icon readable and named (the player can tell what every icon and number is), drawn in the notebook style. D-078: the first-run tutorial's steps, copy and look (the point of the game, every icon, how to progress, the game's elements), skippable or not, and replayable. D-083: the partner highlight and the recipe window (parents and result as sprites; an unfound result darkened). D-082: a Special and a Rare tier badge | **done** (#100; Claude's review passed in round 2) | Claude's review passes (technical fit, consistency, D-045); GUI_MVP.md updated |
+| OFFLINE-UNCAPPED | Claude | D-080: credit all time away; bounded catch-up cost for very long absences; drop the summary's "Capped at" line; the simulator's long-absence check | **done** (#101) | Unit tests for a month away (Materials, spawns, plots, fields, happiness); reviewed by Codex |
 | TIER-NAMES | Claude (rules, labels) / ChatGPT (badges) | D-082: specials are the Special tier (tier 5 for income and odds), rares the Rare tier (tier 6); "Special" and "Rare" shown wherever a tier is; badges from ROUND3-DESIGN | **done** (#104) | Content validation and unit tests; e2e for the labels; `npm run balance` before and after; reviewed by Codex |
 | DRAG-HOVER | Claude (engine) / ChatGPT (design) | D-083: a held kid floats above the others (drawn on top, no pushing); a partner under it is highlighted, a non-partner isn't; the recipe window with sprites, an unfound result darkened; release over a non-partner puts it down at the nearest free place | **done** (#103: the engine, the partner mark and the recipe window from GUI_MVP §25) | Unit and e2e tests (no kid moves while one is dragged over it; highlight only on partners; the window's result darkened until found); reviewed by Codex |
 | ICON-HUD | Claude | D-077: implement ROUND3-DESIGN's icon HUD and tray | **done** (#105, Codex review in 11 rounds; the Icon guide's Replay tutorial comes with TUTORIAL) | e2e at the GUI_MVP viewports; the world share measured |
-| TUTORIAL | Claude | D-078: implement ROUND3-DESIGN's tutorial: first run, progress in the save, replayable | review (#107) | e2e from a fresh save through the whole tutorial, and a replay on an existing save |
+| TUTORIAL | Claude | D-078: implement ROUND3-DESIGN's tutorial: first run, progress in the save, replayable | **done** (#107, Codex review in 5 rounds) | e2e from a fresh save through the whole tutorial, and a replay on an existing save |
 | SPROUT-OVERFLOW | Claude | D-084: a ripe plot's kid comes up even on a full map (over capacity by up to one per plot); the Garden still waits for room; offline too | **done** (#106; Codex review clean in 2 rounds) | Unit tests online and offline, e2e for a sprout on a full map; `npm run balance` shows no deadlocked turns; reviewed by Codex |
