@@ -325,14 +325,16 @@ export class Sheets {
     c.sheet.dataset.flow = 'false';
     // A Notebook page's way back takes height above the body too (Codex review round 5, PR #87).
     const pageNav = c.sheet.querySelector(':scope > .sheet-page-nav') !== null;
-    const crowded = pageNav || c.bar.childElementCount > 0 || (footer?.childElementCount ?? 0) > 0;
+    // A header that leaves the body too little room crowds it as well: a stat help sheet's
+    // wrapped title and value on a tiny screen (Codex review, #105).
+    const crowded = pageNav || c.bar.childElementCount > 0 || (footer?.childElementCount ?? 0) > 0 || (header?.offsetHeight ?? 0) + BODY_MIN > c.sheet.clientHeight;
     const tight = crowded && c.body.clientHeight < BODY_MIN;
     c.sheet.dataset.tight = String(tight);
     const flow = tight && c.sheet.clientHeight - (header?.offsetHeight ?? 0) - (footer?.offsetHeight ?? 0) < BODY_MIN;
     c.sheet.dataset.flow = String(flow);
     // Scrolling something into view (a message, a focused control) stops clear of the
     // sticky header and footer, never under them (Codex review, PR #54).
-    c.sheet.style.scrollPaddingTop = tight && header ? `${header.offsetHeight}px` : '';
+    c.sheet.style.scrollPaddingTop = tight && !flow && header ? `${header.offsetHeight}px` : '';
     c.sheet.style.scrollPaddingBottom = tight && !flow && footer ? `${footer.offsetHeight}px` : '';
     if (tight !== was) (tight ? c.sheet : c.body).scrollTop = scroll;
   }

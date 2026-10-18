@@ -1,17 +1,18 @@
 import { ZOOM_MAX, ZOOM_MIN, type MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
 import type { BuildingSheets, SheetRestore } from './buildings';
-import { el } from './dom';
+import { el, icon } from './dom';
 import { openSettings } from './settings';
 import type { Sheets } from './sheet';
 
-/** Notebook's tools, in order (GUI_MVP §19.2). */
+/** Notebook's tools, in order (GUI_MVP §23.3). */
 const ROWS = [
   { key: 'pantry', label: 'Pantry' },
   { key: 'capacity', label: 'Capacity' },
   { key: 'bias', label: 'Spawn bias' },
   { key: 'compendium', label: 'Compendium' },
   { key: 'mapview', label: 'Map view' },
+  { key: 'iconguide', label: 'Icon guide' },
   { key: 'settings', label: 'Settings' },
 ] as const;
 type Row = (typeof ROWS)[number]['key'];
@@ -94,7 +95,31 @@ export class Notebook {
     if (row === 'settings') openSettings(this.sheets, this.settings, launcher, restore?.scrollTop);
     else if (row === 'mapview') this.openMapView(launcher, restore?.scrollTop);
     else if (row === 'pantry') this.openPantry?.(launcher);
+    else if (row === 'iconguide') this.openIconGuide(launcher, restore?.scrollTop);
     else this.buildings.open(row, launcher, restore);
+  }
+
+  /**
+   * The Icon guide (D-077, GUI_MVP §23.3): every HUD and tray icon with its name and what it's
+   * for, in Codex's words. Nothing in it is a command.
+   */
+  openIconGuide(launcher: HTMLElement | null, scrollTop = 0): void {
+    const sheet = this.sheets.open({ key: 'iconguide', icon: 'icon_compendium', title: 'Icon guide', requestedHeight: 480 }, launcher);
+    sheet.setSubtitle('What every icon means.');
+    const entries: [string, string, string][] = [
+      ['icon_materials', 'Materials', 'Kids on the map earn these. Spend them on buildings, plots, fields, names or Compendium returns.'],
+      ['icon_potatokens', 'Potatokens', 'Spend these on instant Garden spawns or Compendium returns. Each action shows its cost before you spend.'],
+      ['icon_kids', 'Kids on map', 'Plot kids and farming kids are counted in their own pages. Capacity upgrades add map space.'],
+      ['icon_r3_garden', 'Garden', 'Arrivals, planting plots, food fields and spawn-rate upgrades.'],
+      ['icon_r3_dex', 'Potato-Dex', 'Your discoveries, found recipes and kids on the map.'],
+      ['icon_r3_notebook', 'Notebook', 'Pantry, buildings, map view, this guide and Settings.'],
+    ];
+    sheet.body.append(
+      ...entries.map(([glyph, title, text]) =>
+        el('div', 'icon-guide-row', icon(glyph, '', 'ui-icon'), el('div', 'icon-guide-text', el('p', 'icon-guide-title', title), el('p', 'icon-guide-line', text))),
+      ),
+    );
+    sheet.scrollTo(scrollTop);
   }
 
   /**

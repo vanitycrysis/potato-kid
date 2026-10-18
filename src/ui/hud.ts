@@ -10,6 +10,7 @@ import { BuildingSheets } from './buildings';
 import { FieldSheets } from './fields';
 import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
+import { NameBubble, nameOnHold, type BubbleContent } from './nameBubble';
 import { RecipePreview } from './recipePreview';
 import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
@@ -58,13 +59,16 @@ interface Card {
  * save banners. Every visual decision is Codex's (D-036); this class implements it.
  */
 export class Hud {
-  private readonly hud = el('section', 'hud ui-surface');
+  private readonly hud = el('section', 'hud');
   private readonly materials = el('span', 'hud-count');
   private readonly potatokens = el('span', 'hud-count');
   private readonly count = el('span', 'hud-value');
-  /** The population's icon: kids, or a warning when the map is full (§19.1). */
-  private readonly countIcon = el('span', 'hud-count-icon');
-  private countFull: boolean | null = null;
+  /** Each stat's name, value and purpose, one tap away (D-077, GUI_MVP §23.2). */
+  private readonly bubble: NameBubble;
+  /** The stat chips, by bubble key. */
+  private readonly stats = new Map<'materials' | 'potatokens' | 'kids', HTMLButtonElement>();
+  /** An icon-only control's name, above the tray (§23.2). */
+  private readonly tip = el('div', 'name-tip ui-surface ui-toast');
   private readonly top = el('div', 'top-stack');
   private readonly banners = el('div', 'banners');
   private readonly feedback = el('div', 'feedback');
@@ -101,12 +105,24 @@ export class Hud {
     this.applyTokens();
     this.known = new Set(scene.game.state.discoveredKids);
 
-    // Three noninteractive stats (§19.1): the timer, Spawn now and Settings moved to sheets.
-    this.hud.append(
-      el('span', 'hud-stat hud-materials', icon('icon_materials', '', 'ui-icon-24'), this.materials),
-      el('span', 'hud-stat hud-potatokens', icon('icon_potatokens', '', 'ui-icon-24'), this.potatokens),
-      el('span', 'hud-stat hud-population', this.countIcon, this.count),
+    // Three stat chips (D-077, §23.1): a glyph and a count each; one tap opens its name bubble.
+    this.bubble = new NameBubble(
+      () => ({
+        left: this.top.getBoundingClientRect().left,
+        right: this.top.getBoundingClientRect().right,
+        below: this.hud.getBoundingClientRect().bottom,
+        bottom: (document.querySelector('.tray')?.getBoundingClientRect().top ?? window.innerHeight) - 8,
+      }),
+      (key, trigger, content) => this.statHelp(key, trigger, content),
+      this.tip,
     );
+    this.hud.append(
+      this.stat('materials', 'hud-materials', 'icon_materials', this.materials),
+      this.stat('potatokens', 'hud-potatokens', 'icon_potatokens', this.potatokens),
+      this.stat('kids', 'hud-population', 'icon_kids', this.count),
+    );
+    this.tip.hidden = true;
+    this.tip.setAttribute('aria-hidden', 'true');
     this.hud.setAttribute('aria-label', 'Garden status');
     this.feedback.setAttribute('role', 'status');
     this.feedback.addEventListener('pointerenter', () => (this.hover = true));
@@ -119,13 +135,13 @@ export class Hud {
     const tray = el(
       'nav',
       'tray ui-surface ui-tray',
-      this.trayCell('garden', 'Garden', 'icon_garden', (b) => this.buildings.open('garden', b)),
-      this.trayCell('dex', 'Dex', 'icon_dex', (b) => this.dex.open(b)),
-      this.trayCell('notebook', 'Notebook', 'icon_compendium', (b) => this.notebook.open(b)),
+      this.trayCell('garden', 'Garden', 'icon_r3_garden', (b) => this.buildings.open('garden', b)),
+      this.trayCell('dex', 'Potato-Dex', 'icon_r3_dex', (b) => this.dex.open(b)),
+      this.trayCell('notebook', 'Notebook', 'icon_r3_notebook', (b) => this.notebook.open(b)),
     );
     tray.setAttribute('aria-label', 'Main');
     const dex = this.trayCells.get('dex')!;
-    document.body.append(this.shield, this.banners, this.top, tray);
+    document.body.append(this.shield, this.banners, this.top, tray, this.tip);
     this.sheets = new Sheets(
       scene,
       () => [this.top, tray, document.getElementById('app')!].filter(Boolean),
@@ -208,6 +224,8 @@ export class Hud {
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
+    // A count growing (a long amount) can outgrow its chip without the row changing size.
+    for (const c of [this.materials, this.potatokens, this.count]) new ResizeObserver(measure).observe(c);
     // The navigation is sized by its content: a font that loads, or text that wraps, can change
     // it with no other resize (Codex review round 4, PR #87).
     new ResizeObserver(measure).observe(tray);
@@ -287,18 +305,83 @@ export class Hud {
     }
   }
 
-  /** A navigation control (§19.1): a 24 px glyph beside its label. */
+  /**
+   * A navigation control (D-077, §23.1): a 28 px icon, named by its label (shown only in the
+   * scroll-window and page layouts) and, on hover, focus or a hold, by a name above the tray.
+   */
   private trayCell(key: 'garden' | 'dex' | 'notebook', label: string, glyph: string, open: (b: HTMLButtonElement) => void): HTMLButtonElement {
-    const b = el('button', 'tray-cell', icon(glyph, '', 'ui-icon-24'), el('span', 'tray-label', label));
+    const b = el('button', 'tray-cell', icon(glyph, '', 'ui-icon'), el('span', 'tray-label', label));
     b.type = 'button';
     b.dataset.nav = key;
+    b.setAttribute('aria-label', label);
     this.trayCells.set(key, b);
     b.addEventListener('click', () => open(b));
+    nameOnHold(b, label, this.tip, (r) => {
+      // 8 px above the tray, centred on the control, inside the screen.
+      const w = this.tip.offsetWidth;
+      this.tip.style.left = `${Math.max(8, Math.min(window.innerWidth - 8 - w, (r.left + r.right) / 2 - w / 2))}px`;
+      this.tip.style.top = `${b.closest('.tray')!.getBoundingClientRect().top - 8 - this.tip.offsetHeight}px`;
+    });
     return b;
   }
 
-  /** Android Back: closes an open sheet (returns whether it did). */
+  /** A stat chip (§23.1): a button that opens its name bubble, changing nothing else. */
+  private stat(key: 'materials' | 'potatokens' | 'kids', className: string, glyph: string, count: HTMLElement): HTMLButtonElement {
+    const b = el('button', `hud-stat ui-surface ${className}`, icon(glyph, '', 'ui-icon-24'), count);
+    b.type = 'button';
+    b.setAttribute('aria-expanded', 'false');
+    b.addEventListener('click', () => this.bubble.toggle(key, b, this.statContent(key)));
+    this.stats.set(key, b);
+    return b;
+  }
+
+  /** The stat whose help sheet is open (or was, before the offline summary interrupted it). */
+  private helpKey: 'materials' | 'potatokens' | 'kids' = 'materials';
+
+  /**
+   * A stat's name as an ordinary help sheet, when its bubble can't fit (§23.2). Its value and
+   * lines stay current, quietly, as the game runs (Codex review, #105).
+   */
+  private statHelp(key: string, trigger: HTMLElement | null, content: BubbleContent, scrollTop = 0): void {
+    const stat = key as 'materials' | 'potatokens' | 'kids';
+    this.helpKey = stat;
+    const glyph = stat === 'materials' ? 'icon_materials' : stat === 'potatokens' ? 'icon_potatokens' : 'icon_kids';
+    const lines = el('div', 'stat-help-lines');
+    let shown = '';
+    const render = () => {
+      const now = this.statContent(stat);
+      sheet.setSubtitle(now.value);
+      const text = now.lines.join('|');
+      if (text === shown) return;
+      shown = text;
+      lines.replaceChildren(...now.lines.map((l) => el('p', 'sheet-body-text', l)));
+    };
+    const sheet = this.sheets.open({ key: 'stathelp', icon: glyph, title: content.title, requestedHeight: 480, update: () => render() }, trigger);
+    sheet.body.append(lines);
+    render();
+    sheet.scrollTo(scrollTop);
+  }
+
+  /** A stat's bubble (§23.2): Codex's exact title, value and explanation. */
+  private statContent(key: 'materials' | 'potatokens' | 'kids'): BubbleContent {
+    const g = this.scene.game;
+    const s = g.state;
+    if (key === 'materials') return { title: 'Materials', value: `${formatExact(s.materials)} Materials`, lines: ['Kids on the map earn these. Spend them on buildings, plots, fields, names or Compendium returns.'] };
+    if (key === 'potatokens') return { title: 'Potatokens', value: `${formatExact(s.potatokens)} Potatokens`, lines: ['Spend these on instant Garden spawns or Compendium returns. Each action shows its cost before you spend.'] };
+    const onMap = s.world.kids.length;
+    return {
+      title: 'Kids on map',
+      value: `${onMap} / ${g.capacity} on the map`,
+      lines: ['Plot kids and farming kids are counted in their own pages. Capacity upgrades add map space.', ...(onMap >= g.capacity ? ['The map is full. Make room for another kid.'] : [])],
+    };
+  }
+
+  /** Android Back: closes a name bubble, else an open sheet (returns whether it did). */
   back(): boolean {
+    if (this.bubble.openKey !== null) {
+      this.bubble.hide(true);
+      return true;
+    }
     return this.sheets.back();
   }
 
@@ -332,6 +415,8 @@ export class Hud {
       else if (back.key === 'field' || back.key === 'field-food' || back.key === 'field-pick') this.buildings.openFields(back.launcher);
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
+      // A stat's help sheet comes back on the same stat (Codex review, #105).
+      else if (back.key === 'stathelp') this.statHelp(this.helpKey, back.launcher, this.statContent(this.helpKey), back.scrollTop);
       // With the way back its Fields were opened with, if any (the Pantry, feeding).
       else if (back.key === 'garden') this.buildings.reopenGarden(back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots }, back.gardenBack);
     });
@@ -361,7 +446,14 @@ export class Hud {
     // Read-only hides the HUD and freezes the world: nothing to fit.
     if (this.save.readOnly) return;
     const band = () => (tray?.getBoundingClientRect().top ?? h) - 8 - (this.hud.getBoundingClientRect().bottom + 8);
-    if (band() >= PLAY_BAND) return;
+    // Too narrow for the 156 px tray or for three 44 px chips: the labelled scroll windows,
+    // whatever the height (§23.1; Codex review, #105).
+    const safe = this.top.getBoundingClientRect().width;
+    // A count wider than its chip, even with the glyph stacked above it, doesn't fit either
+    // (enlarged text, a long amount; Codex review, #105).
+    const overflows = [...this.stats.values()].some((c) => c.scrollWidth > c.clientWidth + 1);
+    const narrow = safe < 156 || (safe - 16) / 3 < 44 || overflows;
+    if (!narrow && band() >= PLAY_BAND) return;
     root.dataset.hudFit = 'window';
     // Each window is 60 px, or taller to show its tallest item whole (enlarged text), plus
     // its 16 px of border (§19.3; Codex review, PR #87).
@@ -393,23 +485,23 @@ export class Hud {
     const g = this.scene.game;
     const s = g.state;
     this.materials.textContent = formatCount(s.materials);
-    this.materials.parentElement!.setAttribute('aria-label', `Materials: ${formatExact(s.materials)}`);
+    this.stats.get('materials')!.setAttribute('aria-label', `Materials: ${formatExact(s.materials)}. About Materials`);
     this.potatokens.textContent = formatCount(s.potatokens);
-    this.potatokens.parentElement!.setAttribute('aria-label', `Potatokens: ${formatExact(s.potatokens)}`);
+    this.stats.get('potatokens')!.setAttribute('aria-label', `Potatokens: ${formatExact(s.potatokens)}. About Potatokens`);
     const onMap = s.world.kids.length;
     this.count.textContent = `${onMap}/${g.capacity}`;
-    // A full map swaps the kids icon for a warning, keeping the count (§19.1).
-    const full = onMap >= g.capacity;
-    if (full !== this.countFull) {
-      this.countFull = full;
-      this.countIcon.replaceChildren(icon(full ? 'icon_warning' : 'icon_kids', '', 'ui-icon-24'));
-    }
-    this.count.parentElement!.setAttribute('aria-label', full ? `Map is full: ${onMap} of ${g.capacity} kids` : `${onMap} of ${g.capacity} kids on the map`);
+    // The kids glyph stays at full capacity: the bubble says the map is full (§23.1).
+    this.stats.get('kids')!.setAttribute('aria-label', `Kids on map: ${onMap} of ${g.capacity}. About map space`);
+    const open = this.bubble.openKey as 'materials' | 'potatokens' | 'kids' | null;
+    // A sheet opening closes the bubble (§23.2); an open one keeps its amounts current.
+    if (open !== null && this.sheets.openKey !== null) this.bubble.hide(false);
+    else if (open !== null) this.bubble.update(open, this.statContent(open));
 
+    this.feedback.style.visibility = this.bubble.openKey !== null ? 'hidden' : '';
     this.tickFeedback(now, dt);
     this.sheets.tick();
-    const open = this.sheets.openKey;
-    const selected = open === null ? null : NOTEBOOK_KEYS.has(open) ? 'notebook' : open === 'dex' || open === 'kid' ? 'dex' : open === 'garden' ? 'garden' : null;
+    const sheet = this.sheets.openKey;
+    const selected = sheet === null ? null : NOTEBOOK_KEYS.has(sheet) ? 'notebook' : sheet === 'dex' || sheet === 'kid' ? 'dex' : sheet === 'garden' ? 'garden' : null;
     for (const [key, cell] of this.trayCells) cell.classList.toggle('is-selected', selected === key);
   }
 
@@ -472,6 +564,8 @@ export class Hud {
     // While a sheet is open, a visible card keeps its time and nothing new is shown, so no
     // card plays out unseen behind the modal (GUI_MVP §9; Codex review, PR #39).
     if (this.sheets.isOpen) return;
+    // Likewise while a name bubble is open: feedback waits, out of sight (GUI_MVP §23.2).
+    if (this.bubble.openKey !== null) return;
     const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
     if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
       const r = this.queue.splice(refusal, 1)[0]!;
