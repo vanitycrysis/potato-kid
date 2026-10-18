@@ -820,6 +820,8 @@
     align-items: center;
     gap: 2px;
   }
+}
+
 /* The recipe window and rail (D-083, GUI_MVP §25.2-25.3): beside the finger, above the world and
    the HUD, below sheets; never takes input. */
 .recipe-window,

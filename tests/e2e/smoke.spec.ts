@@ -6232,6 +6232,15 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     await page.setViewportSize({ width: 640, height: 200 });
     await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
     await expect(card(page)).toHaveAttribute('data-flow', 'true');
+    // The player can scroll it: taller than the window, and scrollable, not clipped.
+    const scroll = await card(page).evaluate((e) => [getComputedStyle(e).overflowY, e.scrollHeight > e.clientHeight]);
+    expect(scroll).toEqual(['auto', true]);
+    // All in flow: the body keeps its height, so nothing spills over the controls.
+    const main = (await card(page).locator('.tutorial-main').boundingBox())!;
+    const foot = (await card(page).locator('.tutorial-footer').boundingBox())!;
+    expect(main.height).toBeGreaterThanOrEqual(44);
+    expect(main.y + main.height).toBeLessThanOrEqual(foot.y + 0.5);
+    expect(await card(page).locator('.tutorial-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
     const next = card(page).getByRole('button', { name: 'Next' });
     await next.scrollIntoViewIfNeeded();
     await expect(next).toBeInViewport({ ratio: 1 });
