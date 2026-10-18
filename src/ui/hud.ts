@@ -120,6 +120,7 @@ export class Hud {
         bottom: (document.querySelector('.tray')?.getBoundingClientRect().top ?? window.innerHeight) - 8,
       }),
       (key, trigger, content) => this.statHelp(key, trigger, content),
+      this.tip,
     );
     this.hud.append(
       this.stat('materials', 'hud-materials', 'icon_materials', this.materials),

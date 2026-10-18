@@ -32,6 +32,8 @@ export class NameBubble {
     private readonly frame: () => { left: number; right: number; below: number; bottom: number },
     /** It doesn't fit (a short screen, enlarged text): the same content as a help sheet (§23.2). */
     private readonly overflow: (key: string, trigger: HTMLElement, content: BubbleContent) => void,
+    /** The shared icon name: the Close names itself like every icon-only control (§23.2). */
+    private readonly tip: HTMLElement,
   ) {
     this.root.id = 'name-bubble';
     this.root.hidden = true;
@@ -39,6 +41,13 @@ export class NameBubble {
     this.close.type = 'button';
     this.close.setAttribute('aria-label', 'Close');
     this.close.addEventListener('click', () => this.hide(true));
+    // Hover, keyboard focus or a 450 ms hold shows "Close" just below it, inside the screen; a
+    // recognised hold doesn't also close the bubble (§23.2; Codex review, #105).
+    nameOnHold(this.close, 'Close', tip, (r) => {
+      const w = tip.offsetWidth;
+      tip.style.left = `${Math.max(8, Math.min(window.innerWidth - 8 - w, r.right - w))}px`;
+      tip.style.top = `${r.bottom + 4}px`;
+    });
     this.root.append(this.title, this.value, this.lines, this.close);
     document.body.append(this.root);
     // A tap anywhere else closes it; on the world it does only that, never a pickup or pan.
