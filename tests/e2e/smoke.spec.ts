@@ -6281,6 +6281,32 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     expect(Math.abs(spot.height - 6 - hud.height)).toBeLessThan(2);
   });
 
+  test('640 x 360: every compact illustration can be reached; a save banner stays clear of the card (Codex review round 4, #107)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    // Step 1's column is taller than the body: it starts at the body's top, so scrolling shows it all.
+    const reach = await card(page).locator('.tutorial-main').evaluate((m) => {
+      m.scrollTop = 0;
+      const first = m.querySelector('.tutorial-diagram')!.firstElementChild!.getBoundingClientRect().top;
+      return [m.scrollHeight > m.clientHeight, first - m.getBoundingClientRect().top];
+    });
+    expect(reach[0]).toBe(true);
+    expect(reach[1] as number).toBeGreaterThanOrEqual(-0.5);
+    // A persistent save banner: the card's header and Close stay below it, in view.
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.querySelector('.tutorial-card')!.getBoundingClientRect().top - document.querySelector('.banner')!.getBoundingClientRect().bottom),
+      )
+      .toBeGreaterThanOrEqual(0);
+    await expect(card(page).getByRole('button', { name: 'Skip tutorial' }).first()).toBeInViewport({ ratio: 1 });
+    // Now too short for the fixed regions: it scrolls as one, and Next comes into view below the banner.
+    const next = card(page).getByRole('button', { name: 'Next' });
+    await next.scrollIntoViewIfNeeded();
+    await expect(next).toBeInViewport({ ratio: 1 });
+    expect((await next.boundingBox())!.y).toBeGreaterThanOrEqual((await page.locator('.banner').boundingBox())!.y + (await page.locator('.banner').boundingBox())!.height);
+  });
+
   test('a very short window: the whole card scrolls, its controls reachable (Codex review round 2, #107)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 200 });
     await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');

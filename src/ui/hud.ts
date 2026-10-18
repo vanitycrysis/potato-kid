@@ -231,6 +231,8 @@ export class Hud {
       // The top stack starts below any banner (+ 8 px).
       const banner = this.banners.childElementCount ? this.banners.getBoundingClientRect().height + 8 : 0;
       this.top.style.marginTop = `${banner}px`;
+      // The tutorial's card keeps clear of it too.
+      document.documentElement.style.setProperty('--ui-banner', `${banner}px`);
       this.layout();
       // Page mode changes what scrolls an open sheet.
       this.sheets.place();

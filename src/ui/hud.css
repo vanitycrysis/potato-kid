@@ -700,7 +700,9 @@
   transform: translateX(-50%);
   bottom: calc(var(--ui-sb) + 8px);
   width: min(600px, calc(100vw - var(--ui-ml) - var(--ui-mr)));
-  max-height: calc(100vh - var(--ui-st) - var(--ui-sb) - 16px);
+  /* Clear of a persistent banner, as sheets are (`--ui-banner`, set by the HUD; Codex review
+     round 4, #107). */
+  max-height: calc(100vh - var(--ui-st) - var(--ui-sb) - 16px - var(--ui-banner, 0px));
   /* The body scrolls when it must; the header and the controls stay in view (§24.2). */
   overflow: hidden;
   padding: 4px;
@@ -818,6 +820,9 @@
     width: 80px;
     flex-direction: column;
     align-items: center;
+    /* Centred when the column fits; from its top when it doesn't, so scrolling reaches every
+       illustration (Codex review round 4, #107). */
+    justify-content: safe center;
     gap: 2px;
   }
 }
