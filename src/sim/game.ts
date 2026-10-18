@@ -471,6 +471,19 @@ export class Game {
     return kid.happy.favourite ? f.favouriteMultiplier : f.happyMultiplier;
   }
 
+  /**
+   * What releasing kid `heldId` onto kid `targetId` would make now (D-083's drag preview), or
+   * null: only a recipe pair the fusion step would take, so neither may be in its newborn
+   * grace (resolveFusions; Codex review, #103).
+   */
+  dropResult(heldId: number, targetId: number): KidId | null {
+    const kids = this.state.world.kids;
+    const a = kids.find((k) => k.id === heldId);
+    const b = kids.find((k) => k.id === targetId);
+    if (!a || !b || a.grace > 0 || b.grace > 0) return null;
+    return this.recipes.get(pairKey(a.type, b.type)) ?? null;
+  }
+
   incomeOf(type: KidId): number {
     return this.content.balance.economy.materialsPerSecond * 2 ** ((this.tiers.get(type) ?? 1) - 1);
   }

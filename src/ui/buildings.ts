@@ -3,7 +3,7 @@ import type { BuildingId, Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { GameEvent } from '../sim/game';
 import type { Arrivals } from './arrivals';
-import { el, icon, shortName, tierBadge } from './dom';
+import { el, icon, shortName, tierBadge, tierName } from './dom';
 import { refusalText } from './feedback';
 import { formatCount, formatExact, formatInterval } from './format';
 import { GardenPlots, type PlotsSnapshot } from './gardenPlots';
@@ -639,7 +639,7 @@ export class BuildingSheets {
   /** One discovered kid: portrait, name, tier and the two alternative prices (GUI_MVP §6). */
   private compendiumCard(type: KidId): CompendiumCard {
     const name = this.name(type);
-    const tier = this.content.kids.find((k) => k.id === type)?.tier ?? 1;
+    const def = this.content.kids.find((k) => k.id === type) ?? { tier: 1 };
     const buy = (pay: Pay) => {
       const price = el('span', '');
       const b = el(
@@ -663,7 +663,7 @@ export class BuildingSheets {
       'article',
       'comp-card ui-surface',
       this.portraits!.add(type),
-      el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', ...tierBadge(tier, 'ui-icon-24'), `Tier ${tier}`)),
+      el('div', 'comp-title', el('span', 'comp-name', name), el('span', 'tier comp-tier', ...tierBadge(def, 'ui-icon-24'), tierName(def))),
       el('div', 'comp-buys', ...buttons.map((x) => x.b)),
       arrived,
     );

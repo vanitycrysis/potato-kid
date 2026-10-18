@@ -1,7 +1,7 @@
 import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
-import { el } from './dom';
+import { el, tierName } from './dom';
 import { oddsLines } from './plantingNotes';
 import { portrait } from './portrait';
 
@@ -54,7 +54,8 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
   title.tabIndex = -1;
   const kid = live();
   const kind = kindMark(kidDef);
-  const marks = [`Tier ${kidDef?.tier ?? 1}`, `Kid ${o.ordinal}`, ...(kind ? [kind] : [])];
+  // The Special and Rare tiers show by name (D-082), so the kind isn't repeated.
+  const marks = [tierName(kidDef ?? { tier: 1 }), `Kid ${o.ordinal}`];
   const whoName = el('span', 'dex-home-row-name', o.displayName());
   const who = el(
     'div',
