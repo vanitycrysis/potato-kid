@@ -6644,10 +6644,10 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     // The player's text size, enlarged one and a half times.
     await page.addStyleTag({ content: '.nameplate { font-size: 24px; }' });
     await expect.poll(async () => (await page.evaluate(() => window.__PK__!.nameplates()))[0]?.height ?? 0).toBeGreaterThan(34);
+    // Fitted again at the new size, a frame later (its size is observed): now it needs an ellipsis.
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.nameplates()))[0]?.text ?? '').toMatch(/…$/);
     const after = (await page.evaluate(() => window.__PK__!.nameplates()))[0]!;
     expect(after.width).toBeLessThanOrEqual(120.5);
-    // Fitted again at the new size: now it needs an ellipsis.
-    expect(after.text.endsWith('…')).toBe(true);
     // Nothing clipped inside.
     const clipped = await page.locator('.nameplate:not(.nameplate-probe)').evaluate((e) => e.scrollHeight > e.clientHeight + 1);
     expect(clipped).toBe(false);

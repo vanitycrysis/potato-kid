@@ -522,7 +522,8 @@ export class Hud {
     if (this.asideForReturn || this.summaryOpen) return;
     const open = this.sheets.snapshot();
     this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
-    if (this.sheets.isOpen) this.sheets.close(false);
+    // Gone at once: it comes back after the return, and must not still be fading out then.
+    if (this.sheets.isOpen) this.sheets.close(false, true);
     this.asideForReturn = true;
   }
 

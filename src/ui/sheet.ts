@@ -228,8 +228,11 @@ export class Sheets {
     this.nextPage = { back };
   }
 
-  /** Closes the open sheet; focus returns to whatever opened it (GUI_MVP §2). */
-  close(restoreFocus = true): void {
+  /**
+   * Closes the open sheet; focus returns to whatever opened it (GUI_MVP §2). `instant`: gone at
+   * once, no fade (a sheet put aside, to come back later: it must not linger beside its return).
+   */
+  close(restoreFocus = true, instant = false): void {
     const c = this.current;
     if (!c) return;
     this.current = null;
@@ -250,7 +253,7 @@ export class Sheets {
     // Nor is it a dialog any more: assistive tech (and tests) see only the open one.
     c.sheet.removeAttribute('role');
     c.sheet.setAttribute('aria-hidden', 'true');
-    if (this.reducedMotion || !m || this.swapping) remove();
+    if (this.reducedMotion || !m || this.swapping || instant) remove();
     else {
       c.scrim.style.transition = `opacity ${m.closeMs}ms ease-in`;
       c.sheet.style.transition = `transform ${m.closeMs}ms ease-in, opacity ${m.closeMs}ms ease-in`;
