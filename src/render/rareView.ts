@@ -47,6 +47,17 @@ export function burstAt(ms: number, reduced: boolean, rare: boolean): { scale: n
   return { scale: 1 + (BURST_SCALE - 1) * t, alpha: 1 - t };
 }
 
+/** The sun's centre in fx_happy's 256 px source canvas (its trimmed art: 26, 191, 41 × 42). */
+const SUN_CENTRE: [number, number] = [46.5, 212];
+
+/**
+ * A happy kid's sun (D-092): centred on the top-right corner of its lifetime box, so it sits
+ * by the kid's head on the right whatever its body or costume. World position of the centre.
+ */
+export function sunAt(x: number, y: number, box: Box): { x: number; y: number } {
+  return { x: x + box.right, y: y + box.top };
+}
+
 /** What the layer needs of a kid this frame. */
 export interface RareKid {
   id: number;
@@ -60,7 +71,7 @@ export interface RareKid {
   box: Box;
   /** Its look scale. */
   scale: number;
-  /** Happy from food (D-056): the sun at its left foot, until it wears off (GUI_MVP §17.2). */
+  /** Happy from food (D-056): the sun at its top right (D-092), until it wears off (GUI_MVP §17.2). */
   happy?: boolean;
 }
 
@@ -117,10 +128,11 @@ export class RareLayer {
         item = { sleeve: null, happy: null };
         this.items.set(k.id, item);
       }
-      // Happy: a still sun at the left foot, at the kid's size, no motion.
+      // Happy: a still sun at the top right (D-092), at the kid's size, no motion.
       if (k.happy) {
-        item.happy ??= this.sprite('fx_happy', this.rig.groundAnchor);
-        item.happy.position.set(k.x, k.y);
+        item.happy ??= this.sprite('fx_happy', SUN_CENTRE);
+        const sun = sunAt(k.x, k.y, k.box);
+        item.happy.position.set(sun.x, sun.y);
         item.happy.scale.set((k.scale * this.rig.worldCanvasSize) / this.rig.canvas[0]);
       } else if (item.happy) {
         item.happy.destroy();
@@ -152,10 +164,11 @@ export class RareLayer {
   }
 
   /** Test hook: what each drawn rare shows. */
-  shown(): { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean }[] {
+  shown(): { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[] {
     return [...this.items].map(([id, i]) => ({
       id,
       happy: !!i.happy,
+      ...(i.happy ? { sun: { x: i.happy.x, y: i.happy.y } } : {}),
       sleeve: !!i.sleeve,
       sleeveAlpha: i.sleeve?.alpha ?? 0,
       sleeveScale: i.sleeve?.scale.x ?? 0,

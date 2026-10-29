@@ -1,0 +1,722 @@
+{
+  "schemaVersion": 1,
+  "revision": "round4-decorations-1",
+  "status": "review_pending",
+  "mapRevision": "round4-map-5",
+  "activityRig": "kid_activity_v1.json",
+  "coordinateContract": "All relative coordinates are unscaled world units about instance worldGround; art canvases are 512, pivot [256,400], scale 1. Kids use rig 180/256 times their unchanged saved appearance scale. Slot root is their ground anchor, not body centre. Rotation 0.",
+  "layerContract": "Render an entire decoration group in world depth order using worldGround.y + footprint bottom; inside group: back layer 10, slot left 20, slot right 21, front layer 30, splash FX 40. Preserve kid back/body/face/front inside each slot. Bench kids cover backrest and sit above the seat; bath/pond front occludes only lower body/feet. No screen-wide foreground layer. Ordinary walkers outside the footprint use normal world depth.",
+  "collisionContract": "Ordinary walkers keep the existing 16 gap from BOTH solidRects and silhouetteBoxRelative, plus occupied kids lifetime boxes. occupiedEnvelope is the conservative authoring reserve enclosing all slot silhouettes, not an extra invisible wall. Only a reserved entrant crosses its own decoration via dockPath; collision with every other kid/object/field stays active. Access paths are transient navigation, not permanent no-wander reserves; an approach can begin on a path. Slot acquisition and safe pickup/exit revalidation are Claude rules. Effects never collide.",
+  "admissionContract": "Both player drop and autonomous visit resolve to a free stable slot ID; never teleport an ordinary walker into a slot without reaching its approach. No auto replacement of a full slot. Raw camera-transformed pointer uses dropTargetRelative (468 by 300 world; at least 84.5 by 54.2 CSS px at 0.5x reference fit). Tap/pickup keeps the existing 44 px minimum and Which kid chooser; an occupied kid can always be picked up. Nearest free slot to raw pointer, stable slot ID breaks ties. A dragged kid may dock from a valid drop after reservation; pickup cancels occupancy immediately. No fusion with occupants while admitting. Claude owns hover/dwell/command rules and no-room resolution.",
+  "rulesOwner": "Claude: dwell duration, autonomous visit odds/cooldowns, happiness values/stronger-food precedence, capacity/income/fusion eligibility, saving slot occupancy and no-room behavior. No gameplay numbers are authored here.",
+  "definitions": {
+    "bench": {
+      "name": "Bench",
+      "capacity": 2,
+      "footprintRelative": [
+        -233,
+        -90,
+        233,
+        24
+      ],
+      "occupiedEnvelopeRelative": [
+        -244,
+        -235,
+        244,
+        30
+      ],
+      "collision": {
+        "solidRectsRelative": [
+          [
+            -233,
+            -90,
+            233,
+            24
+          ]
+        ],
+        "ordinaryKidClearance": 16,
+        "silhouetteBoxRelative": [
+          -234,
+          -207,
+          234,
+          24
+        ]
+      },
+      "layers": [
+        {
+          "asset": "landmark_activity_bench_back",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 10
+        },
+        {
+          "asset": "landmark_activity_bench_front",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 30
+        }
+      ],
+      "slots": [
+        {
+          "id": "left",
+          "groundRelative": [
+            -108,
+            -55
+          ],
+          "approachGroundRelative": [
+            -108,
+            240
+          ],
+          "entryGroundRelative": [
+            -108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              -108,
+              240
+            ],
+            [
+              -108,
+              100
+            ],
+            [
+              -108,
+              -55
+            ]
+          ],
+          "drawOrder": 20,
+          "pose": "decoration_sitting",
+          "clip": "decoration_sitting",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        },
+        {
+          "id": "right",
+          "groundRelative": [
+            108,
+            -55
+          ],
+          "approachGroundRelative": [
+            108,
+            240
+          ],
+          "entryGroundRelative": [
+            108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              108,
+              240
+            ],
+            [
+              108,
+              100
+            ],
+            [
+              108,
+              -55
+            ]
+          ],
+          "drawOrder": 21,
+          "pose": "decoration_sitting",
+          "clip": "decoration_sitting",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        }
+      ],
+      "dropTargetRelative": [
+        -234,
+        -210,
+        234,
+        90
+      ]
+    },
+    "bird_bath": {
+      "name": "Bird bath",
+      "capacity": 2,
+      "footprintRelative": [
+        -230,
+        -130,
+        230,
+        48
+      ],
+      "occupiedEnvelopeRelative": [
+        -244,
+        -225,
+        244,
+        50
+      ],
+      "collision": {
+        "solidRectsRelative": [
+          [
+            -230,
+            -130,
+            230,
+            48
+          ]
+        ],
+        "ordinaryKidClearance": 16,
+        "silhouetteBoxRelative": [
+          -234,
+          -146,
+          234,
+          50
+        ]
+      },
+      "layers": [
+        {
+          "asset": "landmark_activity_bath_back",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 10
+        },
+        {
+          "asset": "landmark_activity_bath_front",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 30
+        }
+      ],
+      "slots": [
+        {
+          "id": "left",
+          "groundRelative": [
+            -108,
+            -40
+          ],
+          "approachGroundRelative": [
+            -108,
+            240
+          ],
+          "entryGroundRelative": [
+            -108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              -108,
+              240
+            ],
+            [
+              -108,
+              100
+            ],
+            [
+              -108,
+              -40
+            ]
+          ],
+          "drawOrder": 20,
+          "pose": "decoration_sitting",
+          "clip": "decoration_splash",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        },
+        {
+          "id": "right",
+          "groundRelative": [
+            108,
+            -40
+          ],
+          "approachGroundRelative": [
+            108,
+            240
+          ],
+          "entryGroundRelative": [
+            108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              108,
+              240
+            ],
+            [
+              108,
+              100
+            ],
+            [
+              108,
+              -40
+            ]
+          ],
+          "drawOrder": 21,
+          "pose": "decoration_sitting",
+          "clip": "decoration_splash",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        }
+      ],
+      "dropTargetRelative": [
+        -234,
+        -210,
+        234,
+        90
+      ]
+    },
+    "picnic_blanket": {
+      "name": "Picnic blanket",
+      "capacity": 2,
+      "footprintRelative": [
+        -228,
+        -130,
+        228,
+        48
+      ],
+      "occupiedEnvelopeRelative": [
+        -244,
+        -210,
+        244,
+        50
+      ],
+      "collision": {
+        "solidRectsRelative": [
+          [
+            -228,
+            -130,
+            228,
+            48
+          ]
+        ],
+        "ordinaryKidClearance": 16,
+        "note": "Soft material, but occupied space is reserved so ordinary kids do not walk across seated faces.",
+        "silhouetteBoxRelative": [
+          -230,
+          -132,
+          230,
+          50
+        ]
+      },
+      "layers": [
+        {
+          "asset": "landmark_activity_blanket",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 10
+        }
+      ],
+      "slots": [
+        {
+          "id": "left",
+          "groundRelative": [
+            -108,
+            -30
+          ],
+          "approachGroundRelative": [
+            -108,
+            240
+          ],
+          "entryGroundRelative": [
+            -108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              -108,
+              240
+            ],
+            [
+              -108,
+              100
+            ],
+            [
+              -108,
+              -30
+            ]
+          ],
+          "drawOrder": 20,
+          "pose": "decoration_sitting",
+          "clip": "decoration_sitting",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        },
+        {
+          "id": "right",
+          "groundRelative": [
+            108,
+            -30
+          ],
+          "approachGroundRelative": [
+            108,
+            240
+          ],
+          "entryGroundRelative": [
+            108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              108,
+              240
+            ],
+            [
+              108,
+              100
+            ],
+            [
+              108,
+              -30
+            ]
+          ],
+          "drawOrder": 21,
+          "pose": "decoration_sitting",
+          "clip": "decoration_sitting",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        }
+      ],
+      "dropTargetRelative": [
+        -234,
+        -210,
+        234,
+        90
+      ]
+    },
+    "shallow_pond": {
+      "name": "Little pond",
+      "capacity": 2,
+      "footprintRelative": [
+        -235,
+        -150,
+        235,
+        48
+      ],
+      "occupiedEnvelopeRelative": [
+        -244,
+        -210,
+        244,
+        50
+      ],
+      "collision": {
+        "solidRectsRelative": [
+          [
+            -235,
+            -150,
+            235,
+            48
+          ]
+        ],
+        "ordinaryKidClearance": 16,
+        "silhouetteBoxRelative": [
+          -244,
+          -160,
+          244,
+          50
+        ]
+      },
+      "layers": [
+        {
+          "asset": "landmark_activity_pond_back",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 10
+        },
+        {
+          "asset": "landmark_activity_pond_front",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 30
+        }
+      ],
+      "slots": [
+        {
+          "id": "left",
+          "groundRelative": [
+            -108,
+            -18
+          ],
+          "approachGroundRelative": [
+            -108,
+            240
+          ],
+          "entryGroundRelative": [
+            -108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              -108,
+              240
+            ],
+            [
+              -108,
+              100
+            ],
+            [
+              -108,
+              -18
+            ]
+          ],
+          "drawOrder": 20,
+          "pose": "decoration_sitting",
+          "clip": "decoration_splash",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        },
+        {
+          "id": "right",
+          "groundRelative": [
+            108,
+            -18
+          ],
+          "approachGroundRelative": [
+            108,
+            240
+          ],
+          "entryGroundRelative": [
+            108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              108,
+              240
+            ],
+            [
+              108,
+              100
+            ],
+            [
+              108,
+              -18
+            ]
+          ],
+          "drawOrder": 21,
+          "pose": "decoration_sitting",
+          "clip": "decoration_splash",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        }
+      ],
+      "dropTargetRelative": [
+        -234,
+        -210,
+        234,
+        90
+      ]
+    },
+    "sitting_log": {
+      "name": "Sitting log",
+      "capacity": 2,
+      "footprintRelative": [
+        -215,
+        -85,
+        225,
+        36
+      ],
+      "occupiedEnvelopeRelative": [
+        -244,
+        -235,
+        244,
+        40
+      ],
+      "collision": {
+        "solidRectsRelative": [
+          [
+            -215,
+            -85,
+            225,
+            36
+          ]
+        ],
+        "ordinaryKidClearance": 16,
+        "silhouetteBoxRelative": [
+          -220,
+          -88,
+          228,
+          40
+        ]
+      },
+      "layers": [
+        {
+          "asset": "landmark_activity_log",
+          "sourcePivot": [
+            256,
+            400
+          ],
+          "scale": 1,
+          "rotationDeg": 0,
+          "drawOrder": 10
+        }
+      ],
+      "slots": [
+        {
+          "id": "left",
+          "groundRelative": [
+            -108,
+            -55
+          ],
+          "approachGroundRelative": [
+            -108,
+            240
+          ],
+          "entryGroundRelative": [
+            -108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              -108,
+              240
+            ],
+            [
+              -108,
+              100
+            ],
+            [
+              -108,
+              -55
+            ]
+          ],
+          "drawOrder": 20,
+          "pose": "decoration_sitting",
+          "clip": "decoration_sitting",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        },
+        {
+          "id": "right",
+          "groundRelative": [
+            108,
+            -55
+          ],
+          "approachGroundRelative": [
+            108,
+            240
+          ],
+          "entryGroundRelative": [
+            108,
+            100
+          ],
+          "dockPathRelative": [
+            [
+              108,
+              240
+            ],
+            [
+              108,
+              100
+            ],
+            [
+              108,
+              -55
+            ]
+          ],
+          "drawOrder": 21,
+          "pose": "decoration_sitting",
+          "clip": "decoration_sitting",
+          "appearanceScale": "preserve",
+          "facing": "front",
+          "reachableFrom": "south",
+          "reachRule": "Walk to approach with normal kid/scenery collision. Reserve slot before docking; only the reserved kid may cross this decoration collision via dockPath. Reverse on departure; validate free approach on entry and exit. Never grant a global collision exemption."
+        }
+      ],
+      "dropTargetRelative": [
+        -234,
+        -210,
+        234,
+        90
+      ]
+    }
+  },
+  "instances": [
+    {
+      "id": "activity_bench_northwest",
+      "definition": "bench",
+      "worldGround": [
+        1300,
+        1240
+      ]
+    },
+    {
+      "id": "activity_pond_northeast",
+      "definition": "shallow_pond",
+      "worldGround": [
+        1810,
+        650
+      ]
+    },
+    {
+      "id": "activity_log_east",
+      "definition": "sitting_log",
+      "worldGround": [
+        2372,
+        2780
+      ]
+    },
+    {
+      "id": "activity_bath_southwest",
+      "definition": "bird_bath",
+      "worldGround": [
+        680,
+        3960
+      ],
+      "replacesSceneryId": "zone_1_0_birdbath"
+    },
+    {
+      "id": "activity_bench_southeast",
+      "definition": "bench",
+      "worldGround": [
+        2392,
+        3960
+      ],
+      "replacesSceneryId": "zone_3_2_bench"
+    },
+    {
+      "id": "activity_picnic_southwest",
+      "definition": "picnic_blanket",
+      "worldGround": [
+        850,
+        4800
+      ]
+    }
+  ]
+}

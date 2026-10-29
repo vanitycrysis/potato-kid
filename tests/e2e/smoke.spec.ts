@@ -3128,7 +3128,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('its favourite: one bite from the pantry, happy for longer, the sun at its foot; the hated food is refused, nothing used', async ({ page }) => {
+  test('its favourite: one bite from the pantry, happy for longer, the sun at its top right (D-092); the hated food is refused, nothing used', async ({ page }) => {
     const id = await open(page);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
     await expect(card(page).locator('.sheet-title')).toHaveText('Feed Fire Kid');
@@ -3147,6 +3147,14 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     // Feeding costs no Materials (D-069).
     expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeGreaterThanOrEqual(1000);
     await expect.poll(() => page.evaluate((i) => window.__PK__!.rares().find((r) => r.id === i)?.happy ?? false, id)).toBe(true);
+    // The sun sits by its head on the right (D-092): right of its middle, above most of its body.
+    const marks = await page.evaluate((i) => {
+      const pk = window.__PK__!;
+      const sun = pk.rares().find((r) => r.id === i)!.sun!;
+      return { sun: pk.worldToScreen(sun.x, sun.y), feet: pk.screenPointOf(i)! };
+    }, id);
+    expect(marks.sun.x).toBeGreaterThan(marks.feet.x + 10);
+    expect(marks.sun.y).toBeLessThan(marks.feet.y - 30);
     await card(page).getByRole('button', { name: 'Back' }).click();
     await expect(card(page).locator('.kid-card-happy')).toContainText(/Happy · (1:00:00|59:5\d)/);
     await expect(card(page).locator('.kid-card-happy')).toContainText('Counts as Tier 2 when added to a plot; odds stay capped.');
@@ -6361,5 +6369,52 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     }
     await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
     await expect(page.locator('.feedback')).toContainText('Not enough');
+  });
+});
+
+test.describe('A kid near the top of the screen opens its card by touch (owner bug, TOP-EDGE-TAP)', () => {
+  /** A Fire Kid mid-map, the camera moved so its feet stand at screen y = `feet`. */
+  async function kidWithFeetAt(page: Page, feet: number): Promise<{ x: number; y: number }> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1500, 2000));
+    const at = (y: number) =>
+      page.evaluate(([i, y]) => {
+        window.__PK__!.centerOn(1500, y);
+        return window.__PK__!.screenPointOf(i)!;
+      }, [id, y] as const);
+    const a = await at(2000);
+    const b = await at(2100);
+    const p = await at(2000 + ((a.y - feet) * 100) / (a.y - b.y));
+    expect(p.y).toBeCloseTo(feet, 0);
+    await page.waitForTimeout(200);
+    return p;
+  }
+
+  test('a tap above the card\'s top edge: the click that follows lands on the scrim and must not close the card', async ({ page }) => {
+    const feet = await kidWithFeetAt(page, 160);
+    await page.touchscreen.tap(feet.x, feet.y - 30);
+    const card = page.getByRole('dialog');
+    await expect(card.locator('.sheet-title')).toHaveText('Fire Kid');
+    // The tap point is on the scrim, above the card, so a stray click would have closed it.
+    expect((await card.boundingBox())!.y).toBeGreaterThan(feet.y - 30);
+    await page.waitForTimeout(300);
+    await expect(card).toBeVisible();
+    // A real tap on the scrim still closes it.
+    await page.touchscreen.tap(feet.x, feet.y - 30);
+    await expect(card).toBeHidden();
+  });
+
+  test('a tap on the kid just under a stat chip is the kid\'s, not the chip\'s', async ({ page }) => {
+    const feet = await kidWithFeetAt(page, 95);
+    const box = (await page.locator('.hud-potatokens').boundingBox())!;
+    // The kid is under the middle chip; the tap is on its visible body, a few px below the chip.
+    expect(feet.x).toBeGreaterThan(box.x);
+    expect(feet.x).toBeLessThan(box.x + box.width);
+    const y = box.y + box.height + 3;
+    expect(y).toBeLessThan(feet.y - 5);
+    expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.tagName, [feet.x, y] as const)).toBe('CANVAS');
+    await page.touchscreen.tap(feet.x, y);
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Fire Kid');
+    await expect(page.locator('.name-bubble')).toBeHidden();
   });
 });
