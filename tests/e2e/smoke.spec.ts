@@ -6744,3 +6744,28 @@ test("every discovered rare's portrait moves in its sleeve, in lists too; hidden
   });
   await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-play-state', 'running');
 });
+
+test('opening and closing rare cards never piles up watched sleeves (Codex review round 3, #116)', async ({ page }) => {
+  await boot(page, '?seed=3&debug=1&calm=1');
+  const id = await page.evaluate(() => {
+    const pk = window.__PK__!;
+    const id = pk.debugAdd!('rainbow', 1076, 3048);
+    pk.centerOn(1076, 2998);
+    return id;
+  });
+  await page.waitForTimeout(300);
+  for (let i = 0; i < 6; i++) {
+    const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.click(at.x, at.y - 20);
+    await expect(page.getByRole('dialog', { name: 'Rainbow Kid' }).locator('.portrait-sleeve')).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  }
+  // Only what is on screen now (nothing) stays watched, once a frame has passed.
+  await page.waitForTimeout(100);
+  const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+  await page.mouse.click(at.x, at.y - 20);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(1);
+});
+

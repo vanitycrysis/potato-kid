@@ -179,19 +179,44 @@ export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: {
  * (§27.7): no catch-up. One observer and one listener for them all.
  */
 let sleeveObserver: IntersectionObserver | null | undefined;
+/** The sleeves observed now: one gone from the page is let go, so nothing detached is kept (Codex review, #116). */
+const watched = new Set<Element>();
+function release(sleeve: Element): void {
+  sleeveObserver?.unobserve(sleeve);
+  watched.delete(sleeve);
+}
 function watchSleeve(sleeve: HTMLElement): void {
   if (sleeveObserver === undefined) {
     sleeveObserver =
       typeof IntersectionObserver === 'undefined'
         ? null
         : new IntersectionObserver((entries) => {
-            for (const e of entries) e.target.classList.toggle('is-offscreen', !e.isIntersecting);
+            for (const e of entries) {
+              if (!e.target.isConnected) release(e.target);
+              else e.target.classList.toggle('is-offscreen', !e.isIntersecting);
+            }
           });
     const hidden = () => document.documentElement.classList.toggle('app-hidden', document.hidden);
     document.addEventListener('visibilitychange', hidden);
     hidden();
   }
-  sleeveObserver?.observe(sleeve);
+  if (!sleeveObserver) return;
+  sleeveObserver.observe(sleeve);
+  watched.add(sleeve);
+  // Next frame (after a list is appended), any sleeve whose portrait was thrown away is released.
+  if (!sweeping) {
+    sweeping = true;
+    requestAnimationFrame(() => {
+      sweeping = false;
+      for (const w of [...watched]) if (!w.isConnected) release(w);
+    });
+  }
+}
+let sweeping = false;
+
+/** Test hook: how many sleeves are observed now. */
+export function watchedSleeves(): number {
+  return watched.size;
 }
 
 /**
