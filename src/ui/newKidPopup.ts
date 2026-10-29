@@ -265,6 +265,9 @@ export class NewKidPopup {
     // The first of a run remembers what had focus; the rest keep that (§27.4).
     if (this.restoreTo === undefined) this.restoreTo = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
     document.body.append(scrim, dialog);
+    // The page-mode layout (§3.1) puts it in the page's flow, in place of the HUD and tray.
+    document.documentElement.dataset.arrivalOpen = 'true';
+    if (document.documentElement.dataset.hudFit === 'page') dialog.scrollIntoView({ block: 'start' });
     for (const b of this.background()) b.inert = true;
     this.pauseInput(true);
     this.open = { meeting: m, scrim, dialog, sprite, art, idle: 0, reduced, layout };
@@ -290,6 +293,7 @@ export class NewKidPopup {
 
   private unmount(): void {
     const o = this.open!;
+    delete document.documentElement.dataset.arrivalOpen;
     o.scrim.remove();
     o.dialog.remove();
     for (const b of this.background()) b.inert = false;

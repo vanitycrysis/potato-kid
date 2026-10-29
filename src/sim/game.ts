@@ -222,6 +222,8 @@ export interface OfflineReport {
   /** Potatokens from Dex milestones that offline spawns reached. */
   potatokens: number;
   spawned: Kid[];
+  /** Potatokens each arrival brought (a Dex milestone it reached), by kid id; included in `potatokens`. */
+  awards: Record<number, number>;
   /** Plots ready on return but waiting for room. */
   plotsWaiting: number;
   /** Bites the fields grew while away, by food (D-069). */
@@ -647,6 +649,7 @@ export class Game {
 
     const events: GameEvent[] = [];
     const spawned: Kid[] = [];
+    const awards: Record<number, number> = {};
     /** Offline arrivals, seconds into the absence. */
     const arrived = new Map<number, number>();
     // Each kid earns its base rate for the whole absence, and its happy extra only until the
@@ -680,8 +683,12 @@ export class Game {
     let last: number | undefined;
     // Tolerance absorbs float drift, as in advanceSpawn.
     while (s.world.kids.length < this.capacity && t <= away + 1e-6) {
+      const before = events.length;
       const kid = this.spawnAtOutlet(() => this.rollSpawnType(), 'offline', events);
       if (!kid) break;
+      // What this arrival earned (a Dex milestone, D-087): its popup says so.
+      const earned = events.slice(before).reduce((n, e) => n + (e.type === 'earned' ? e.potatokens : 0), 0);
+      if (earned > 0) awards[kid.id] = earned;
       s.gardenSpawns++;
       admit(kid, t);
       last = t;
@@ -709,7 +716,7 @@ export class Game {
     let potatokens = 0;
     for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;
     const plotsWaiting = s.plots.filter((p) => this.plotReady(p)).length;
-    return { seconds: away, materials, potatokens, spawned, plotsWaiting, food };
+    return { seconds: away, materials, potatokens, spawned, awards, plotsWaiting, food };
   }
 
   /**

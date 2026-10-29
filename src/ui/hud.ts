@@ -330,7 +330,7 @@ export class Hud {
       for (const k of report.spawned) {
         if (!this.options.arrivals || this.known.has(k.type) || fresh.has(k.type)) continue;
         fresh.add(k.type);
-        this.popup.add({ source: 'garden', type: k.type, look: { body: k.look.body, face: k.look.face, scale: k.look.scale }, isNew: true, potatokens: 0, kidId: k.id });
+        this.popup.add({ source: 'garden', type: k.type, look: { body: k.look.body, face: k.look.face, scale: k.look.scale }, isNew: true, potatokens: report.awards[k.id] ?? 0, kidId: k.id });
       }
       for (const t of scene.game.state.discoveredKids) this.known.add(t);
       this.offlineSummary(report, fresh.size);

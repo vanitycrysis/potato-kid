@@ -7270,6 +7270,28 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     expect(after! - before!).toBeLessThanOrEqual(frame + 0.02);
   });
 
+  test('page mode: the popup is in the page flow below the banner, all of it reachable, in place of the HUD and tray (Codex review round 6, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 300, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic' }));
+    await expect(popup(page)).toHaveCount(1);
+    await expect(popup(page)).toHaveCSS('position', 'static');
+    await expect(page.locator('.top-stack')).toBeHidden();
+    await expect(page.locator('.tray')).toBeHidden();
+    // Below the banner, and every control can be scrolled to.
+    const banner = (await page.locator('.banners').boundingBox())!;
+    const top = await popup(page).evaluate((e) => e.getBoundingClientRect().top + document.scrollingElement!.scrollTop);
+    expect(top).toBeGreaterThanOrEqual(banner.y + banner.height - 0.5);
+    const go = popup(page).getByRole('button', { name: 'Continue', exact: true });
+    await go.scrollIntoViewIfNeeded();
+    await expect(go).toBeInViewport({ ratio: 1 });
+    await go.click();
+    await expect(popup(page)).toHaveCount(0);
+    await expect(page.locator('.top-stack')).toBeVisible();
+  });
+
   test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
