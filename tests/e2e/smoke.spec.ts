@@ -45,7 +45,7 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
   await expect(page.locator('.hud-value')).toHaveText(`${start}/12`);
   await page.screenshot({ path: 'test-results/boot.png' });
   // A real first run offers the tutorial (D-078); skipped, the game is in front.
-  await page.locator('#tutorial-card').getByRole('button', { name: 'Skip tutorial' }).click();
+  await page.locator('#tutorial-card').getByRole('button', { name: 'Skip introduction' }).click();
   // The timer lives in the Garden's Arrivals now (GUI_MVP §19.2).
   await page.locator('[data-nav=garden]').click();
   await expect(page.locator('.arrivals-next')).toContainText('Next kid');
@@ -6296,85 +6296,96 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
   });
 });
 
-test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
+test.describe('the first-run introduction (D-086, GUI_MVP §27.1)', () => {
   const card = (page: Page) => page.locator('#tutorial-card');
-  const record = (page: Page) => page.evaluate(() => window.__PK__!.settings().guidedTutorial);
-  const titles = ['A garden of discoveries', 'Pick up, hover, fuse', 'Know your numbers', 'The Garden brings new kids', 'Plant for a surprise', 'Farm food, then feed', 'Keep your discoveries', 'Your Notebook of tools'];
+  const lessons = (page: Page) => page.evaluate(() => window.__PK__!.lessons() as { intro: string; introPage: number; seen: string[]; pending: string[]; firstFusion: boolean });
+  const titles = ['A garden of discoveries', 'Two kids, one discovery', 'Keep every discovery'];
 
-  test('a first run offers it at step 1; Next and Back walk the eight cards; Finish closes it for good', async ({ page }) => {
+  test('a first run offers it at page 1; Next and Back walk the three cards; Done closes it for good', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
     await expect(card(page)).toBeVisible();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 1 of 8');
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Welcome · 1 of 3');
     await expect(card(page).locator('.tutorial-title')).toBeFocused();
     // The world and the HUD wait meanwhile (§2).
     expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(true);
     await expect(card(page).getByRole('button', { name: 'Back' })).toHaveCount(0);
-    for (let i = 0; i < 8; i++) {
+    await expect(card(page).getByRole('button', { name: 'Skip introduction' })).toBeVisible();
+    for (let i = 0; i < 3; i++) {
       await expect(card(page).locator('.tutorial-title')).toHaveText(titles[i]!);
-      await expect(card(page).locator('.tutorial-title')).toHaveAttribute('aria-label', `Step ${i + 1} of 8: ${titles[i]}`);
-      expect(await record(page)).toEqual({ version: 1, status: 'inProgress', nextStep: i + 1 });
+      await expect(card(page).locator('.tutorial-title')).toHaveAttribute('aria-label', `Welcome · ${i + 1} of 3: ${titles[i]}`);
+      expect(await lessons(page)).toMatchObject({ intro: 'inProgress', introPage: i + 1 });
       if (i === 1) {
-        // The demo recipe's result is dark, unnamed (§25.2's mystery): drawn as a silhouette.
-        await expect(card(page).locator('.recipe-unfound')).toHaveCount(1);
-        expect(await card(page).locator('.recipe-unfound').evaluate((e) => getComputedStyle(e).filter)).toContain('brightness(0)');
+        // A labelled demo: two kids, a plus, an arrow and the unknown result; nothing is found.
+        await expect(card(page).locator('.tutorial-kid')).toHaveCount(2);
+        await expect(card(page).locator('[data-icon="icon_unknown"]')).toHaveCount(1);
         await card(page).getByRole('button', { name: 'Back' }).click();
         await expect(card(page).locator('.tutorial-title')).toHaveText(titles[0]!);
         await card(page).getByRole('button', { name: 'Next' }).click();
       }
-      if (i < 7) await card(page).getByRole('button', { name: 'Next' }).click();
+      if (i < 2) await card(page).getByRole('button', { name: 'Next' }).click();
     }
-    await expect(card(page).getByRole('button', { name: 'Next' })).toHaveCount(0);
-    await card(page).getByRole('button', { name: 'Finish' }).click();
+    // Page 3 outlines the Dex control.
+    const dex = (await page.locator('[data-nav=dex]').boundingBox())!;
+    const spot = (await page.locator('.tutorial .tutorial-spot').boundingBox())!;
+    expect(Math.abs(spot.x + 3 - dex.x)).toBeLessThan(2);
+    await card(page).getByRole('button', { name: 'Done' }).click();
     await expect(card(page)).toBeHidden();
-    expect(await record(page)).toEqual({ version: 1, status: 'completed', nextStep: 8 });
+    expect((await lessons(page)).intro).toBe('completed');
     await expect(page.locator('[data-nav=garden]')).toBeFocused();
-    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
     await page.waitForTimeout(300);
     await expect(card(page)).toBeHidden();
   });
 
-  test('Escape skips it, for good; an unfinished one resumes at its step', async ({ page }) => {
+  test('Escape skips it for good; an unfinished one resumes at its page, saved with the game at each page', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
     await card(page).getByRole('button', { name: 'Next' }).click();
     await card(page).getByRole('button', { name: 'Next' }).click();
+    // Saved as the page turned: a crash now (no save on the way out) still resumes at page 3.
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      Storage.prototype.setItem = () => {};
+    });
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 3 of 8');
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Welcome · 3 of 3');
     await page.keyboard.press('Escape');
     await expect(card(page)).toBeHidden();
-    expect((await record(page)).status).toBe('skipped');
+    expect((await lessons(page)).intro).toBe('skipped');
+    await page.waitForTimeout(300);
     await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
     await page.waitForTimeout(300);
     await expect(card(page)).toBeHidden();
   });
 
-  test('replayed from the Icon guide over its sheet: its own header, the record kept, focus back on Replay', async ({ page }) => {
+  test('a tap outside skips; keyboard focus stays in the card', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
-    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
-    expect((await record(page)).status).toBe('skipped');
-    await page.locator('[data-nav=notebook]').click();
-    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Icon guide', exact: true }).click();
-    const guide = page.getByRole('dialog', { name: 'Icon guide' });
-    await guide.getByRole('button', { name: 'Replay tutorial' }).click();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
-    await card(page).getByRole('button', { name: 'Next' }).click();
-    // Escape is the tutorial's, not the sheet's beneath it.
-    await page.keyboard.press('Escape');
+    await card(page).getByRole('button', { name: 'Skip introduction' }).focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeFocused();
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
+    }
+    await page.mouse.click(10, 120);
     await expect(card(page)).toBeHidden();
-    await expect(guide).toBeVisible();
-    await expect(guide.getByRole('button', { name: 'Replay tutorial' })).toBeFocused();
-    expect(await record(page)).toEqual({ version: 1, status: 'skipped', nextStep: 1 });
-    // Settings has it too.
-    await page.getByRole('button', { name: 'Back to Notebook' }).click();
-    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
+    expect((await lessons(page)).intro).toBe('skipped');
   });
 
-  test('the return summary comes first: the tutorial steps aside and comes back at its step; then the game is in front (Codex review, #107)', async ({ page }) => {
+  test('centred, 360 px wide: at 390 x 844 and 640 x 360 its controls are in view', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
+    const box = (await card(page).boundingBox())!;
+    expect(box.width).toBeCloseTo(360, 0);
+    expect(Math.abs(box.x + box.width / 2 - page.viewportSize()!.width / 2)).toBeLessThan(2);
+    await page.setViewportSize({ width: 640, height: 360 });
+    await frames(page, 2);
+    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
+    await expect(card(page).locator('.tutorial-title')).toBeInViewport({ ratio: 1 });
+  });
+
+  test('a return summary comes first: the card steps aside and comes back at its page', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
     await card(page).getByRole('button', { name: 'Next' }).click();
     await page.evaluate(() => window.__PK__!.debugAway!(120_000));
@@ -6382,140 +6393,222 @@ test.describe('the first-run tutorial (D-078, GUI_MVP §24)', () => {
     await expect(summary).toBeVisible();
     await expect(card(page)).toBeHidden();
     await summary.getByRole('button', { name: 'Back to the garden' }).click();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
-    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
-    // Nothing is left inert or paused behind it: a drag on empty ground pans the map.
-    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
-    const before = await page.evaluate(() => window.__PK__!.worldToScreen(0, 0));
-    await page.mouse.move(200, 600);
-    await page.mouse.down();
-    await page.mouse.move(200, 400, { steps: 6 });
-    await page.mouse.up();
-    await frames(page, 2);
-    expect(before.y - (await page.evaluate(() => window.__PK__!.worldToScreen(0, 0))).y).toBeGreaterThan(100);
-    await page.locator('[data-nav=garden]').click();
-    await expect(page.getByRole('dialog', { name: 'Garden' })).toBeVisible();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Welcome · 2 of 3');
   });
 
-  test('keyboard focus stays in the card; a tap outside it skips (Codex review, #107)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
-    await expect(card(page).locator('.tutorial-title')).toBeFocused();
-    // Close is first, Next last: Shift+Tab from Close wraps to Next.
-    await card(page).getByRole('button', { name: 'Skip tutorial' }).focus();
-    await page.keyboard.press('Shift+Tab');
-    await expect(card(page).getByRole('button', { name: 'Next' })).toBeFocused();
-    await page.keyboard.press('Tab');
-    expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
-    for (let i = 0; i < 6; i++) {
-      await page.keyboard.press('Tab');
-      expect(await page.evaluate(() => !!document.activeElement?.closest('#tutorial-card'))).toBe(true);
-    }
-    await page.mouse.click(10, 300);
-    await expect(card(page)).toBeHidden();
-    expect((await record(page)).status).toBe('skipped');
-  });
-
-  test('640 x 360: the card keeps its controls in view; the spotlight follows a resize (Codex review, #107)', async ({ page }) => {
-    await page.setViewportSize({ width: 640, height: 360 });
-    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
-    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
-    // Enlarged text: the body scrolls, the controls stay in view.
-    await page.addStyleTag({ content: '.tutorial-text { font-size: 30px !important; line-height: 36px !important; }' });
-    await frames(page, 2);
-    await expect(card(page).getByRole('button', { name: 'Next' })).toBeInViewport({ ratio: 1 });
-    await expect(card(page).locator('.tutorial-title')).toBeInViewport({ ratio: 1 });
-    await card(page).getByRole('button', { name: 'Next' }).click();
-    await card(page).getByRole('button', { name: 'Next' }).click();
-    await expect(card(page).locator('.tutorial-title')).toHaveText('Know your numbers');
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForTimeout(300);
-    const hud = (await page.locator('.hud').boundingBox())!;
-    const spot = (await page.locator('.tutorial-spot').boundingBox())!;
-    expect(Math.abs(spot.x + 3 - hud.x)).toBeLessThan(2);
-    expect(Math.abs(spot.width - 6 - hud.width)).toBeLessThan(2);
-    // Vertically too: leaving the compact layout moves the HUD down 16 px (Codex review round 3, #107).
-    expect(Math.abs(spot.y + 3 - hud.y)).toBeLessThan(2);
-    expect(Math.abs(spot.height - 6 - hud.height)).toBeLessThan(2);
-  });
-
-  test('640 x 360: every compact illustration can be reached; a save banner stays clear of the card (Codex review round 4, #107)', async ({ page }) => {
-    await page.setViewportSize({ width: 640, height: 360 });
-    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
-    // Step 1's column is taller than the body: it starts at the body's top, so scrolling shows it all.
-    const reach = await card(page).locator('.tutorial-main').evaluate((m) => {
-      m.scrollTop = 0;
-      const first = m.querySelector('.tutorial-diagram')!.firstElementChild!.getBoundingClientRect().top;
-      return [m.scrollHeight > m.clientHeight, first - m.getBoundingClientRect().top];
-    });
-    expect(reach[0]).toBe(true);
-    expect(reach[1] as number).toBeGreaterThanOrEqual(-0.5);
-    // A persistent save banner: the card's header and Close stay below it, in view.
-    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
-    await expect
-      .poll(() =>
-        page.evaluate(() => document.querySelector('.tutorial-card')!.getBoundingClientRect().top - document.querySelector('.banner')!.getBoundingClientRect().bottom),
-      )
-      .toBeGreaterThanOrEqual(0);
-    await expect(card(page).getByRole('button', { name: 'Skip tutorial' }).first()).toBeInViewport({ ratio: 1 });
-    // Now too short for the fixed regions: it scrolls as one, and Next comes into view below the banner.
-    const next = card(page).getByRole('button', { name: 'Next' });
-    await next.scrollIntoViewIfNeeded();
-    await expect(next).toBeInViewport({ ratio: 1 });
-    expect((await next.boundingBox())!.y).toBeGreaterThanOrEqual((await page.locator('.banner').boundingBox())!.y + (await page.locator('.banner').boundingBox())!.height);
-  });
-
-  test('a very short window: the whole card scrolls, its controls reachable (Codex review round 2, #107)', async ({ page }) => {
-    await page.setViewportSize({ width: 640, height: 200 });
-    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
-    await expect(card(page)).toHaveAttribute('data-flow', 'true');
-    // The player can scroll it: taller than the window, and scrollable, not clipped.
-    const scroll = await card(page).evaluate((e) => [getComputedStyle(e).overflowY, e.scrollHeight > e.clientHeight]);
-    expect(scroll).toEqual(['auto', true]);
-    // All in flow: the body keeps its height, so nothing spills over the controls.
-    const main = (await card(page).locator('.tutorial-main').boundingBox())!;
-    const foot = (await card(page).locator('.tutorial-footer').boundingBox())!;
-    expect(main.height).toBeGreaterThanOrEqual(44);
-    expect(main.y + main.height).toBeLessThanOrEqual(foot.y + 0.5);
-    expect(await card(page).locator('.tutorial-main').evaluate((e) => e.scrollHeight <= e.clientHeight + 1)).toBe(true);
-    const next = card(page).getByRole('button', { name: 'Next' });
-    await next.scrollIntoViewIfNeeded();
-    await expect(next).toBeInViewport({ ratio: 1 });
-    await next.click();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Step 2 of 8');
-    // The next page starts at its top (Codex review round 3, #107).
-    expect(await card(page).evaluate((e) => e.scrollTop)).toBe(0);
-    await expect(card(page).locator('.tutorial-step')).toBeInViewport({ ratio: 1 });
-  });
-
-  test('a replay interrupted by the return summary returns focus to the rebuilt Replay control (Codex review round 2, #107)', async ({ page }) => {
-    await boot(page, '?seed=3&debug=1&calm=1&tutorial=1');
-    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
-    await page.locator('[data-nav=notebook]').click();
-    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
-    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
-    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
-    await expect(card(page).locator('.tutorial-step')).toHaveText('Tutorial · Step 1 of 8');
-    await page.keyboard.press('Escape');
-    await expect(card(page)).toBeHidden();
-    await expect(page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' })).toBeFocused();
-  });
-
-  test('in tests it waits unless asked for; feedback waits while it is open', async ({ page }) => {
+  test('in tests it waits unless asked for', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.waitForTimeout(300);
     await expect(card(page)).toBeHidden();
-    await page.goto('/?seed=3&debug=1&calm=1&tutorial=1');
+  });
+});
+
+test.describe('Tutorial & lessons (D-086, GUI_MVP §27.3)', () => {
+  const card = (page: Page) => page.locator('#tutorial-card');
+  const lessons = (page: Page) => page.evaluate(() => window.__PK__!.lessons() as { intro: string; introPage: number; seen: string[]; pending: string[]; firstFusion: boolean });
+
+  async function openFromIconGuide(page: Page) {
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Icon guide', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Icon guide' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    return page.getByRole('dialog', { name: 'Tutorial & lessons' });
+  }
+
+  test('Replay tutorial opens the list: the introduction, then all twelve lessons by name, Seen or Not seen', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugLessons!({ seen: ['garden'] }));
+    const sheet = await openFromIconGuide(page);
+    const rows = sheet.locator('.lessons-row');
+    await expect(rows).toHaveCount(13);
+    await expect(rows.nth(0)).toHaveText('Introduction · 3 short cards');
+    await expect(rows.nth(1)).toContainText('Plant a surprise');
+    await expect(rows.nth(1)).toContainText('Not seen');
+    await expect(sheet.locator('[data-lesson="garden"]')).toContainText('Seen');
+    await expect(sheet.locator('[data-lesson="returns"]')).toContainText('Choose how to pay');
+    // Its way back is to the Icon guide.
+    await sheet.getByRole('button', { name: 'Back to Icon guide' }).click();
+    await expect(page.getByRole('dialog', { name: 'Icon guide' })).toBeVisible();
+  });
+
+  test('one lesson replays inside the sheet with its route; Back to lessons; nothing is marked seen', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const sheet = await openFromIconGuide(page);
+    await sheet.locator('[data-lesson="fields"]').click();
+    await expect(sheet.locator('.lessons-lesson-title')).toHaveText('Grow food');
+    await expect(sheet.locator('.lessons-lesson-title')).toBeFocused();
+    await expect(sheet.locator('.lesson-route')).toHaveText('How to find it Garden → Fields');
+    await sheet.getByRole('button', { name: 'Back to lessons' }).click();
+    await expect(sheet.locator('[data-lesson="fields"]')).toBeFocused();
+    expect((await lessons(page)).seen).toEqual([]);
+  });
+
+  test('the introduction previews over the list from page 1, changing nothing; focus back on its row', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.debugLessons!({ intro: 'skipped' }));
+    const sheet = await openFromIconGuide(page);
+    await sheet.getByRole('button', { name: 'Introduction · 3 short cards' }).click();
+    await expect(card(page).locator('.tutorial-step')).toHaveText('Welcome · 1 of 3');
+    await card(page).getByRole('button', { name: 'Next' }).click();
+    // A preview saves nothing as it goes, nor when it ends.
+    expect(await lessons(page)).toMatchObject({ intro: 'skipped', introPage: 1 });
+    // Escape is the card's, not the sheet's beneath it.
+    await page.keyboard.press('Escape');
+    await expect(card(page)).toBeHidden();
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole('button', { name: 'Introduction · 3 short cards' })).toBeFocused();
+    expect(await lessons(page)).toMatchObject({ intro: 'skipped', introPage: 1 });
+  });
+
+  test('Settings has it too, with its way back to Settings', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Tutorial & lessons' });
+    await sheet.getByRole('button', { name: 'Back to Settings' }).click();
+    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+  });
+});
+
+test.describe('automatic lessons (D-086, GUI_MVP §27.2-27.3)', () => {
+  const note = (page: Page) => page.locator('#lesson-note');
+  const lessons = (page: Page) => page.evaluate(() => window.__PK__!.lessons() as { intro: string; introPage: number; seen: string[]; pending: string[]; firstFusion: boolean });
+  /** A new save, the introduction behind it. */
+  async function start(page: Page, query = '?seed=3&debug=1&calm=1&lessons=1') {
+    await boot(page, query);
+    await page.evaluate(() => window.__PK__!.debugLessons!({ intro: 'skipped' }));
+  }
+  async function fuseFirst(page: Page) {
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect.poll(async () => (await lessons(page)).firstFusion).toBe(true);
+  }
+
+  test('nothing before the first fusion discovery, however rich; then the relevant lessons queue in table order', async ({ page }) => {
+    await start(page);
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await page.waitForTimeout(1500);
+    await expect(note(page)).toBeHidden();
+    expect((await lessons(page)).pending).toEqual([]);
+    await fuseFirst(page);
+    // All relevant at once: in the table's order (planting, potatokens, garden, …, naming).
+    const table = ['planting', 'potatokens', 'garden', 'capacity', 'naming', 'bias', 'fields', 'feeding', 'plot-space', 'field-space', 'compendium', 'returns'];
+    const l = await lessons(page);
+    expect(l.pending).toEqual([...l.pending].sort((a, b) => table.indexOf(a) - table.indexOf(b)));
+    expect(l.pending).toEqual(expect.arrayContaining(['potatokens', 'garden', 'capacity']));
+  });
+
+  test('the first note after 1 s idle: a region that takes no focus, announced once; Got it marks it seen', async ({ page }) => {
+    await start(page);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await fuseFirst(page);
+    const first = (await lessons(page)).pending[0]!;
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    expect(await page.evaluate(() => window.__PK__!.lessonShown())).toBe(first);
+    await expect(note(page)).toHaveAttribute('role', 'region');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#lesson-note'))).toBe(false);
+    await expect(page.locator('[aria-live="polite"]', { hasText: /^Tip: / })).toHaveCount(1);
+    // Above the tray, inside the band.
+    const n = (await note(page).boundingBox())!;
+    const tray = (await page.locator('.tray').boundingBox())!;
+    expect(n.y + n.height).toBeLessThanOrEqual(tray.y - 8 + 1);
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    await expect(note(page)).toBeHidden();
+    const l = await lessons(page);
+    expect(l.seen).toContain(first);
+    expect(l.pending).not.toContain(first);
+  });
+
+  test('the next waits for a deliberate action and 5 s idle', async ({ page }) => {
+    await start(page);
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    // Idle only: no next note.
+    await page.waitForTimeout(6000);
+    await expect(note(page)).toBeHidden();
+    // An action (a tap on empty ground), then 5 s idle.
+    const ground = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3500));
+    await page.mouse.click(ground.x, ground.y);
+    await page.waitForTimeout(3500);
+    await expect(note(page)).toBeHidden();
+    await expect(note(page)).toBeVisible({ timeout: 4000 });
+  });
+
+  test('a note gets out of the way of a gesture and a sheet, and comes back, still first', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    const shown = await page.evaluate(() => window.__PK__!.lessonShown());
+    await page.mouse.move(200, 500);
+    await page.mouse.down();
+    await expect(note(page)).toBeHidden();
+    await page.mouse.move(220, 480, { steps: 4 });
+    await page.mouse.up();
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    expect(await page.evaluate(() => window.__PK__!.lessonShown())).toBe(shown);
+    await page.locator('[data-nav=garden]').click();
+    await expect(note(page)).toBeHidden();
+    await page.waitForTimeout(1500);
+    await expect(note(page)).toBeHidden();
+  });
+
+  test('the keyboard can reach the note: Tab does not hide it', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    for (let i = 0; i < 40 && !(await page.evaluate(() => !!document.activeElement?.closest('#lesson-note'))); i++) await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#lesson-note'))).toBe(true);
+    await expect(note(page)).toBeVisible();
+  });
+
+  test('Where is…? shows the route in place; Escape inside the note acknowledges it', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    const title = await note(page).locator('.lesson-title').textContent();
+    const where = note(page).getByRole('button', { name: `Where is ${title}?` });
+    await expect(note(page).locator('.lesson-route')).toBeHidden();
+    await where.click();
+    await expect(note(page).locator('.lesson-route')).toBeVisible();
+    await expect(where).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Escape');
+    await expect(note(page)).toBeHidden();
+    expect((await lessons(page)).seen.length).toBe(1);
+  });
+
+  test('a lesson whose mechanic is used meanwhile is seen without showing', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 1000 }));
+    await expect.poll(async () => (await lessons(page)).pending).toContain('garden');
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' }));
+    await expect.poll(async () => (await lessons(page)).seen).toContain('garden');
+    expect((await lessons(page)).pending).not.toContain('garden');
+  });
+
+  test('lessons wait while the introduction is not behind the player', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&lessons=1');
+    await fuseFirst(page);
+    await page.waitForTimeout(1500);
+    await expect(note(page)).toBeHidden();
+    expect((await lessons(page)).pending.length).toBeGreaterThan(0);
+  });
+
+  test('pending lessons are saved with the game', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    const before = (await lessons(page)).pending;
+    await page.waitForTimeout(400);
+    await page.reload();
     await page.waitForFunction(() => window.__PK__?.ready === true);
-    await expect(card(page)).toBeVisible();
-    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'upgrade', building: 'garden' })); // no Materials
-    for (let i = 0; i < 3; i++) {
-      await page.waitForTimeout(150);
-      expect(await page.locator('.feedback').textContent()).toBe('');
-    }
-    await card(page).getByRole('button', { name: 'Skip tutorial' }).click();
-    await expect(page.locator('.feedback')).toContainText('Not enough');
+    expect((await lessons(page)).pending.slice(0, before.length)).toEqual(before);
+    expect((await lessons(page)).firstFusion).toBe(true);
   });
 });
 
@@ -7119,7 +7212,7 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1&tutorial=1');
     const card = page.locator('#tutorial-card');
     await card.getByRole('button', { name: 'Next' }).click();
-    await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    await expect(card.locator('.tutorial-step')).toHaveText('Welcome · 2 of 3');
     await page.evaluate(() => {
       const pk = window.__PK__!;
       pk.centerOn(1256, 3228);
@@ -7130,7 +7223,7 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     await expect(card).toBeHidden();
     await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(card).toBeVisible();
-    await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    await expect(card.locator('.tutorial-step')).toHaveText('Welcome · 2 of 3');
   });
 
   test('the panel keeps inside the safe-area insets, and picks its layout from the width between them (Codex review round 3, #117)', async ({ page }) => {

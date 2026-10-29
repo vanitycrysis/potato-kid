@@ -99,5 +99,8 @@ export function migrations(content: Content): Record<number, Migration> {
     // Schema 11 (D-087): nothing yet to show. Arrivals an older build kept with the settings
     // stay there unseen; a save never shows popups for its history (§27.3).
     10: (state) => ({ ...(state as object), presentation: { arrivals: [], recaps: [] } }),
+    // Schema 12 (D-086): lessons. Adopted at load from the old tutorial's record and this
+    // save's own evidence (§27.3), which a migration can't see.
+    11: (state) => ({ ...(state as object), lessons: null }),
   };
 }

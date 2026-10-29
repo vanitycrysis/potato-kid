@@ -14,6 +14,9 @@ import { Dex } from './dex';
 import { HomeOverlay } from './homeOverlay';
 import { NameBubble, nameOnHold, type BubbleContent } from './nameBubble';
 import { Tutorial } from './tutorial';
+import { adoptLegacy, enqueue, noteEvents, relevantNow } from './lessons';
+import { LessonNotes } from './lessonNotes';
+import { LessonsSheet } from './lessonsSheet';
 import { RecipePreview } from './recipePreview';
 import type { PlotsSnapshot } from './gardenPlots';
 import { KidCard, type CardSnapshot } from './kidCard';
@@ -103,8 +106,11 @@ export class Hud {
   private summaryOpen = false;
   private interrupted: (SheetSnapshot & { search: string; plots: PlotsSnapshot | null; card: CardSnapshot | null; farm: ((scrollTop: number) => void) | null; gardenBack: { label: string; run: () => void } | null }) | null = null;
 
-  /** The first-run tutorial and its replays (D-078, GUI_MVP §24). */
+  /** The first-run introduction and its previews (D-086, GUI_MVP §27.1). */
   private readonly tutorial: Tutorial;
+  /** The automatic lessons' quiet notes, and their replay sheet (D-086, §27.2-27.3). */
+  private readonly lessonNotes: LessonNotes;
+  private readonly lessonsSheet: LessonsSheet;
   /** The new-kid popup (D-087, D-088). */
   private readonly popup: NewKidPopup;
   /** A sheet put aside at a return, for its popups and summaries: it comes back after them. */
@@ -119,10 +125,17 @@ export class Hud {
     private readonly scene: MapScene,
     private readonly content: Content,
     private readonly settings: SettingsStore,
-    /** Offer the tutorial on a first run: off in tests unless asked for (`?tutorial=1`). */
-    private readonly options: { tutorialAuto: boolean; arrivals: boolean } = { tutorialAuto: true, arrivals: true },
+    /**
+     * Offer the introduction on a first run, and show lessons: off in tests unless asked for
+     * (`?tutorial=1`, `?lessons=1`).
+     */
+    private readonly options: { tutorialAuto: boolean; arrivals: boolean; lessons: boolean } = { tutorialAuto: true, arrivals: true, lessons: true },
   ) {
     this.applyTokens();
+    // A save from before lessons adopts them now, from the old tutorial's record and its own
+    // evidence (§27.3); a read-only one is never written, so it gets none.
+    const state = scene.game.state;
+    if (state.lessons === null) state.lessons = adoptLegacy(scene.game, content.balance, settings.value.guidedTutorial.status);
     this.known = new Set(scene.game.state.discoveredKids);
 
     // Three stat chips (D-077, §23.1): a glyph and a count each; one tap opens its name bubble.
@@ -173,14 +186,16 @@ export class Hud {
     );
     this.tutorial = new Tutorial(
       scene,
-      settings,
+      () => scene.game.state.lessons!,
       () => [this.top, tray, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
       () => this.trayCells.get('garden') ?? null,
       matchMedia('(prefers-reduced-motion: reduce)').matches,
       () => this.sheets.isOpen,
+      () => this.persist(),
     );
     const dex = this.trayCells.get('dex')!;
     document.body.append(this.shield, this.banners, this.top, tray, this.tip);
+    this.lessonNotes = new LessonNotes(() => scene.game.state.lessons, tray, () => this.top.getBoundingClientRect().bottom, () => this.trayCells.get('garden') ?? null);
     this.sheets = new Sheets(
       scene,
       () => [this.top, tray, document.getElementById('app')!].filter(Boolean),
@@ -192,7 +207,8 @@ export class Hud {
     // Food fields and the pantry (D-069, GUI_MVP §22).
     this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.buildings.fieldsBack);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
-    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) => this.tutorial.replay(launcher), (launcher) =>
+    this.lessonsSheet = new LessonsSheet(this.sheets, () => scene.game.state.lessons, (launcher) => this.tutorial.replay(launcher));
+    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) => this.openLessons(launcher), (launcher) =>
       this.fields.openPantry(launcher, {
         label: 'Back to Notebook',
         run: () => {
@@ -318,6 +334,10 @@ export class Hud {
     window.visualViewport?.addEventListener('resize', measure);
     measure();
     scene.listenSteps((events) => this.onStep(events));
+    // Lessons (§27.3): each step's mechanics used are seen, and what is newly relevant joins the
+    // queue. Evaluated now for a loaded save too.
+    scene.listenSteps((events) => this.evaluateLessons(events));
+    this.evaluateLessons([]);
     // A newborn's card waits until the kid is actually drawn (its costume may still be
     // loading), then for its discovery effect (Codex review, PR #35).
     scene.listenShown((kidId) => this.kidShown(kidId, performance.now()));
@@ -348,6 +368,11 @@ export class Hud {
   /** Test hook: the map nicknames shown now (D-091). */
   get nameplatesShown(): { id: number; text: string; rect: DOMRect }[] {
     return this.nameplates?.shown() ?? [];
+  }
+
+  /** Test hook: the lesson note up now, if any (§27.3). */
+  get lessonShown(): string | null {
+    return this.lessonNotes.current;
   }
 
   /** Test hook: the new-kid popup up now, if any (D-087). */
@@ -485,10 +510,44 @@ export class Hud {
     };
   }
 
-  /** Android Back: the new-kid popup first, then a name bubble, else an open sheet (returns whether it did). */
+  /**
+   * After a step, a load, or a while (§27.3): mechanics used are seen, the first fusion
+   * discovery opens the gate, and lessons now relevant join the queue. Materials grow with no
+   * event, so the frame loop evaluates too, a few times a second.
+   */
+  private evaluateLessons(events: GameEvent[]): void {
+    const l = this.scene.game.state.lessons;
+    if (!l) return;
+    noteEvents(l, events);
+    enqueue(l, relevantNow(this.scene.game, this.content.balance));
+    this.lessonsAt = performance.now();
+  }
+  private lessonsAt = 0;
+
+  /**
+   * `Tutorial & lessons` (§27.3), from Settings or the Icon guide: a page of that sheet, with
+   * its way back.
+   */
+  private openLessons(launcher: HTMLElement): void {
+    const from = this.sheets.openKey === 'iconguide' ? 'iconguide' : 'settings';
+    const scrollTop = this.sheets.snapshot()?.scrollTop ?? 0;
+    this.lessonsBack = {
+      label: from === 'iconguide' ? 'Back to Icon guide' : 'Back to Settings',
+      run: () => this.notebook.openRow(from, null, undefined, { scrollTop }),
+    };
+    this.lessonsSheet.open(launcher, this.lessonsBack);
+  }
+  /** `Tutorial & lessons`' way back, kept for when a return summary brings the sheet back. */
+  private lessonsBack: { label: string; run: () => void } | null = null;
+
+  /**
+   * Android Back: the new-kid popup first, then the introduction, a lesson note holding focus,
+   * a name bubble, else an open sheet (returns whether it did).
+   */
   back(): boolean {
     if (this.popup.back()) return true;
     if (this.tutorial.back()) return true;
+    if (this.lessonNotes.back()) return true;
     if (this.bubble.openKey !== null) {
       this.bubble.hide(true);
       return true;
@@ -571,6 +630,7 @@ export class Hud {
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
       // A stat's help sheet comes back on the same stat (Codex review, #105).
+      else if (back.key === 'lessons') this.lessonsSheet.open(back.launcher, this.lessonsBack);
       else if (back.key === 'stathelp') this.statHelp(this.helpKey, back.launcher, this.statContent(this.helpKey), back.scrollTop);
       // With the way back its Fields were opened with, if any (the Pantry, feeding).
       else if (back.key === 'garden') this.buildings.reopenGarden(back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots }, back.gardenBack);
@@ -674,9 +734,15 @@ export class Hud {
     // an unanswered recovery banner, a sheet or a name bubble to be out of the way; a read-only
     // save gets none (§24.1, §27.3).
     const returning = this.summaryOpen || this.popup.waiting > 0 || recaps.length > 0;
-    if (!returning && this.sheets.openKey === null && this.bubble.openKey === null && !urgent) this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
+    if (!returning && this.sheets.openKey === null && this.bubble.openKey === null && !urgent && !this.scene.busy) this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
     // One put aside for the return comes back once it is over (over any sheet it brought back).
     if (this.tutorial.waiting && !returning) this.tutorial.comeBack();
+    // Last, a lesson (§27.3): only with the introduction behind the player and nothing ahead of
+    // it (a sheet, gesture, bubble, popup, summary, award card, the introduction, an urgent
+    // banner); a read-only save shows none.
+    const quiet = !returning && !this.sheets.isOpen && !this.scene.busy && this.bubble.openKey === null && !this.tutorial.isOpen && !this.tutorial.waiting && !urgent && !this.save.readOnly && !this.showing && this.queue.length === 0;
+    if (now - this.lessonsAt >= 250 && !this.save.readOnly) this.evaluateLessons([]);
+    this.lessonNotes.tick(now, this.options.lessons && this.tutorial.settled && quiet);
     this.sheets.tick();
     const sheet = this.sheets.openKey;
     const selected = sheet === null ? null : NOTEBOOK_KEYS.has(sheet) ? 'notebook' : sheet === 'dex' || sheet === 'kid' ? 'dex' : sheet === 'garden' ? 'garden' : null;
