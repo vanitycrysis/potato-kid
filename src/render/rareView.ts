@@ -27,11 +27,37 @@ export function sleeveAt(box: Box, zoom: number): { x: number; y: number; scale:
   return { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2, scale: css / zoom };
 }
 
-/** The idle sleeve's opacity: .8 → 1 → .8 over 2.4 s, phase fixed by kid id; reduced motion holds at 1. */
+/** The sleeve's small loop (D-094, §27.7): stops at 0/25/50/75 % of 2.4 s, then back to rest. */
+const SLEEVE_STOPS = [
+  { dy: 0, scale: 1, rotation: 0, alpha: 1 },
+  { dy: -1, scale: 1.02, rotation: 2, alpha: 0.82 },
+  { dy: 0, scale: 1, rotation: 0, alpha: 1 },
+  { dy: 1, scale: 0.98, rotation: -2, alpha: 0.82 },
+] as const;
+
+export type SleeveMotion = { dy: number; scale: number; rotation: number; alpha: number };
+
+/**
+ * The idle sleeve at foreground `ms` (D-094, §27.7): it rises and falls 1 CSS px, grows and
+ * shrinks 2 %, tilts ±2° and dims to .82, eased in and out between the stops; the phase is
+ * fixed by kid id. `dy` is CSS px, `rotation` degrees. Reduced motion: at rest.
+ */
+export function sleeveMotion(ms: number, id: number, reduced: boolean): SleeveMotion {
+  if (reduced) return SLEEVE_STOPS[0];
+  const t = (((ms / SLEEVE_PERIOD_MS + id * 0.618034) % 1) + 1) % 1;
+  const at = t * SLEEVE_STOPS.length;
+  const i = Math.floor(at);
+  const a = SLEEVE_STOPS[i]!;
+  const b = SLEEVE_STOPS[(i + 1) % SLEEVE_STOPS.length]!;
+  const u = at - i;
+  const e = u * u * (3 - 2 * u);
+  const mix = (x: number, y: number) => x + (y - x) * e;
+  return { dy: mix(a.dy, b.dy), scale: mix(a.scale, b.scale), rotation: mix(a.rotation, b.rotation), alpha: mix(a.alpha, b.alpha) };
+}
+
+/** The idle sleeve's opacity (its loop's, D-094): between .82 and 1; reduced motion holds at 1. */
 export function sleeveAlpha(ms: number, id: number, reduced: boolean): number {
-  if (reduced) return 1;
-  const phase = (id * 0.618034) % 1;
-  return 0.9 - 0.1 * Math.cos(2 * Math.PI * (ms / SLEEVE_PERIOD_MS + phase));
+  return sleeveMotion(ms, id, reduced).alpha;
 }
 
 /**
@@ -145,13 +171,15 @@ export class RareLayer {
       }
       const box = { left: k.x + k.box.left, top: k.y + k.box.top, right: k.x + k.box.right, bottom: k.y + k.box.bottom };
 
-      // The sleeve: the burst while it lasts, then the rare's idle pulse.
+      // The sleeve: the burst while it lasts, then the rare's idle loop (D-094).
       item.sleeve ??= this.sprite(SLEEVE, [SLEEVE_CENTRE, SLEEVE_CENTRE]);
       const s = sleeveAt(box, zoom);
-      const grow = burst?.scale ?? 1;
-      item.sleeve.position.set(s.x, s.y);
+      const m = burst ? SLEEVE_STOPS[0] : sleeveMotion(now, k.id, this.reducedMotion);
+      const grow = burst?.scale ?? m.scale;
+      item.sleeve.position.set(s.x, s.y + m.dy / zoom);
       item.sleeve.scale.set(s.scale * grow);
-      item.sleeve.alpha = burst ? burst.alpha : sleeveAlpha(now, k.id, this.reducedMotion);
+      item.sleeve.rotation = (m.rotation * Math.PI) / 180;
+      item.sleeve.alpha = burst ? burst.alpha : m.alpha;
 
     }
     for (const [id, item] of this.items) {
@@ -164,9 +192,10 @@ export class RareLayer {
   }
 
   /** Test hook: what each drawn rare shows. */
-  shown(): { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[] {
+  shown(): { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; sleeveRotation: number; happy: boolean; sun?: { x: number; y: number } }[] {
     return [...this.items].map(([id, i]) => ({
       id,
+      sleeveRotation: i.sleeve?.rotation ?? 0,
       happy: !!i.happy,
       ...(i.happy ? { sun: { x: i.happy.x, y: i.happy.y } } : {}),
       sleeve: !!i.sleeve,

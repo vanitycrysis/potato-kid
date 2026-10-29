@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { burstAt, sleeveAlpha, sleeveAt } from './rareView';
+import { burstAt, sleeveAlpha, sleeveAt, sleeveMotion } from './rareView';
 
 // Rare sleeves (GUI_MVP §16.2, §15.5): Codex's numbers, as the spec gives them.
 describe('the rare sleeve (GUI_MVP §16.2)', () => {
@@ -16,10 +16,25 @@ describe('the rare sleeve (GUI_MVP §16.2)', () => {
     expect(sleeveAt({ left: 0, top: 0, right: 1, bottom: 1 }, 0.1).scale * 0.1).toBeCloseTo(0.24, 12);
   });
 
-  it('breathes .8 → 1 → .8 over 2.4 s, in phase by kid; reduced motion holds at 1', () => {
-    const seen = Array.from({ length: 240 }, (_, i) => sleeveAlpha(i * 10, 7, false));
-    expect(Math.min(...seen)).toBeCloseTo(0.8, 3);
-    expect(Math.max(...seen)).toBeCloseTo(1, 3);
+  it('moves in a small 2.4 s loop (D-094, §27.7): ±1 px, ±2 %, ±2°, down to .82 opacity; in phase by kid; reduced motion at rest', () => {
+    const seen = Array.from({ length: 2400 }, (_, i) => sleeveMotion(i, 0, false));
+    const range = (k: 'dy' | 'scale' | 'rotation' | 'alpha') => [Math.min(...seen.map((m) => m[k])), Math.max(...seen.map((m) => m[k]))];
+    expect(range('dy')[0]).toBeCloseTo(-1, 3);
+    expect(range('dy')[1]).toBeCloseTo(1, 3);
+    expect(range('scale')[0]).toBeCloseTo(0.98, 4);
+    expect(range('scale')[1]).toBeCloseTo(1.02, 4);
+    expect(range('rotation')[0]).toBeCloseTo(-2, 3);
+    expect(range('rotation')[1]).toBeCloseTo(2, 3);
+    // The stops, exactly: rest, up and tilted right, rest, down and tilted left.
+    expect(sleeveMotion(0, 0, false)).toEqual({ dy: 0, scale: 1, rotation: 0, alpha: 1 });
+    expect(sleeveMotion(600, 0, false)).toEqual({ dy: -1, scale: 1.02, rotation: 2, alpha: 0.82 });
+    expect(sleeveMotion(1800, 0, false)).toEqual({ dy: 1, scale: 0.98, rotation: -2, alpha: 0.82 });
+    // Eased: slow at the stops, quick between them.
+    expect(Math.abs(sleeveMotion(60, 0, false).dy)).toBeLessThan(0.05);
+    expect(sleeveMotion(1234, 7, true)).toEqual({ dy: 0, scale: 1, rotation: 0, alpha: 1 });
+    const alphas = Array.from({ length: 240 }, (_, i) => sleeveAlpha(i * 10, 7, false));
+    expect(Math.min(...alphas)).toBeCloseTo(0.82, 3);
+    expect(Math.max(...alphas)).toBeCloseTo(1, 3);
     expect(sleeveAlpha(1234, 7, false)).toBeCloseTo(sleeveAlpha(1234 + 2400, 7, false), 12);
     expect(sleeveAlpha(0, 7, false)).not.toBeCloseTo(sleeveAlpha(0, 8, false), 3);
     expect(sleeveAlpha(1234, 7, true)).toBe(1);
