@@ -574,7 +574,8 @@ export class Game {
     const kids = this.state.world.kids;
     const a = kids.find((k) => k.id === heldId);
     const b = kids.find((k) => k.id === targetId);
-    if (!a || !b || a.grace > 0 || b.grace > 0) return null;
+    // A kid on a visit never fuses (D-090): no preview promises it (Codex review round 2, #121).
+    if (!a || !b || a.grace > 0 || b.grace > 0 || visiting(b)) return null;
     return this.recipes.get(pairKey(a.type, b.type)) ?? null;
   }
 
@@ -1694,8 +1695,11 @@ export class Game {
         v.left -= away;
         continue;
       }
-      const at = approachOf(this.sites, kid);
       kid.activity = { kind: 'walk' };
+      // Still on its way: it just stops where it is, and wanders from there (Codex review round
+      // 2, #121). Inside the decoration: out at its approach, or the nearest free spot.
+      if (v.phase === 'approach') continue;
+      const at = approachOf(this.sites, { ...kid, activity: v });
       const p = at && isFree(world, kid.box, at.x, at.y, kid.id) ? at : findFreeSpot(world, kid.box, at?.x ?? kid.x, at?.y ?? kid.y, kid.id);
       if (p) [kid.x, kid.y] = [p.x, p.y];
     }

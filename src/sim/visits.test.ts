@@ -200,6 +200,27 @@ describe('decorations kids use (D-090)', () => {
     expect(kid.activity.kind).toBe('walk');
   });
 
+  it('a brief absence while a kid is still on its way stops it where it is, no jump (Codex review round 2, #121)', () => {
+    const c = testContent({ visitChance: 1 }, { speed: 120, idleChancePerSecond: 50 });
+    const g = game(c);
+    const kid = place(g, 'plain', left!.approach.x - 150, left!.approach.y + 300);
+    for (let i = 0; i < 50 && !(kid.activity.kind === 'visit' && kid.activity.phase === 'approach'); i++) g.step([]);
+    expect(kid.activity).toMatchObject({ kind: 'visit', phase: 'approach' });
+    const was = { x: kid.x, y: kid.y };
+    g.reconcile(g.state.accountedUntil + 1000);
+    expect(kid.activity.kind).toBe('walk');
+    // At most what it could walk in that second, never the jump to its approach.
+    expect(Math.hypot(kid.x - was.x, kid.y - was.y)).toBeLessThanOrEqual(120 + 1e-6);
+  });
+
+  it('no fusion preview with a kid on a visit (Codex review round 2, #121)', () => {
+    const g = game();
+    const [plain, water] = [place(g, 'plain', 300, 1600), place(g, 'water', 600, 1600)];
+    expect(g.dropResult(water.id, plain.id)).toBe('firefighter');
+    dropAt(g, plain, { x: left!.x, y: left!.y });
+    expect(g.dropResult(water.id, plain.id)).toBe(null);
+  });
+
   it("only a food's happiness counts in planting (Codex review, #121)", () => {
     expect(plantsHappy({ happy: { small: true } })).toBe(false);
     expect(plantsHappy({ happy: {} })).toBe(true);

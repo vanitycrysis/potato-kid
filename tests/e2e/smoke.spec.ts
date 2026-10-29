@@ -7679,6 +7679,17 @@ test.describe('decorations kids use (D-090)', () => {
     expect([Math.round(k.x), Math.round(k.y)]).toEqual([BENCH.left.x, BENCH.left.y]);
   });
 
+  test("the plot picker promises no tier for a decoration's happiness (Codex review round 2, #121)", async ({ page }) => {
+    const [id] = await nearBench(page, ['plain']);
+    await dragTo(page, id!, BENCH.left);
+    expect((await kid(page, id!)).activity).toBe('visit');
+    await page.locator('[data-nav=garden]').click();
+    await page.getByRole('dialog', { name: 'Garden' }).getByRole('button', { name: 'Add kids' }).first().click();
+    const row = page.getByRole('dialog').locator('.picker-row').first();
+    await expect(row).toContainText('Tier 1');
+    await expect(row).not.toContainText('Counts as Tier');
+  });
+
   test('a kid sitting is saved so: after a reload it is still on the bench', async ({ page }) => {
     const [id] = await nearBench(page, ['plain']);
     await dragTo(page, id!, BENCH.left);

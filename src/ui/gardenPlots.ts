@@ -1018,7 +1018,7 @@ export class GardenPlots {
         rare: this.kind(k.type) === 'Rare',
         special: this.kind(k.type) === 'Special',
       };
-      row.named(k.name, !!k.happy);
+      row.named(k.name, plantsHappy(k));
       box.addEventListener('change', () => {
         const at = draft.indexOf(id);
         if (box.checked && at < 0) draft.push(id);
@@ -1089,7 +1089,7 @@ export class GardenPlots {
       let visible = 0;
       for (const [id, r] of rows) {
         const now = live().find((k) => k.id === id);
-        r.named(now?.name, !!now?.happy);
+        r.named(now?.name, !!now && plantsHappy(now));
         const kind = kinds.get(id)!;
         const show = (filter === 'all' || (filter === 'rares' ? kind.rare : kind.special)) && (!query || r.text.includes(query));
         r.node.hidden = !show;
