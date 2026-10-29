@@ -867,8 +867,9 @@ export class Game {
       kid.y = p.y;
       // Cancelled (a tap on a sitter, a drag let go nowhere): back in its slot, if still free.
       const lifted = this.lifted.get(kid.id);
+      const back = c.type === 'cancelDrag' ? this.restoredSeat(kid.id) : null;
       this.lifted.delete(kid.id);
-      if (c.type === 'cancelDrag' && lifted && !slotTaken(world, lifted.visit.site, lifted.visit.slot, kid.id) && slotOf(this.sites, lifted.visit)) {
+      if (lifted && back) {
         kid.activity = lifted.visit;
         [kid.x, kid.y] = [lifted.x, lifted.y];
         continue;
@@ -1704,6 +1705,16 @@ export class Game {
       const p = at && isFree(world, kid.box, at.x, at.y, kid.id) ? at : findFreeSpot(world, kid.box, at?.x ?? kid.x, at?.y ?? kid.y, kid.id);
       if (p) [kid.x, kid.y] = [p.x, p.y];
     }
+  }
+
+  /**
+   * Where a cancelled drag of kid `id` puts it back in its seat (D-090): the slot it was lifted
+   * from, if that is still free; else null (it lands as any kid). The scene draws it there.
+   */
+  restoredSeat(id: number): { x: number; y: number } | null {
+    const l = this.lifted.get(id);
+    if (!l || !slotOf(this.sites, l.visit) || slotTaken(this.state.world, l.visit.site, l.visit.slot, id)) return null;
+    return { x: l.x, y: l.y };
   }
 
   /**

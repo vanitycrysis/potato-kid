@@ -7690,6 +7690,39 @@ test.describe('decorations kids use (D-090)', () => {
     await expect(row).not.toContainText('Counts as Tier');
   });
 
+  test('a tapped sitter is drawn back in its seat from its release, never out on the ground (Codex review round 4, #121)', async ({ page }) => {
+    const [id] = await nearBench(page, ['plain']);
+    await dragTo(page, id!, BENCH.left);
+    await page.waitForTimeout(300);
+    const seat = await page.evaluate((b) => window.__PK__!.worldToScreen(b.x, b.y), BENCH.left);
+    const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id!);
+    // Held long enough for the pickup to reach the sim, short enough to stay a tap.
+    await page.mouse.move(at.x, at.y - 20);
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    // Where it is drawn, every frame from the release on.
+    await page.evaluate((i) => {
+      const w = window as unknown as { seen: { x: number; y: number }[] };
+      w.seen = [];
+      const start = () => {
+        const until = performance.now() + 800;
+        const tick = () => {
+          const p = window.__PK__!.screenPointOf(i);
+          if (p) w.seen.push(p);
+          if (performance.now() < until) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      };
+      document.addEventListener('pointerup', start, { once: true, capture: true });
+    }, id!);
+    await page.mouse.up();
+    await page.waitForTimeout(900);
+    const seen = await page.evaluate(() => (window as unknown as { seen: { x: number; y: number }[] }).seen);
+    expect(seen.length).toBeGreaterThan(20);
+    const far = Math.max(...seen.map((p) => Math.hypot(p.x - seat.x, p.y - seat.y)));
+    expect(far).toBeLessThan(3);
+  });
+
   test('a kid sitting is saved so: after a reload it is still on the bench', async ({ page }) => {
     const [id] = await nearBench(page, ['plain']);
     await dragTo(page, id!, BENCH.left);

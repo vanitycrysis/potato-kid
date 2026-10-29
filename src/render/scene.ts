@@ -1372,9 +1372,11 @@ export class MapScene {
     this.pending.push(cmd);
     // Draw the kid exactly where the sim will put it until the command is applied
     // (Codex review, PR #5): the same free-spot answer, so it never jumps or overlaps.
-    // Into a decoration's slot (D-090), exactly there: the slot is inside the decoration.
+    // Into a decoration's slot (D-090), exactly there: the slot is inside the decoration. A
+    // sitter's cancelled drag goes back to its seat, if still free (Codex review round 4, #121).
     const seat = cmd.type === 'drop' && cmd.pointer !== undefined;
-    const spot = (seat ? null : this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn)) ?? { x: cmd.x, y: cmd.y };
+    const back = cmd.type === 'cancelDrag' ? this.game.restoredSeat(cmd.kidId) : null;
+    const spot = back ?? (seat ? null : this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn)) ?? { x: cmd.x, y: cmd.y };
     this.placing.set(this.drag.kidId, spot);
     this.views.get(this.drag.kidId)?.dropped();
     this.endHeld();
