@@ -6578,6 +6578,22 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     }
   });
 
+  test("a ready plot's sign is something no pill may cover (Codex review round 2, #114)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1440, 2400));
+    // Nothing to avoid while no plot is ready.
+    expect(await page.evaluate(() => window.__PK__!.nameExclusions())).toEqual([]);
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero', true));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
+    // Plot 1's checked sign, where it is drawn (its paper centred about (1440, 2383) in the world).
+    const [r] = await page.evaluate(() => window.__PK__!.nameExclusions());
+    const c = await page.evaluate(() => window.__PK__!.worldToScreen(1440, 2383));
+    expect(Math.abs((r!.left + r!.right) / 2 - c.x)).toBeLessThan(2);
+    expect(Math.abs((r!.top + r!.bottom) / 2 - c.y)).toBeLessThan(2);
+    // At least 96 CSS px of sign canvas across means a paper wider than 40 px.
+    expect(r!.right - r!.left).toBeGreaterThan(40);
+  });
+
   test('a long name is cut at whole letters with an ellipsis, and the pill stays 120 px', async ({ page }) => {
     await named(page, 'Wwwwwwwwwwwwwwwwwwwwwwww');
     const [pill] = await page.evaluate(() => window.__PK__!.nameplates());

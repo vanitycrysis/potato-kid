@@ -7,7 +7,7 @@ import { rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
-import { plotAt, PlotsView } from './plotsView';
+import { plotAt, PlotsView, readySignRect } from './plotsView';
 import { fieldAt, FieldsView } from './fieldsView';
 import { RareLayer, type RareKid } from './rareView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
@@ -492,6 +492,17 @@ export class MapScene {
     }
     const { width, height } = this.app.screen;
     const exclusions: { left: number; top: number; right: number; bottom: number }[] = [];
+    // Every ready plot's checked sign (§27.6), as drawn at this zoom (Codex review round 2, #114).
+    if (this.plotsView) {
+      this.game.state.plots.forEach((plot, i) => {
+        if (!this.game.plotReady(plot)) return;
+        const r = readySignRect(this.art.planting!, this.gardenGround, i, this.cam.zoom);
+        if (!r) return;
+        const a = this.camera.toGlobal({ x: r.left, y: r.top });
+        const b = this.camera.toGlobal({ x: r.right, y: r.bottom });
+        exclusions.push({ left: a.x, top: a.y, right: b.x, bottom: b.y });
+      });
+    }
     // The partner mark while a held kid is over a partner (D-083): its whole outline.
     if (this.partnerMark.getLocalBounds().width > 0) {
       const r = this.partnerMark.getBounds();
