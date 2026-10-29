@@ -1,0 +1,1791 @@
+{
+  "schemaVersion": 1,
+  "revision": "round4-activity-1",
+  "status": "review_pending",
+  "extendsRig": "kid_rig_v2.json",
+  "extendsWild": "kid_wild_v1.json",
+  "canvas": [
+    256,
+    256
+  ],
+  "groundAnchor": [
+    128,
+    224
+  ],
+  "worldCanvasSize": 180,
+  "mergeContract": "Add bodies[id].frames, clips and reducedMotion by key. Preserve every existing rig key. These additions are not loaded by the current engine; Claude integrates them. Preserve saved body/face/scale, costume component ordering, attachment transforms and existing constant lifetime boxes.",
+  "bodies": {
+    "round": {
+      "frames": {
+        "farm_left": {
+          "asset": "kid_body_round_farm_left",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                55
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                116
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                166
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                48,
+                171
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                199,
+                172
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "farm_right": {
+          "asset": "kid_body_round_farm_right",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                55
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                116
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                166
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                48,
+                171
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                199,
+                172
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "splash_out": {
+          "asset": "kid_body_round_splash_out",
+          "status": "final",
+          "boundsPx": [
+            16,
+            12,
+            240,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                81
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                143
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                184
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.7
+              ]
+            },
+            "hand_left": {
+              "position": [
+                49,
+                187
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                201,
+                188
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        }
+      }
+    },
+    "tall": {
+      "frames": {
+        "farm_left": {
+          "asset": "kid_body_tall_farm_left",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                44
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                110
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                161
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                64,
+                165
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                187,
+                169
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "farm_right": {
+          "asset": "kid_body_tall_farm_right",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                44
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                110
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                161
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                64,
+                165
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                187,
+                169
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "splash_out": {
+          "asset": "kid_body_tall_splash_out",
+          "status": "final",
+          "boundsPx": [
+            24,
+            8,
+            232,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                72
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                137
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                0.84,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                181
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.7
+              ]
+            },
+            "hand_left": {
+              "position": [
+                67,
+                185
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                188,
+                187
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        }
+      }
+    },
+    "squat": {
+      "frames": {
+        "farm_left": {
+          "asset": "kid_body_squat_farm_left",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                73
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                137
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                180
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                32,
+                178
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                211,
+                182
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "farm_right": {
+          "asset": "kid_body_squat_farm_right",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                73
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                137
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                180
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                32,
+                178
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                211,
+                182
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "splash_out": {
+          "asset": "kid_body_squat_splash_out",
+          "status": "final",
+          "boundsPx": [
+            8,
+            26,
+            248,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                128,
+                88
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                152
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                128,
+                187
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.7
+              ]
+            },
+            "hand_left": {
+              "position": [
+                35,
+                190
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                212,
+                191
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        }
+      }
+    },
+    "bean": {
+      "frames": {
+        "farm_left": {
+          "asset": "kid_body_bean_farm_left",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                143,
+                58
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                121
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                124,
+                170
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                44,
+                178
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "farm_right": {
+          "asset": "kid_body_bean_farm_right",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                143,
+                58
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                128,
+                121
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                124,
+                170
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_left": {
+              "position": [
+                44,
+                178
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                175
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "splash_out": {
+          "asset": "kid_body_bean_splash_out",
+          "status": "final",
+          "boundsPx": [
+            12,
+            14,
+            244,
+            236
+          ],
+          "attachments": {
+            "ground": {
+              "position": [
+                128,
+                224
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "head_top": {
+              "position": [
+                141,
+                82
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "face_centre": {
+              "position": [
+                124,
+                146
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "torso": {
+              "position": [
+                123,
+                185
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                0.7
+              ]
+            },
+            "hand_left": {
+              "position": [
+                44,
+                191
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            },
+            "hand_right": {
+              "position": [
+                196,
+                188
+              ],
+              "rotationDeg": 0,
+              "scale": [
+                1,
+                1
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "poses": {
+    "decoration_sitting": {
+      "bodyFrame": "sit",
+      "faceState": "inherit",
+      "rig": {
+        "offsetPx": [
+          0,
+          0
+        ],
+        "rotationDeg": 0,
+        "opacity": 1
+      },
+      "note": "Use the approved seated contour, folded short feet and its head/face/torso/hand attachments; never scale the stand body into a seat."
+    }
+  },
+  "clips": {
+    "farm_stomp": {
+      "fps": 8,
+      "loop": true,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "farm_left",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "farm_left",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "farm_right",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "farm_right",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "stand",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        }
+      ]
+    },
+    "decoration_sitting": {
+      "fps": 8,
+      "loop": true,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        }
+      ]
+    },
+    "decoration_splash": {
+      "fps": 8,
+      "loop": true,
+      "boundsPxByBody": {
+        "round": [
+          16,
+          12,
+          240,
+          236
+        ],
+        "tall": [
+          24,
+          8,
+          232,
+          236
+        ],
+        "squat": [
+          8,
+          26,
+          248,
+          236
+        ],
+        "bean": [
+          12,
+          14,
+          244,
+          236
+        ]
+      },
+      "frames": [
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "splash_out",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "splash_out",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        },
+        {
+          "bodyFrame": "sit",
+          "faceState": "inherit",
+          "rig": {
+            "offsetPx": [
+              0,
+              0
+            ],
+            "rotationDeg": 0,
+            "opacity": 1
+          }
+        }
+      ]
+    }
+  },
+  "timing": {
+    "farm_stomp": {
+      "durationMs": 1500,
+      "frameMs": 125,
+      "raisedLeftMs": [
+        125,
+        375
+      ],
+      "raisedRightMs": [
+        625,
+        875
+      ],
+      "contactMs": [
+        375,
+        875
+      ],
+      "phase": "Stable saved instance ID hash modulo 1500; continuous foreground loop while working, no synchronized field chorus or offline replay."
+    },
+    "decoration_sitting": {
+      "durationMs": 125,
+      "frameMs": 125,
+      "hold": "Static while occupying slot; normal blink remains composable."
+    },
+    "decoration_splash": {
+      "durationMs": 1500,
+      "frameMs": 125,
+      "splashMs": [
+        125,
+        500
+      ],
+      "phase": "Stable instance ID modulo 1500; no world translation."
+    }
+  },
+  "effects": {
+    "farm_stomp": {
+      "asset": "fx_activity_stamp",
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "space": "kid source canvas",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "drawLayer": "behind_body",
+      "onFrames": [
+        3,
+        7
+      ],
+      "opacity": 1,
+      "collision": false
+    },
+    "decoration_splash": {
+      "asset": "fx_activity_splash",
+      "canvas": [
+        256,
+        256
+      ],
+      "sourcePivot": [
+        128,
+        224
+      ],
+      "space": "kid source canvas",
+      "offsetPx": [
+        0,
+        0
+      ],
+      "drawLayer": "after_decoration_front",
+      "onFrames": [
+        1,
+        4
+      ],
+      "opacity": 1,
+      "collision": false
+    }
+  },
+  "reducedMotion": {
+    "farm_stomp": {
+      "bodyFrame": "stand",
+      "faceState": "inherit",
+      "effect": "none"
+    },
+    "decoration_sitting": {
+      "bodyFrame": "sit",
+      "faceState": "inherit",
+      "effect": "none"
+    },
+    "decoration_splash": {
+      "bodyFrame": "sit",
+      "faceState": "inherit",
+      "effect": "none"
+    }
+  },
+  "wild": {
+    "selection": "All types in kid_wild_v1.types retain their own object body and shared face. Never render a potato body or a legacy costume underneath. Native farm and splash substitutes below use existing wild format and at most its approved 3 px upward bob; face moves together.",
+    "clips": {
+      "farm_stomp": {
+        "support": "native",
+        "loop": true,
+        "frames": [
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              -3
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              -3
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              -3
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              -3
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          }
+        ]
+      },
+      "decoration_sitting": {
+        "support": "native",
+        "loop": true,
+        "frames": [
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          }
+        ]
+      },
+      "decoration_splash": {
+        "support": "native",
+        "loop": true,
+        "frames": [
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              -3
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              -3
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          },
+          {
+            "durationMs": 125,
+            "frame": "stand",
+            "offsetPx": [
+              0,
+              0
+            ],
+            "faceState": "inherit",
+            "opacity": 1
+          }
+        ]
+      }
+    },
+    "reducedMotion": {
+      "farm_stomp": {
+        "frame": "stand",
+        "offsetPx": [
+          0,
+          0
+        ],
+        "faceState": "inherit",
+        "opacity": 1,
+        "effect": "none"
+      },
+      "decoration_sitting": {
+        "frame": "stand",
+        "offsetPx": [
+          0,
+          0
+        ],
+        "faceState": "inherit",
+        "opacity": 1,
+        "effect": "none"
+      },
+      "decoration_splash": {
+        "frame": "stand",
+        "offsetPx": [
+          0,
+          0
+        ],
+        "faceState": "inherit",
+        "opacity": 1,
+        "effect": "none"
+      }
+    }
+  },
+  "scheduler": {
+    "priority": "Held/pickup interrupts a decoration immediately; field assignment uses farm_stomp instead of the hardcoded FARM_STEPS. Occupied slots suppress wander/wave/sleep. Blink composes without changing body pose. No additional per-type transforms, noise, squashing or scaling.",
+    "completion": "Loops do not decide how long occupancy lasts. Claude owns dwell, reservation, return and happiness rules."
+  }
+}
