@@ -889,3 +889,31 @@
 .recipe-unfound {
   filter: brightness(0) invert(0.102);
 }
+
+/* Nicknames on the map (D-091, §27.7): a paper pill under each named kid, over the world
+   and under every control. Decorative: the card and lists name the kid. */
+.nameplates {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.nameplate {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  /* 26 px at 16 px type; taller, never clipped, with enlarged text (§27.7). */
+  min-height: 26px;
+  max-width: 120px;
+  padding: 0.125em 0.375em;
+  border: 1px solid var(--ui-ink);
+  border-radius: 6px;
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+  font-family: var(--ui-font);
+  font-size: 16px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+}

@@ -6523,3 +6523,165 @@ test.describe('A kid near the top of the screen opens its card by touch (owner b
     await expect(page.locator('.name-bubble')).toBeHidden();
   });
 });
+
+test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
+  /** Two kids mid-map, the first named `name`; returns their ids. */
+  async function named(page: Page, name: string, gap = 400): Promise<[number, number]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(([name, gap]) => {
+      const pk = window.__PK__!;
+      pk.debugGive!({ materials: 1000 });
+      pk.centerOn(1256, 3300);
+      const a = pk.debugAdd!('fire', 1256 - gap / 2, 3228);
+      const b = pk.debugAdd!('snow', 1256 + gap / 2, 3228);
+      pk.debugCommand!({ type: 'name', kidId: a, name });
+      return [a, b] as [number, number];
+    }, [name, gap] as const);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(1);
+    return ids;
+  }
+
+  test('a named kid has its name in a pill under its feet; an unnamed kid has none', async ({ page }) => {
+    const [a] = await named(page, 'Moss');
+    const [pill] = await page.evaluate(() => window.__PK__!.nameplates());
+    expect(pill!.id).toBe(a);
+    expect(pill!.text).toBe('Moss');
+    const feet = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, a);
+    // Centred under the feet, 4 px below them at least, 26 px tall, no wider than 120 px.
+    expect(pill!.left + pill!.width / 2).toBeCloseTo(feet.x, -0.5);
+    expect(pill!.top).toBeGreaterThanOrEqual(feet.y + 4 - 0.5);
+    expect(pill!.height).toBeCloseTo(26, 0);
+    expect(pill!.width).toBeLessThanOrEqual(120);
+    // Decorative: it takes no taps, so a tap on it reaches the map.
+    const node = page.locator('.nameplate:not(.nameplate-probe)');
+    await expect(node).toHaveCSS('pointer-events', 'none');
+    await expect(page.locator('.nameplates')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('no pill covers a kid, named or not (Codex review, #114)', async ({ page }) => {
+    const [a] = await named(page, 'Moss');
+    // An unnamed kid just below the named one, where its pill would go.
+    const below = await page.evaluate((a) => {
+      const pk = window.__PK__!;
+      const k = pk.kids().find((x) => x.id === a)!;
+      return pk.debugAdd!('snow', k.x, k.y + 175);
+    }, a);
+    await page.waitForTimeout(400);
+    const box = await page.evaluate((i) => {
+      const pk = window.__PK__!;
+      const k = pk.kids().find((x) => x.id === i)!;
+      return { a: pk.worldToScreen(k.x + k.box.left, k.y + k.box.top), b: pk.worldToScreen(k.x + k.box.right, k.y + k.box.bottom) };
+    }, below);
+    for (const p of await page.evaluate(() => window.__PK__!.nameplates())) {
+      const clear = p.left + p.width <= box.a.x || box.b.x <= p.left || p.top + p.height <= box.a.y || box.b.y <= p.top;
+      expect(clear).toBe(true);
+    }
+  });
+
+  test("a ready plot's sign is something no pill may cover (Codex review round 2, #114)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1440, 2400));
+    // Nothing to avoid while no plot is ready.
+    expect(await page.evaluate(() => window.__PK__!.nameExclusions())).toEqual([]);
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero', true));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
+    // Plot 1's checked sign, where it is drawn (its paper centred about (1440, 2383) in the world).
+    const [r] = await page.evaluate(() => window.__PK__!.nameExclusions());
+    const c = await page.evaluate(() => window.__PK__!.worldToScreen(1440, 2383));
+    expect(Math.abs((r!.left + r!.right) / 2 - c.x)).toBeLessThan(2);
+    expect(Math.abs((r!.top + r!.bottom) / 2 - c.y)).toBeLessThan(2);
+    // At least 96 CSS px of sign canvas across means a paper wider than 40 px.
+    expect(r!.right - r!.left).toBeGreaterThan(40);
+  });
+
+  test('with enlarged text the pill grows taller, never clipped, still 120 px at most, and names are fitted again (Codex review round 3, #114)', async ({ page }) => {
+    await named(page, 'Meadowsweetly');
+    const before = (await page.evaluate(() => window.__PK__!.nameplates()))[0]!;
+    expect(before.text).toBe('Meadowsweetly');
+    expect(before.height).toBeCloseTo(26, 0);
+    // The player's text size, enlarged one and a half times.
+    await page.addStyleTag({ content: '.nameplate { font-size: 24px; }' });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.nameplates()))[0]?.height ?? 0).toBeGreaterThan(34);
+    const after = (await page.evaluate(() => window.__PK__!.nameplates()))[0]!;
+    expect(after.width).toBeLessThanOrEqual(120.5);
+    // Fitted again at the new size: now it needs an ellipsis.
+    expect(after.text.endsWith('…')).toBe(true);
+    // Nothing clipped inside.
+    const clipped = await page.locator('.nameplate:not(.nameplate-probe)').evaluate((e) => e.scrollHeight > e.clientHeight + 1);
+    expect(clipped).toBe(false);
+  });
+
+  test('while a kid is held over the Garden, its drop target and label are things no pill may cover (Codex review round 4, #114)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1536, 2488));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1216, 2728));
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1536, 2156));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 6 });
+    const label = page.locator('.home-label:not(.home-probe)');
+    await expect(label).toBeVisible();
+    const box = (await label.boundingBox())!;
+    const ex = await page.evaluate(() => window.__PK__!.nameExclusions());
+    expect(ex.some((r) => Math.abs(r.left - box.x) < 1 && Math.abs(r.top - box.y) < 1 && Math.abs(r.right - (box.x + box.width)) < 1)).toBe(true);
+    await page.mouse.up();
+    // Let go: nothing of the target is left to avoid.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameExclusions().length)).toBe(0);
+  });
+
+  test('a long name is cut at whole letters with an ellipsis, and the pill stays 120 px', async ({ page }) => {
+    await named(page, 'Wwwwwwwwwwwwwwwwwwwwwwww');
+    const [pill] = await page.evaluate(() => window.__PK__!.nameplates());
+    expect(pill!.text.endsWith('…')).toBe(true);
+    expect(pill!.text.length).toBeLessThan(24);
+    expect(pill!.width).toBeLessThanOrEqual(120.5);
+  });
+
+  test('the Settings switch hides every pill at once and shows them again, and is kept', async ({ page }) => {
+    await named(page, 'Moss');
+    const openSettings = async () => {
+      await page.locator('[data-nav=notebook]').click();
+      await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    };
+    await openSettings();
+    const toggle = page.getByRole('switch', { name: 'Show nicknames on the map' });
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(0);
+    // Kept across a reload; the card still names the kid.
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await page.evaluate(() => window.__PK__!.centerOn(1256, 3300));
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.__PK__!.nameplates().length)).toBe(0);
+    await openSettings();
+    await page.getByRole('switch', { name: 'Show nicknames on the map' }).click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(1);
+  });
+
+  test('pills never crowd: far apart both show; side by side only the frontmost', async ({ page }) => {
+    const [, b] = await named(page, 'Meadowsweet', 400);
+    await page.evaluate((b) => window.__PK__!.debugCommand!({ type: 'name', kidId: b, name: 'Bramblewood' }), b);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(2);
+    // Two more, side by side, the second a little lower (in front).
+    const [c, d] = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const c = pk.debugAdd!('fire', 1180, 3428);
+      const d = pk.debugAdd!('snow', 1350, 3448);
+      pk.debugCommand!({ type: 'name', kidId: c, name: 'Meadowsweet' });
+      pk.debugCommand!({ type: 'name', kidId: d, name: 'Bramblewood' });
+      return [c, d];
+    });
+    await page.waitForTimeout(500);
+    const pills = await page.evaluate(() => window.__PK__!.nameplates());
+    const ids = pills.map((p) => p.id);
+    expect(ids).toContain(d);
+    expect(ids).not.toContain(c);
+    // No two pills overlap.
+    for (const p of pills) for (const q of pills) if (p !== q) expect(p.left + p.width <= q.left || q.left + q.width <= p.left || p.top + p.height <= q.top || q.top + q.height <= p.top).toBe(true);
+  });
+});

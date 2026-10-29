@@ -13,6 +13,8 @@ export interface Settings {
   plantV2Explained: boolean;
   /** The first-run tutorial's progress (D-078, GUI_MVP §24.1): offered until skipped or done. */
   guidedTutorial: TutorialRecord;
+  /** Nicknames under named kids on the map (D-091, §27.7); on by default. */
+  showNicknames: boolean;
 }
 
 /** The tutorial's saved progress (§24.1, `guidedTutorial`, version 1). */
@@ -57,6 +59,7 @@ export function parseSettings(text: string | null, defaults: Settings): Settings
     sfx: volume(raw.sfx, defaults.sfx),
     plantV2Explained: typeof raw.plantV2Explained === 'boolean' ? raw.plantV2Explained : defaults.plantV2Explained,
     guidedTutorial: tutorialRecord(raw.guidedTutorial, defaults.guidedTutorial),
+    showNicknames: typeof raw.showNicknames === 'boolean' ? raw.showNicknames : defaults.showNicknames,
   };
 }
 

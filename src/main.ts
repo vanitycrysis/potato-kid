@@ -93,6 +93,10 @@ declare global {
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[]; glow: boolean; signCss: number | null }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
       rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[];
+      /** What a map nickname may not cover now (§27.7): screen boxes of ready signs and the partner mark. */
+      nameExclusions: () => { left: number; top: number; right: number; bottom: number }[];
+      /** Map nicknames shown now (D-091, §27.7): kid id, text and screen box. */
+      nameplates: () => { id: number; text: string; left: number; top: number; width: number; height: number }[];
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
@@ -143,7 +147,7 @@ async function boot(): Promise<void> {
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
   const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained' | 'guidedTutorial'> } } | undefined)?.settings?.defaults;
-  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 } };
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 }, showNicknames: true };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -258,6 +262,8 @@ async function boot(): Promise<void> {
     dropTarget: () => scene.dropTarget,
     recipe: () => scene.recipeShown,
     rares: () => scene.raresShown,
+    nameExclusions: () => hud.nameExclusions,
+    nameplates: () => hud.nameplatesShown.map((n) => ({ id: n.id, text: n.text, left: n.rect.left, top: n.rect.top, width: n.rect.width, height: n.rect.height })),
     layers: () => scene.layerNames,
     plots: () =>
       scene.game.state.plots.map((p, i) => {

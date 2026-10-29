@@ -57,6 +57,11 @@ const ALL_LABELS: [string, string, string][] = [
 const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
 export class HomeOverlay {
+  /** What it shows now, in screen CSS px (nicknames keep clear of it, §27.7). */
+  visibleRects(): { left: number; top: number; right: number; bottom: number }[] {
+    return [this.target, this.mark, this.label].filter((n) => !n.hidden && n.isConnected).map((n) => n.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0).map((r) => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom }));
+  }
+
   private readonly target = el('div', 'home-target');
   private readonly mark = el('div', 'home-point');
   private readonly heading = el('span', 'home-heading');

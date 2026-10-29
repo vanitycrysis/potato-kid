@@ -95,6 +95,11 @@ export function placeRail(pointer: { x: number; y: number }, frame: PreviewFrame
 }
 
 export class RecipePreview {
+  /** What it shows now, in screen CSS px (nicknames keep clear of it, §27.7). */
+  visibleRects(): { left: number; top: number; right: number; bottom: number }[] {
+    return [this.panel, this.rail].filter((n) => !n.hidden && n.isConnected).map((n) => n.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0).map((r) => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom }));
+  }
+
   private readonly panel = el('div', 'recipe-window ui-surface ui-toast');
   private readonly rail = el('div', 'recipe-rail ui-surface ui-toast');
   /** Announces each new pair once (§25.2); never the hidden result's name. */

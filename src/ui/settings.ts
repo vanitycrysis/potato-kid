@@ -85,7 +85,29 @@ export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTM
     render();
   };
 
-  s.body.append(audioRow, music.section, sfx.section);
+  // Nicknames on the map (D-091, §27.7): one switch, named by its label.
+  const names = el('button', 'ui-button settings-choice settings-switch');
+  names.type = 'button';
+  names.setAttribute('role', 'switch');
+  names.id = 'settings-nicknames';
+  const namesLabel = el('label', 'settings-label', 'Show nicknames on the map');
+  namesLabel.htmlFor = names.id;
+  names.setAttribute('aria-labelledby', 'settings-nicknames-label');
+  namesLabel.id = 'settings-nicknames-label';
+  names.addEventListener('click', () => {
+    store.set({ showNicknames: !store.value.showNicknames });
+    renderNames();
+  });
+  const renderNames = () => {
+    const on = store.value.showNicknames;
+    names.setAttribute('aria-checked', String(on));
+    names.classList.toggle('is-selected', on);
+    names.textContent = on ? 'On' : 'Off';
+  };
+  const namesRow = el('div', 'settings-row settings-nicknames', namesLabel, names);
+  renderNames();
+
+  s.body.append(audioRow, music.section, sfx.section, namesRow);
   // Under the preferences, the tutorial again (D-078, §23.3).
   if (replay) s.body.append(replayButton(replay));
   const done = el('button', 'ui-button ui-primary sheet-action', el('span', 'action-label', 'Done'));

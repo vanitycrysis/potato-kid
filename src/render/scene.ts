@@ -7,7 +7,7 @@ import { rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
 import { kidUnder } from './dropTarget';
-import { plotAt, PlotsView } from './plotsView';
+import { plotAt, PlotsView, readySignRect } from './plotsView';
 import { fieldAt, FieldsView } from './fieldsView';
 import { RareLayer, type RareKid } from './rareView';
 import { HomeTarget, type HomeSpec, type HomeState } from './homeTarget';
@@ -258,6 +258,7 @@ export class MapScene {
   private readonly home: HomeTarget | null;
   private readonly homeLayer = new Graphics();
   private readonly homeListeners = new Set<(v: HomeView) => void>();
+  private readonly frameListeners = new Set<() => void>();
   private readonly recipeListeners = new Set<(v: RecipeView | null) => void>();
   /** The partner mark, drawn just below the held kid (§25.1). */
   private readonly partnerMark = new Graphics();
@@ -455,6 +456,61 @@ export class MapScene {
   }
 
   /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
+  /** Calls `fn` after each drawn frame: screen overlays that follow kids (map nicknames, D-091). */
+  listenFrame(fn: () => void): void {
+    this.frameListeners.add(fn);
+  }
+
+  /**
+   * Every kid drawn now, in screen CSS px (D-091, §27.7): where each one's feet are drawn
+   * (lifted while held), its lifetime box there and its nickname (empty without one); the
+   * visible map band between the HUD and the tray; what a name must never cover (the partner
+   * mark); and the finger, while a kid is held. Farming kids stand on their pads.
+   */
+  namedOnScreen(): {
+    kids: { id: number; name: string; feet: { x: number; y: number }; box: { left: number; top: number; right: number; bottom: number }; held: boolean }[];
+    band: { left: number; top: number; right: number; bottom: number };
+    exclusions: { left: number; top: number; right: number; bottom: number }[];
+    finger: { x: number; y: number } | null;
+  } {
+    const out: ReturnType<MapScene['namedOnScreen']>['kids'] = [];
+    const add = (id: number, name: string | undefined, at: { x: number; y: number }, box: { left: number; top: number; right: number; bottom: number }, held: boolean) => {
+      const feet = this.camera.toGlobal(at);
+      const a = this.camera.toGlobal({ x: at.x + box.left, y: at.y + box.top });
+      const b = this.camera.toGlobal({ x: at.x + box.right, y: at.y + box.bottom });
+      out.push({ id, name: name ?? '', feet: { x: feet.x, y: feet.y }, box: { left: a.x, top: a.y, right: b.x, bottom: b.y }, held });
+    };
+    for (const k of this.game.state.world.kids) {
+      const view = this.views.get(k.id);
+      if (view) add(k.id, k.name, view.root.position, k.box, this.drag?.kidId === k.id);
+    }
+    for (const f of this.game.state.fields) {
+      for (const w of f.workers) {
+        const at = this.fieldsView?.feetOf(w.id);
+        if (at) add(w.id, w.name, at, this.game.boxOf(w.look, w.type), false);
+      }
+    }
+    const { width, height } = this.app.screen;
+    const exclusions: { left: number; top: number; right: number; bottom: number }[] = [];
+    // Every ready plot's checked sign (§27.6), as drawn at this zoom (Codex review round 2, #114).
+    if (this.plotsView) {
+      this.game.state.plots.forEach((plot, i) => {
+        if (!this.game.plotReady(plot)) return;
+        const r = readySignRect(this.art.planting!, this.gardenGround, i, this.cam.zoom);
+        if (!r) return;
+        const a = this.camera.toGlobal({ x: r.left, y: r.top });
+        const b = this.camera.toGlobal({ x: r.right, y: r.bottom });
+        exclusions.push({ left: a.x, top: a.y, right: b.x, bottom: b.y });
+      });
+    }
+    // The partner mark while a held kid is over a partner (D-083): its whole outline.
+    if (this.partnerMark.getLocalBounds().width > 0) {
+      const r = this.partnerMark.getBounds();
+      exclusions.push({ left: r.x, top: r.y, right: r.x + r.width, bottom: r.y + r.height });
+    }
+    return { kids: out, band: { left: 0, top: this.insets.top, right: width, bottom: height - this.insets.bottom }, exclusions, finger: this.drag ? { ...this.dragScreen } : null };
+  }
+
   listenSteps(fn: (events: GameEvent[]) => void): void {
     this.stepListeners.add(fn);
   }
@@ -1562,6 +1618,7 @@ export class MapScene {
       }
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, alive);
+    for (const fn of this.frameListeners) fn();
   }
 
   /** Test hook: the world's layers, bottom first, by label (unlabelled ones as ''). */
