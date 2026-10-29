@@ -1,5 +1,6 @@
 import { kidRig, type KidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
+import type { PendingArrival } from '../sim/game';
 import { AnimatedPortrait } from './animatedPortrait';
 import { el, icon, tierBadge, tierName } from './dom';
 
@@ -9,22 +10,10 @@ import { el, icon, tierBadge, tierName } from './dom';
 // shown, each acknowledged by itself. The world keeps running underneath; nothing here
 // changes the game (the sim already admitted the kid and paid any award).
 
-export type MeetSource = 'garden' | 'plot' | 'fusion';
+export type MeetSource = PendingArrival['source'];
 
-/** One arrival to show: what came, from where, whether its kind is new, and its award. */
-export interface Meeting {
-  source: MeetSource;
-  type: KidId;
-  look: { body: string; face: string };
-  /** Its kind was not in the Dex before this birth (`New!`). */
-  isNew: boolean;
-  /** Potatokens the sim awarded with it (discovery and milestones); 0 hides the line. */
-  potatokens: number;
-  /** Which of the source's ten lines, chosen once (§27.5). */
-  line: number;
-  /** The kid on the map, while it is drawn there: the popup waits until it is. */
-  kidId?: number;
-}
+/** One arrival to show: as saved with the game (D-087, §27.5). */
+export type Meeting = PendingArrival;
 
 /** Ten lines per source (§27.5): every one names the kind once, with no pronoun. */
 export const LINES: Record<MeetSource, readonly string[]> = {
@@ -43,26 +32,45 @@ export function pickLine(source: MeetSource, last: number | null, random: () => 
 
 /** The popup's greeting (§27.4): the wave, then 2.5 s still, again while it is open. */
 const GREETING_IDLE_S = 2.5;
+/** A compact panel needs this much width (§27.4); narrower, the single-column page is used. */
+const COMPACT_MIN_WIDTH = 520;
+
+/** How the panel is laid out (§27.4): portrait, compact (sprite left), or the single-column fallback. */
+type Layout = { mode: 'portrait' | 'compact' | 'fallback'; sprite: number };
+
+function layoutNow(): Layout {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  if (h > 520) return { mode: 'portrait', sprite: 256 };
+  if (w - 16 < COMPACT_MIN_WIDTH) return { mode: 'fallback', sprite: 144 };
+  return { mode: 'compact', sprite: h < 280 + 16 ? 128 : 192 };
+}
 
 export class NewKidPopup {
-  private readonly queue: Meeting[];
-  private open: { meeting: Meeting; scrim: HTMLElement; dialog: HTMLElement; sprite: AnimatedPortrait; idle: number; restore: HTMLElement | null } | null = null;
+  private open: { meeting: Meeting; scrim: HTMLElement; dialog: HTMLElement; sprite: AnimatedPortrait; art: HTMLElement; idle: number; reduced: boolean; layout: Layout } | null = null;
   private readonly lastLine: Partial<Record<MeetSource, number>> = {};
   private last = 0;
   private readonly listeners = new Set<() => void>();
+  /**
+   * Where focus goes when the last of a run of popups is acknowledged: the control that had
+   * it when the first opened (§27.4). Undefined between runs.
+   */
+  private restoreTo: HTMLElement | null | undefined = undefined;
 
   constructor(
     private readonly content: Content,
-    /** Saved arrivals not yet acknowledged, and where to keep them (§27.5). */
-    private readonly store: { load(): Meeting[]; save(queue: readonly Meeting[]): void },
+    /** The arrivals not yet acknowledged, oldest first, as saved with the game (§27.5). */
+    private readonly queue: () => Meeting[],
     private readonly reducedMotion: () => boolean,
     /** What goes inert behind the popup. */
     private readonly background: () => HTMLElement[],
     /** Pauses or resumes world input (the simulation keeps running). */
     private readonly pauseInput: (paused: boolean) => void,
+    /** Where focus goes when nothing that had it is left (the Garden control). */
+    private readonly fallbackFocus: () => HTMLElement | null,
     private readonly rig: KidRig | undefined = kidRig,
   ) {
-    this.queue = store.load().filter((m) => content.kids.some((k) => k.id === m.type));
+    window.addEventListener('resize', () => this.relayout());
   }
 
   /** Whether a popup is up. */
@@ -72,12 +80,7 @@ export class NewKidPopup {
 
   /** Arrivals waiting, the one up included. */
   get waiting(): number {
-    return this.queue.length;
-  }
-
-  /** The arrivals waiting, oldest first (tests). */
-  get queued(): readonly Meeting[] {
-    return this.queue;
+    return this.queue().length;
   }
 
   /** Calls `fn` whenever the last waiting popup is acknowledged. */
@@ -89,45 +92,66 @@ export class NewKidPopup {
   add(m: Omit<Meeting, 'line'>): void {
     const line = pickLine(m.source, this.lastLine[m.source] ?? null);
     this.lastLine[m.source] = line;
-    this.queue.push({ ...m, line });
-    this.store.save(this.queue);
+    this.queue().push({ ...m, line });
+  }
+
+  /** Android Back (§27.4): acknowledges the popup up, if any. */
+  back(): boolean {
+    if (!this.open) return false;
+    this.acknowledge();
+    return true;
   }
 
   /**
-   * Called every frame. `canShow`: nothing else holds the screen (no sheet, drag, pointer
-   * down, name bubble or tutorial card). `ready(m)`: its kid is drawn (or gone).
+   * Called every frame. `canShow`: nothing else holds the screen (no sheet, gesture, name
+   * bubble, tutorial card or recovery warning). `ready(m)`: its kid is drawn (or gone).
    */
   tick(now: number, canShow: boolean, ready: (m: Meeting) => boolean): void {
     const dt = this.last ? Math.min(0.25, (now - this.last) / 1000) : 0;
     this.last = now;
     if (this.open) {
-      const s = this.open.sprite;
+      const o = this.open;
       if (document.hidden) return;
-      if (s.playing) s.tick(dt);
-      else if (!this.reducedMotion() && (this.open.idle += dt) >= GREETING_IDLE_S) {
-        this.open.idle = 0;
-        s.play('wave');
+      // A changed motion preference applies at once: still now, or a full rest before waving.
+      const reduced = this.reducedMotion();
+      if (reduced !== o.reduced) {
+        o.reduced = reduced;
+        o.sprite.setReducedMotion(reduced);
+        o.idle = 0;
+      }
+      if (o.sprite.playing) o.sprite.tick(dt);
+      else if (!reduced && (o.idle += dt) >= GREETING_IDLE_S) {
+        o.idle = 0;
+        o.sprite.play('wave');
       }
       return;
     }
-    const next = this.queue[0];
+    const next = this.queue()[0];
     if (!next || !canShow || !ready(next)) return;
     this.mount(next);
   }
 
-  /** Takes the popup down for a while (a sheet must open, the app is leaving); it comes back. */
-  hide(): void {
-    if (!this.open) return;
-    this.unmount();
+  /** A new screen size or rotation: the same arrival, laid out again, its line kept. */
+  private relayout(): void {
+    const o = this.open;
+    if (!o) return;
+    const layout = layoutNow();
+    if (layout.mode === o.layout.mode && layout.sprite === o.layout.sprite) return;
+    o.layout = layout;
+    o.dialog.classList.toggle('is-compact', layout.mode === 'compact');
+    o.dialog.classList.toggle('is-fallback', layout.mode === 'fallback');
+    const sprite = new AnimatedPortrait(this.rig!, o.meeting.type, layout.sprite, o.meeting.look, o.reduced);
+    o.art.replaceChildren(sprite.node);
+    o.sprite = sprite;
   }
 
   private mount(m: Meeting): void {
     const def = this.content.kids.find((k) => k.id === m.type);
     const name = def?.name ?? m.type;
     const sentence = LINES[m.source][m.line]!.replace('{name}', name);
-    const compact = window.innerHeight <= 520;
-    const size = compact ? (window.innerHeight < 280 + 2 * 8 ? 128 : 192) : 256;
-    const sprite = new AnimatedPortrait(this.rig!, m.type, size, m.look, this.reducedMotion());
+    const layout = layoutNow();
+    const reduced = this.reducedMotion();
+    const sprite = new AnimatedPortrait(this.rig!, m.type, layout.sprite, m.look, reduced);
 
     const scrim = el('div', 'arrival-scrim');
     let pressed = false;
@@ -139,7 +163,7 @@ export class NewKidPopup {
       if (pressed) this.acknowledge();
       pressed = false;
     });
-    const last = this.queue.length === 1;
+    const last = this.queue().length === 1;
     const status = el('p', 'arrival-status', m.isNew ? 'New!' : 'From your plot');
     status.id = 'arrival-status';
     const close = el('button', 'ui-button arrival-close', icon('icon_close', '', 'ui-icon-24'));
@@ -162,14 +186,14 @@ export class NewKidPopup {
     go.addEventListener('click', () => this.acknowledge());
     const art = el('div', 'arrival-sprite', sprite.node);
     const text = el('div', 'arrival-text', ...parts, go);
-    const dialog = el('section', `arrival ui-surface${compact ? ' is-compact' : ''}`, el('header', 'arrival-header', status, close), art, text);
+    const dialog = el('section', `arrival ui-surface${layout.mode === 'compact' ? ' is-compact' : ''}${layout.mode === 'fallback' ? ' is-fallback' : ''}`, el('header', 'arrival-header', status, close), art, text);
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');
     dialog.setAttribute('aria-labelledby', 'arrival-sentence');
     dialog.setAttribute('aria-describedby', ['arrival-status', 'arrival-category', ...(m.potatokens > 0 ? ['arrival-award'] : [])].join(' '));
     dialog.dataset.source = m.source;
-    // Its own keys: Escape (and Android back) acknowledge this one; Tab stays inside. A held
-    // key never drains the queue (§27.4).
+    // Its own keys: Escape acknowledges this one; Tab stays inside. A held key never drains
+    // the queue (§27.4).
     dialog.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -184,11 +208,12 @@ export class NewKidPopup {
       }
     });
     dialog.addEventListener('pointerdown', (e) => e.stopPropagation());
-    const restore = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+    // The first of a run remembers what had focus; the rest keep that (§27.4).
+    if (this.restoreTo === undefined) this.restoreTo = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
     document.body.append(scrim, dialog);
     for (const b of this.background()) b.inert = true;
     this.pauseInput(true);
-    this.open = { meeting: m, scrim, dialog, sprite, idle: 0, restore };
+    this.open = { meeting: m, scrim, dialog, sprite, art, idle: 0, reduced, layout };
     title.focus({ preventScroll: true });
     // The greeting starts on mount (§27.4).
     sprite.play('wave');
@@ -196,14 +221,16 @@ export class NewKidPopup {
 
   private acknowledge(): void {
     if (!this.open) return;
-    const restore = this.open.restore;
+    const queue = this.queue();
+    const shown = this.open.meeting;
     this.unmount();
-    this.queue.shift();
-    this.store.save(this.queue);
-    if (this.queue.length === 0) {
-      if (restore?.isConnected) restore.focus({ preventScroll: true });
-      for (const fn of this.listeners) fn();
-    }
+    if (queue[0] === shown) queue.shift();
+    if (queue.length > 0) return;
+    // The run is over: focus back where it was, else on the Garden.
+    const to = this.restoreTo?.isConnected ? this.restoreTo : this.fallbackFocus();
+    this.restoreTo = undefined;
+    to?.focus({ preventScroll: true });
+    for (const fn of this.listeners) fn();
   }
 
   private unmount(): void {
@@ -216,9 +243,9 @@ export class NewKidPopup {
   }
 
   /** Test hook: what is up now. */
-  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string } | null {
+  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string } | null {
     if (!this.open) return null;
     const m = this.open.meeting;
-    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset };
+    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode };
   }
 }

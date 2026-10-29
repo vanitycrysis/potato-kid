@@ -100,8 +100,10 @@ declare global {
       nameExclusions: () => { left: number; top: number; right: number; bottom: number }[];
       /** Map nicknames shown now (D-091, §27.7): kid id, text and screen box. */
       nameplates: () => { id: number; text: string; left: number; top: number; width: number; height: number }[];
+      /** Only with `?debug=1`: Android's Back, as the native button calls it (returns whether the UI took it). */
+      debugBack?: () => boolean;
       /** The new-kid popup up now (D-087), and how many arrivals wait, the one up included. */
-      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; waiting: number } | null;
+      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; waiting: number } | null;
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
@@ -154,7 +156,7 @@ async function boot(): Promise<void> {
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
   const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained' | 'guidedTutorial'> } } | undefined)?.settings?.defaults;
-  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 }, showNicknames: true, arrivals: [] };
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 }, showNicknames: true };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -302,6 +304,7 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
+          debugBack: () => hud.back(),
           debugKnow: (type: string) => {
             if (!scene.game.state.discoveredKids.includes(type)) scene.game.state.discoveredKids.push(type);
             hud.debugKnow(type);

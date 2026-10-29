@@ -158,6 +158,40 @@ export interface PlantedKid {
   happiness?: { left: number; favourite: boolean };
 }
 
+/** One arrival to show in the new-kid popup (D-087, D-088): kept until acknowledged. */
+export interface PendingArrival {
+  source: 'garden' | 'plot' | 'fusion';
+  type: KidId;
+  look: { body: string; face: string };
+  /** Its kind was not in the Dex before this birth. */
+  isNew: boolean;
+  /** Potatokens the sim awarded with it. */
+  potatokens: number;
+  /** Which of the source's lines, chosen once (§27.5). */
+  line: number;
+  /** The kid, while it may still be on the map (the popup waits until it is drawn). */
+  kidId?: number;
+}
+
+/** One return summary not yet shown (§27.5): the report's totals, kept until dismissed. */
+export interface Recap {
+  seconds: number;
+  materials: number;
+  potatokens: number;
+  /** Garden arrivals while away. */
+  arrived: number;
+  /** Kinds first found among them, each shown in its own popup first. */
+  newKinds: number;
+  plotsWaiting: number;
+  food: Record<string, number>;
+}
+
+/** What the player has yet to see, oldest first. */
+export interface Presentation {
+  arrivals: PendingArrival[];
+  recaps: Recap[];
+}
+
 /** A plot's seed (D-061): the kids planted in it, then, once started, its sprout. */
 export interface Seed {
   /** The kids planted, in order: `minKids` to `maxKids` before it can start. */
@@ -252,6 +286,12 @@ export interface GameState {
   fields: Field[];
   /** Whole bites of each food, from the fields (D-069). */
   pantry: Record<string, number>;
+  /**
+   * What the player has yet to see (D-087, GUI_MVP §27.5): saved in the same write as the
+   * births and the catch-up it shows, so neither can be saved without the other. The sim
+   * never reads it; the HUD adds and acknowledges.
+   */
+  presentation: Presentation;
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
   /** Recipe pair keys (`pairKey`) the player has triggered. */
@@ -362,6 +402,7 @@ export class Game {
       plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })),
       fields: [],
       pantry: {},
+      presentation: { arrivals: [], recaps: [] },
       discoveredKids: [],
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,

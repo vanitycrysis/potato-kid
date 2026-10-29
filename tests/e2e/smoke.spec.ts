@@ -6935,6 +6935,147 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     expect(await page.evaluate(() => window.__PK__!.arrival())).toBeNull();
   });
 
+  test("Android's Back acknowledges the popup up, and only it (Codex review, #117)", async ({ page }) => {
+    await fuseNew(page);
+    expect(await page.evaluate(() => window.__PK__!.debugBack!())).toBe(true);
+    await expect(popup(page)).toHaveCount(0);
+    // Nothing else open: Back is the app's again.
+    expect(await page.evaluate(() => window.__PK__!.debugBack!())).toBe(false);
+  });
+
+  test('a short screen too narrow for the compact panel gets the single column, without sideways overflow; a rotation lays it out again with its line (Codex review, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 480 });
+    await fuseNew(page);
+    const a = (await page.evaluate(() => window.__PK__!.arrival()))!;
+    expect(a.layout).toBe('fallback');
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    await page.setViewportSize({ width: 640, height: 360 });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.sentence).toBe(a.sentence);
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+  });
+
+  test('a kind found mid-pan waits for the finger to lift (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1256, 3228));
+    const at = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3428));
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(at.x + 30, at.y - 20, { steps: 6 });
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.debugKnown!().includes('firefighter'))).toBe(true);
+    await page.waitForTimeout(400);
+    await expect(popup(page)).toHaveCount(0);
+    // Still panning: the map follows the finger.
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3228));
+    await page.mouse.move(at.x + 60, at.y - 40, { steps: 6 });
+    const after = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3228));
+    expect(after.x - before.x).toBeGreaterThan(20);
+    await page.mouse.up();
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  });
+
+  test('a motion preference changed while it is up applies at once (Codex review, #117)', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fuseNew(page);
+    await page.waitForTimeout(600);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/stand/);
+    // Allowed again: after a full rest, it waves.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()!.body), { timeout: 5000, intervals: [50] }).toMatch(/wave/);
+    // Reduced mid-wave: it stands at once.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForTimeout(100);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/stand/);
+  });
+
+  test('after the last of several popups from the map, focus goes to the Garden (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    // Two new kinds in one step.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+      pk.debugAdd!('fire', 1536, 3228);
+      pk.debugAdd!('water', 1576, 3228);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()?.waiting ?? 0)).toBe(2);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(popup(page).locator('.arrival-sentence')).toBeFocused();
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(popup(page)).toHaveCount(0);
+    await expect(page.locator('[data-nav=garden]')).toBeFocused();
+  });
+
+  test('a return summary still waiting is kept with the game: after a reload it follows its popups (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
+    await expect(popup(page).locator('.arrival-status')).toHaveText('New!');
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    for (;;) {
+      if (!(await page.evaluate(() => window.__PK__!.arrival()))) break;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+      await page.waitForTimeout(150);
+    }
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toBeVisible();
+  });
+
+  test('two returns before the first is seen: both summaries, oldest first (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
+    await expect(popup(page).locator('.arrival-status')).toHaveText('New!');
+    await page.evaluate(() => window.__PK__!.debugAway!(2 * 3600 * 1000));
+    for (;;) {
+      if (!(await page.evaluate(() => window.__PK__!.arrival()))) break;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+      await page.waitForTimeout(150);
+    }
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toContainText('6 h');
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(summary).toContainText('2 h');
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('the first-run tutorial waits for a popup restored at start (Codex review, #117)', async ({ page }) => {
+    await fuseNew(page);
+    await page.waitForTimeout(300);
+    await page.goto('/?seed=3&debug=1&calm=1&arrivals=1&tutorial=1');
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+    await page.waitForTimeout(500);
+    await expect(page.locator('#tutorial-card')).toBeHidden();
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.locator('#tutorial-card')).toBeVisible();
+  });
+
+  test('an unanswered recovery warning comes first; a save banner stays usable above a popup (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: true, readOnly: false }));
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.debugKnown!().includes('firefighter'))).toBe(true);
+    await page.waitForTimeout(400);
+    await expect(page.locator('.arrival')).toHaveCount(0);
+    await page.locator('.banner').getByRole('button').first().click();
+    await expect(page.locator('.arrival')).toHaveCount(1);
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect(page.locator('.banner')).toBeVisible();
+    expect(await page.locator('.banners').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+  });
+
   test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));

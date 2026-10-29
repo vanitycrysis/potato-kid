@@ -75,7 +75,7 @@ export class AnimatedPortrait {
     readonly type: KidId,
     sizePx: number,
     look: { body: string; face: string },
-    private readonly reducedMotion: boolean,
+    private reducedMotion: boolean,
     private readonly wild: WildData | undefined = kidWild,
   ) {
     const [cw, ch] = rig.canvas;
@@ -139,6 +139,15 @@ export class AnimatedPortrait {
     if (this.reducedMotion) return;
     this.clip = { name, time: 0 };
     this.pose();
+  }
+
+  /** The motion preference changed: turned on, it stands still at once (§27.4). */
+  setReducedMotion(on: boolean): void {
+    this.reducedMotion = on;
+    if (on && this.clip) {
+      this.clip = null;
+      this.pose();
+    }
   }
 
   /** Whether a clip is still playing. */

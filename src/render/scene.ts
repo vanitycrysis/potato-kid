@@ -455,7 +455,11 @@ export class MapScene {
     return this.home?.state ?? 'hidden';
   }
 
-  /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
+  /** A gesture is under way on the map: a kid held, a pan or a pinch (§27.4: nothing interrupts it). */
+  get busy(): boolean {
+    return !!(this.drag || this.pan || this.pinch);
+  }
+
   /** Calls `fn` after each drawn frame: screen overlays that follow kids (map nicknames, D-091). */
   listenFrame(fn: () => void): void {
     this.frameListeners.add(fn);
@@ -511,6 +515,7 @@ export class MapScene {
     return { kids: out, band: { left: 0, top: this.insets.top, right: width, bottom: height - this.insets.bottom }, exclusions, finger: this.drag ? { ...this.dragScreen } : null };
   }
 
+  /** Calls `fn` once per sim step with all of that step's events (GUI feedback batches them). */
   listenSteps(fn: (events: GameEvent[]) => void): void {
     this.stepListeners.add(fn);
   }

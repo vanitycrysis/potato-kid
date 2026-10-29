@@ -1,4 +1,4 @@
-import type { OfflineReport } from '../sim/game';
+import type { Recap } from '../sim/game';
 import { el, icon } from './dom';
 import { formatCount, formatDuration, formatExact } from './format';
 import type { Sheets } from './sheet';
@@ -10,7 +10,7 @@ import type { Sheets } from './sheet';
  * One report, shown once. `onClose` runs when the player dismisses it, by any path.
  * `newKinds`: kinds first found while away, each already shown in its own popup (§27.5).
  */
-export function openOfflineSummary(sheets: Sheets, report: OfflineReport, foods: readonly { id: string; name: string }[], onClose: (replaced: boolean) => void, newKinds = 0): void {
+export function openOfflineSummary(sheets: Sheets, report: Recap, foods: readonly { id: string; name: string }[], onClose: (replaced: boolean) => void, newKinds = 0): void {
   const s = sheets.open({ key: 'offline', icon: 'icon_timer', title: 'Welcome back', requestedHeight: 480, onClose }, null);
   s.setSubtitle('Your garden kept growing.');
 
@@ -36,7 +36,7 @@ export function openOfflineSummary(sheets: Sheets, report: OfflineReport, foods:
       'div',
       'stats',
       stat('icon_materials', 'Materials earned', `+${materials}`, materials === exact ? undefined : `(${exact} Materials)`),
-      stat('icon_kids', 'Kids arrived', formatExact(report.spawned.length)),
+      stat('icon_kids', 'Kids arrived', formatExact(report.arrived)),
       // The new kinds among them were met one by one before this summary (D-087, §27.5).
       ...(newKinds > 0 ? [stat('icon_discovery', 'New kinds', `${formatExact(newKinds)} · Shown above`)] : []),
       stat('icon_potatokens', 'Milestone Potatokens', `+${formatExact(report.potatokens)}`),

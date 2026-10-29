@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { content } from '../content';
 import { Game, type PersistedState } from '../sim/game';
 import { SaveManager } from './manager';
+import { migrations } from './migrations';
 import { decode, encode, SAVE_SCHEMA, validateState } from './record';
 import { MemoryStorage, type SaveStorage } from './storage';
 
@@ -533,7 +534,7 @@ describe('schema 7: rare variants retired (D-072)', () => {
   });
 
   it('a schema-9 save keeps its kids beside the Garden, which moved with map v4 (D-076); fields and plots as they were', async () => {
-    expect(SAVE_SCHEMA).toBe(10);
+    expect(SAVE_SCHEMA).toBe(11);
     const g = newGame();
     g.state.materials = 1e6;
     g.step([{ type: 'unlockField' }, { type: 'setFieldFood', field: 0, food: content.balance.feeding.foods[0]!.id }], 0);
@@ -664,3 +665,30 @@ describe('schema 6: planted kids keep their ids (D-074)', () => {
     expect(ok([...plot({ id: 500 }), ...plot({ id: 500 })])).not.toEqual([]);
   });
 });
+
+describe('what the player has yet to see (schema 11, D-087, GUI_MVP §27.5)', () => {
+  const T = 1_700_000_000_000;
+  const fresh = () => new Game(content, { bounds: { minX: 0, minY: 0, maxX: 2000, maxY: 2000 }, spawnAt: { x: 1000, y: 300 }, now: T }, 1).persisted();
+
+  it('a schema-10 save gets an empty queue: no popups for its history', () => {
+    const { presentation: _, ...old } = fresh();
+    void _;
+    expect(migrations(content)[10]!(old)).toMatchObject({ presentation: { arrivals: [], recaps: [] } });
+  });
+
+  it('a queue is saved with the game, and a malformed one is refused', () => {
+    const state = fresh();
+    state.presentation.arrivals.push({ source: 'plot', type: 'fire', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 3 });
+    state.presentation.recaps.push({ seconds: 600, materials: 12.5, potatokens: 0, arrived: 2, newKinds: 1, plotsWaiting: 0, food: {} });
+    expect(validateState(state, content)).toEqual([]);
+    for (const bad of [
+      { arrivals: [{ source: 'moon', type: 'fire', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 0 }], recaps: [] },
+      { arrivals: [{ source: 'plot', type: 'nobody', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 0 }], recaps: [] },
+      { arrivals: [], recaps: [{ seconds: 'long' }] },
+      undefined,
+    ]) {
+      expect(validateState({ ...state, presentation: bad } as unknown as PersistedState, content)).toContain('presentation is invalid');
+    }
+  });
+});
+

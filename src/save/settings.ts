@@ -15,34 +15,6 @@ export interface Settings {
   guidedTutorial: TutorialRecord;
   /** Nicknames under named kids on the map (D-091, §27.7); on by default. */
   showNicknames: boolean;
-  /** New-kid popups not yet acknowledged, oldest first (D-087, GUI_MVP §27.5). */
-  arrivals: PendingArrival[];
-}
-
-/** One saved arrival (the popup's `Meeting`). */
-export interface PendingArrival {
-  source: 'garden' | 'plot' | 'fusion';
-  type: string;
-  look: { body: string; face: string };
-  isNew: boolean;
-  potatokens: number;
-  line: number;
-}
-
-const SOURCES = ['garden', 'plot', 'fusion'];
-
-/** Stored arrivals made valid: anything malformed is dropped (a popup is never worth a crash). */
-function arrivals(v: unknown): PendingArrival[] {
-  if (!Array.isArray(v)) return [];
-  return v.flatMap((a): PendingArrival[] => {
-    if (!a || typeof a !== 'object') return [];
-    const r = a as Record<string, unknown>;
-    const look = r.look as Record<string, unknown> | null;
-    if (!SOURCES.includes(r.source as string) || typeof r.type !== 'string' || !look || typeof look.body !== 'string' || typeof look.face !== 'string') return [];
-    const line = typeof r.line === 'number' && Number.isInteger(r.line) ? Math.min(9, Math.max(0, r.line)) : 0;
-    const potatokens = typeof r.potatokens === 'number' && Number.isFinite(r.potatokens) ? Math.max(0, Math.round(r.potatokens)) : 0;
-    return [{ source: r.source as PendingArrival['source'], type: r.type, look: { body: look.body, face: look.face }, isNew: r.isNew === true, potatokens, line }];
-  });
 }
 
 /** The tutorial's saved progress (§24.1, `guidedTutorial`, version 1). */
@@ -88,7 +60,6 @@ export function parseSettings(text: string | null, defaults: Settings): Settings
     plantV2Explained: typeof raw.plantV2Explained === 'boolean' ? raw.plantV2Explained : defaults.plantV2Explained,
     guidedTutorial: tutorialRecord(raw.guidedTutorial, defaults.guidedTutorial),
     showNicknames: typeof raw.showNicknames === 'boolean' ? raw.showNicknames : defaults.showNicknames,
-    arrivals: raw.arrivals === undefined ? defaults.arrivals : arrivals(raw.arrivals),
   };
 }
 

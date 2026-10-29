@@ -2,7 +2,7 @@ import { kidRig, uiData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
-import type { GameEvent, OfflineReport } from '../sim/game';
+import type { GameEvent, OfflineReport, Recap } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { Nameplates } from './nameplates';
 import { NewKidPopup } from './newKidPopup';
@@ -22,7 +22,6 @@ import { PlantingNotes } from './plantingNotes';
 import { el, icon, tierBadge, tierName, tierShort, ui } from './dom';
 import { NOTEBOOK_KEYS, Notebook } from './notebook';
 import { openOfflineSummary } from './offline';
-import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
 import { Sheets, type SheetSnapshot } from './sheet';
 import './hud.css';
@@ -108,10 +107,8 @@ export class Hud {
   private readonly tutorial: Tutorial;
   /** The new-kid popup (D-087, D-088). */
   private readonly popup: NewKidPopup;
-  /** A return summary waiting for the new kinds' popups (§27.5). */
-  private pendingSummary: { report: OfflineReport; newKinds: number } | null = null;
-  /** A sheet put aside for popups with no summary after them: it comes back when they're done. */
-  private asidePending = false;
+  /** A sheet put aside at a return, for its popups and summaries: it comes back after them. */
+  private asideForReturn = false;
 
   constructor(
     private readonly scene: MapScene,
@@ -158,15 +155,15 @@ export class Hud {
       this.trayCell('notebook', 'Notebook', 'icon_r3_notebook', (b) => this.notebook.open(b)),
     );
     tray.setAttribute('aria-label', 'Main');
+    // The arrivals waiting live in the game state, saved with the births they show (§27.5).
     this.popup = new NewKidPopup(
       content,
-      {
-        load: () => settings.value.arrivals,
-        save: (queue) => settings.set({ arrivals: queue.map(({ source, type, look, isNew, potatokens, line }) => ({ source, type, look, isNew, potatokens, line })) }),
-      },
+      () => scene.game.state.presentation.arrivals,
       () => matchMedia('(prefers-reduced-motion: reduce)').matches,
-      () => [this.top, tray, this.banners, this.feedback, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
+      // Save banners stay usable above it (§27.3).
+      () => [this.top, tray, this.feedback, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
       (paused) => (scene.inputPaused = paused),
+      () => this.trayCells.get('garden') ?? null,
     );
     this.tutorial = new Tutorial(
       scene,
@@ -330,16 +327,8 @@ export class Hud {
       for (const t of scene.game.state.discoveredKids) this.known.add(t);
       this.offlineSummary(report, fresh.size);
     });
-    // The summary waits for the popups; with none to show, a sheet put aside comes back.
-    this.popup.onDrained(() => {
-      const waiting = this.pendingSummary;
-      this.pendingSummary = null;
-      if (waiting) this.openSummary(waiting.report, waiting.newKinds);
-      else if (this.asidePending) {
-        this.asidePending = false;
-        this.restoreInterrupted();
-      }
-    });
+    // With no summary after the popups, a sheet put aside for them comes back.
+    this.popup.onDrained(() => this.returnDone());
     const tick = (now: number) => {
       this.render(now);
       requestAnimationFrame(tick);
@@ -354,7 +343,7 @@ export class Hud {
   }
 
   /** Test hook: the new-kid popup up now, if any (D-087). */
-  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; waiting: number } | null {
+  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; waiting: number } | null {
     const s = this.popup.shown;
     return s && { ...s, waiting: this.popup.waiting };
   }
@@ -483,8 +472,9 @@ export class Hud {
     };
   }
 
-  /** Android Back: closes a name bubble, else an open sheet (returns whether it did). */
+  /** Android Back: the new-kid popup first, then a name bubble, else an open sheet (returns whether it did). */
   back(): boolean {
+    if (this.popup.back()) return true;
     if (this.tutorial.back()) return true;
     if (this.bubble.openKey !== null) {
       this.bubble.hide(true);
@@ -494,46 +484,59 @@ export class Hud {
   }
 
   /**
-   * The offline-return summary, once per report (GUI_MVP §8). A sheet that was open is put
-   * away and comes back, where it was, when the summary is dismissed; a second report while
-   * the summary is up replaces it. A short absence (a quick app switch) shows nothing: the
-   * rewards are credited all the same (D-049).
+   * A return (GUI_MVP §8, §27.5): its summary joins the saved queue, oldest first, and waits
+   * for the new kinds' popups; a sheet that was open steps aside and comes back, where it was,
+   * after all of them. A short absence (a quick app switch) gets no summary, though its new
+   * kinds still meet the player; the rewards are credited all the same (D-049).
    */
   private offlineSummary(report: OfflineReport, newKinds = 0): void {
     if (this.save.readOnly) return;
     const recap = report.seconds >= this.content.balance.economy.offlineSummaryMinSeconds;
-    // A short absence shows no summary, but its new kinds still meet the player (§27.5).
+    if (recap) {
+      this.scene.game.state.presentation.recaps.push({
+        seconds: report.seconds,
+        materials: report.materials,
+        potatokens: report.potatokens,
+        arrived: report.spawned.length,
+        newKinds,
+        plotsWaiting: report.plotsWaiting,
+        food: { ...report.food },
+      });
+    }
     if (!recap && newKinds === 0) return;
-    // The summary comes first: an open tutorial steps aside until it is dismissed (§24.1).
+    // The return comes first: an open tutorial steps aside until it is over (§24.1).
     this.tutorial.stepAside();
-    if (!this.summaryOpen && !this.pendingSummary && !this.asidePending) {
-      const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
-    }
-    if (this.popup.waiting > 0) {
-      // The new kinds first: an open sheet steps aside for them, and the summary waits.
-      if (this.sheets.isOpen && !this.summaryOpen) this.sheets.close(false);
-      if (recap) this.pendingSummary = { report, newKinds: (this.pendingSummary?.newKinds ?? 0) + newKinds };
-      else this.asidePending = !this.summaryOpen && !this.pendingSummary;
-      return;
-    }
-    if (recap) this.openSummary(report, newKinds);
+    if (this.asideForReturn || this.summaryOpen) return;
+    const open = this.sheets.snapshot();
+    this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
+    if (this.sheets.isOpen) this.sheets.close(false);
+    this.asideForReturn = true;
   }
 
-  /** The return summary itself; the sheet it put aside comes back when it is dismissed. */
-  private openSummary(report: OfflineReport, newKinds: number): void {
+  /** The oldest summary waiting; dismissed, it leaves the queue. */
+  private openSummary(recap: Recap): void {
     this.summaryOpen = true;
     openOfflineSummary(
       this.sheets,
-      report,
+      recap,
       this.content.balance.feeding.foods,
       (replaced) => {
-        if (replaced) return;
+        const queue = this.scene.game.state.presentation.recaps;
+        if (queue[0] === recap) queue.shift();
         this.summaryOpen = false;
-        this.restoreInterrupted();
+        // Replaced by a sheet it handed back (a kid card, the Garden): that sheet is in front.
+        if (replaced) this.asideForReturn = false;
+        else this.returnDone();
       },
-      newKinds,
+      recap.newKinds,
     );
+  }
+
+  /** Every popup and summary of a return seen: the sheet it put aside comes back. */
+  private returnDone(): void {
+    if (!this.asideForReturn || this.popup.waiting > 0 || this.summaryOpen || this.scene.game.state.presentation.recaps.length > 0) return;
+    this.asideForReturn = false;
+    this.restoreInterrupted();
   }
 
   /** Brings back the sheet the return put aside, where it was. */
@@ -635,19 +638,25 @@ export class Hud {
     else if (open !== null) this.bubble.update(open, this.statContent(open));
 
     this.feedback.style.visibility = this.bubble.openKey !== null ? 'hidden' : '';
-    // The new-kid popup first (§27.3): once nothing else holds the screen and its kid is drawn.
+    // The new-kid popup first (§27.3): once nothing else holds the screen (no sheet, gesture,
+    // name bubble, tutorial card or unanswered recovery warning) and its kid is drawn.
+    const urgent = this.save.recovery && !this.recoveryDismissed;
     this.popup.tick(
       now,
-      !this.sheets.isOpen && !this.summaryOpen && !this.scene.dragging && this.bubble.openKey === null && !this.tutorial.isOpen && !this.save.readOnly,
+      !this.sheets.isOpen && !this.summaryOpen && !this.scene.busy && this.bubble.openKey === null && !this.tutorial.isOpen && !this.save.readOnly && !urgent,
       (m) => m.kidId === undefined || this.scene.viewState(m.kidId) !== 'pending',
     );
+    // Then the return summaries waiting, oldest first, each once its popups are seen (§27.5).
+    const recaps = this.scene.game.state.presentation.recaps;
+    if (recaps.length && !this.summaryOpen && this.popup.waiting === 0 && !this.sheets.isOpen && !this.scene.busy && !this.save.readOnly && !urgent) this.openSummary(recaps[0]!);
     this.tickFeedback(now, dt);
-    // The first-run offer waits for the return summary, an unanswered recovery banner, a sheet
-    // or a name bubble to be out of the way; a read-only save gets none (§24.1).
-    if (!this.summaryOpen && this.sheets.openKey === null && this.bubble.openKey === null && !(this.save.recovery && !this.recoveryDismissed))
-      this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
-    // One put aside for the summary comes back once it is dismissed (over any sheet it brought back).
-    if (this.tutorial.waiting && !this.summaryOpen) this.tutorial.comeBack();
+    // The first-run offer, and a tutorial put aside, wait for every popup and return summary,
+    // an unanswered recovery banner, a sheet or a name bubble to be out of the way; a read-only
+    // save gets none (§24.1, §27.3).
+    const returning = this.summaryOpen || this.popup.waiting > 0 || recaps.length > 0;
+    if (!returning && this.sheets.openKey === null && this.bubble.openKey === null && !urgent) this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
+    // One put aside for the return comes back once it is over (over any sheet it brought back).
+    if (this.tutorial.waiting && !returning) this.tutorial.comeBack();
     this.sheets.tick();
     const sheet = this.sheets.openKey;
     const selected = sheet === null ? null : NOTEBOOK_KEYS.has(sheet) ? 'notebook' : sheet === 'dex' || sheet === 'kid' ? 'dex' : sheet === 'garden' ? 'garden' : null;
