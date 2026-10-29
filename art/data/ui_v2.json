@@ -2931,6 +2931,532 @@
         "heading": "Time credited: {formatted report.seconds}",
         "usesAuthoritativeUncappedReport": true
       }
+    },
+    "round4": {
+      "revision": "round4-design-2",
+      "status": "Claude review pending",
+      "contract": "docs/GUI_MVP.md §27",
+      "intro": {
+        "header": "Welcome · {n} of 3",
+        "actions": {
+          "skip": "Skip",
+          "close": "Skip introduction",
+          "back": "Back",
+          "next": "Next",
+          "done": "Done"
+        },
+        "widthCss": 360,
+        "heightCss": 280,
+        "insetCss": 12,
+        "iconCss": 48,
+        "entryMs": 120,
+        "steps": [
+          {
+            "id": "intro-purpose",
+            "title": "A garden of discoveries",
+            "body": "Discover new kinds of Potato Kid. Fill your Potato-Dex at your own pace.",
+            "icons": [
+              "icon_discovery"
+            ],
+            "pointer": null
+          },
+          {
+            "id": "intro-fuse",
+            "title": "Two kids, one discovery",
+            "body": "Drag a kid over a marked partner. Release to fuse two kids into one new kid.",
+            "icons": [
+              "icon_unknown"
+            ],
+            "demoTypes": [
+              "plain",
+              "water"
+            ],
+            "pointer": null
+          },
+          {
+            "id": "intro-dex",
+            "title": "Keep every discovery",
+            "body": "Open the Potato-Dex for the kinds and recipes you've found.",
+            "icons": [
+              "icon_r3_dex"
+            ],
+            "pointer": "Dex tray"
+          }
+        ]
+      },
+      "lessons": {
+        "widthCss": 360,
+        "minHeightCss": 176,
+        "insetCss": 12,
+        "headerMinCss": 44,
+        "bodyFontCss": 16,
+        "bodyLineCss": 22,
+        "titleFontCss": 22,
+        "titleLineCss": 28,
+        "iconCss": 28,
+        "gapCss": 8,
+        "footerMinCss": 44,
+        "aboveTrayGapCss": 8,
+        "initialIdleMs": 1000,
+        "subsequentIdleMs": 5000,
+        "requireActionBetween": true,
+        "actions": {
+          "acknowledge": "Got it",
+          "close": "Dismiss lesson",
+          "where": "Where is {title}?"
+        },
+        "replayTitle": "Tutorial & lessons",
+        "replayIntro": "Introduction · 3 short cards",
+        "replaySeen": "Seen",
+        "replayUnseen": "Not seen",
+        "replayBack": "Back to lessons",
+        "items": [
+          {
+            "id": "planting",
+            "title": "Plant a surprise",
+            "trigger": "ownedPlots >= 1 && canPlant >= balance.planting.minKids",
+            "body": "Add 3–5 kids to a plot, then choose Start growing. One surprise kid grows; tap the glowing plot to meet the sprout.",
+            "icons": [
+              "fx_plant_ready"
+            ],
+            "pointer": "Garden tray",
+            "route": "Garden → Plots"
+          },
+          {
+            "id": "potatokens",
+            "title": "An arrival without the wait",
+            "trigger": "P >= balance.economy.instantSpawnPotatokens",
+            "body": "Potatokens buy instant Garden arrivals. Spawn now shows the price before spending.",
+            "icons": [
+              "icon_potatokens"
+            ],
+            "pointer": "Potatokens HUD",
+            "route": "Garden → Spawn now"
+          },
+          {
+            "id": "garden",
+            "title": "Shorten the wait",
+            "trigger": "upgradeCost('garden') != null && M >= upgradeCost('garden')",
+            "body": "Kids on the map earn Materials. Garden upgrades spend Materials to shorten the wait between arrivals.",
+            "icons": [
+              "icon_r3_garden"
+            ],
+            "pointer": "Garden tray",
+            "route": "Garden → Spawn rate"
+          },
+          {
+            "id": "capacity",
+            "title": "Room for more kids",
+            "trigger": "upgradeCost('capacity') != null && M >= upgradeCost('capacity')",
+            "body": "Capacity upgrades spend Materials to make room for more kids on the map.",
+            "icons": [
+              "icon_capacity"
+            ],
+            "pointer": "Notebook tray",
+            "route": "Notebook → Capacity"
+          },
+          {
+            "id": "naming",
+            "title": "A name to keep",
+            "trigger": "live && M >= balance.naming.price",
+            "body": "Open a kid's card to buy a nickname with Materials. The name stays until fusion or planting; clearing the name is free.",
+            "icons": [
+              "icon_kids"
+            ],
+            "pointer": null,
+            "route": "Kid card → Name; Potato-Dex → Kids on map"
+          },
+          {
+            "id": "bias",
+            "title": "Choose a Garden favourite",
+            "trigger": "upgradeCost('bias') != null && M >= upgradeCost('bias')",
+            "body": "Build Spawn bias with Materials, then choose a discovered Garden kind. Upgrades make that kind more likely to arrive.",
+            "icons": [
+              "icon_bias"
+            ],
+            "pointer": "Notebook tray",
+            "route": "Notebook → Spawn bias"
+          },
+          {
+            "id": "fields",
+            "title": "Grow food",
+            "trigger": "fields.length == 0 && fieldUnlockCost != null && M >= fieldUnlockCost",
+            "body": "Buy a field with Materials, choose food, and assign kids. Farmers fill the Pantry instead of earning Materials; take farmers back any time.",
+            "icons": [
+              "icon_fields"
+            ],
+            "pointer": "Garden tray",
+            "route": "Garden → Fields"
+          },
+          {
+            "id": "feeding",
+            "title": "A bite of happiness",
+            "trigger": "exists live kid, food: pantry[food] >= 1 && food != hatedFood(kid.type)",
+            "body": "Feed a kid from the Pantry through the kid's card. Favourites keep happiness longer; happy kids earn more and help planting odds.",
+            "icons": [
+              "icon_happy",
+              "icon_pantry"
+            ],
+            "pointer": null,
+            "route": "Kid card → Feed; Potato-Dex → Kids on map"
+          },
+          {
+            "id": "plot-space",
+            "title": "Another planting plot",
+            "trigger": "plotUnlockCost != null && M >= plotUnlockCost",
+            "body": "Spend Materials on another plot to grow more surprises at once. Each plot still needs 3–5 kids and Start growing.",
+            "icons": [
+              "fx_plant_plot"
+            ],
+            "pointer": "Garden tray",
+            "route": "Garden → Plots"
+          },
+          {
+            "id": "field-space",
+            "title": "Another food field",
+            "trigger": "fields.length >= 1 && fieldUnlockCost != null && M >= fieldUnlockCost",
+            "body": "Spend Materials on another field to grow more food. Choose food and assign farmers in each field.",
+            "icons": [
+              "icon_fields"
+            ],
+            "pointer": "Garden tray",
+            "route": "Garden → Fields"
+          },
+          {
+            "id": "compendium",
+            "title": "Bring familiar kinds back",
+            "trigger": "compendiumLevel == 0 && upgradeCost('compendium') != null && M >= upgradeCost('compendium')",
+            "body": "Build the Compendium with Materials to bring discovered ordinary kinds back. Special and Rare kids come only from planting.",
+            "icons": [
+              "icon_compendium"
+            ],
+            "pointer": "Notebook tray",
+            "route": "Notebook → Compendium"
+          },
+          {
+            "id": "returns",
+            "title": "Choose how to pay",
+            "trigger": "compendiumLevel >= 1 && exists discovered ordinary t: (M >= respawnCost(t).materials || P >= respawnCost(t).potatokens)",
+            "body": "A Compendium return costs Materials or Potatokens. Choose one price to bring back one known ordinary kid when there's room.",
+            "icons": [
+              "icon_compendium",
+              "icon_materials",
+              "icon_potatokens"
+            ],
+            "pointer": "Notebook tray",
+            "route": "Notebook → Compendium"
+          }
+        ],
+        "automaticGate": {
+          "predicate": "firstFusionDiscovery || discoveredRecipes.length > 0",
+          "scope": "all twelve automatic lesson enqueue and display predicates; replay unaffected",
+          "opensOn": "successful fused event with firstDiscovery (recipe discovery)",
+          "beforeGate": "no pending lessons; successful mechanic use may mark its lesson seen",
+          "onOpen": "evaluate current predicates in table order; first note waits for discovery feedback, completed/skipped intro and 1000 ms idle",
+          "noTimeoutBypass": true
+        }
+      },
+      "persistence": {
+        "lessonVersion": 2,
+        "introStates": [
+          "notStarted",
+          "inProgress",
+          "skipped",
+          "completed"
+        ],
+        "lessonSeen": "stable ID set per save",
+        "lessonPending": "ordered unique IDs",
+        "events": "durable birth-linked FIFO, acknowledge before advancing",
+        "veteranMigration": "seed predicates already met or mechanics already used as seen; no historical discovery events",
+        "introIndependentOfPacing": true,
+        "firstFusionDiscovery": "per-save boolean latched atomically with first recipe discovery; nonempty discoveredRecipes proves gate on load/migration",
+        "round1Migration": "preserve seen IDs; if gate false discard unshown pending IDs, allow an already-open note to finish; veteran local-predicate seeding ignores shared gate"
+      },
+      "feedbackOrder": [
+        "urgent save/recovery/read-only",
+        "active gesture / existing sheet resolves",
+        "arrival popups FIFO",
+        "offline recap >= 60 seconds",
+        "ordinary awards",
+        "introduction",
+        "lessons"
+      ],
+      "arrival": {
+        "surface": "ui_panel",
+        "scrimOpacity": 0.24,
+        "portrait": {
+          "widthCss": 360,
+          "heightCss": 476,
+          "awardHeightCss": 496,
+          "spriteCss": 256,
+          "headerY": 12,
+          "spriteY": 56,
+          "sentenceY": 320,
+          "sentenceMinHeightCss": 56,
+          "metadataY": 376,
+          "footerY": 416,
+          "footerHeightCss": 48,
+          "insetCss": 16
+        },
+        "compact": {
+          "minWidthCss": 520,
+          "widthCss": 600,
+          "heightCss": 280,
+          "spriteCss": 192,
+          "spriteXY": [
+            16,
+            64
+          ],
+          "contentX": 224,
+          "sentenceY": 72,
+          "metadataY": 136,
+          "awardY": 168,
+          "footerY": 216,
+          "footerHeightCss": 48
+        },
+        "short": {
+          "minAvailableHeightCss": 224,
+          "heightCss": 224,
+          "spriteCss": 128,
+          "spriteXY": [
+            16,
+            68
+          ],
+          "contentX": 176,
+          "sentenceY": 56,
+          "metadataY": 116,
+          "awardY": 144,
+          "footerY": 172,
+          "footerHeightCss": 44
+        },
+        "sentenceFontCss": 22,
+        "sentenceLineCss": 28,
+        "statusFontCss": 16,
+        "statusLineCss": 22,
+        "badgeCss": 24,
+        "newStatus": "New!",
+        "knownPlotStatus": "From your plot",
+        "continue": "Continue",
+        "closeQueued": "Continue to next arrival",
+        "closeLast": "Close arrival",
+        "wave": {
+          "ordinaryClip": "wave",
+          "wildSubstitute": "greeting_bob",
+          "clipTiming": "existing native clip; ordinary 500 ms, wild 500 ms",
+          "idleAfterClipMs": 2500,
+          "ordinaryPeriodMs": 3000,
+          "wildPeriodMs": 3000,
+          "repeatWhileOpen": true,
+          "phase": "foreground time; pause hidden; preserve across remount/layout; no catch-up",
+          "reload": "stand then 2500 ms idle before greeting",
+          "reducedMotion": "stand/open; no wave or bob",
+          "resumeFromMotionPause": "stand for full 2500 ms then repeat",
+          "announcements": false
+        },
+        "randomChoice": "cosmetic RNG, exclude immediately previous source index, save chosen index",
+        "lines": {
+          "garden": [
+            "{name} wandered in!",
+            "{name} arrived!",
+            "{name} stopped by!",
+            "{name} joined the garden!",
+            "{name} found the garden!",
+            "{name} came to visit!",
+            "{name} made an entrance!",
+            "{name} is here!",
+            "{name} came along!",
+            "{name} paid a visit!"
+          ],
+          "plot": [
+            "{name} sprouted!",
+            "{name} has sprouted!",
+            "{name} grew from the plot!",
+            "{name} is ready to meet!",
+            "{name} is the plot's surprise!",
+            "{name} has grown!",
+            "{name} is fresh from the plot!",
+            "{name} came from the plot!",
+            "{name} is a growing surprise!",
+            "{name} is the harvest!"
+          ],
+          "fusion": [
+            "{name} is a new discovery!",
+            "{name} appeared in a fusion!",
+            "{name} came from a fusion!",
+            "{name} joined the discoveries!",
+            "{name} is a fresh find!",
+            "{name} is a fusion surprise!",
+            "{name} arrived through fusion!",
+            "{name} is a brand-new find!",
+            "{name} is a new kind to meet!",
+            "{name} is a discovery to keep!"
+          ]
+        },
+        "recap": {
+          "arrivals": "Garden arrivals: {N}",
+          "newKinds": "New kinds: {D} · Shown above",
+          "ripeSingular": "1 plot is ready to sprout.",
+          "ripePlural": "{N} plots are ready to sprout."
+        }
+      },
+      "ripe": {
+        "soil": "fx_plant_plot",
+        "sign": "fx_plant_ready",
+        "glow": {
+          "colour": "#fff1d5",
+          "innerAlpha": 0.72,
+          "outerAlpha": 0.28,
+          "innerSizeExtraCss": [
+            16,
+            12
+          ],
+          "outerSizeExtraCss": [
+            28,
+            20
+          ],
+          "motion": "steady",
+          "blend": "normal",
+          "rasterBytes": 0
+        },
+        "signMinimumCanvasCss": 96,
+        "minimumCheckedPaperSizeCss": 24,
+        "hitTargetMinCss": 44,
+        "accessible": "Plot {n}, ready to sprout. Tap to harvest.",
+        "status": "Ready to sprout",
+        "help": "Tap the plot or choose Harvest sprout.",
+        "action": "Harvest sprout",
+        "waiting": "Ready · Waiting for a clear spot",
+        "noRoom": "No clear spot near the Garden. Try again after kids move.",
+        "reducedMotion": "same steady glow and sign"
+      },
+      "rareSparkle": {
+        "asset": "fx_rare_sparkle",
+        "periodMs": 2400,
+        "easing": "ease-in-out between stops",
+        "transformOrigin": "50% 50%",
+        "paddingCss": 8,
+        "stops": [
+          {
+            "percent": 0,
+            "yCss": 0,
+            "scale": 1,
+            "rotateDeg": 0,
+            "opacity": 1
+          },
+          {
+            "percent": 25,
+            "yCss": -1,
+            "scale": 1.02,
+            "rotateDeg": 2,
+            "opacity": 0.82
+          },
+          {
+            "percent": 50,
+            "yCss": 0,
+            "scale": 1,
+            "rotateDeg": 0,
+            "opacity": 1
+          },
+          {
+            "percent": 75,
+            "yCss": 1,
+            "scale": 0.98,
+            "rotateDeg": -2,
+            "opacity": 0.82
+          },
+          {
+            "percent": 100,
+            "yCss": 0,
+            "scale": 1,
+            "rotateDeg": 0,
+            "opacity": 1
+          }
+        ],
+        "reducedMotion": {
+          "yCss": 0,
+          "scale": 1,
+          "rotateDeg": 0,
+          "opacity": 1
+        },
+        "smallEnvelopeFallback": "opacity only",
+        "existingMapLoop": "preserve; do not stack"
+      },
+      "settings": {
+        "nicknameToggle": "Show nicknames on the map",
+        "nicknameDefault": true
+      },
+      "budget": {
+        "newRuntimeDecodedPngBytes": 0,
+        "newSvgCount": 0,
+        "newTextureCount": 0
+      },
+      "nicknameLabel": {
+        "enabledBy": "Show nicknames on the map",
+        "content": "nonempty saved nickname only; unnamed kids show nothing",
+        "fontFamily": "Patrick Hand",
+        "fontWeight": 400,
+        "fontCss": 16,
+        "lineCss": 20,
+        "ink": "#1a1a1a",
+        "paper": "#fff1d5",
+        "opacity": 1,
+        "borderCss": 1,
+        "borderColour": "#1a1a1a",
+        "radiusCss": 6,
+        "paddingCss": [
+          2,
+          6
+        ],
+        "heightCss": 26,
+        "maxWidthCss": 120,
+        "maxTextWidthCss": 106,
+        "feetGapCss": 4,
+        "anchor": "centre x at projected displayed ground; top = max(ground y, pose/clip lifetime ink bottom) + feetGapCss; no current-frame jitter",
+        "overflow": "one line; actual-font measured whole-grapheme end ellipsis …; no wrap/shrink/marquee",
+        "savedGraphemeLimit": 24,
+        "zoom": {
+          "factors": [
+            0.5,
+            2
+          ],
+          "screenConstant": true,
+          "hideByZoom": false
+        },
+        "textEnlargement": "scale font/line/padding, grow height, keep max width 120; repeat fit/collision",
+        "clip": "full pill must fit unobscured map band; otherwise hide, never dock",
+        "layer": "DOM overlay above world canvas (kids/decor/crops/rare sleeves/ripe glow), below drag feedback and GUI; checked sprout and held kid get visual priority through exclusions",
+        "heldLayer": "above held sprite, below drag feedback and GUI",
+        "exclude": "other kid lifetime ink boxes (including held), checked sprout signs, drag/partner/drop feedback",
+        "exclusionPadCss": 2,
+        "collision": {
+          "priority": [
+            "held",
+            "projected ground y descending",
+            "stable instance ID ascending"
+          ],
+          "labelGapCss": 4,
+          "strategy": "greedy accept; hide losers without stacking or displacement",
+          "revealClearMs": 200,
+          "hideImmediately": true
+        },
+        "poses": {
+          "held": "lifted displayed ground; suppress under 44x44 finger square",
+          "farming": "assigned worker ground and full farming-clip bounds",
+          "sitting": "seat displayed ground and sitting bounds",
+          "splashing": "splash-slot ground and full clip body/costume bounds, excluding droplets/ripples",
+          "plots": "none; planting clears nicknames and inputs/outcome are not live kids"
+        },
+        "fingerExclusionCss": 44,
+        "accessibility": {
+          "decorative": true,
+          "ariaHidden": true,
+          "pointerEvents": "none",
+          "focusable": false,
+          "fullNameRoute": "kid card; Potato-Dex → Kids on map"
+        },
+        "reducedMotion": "identical static pill; no fade/bob; same 200 ms clear delay",
+        "rasterBytes": 0
+      }
     }
   },
   "stateBorderImageRepeat": {
