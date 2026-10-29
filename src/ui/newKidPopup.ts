@@ -43,7 +43,7 @@ const GREETING_IDLE_S = 2.5;
 const COMPACT_MIN_WIDTH = 520;
 
 /** How the panel is laid out (§27.4): portrait, compact (sprite left), or the single-column fallback. */
-type Layout = { mode: 'portrait' | 'compact' | 'fallback'; sprite: number };
+export type Layout = { mode: 'portrait' | 'compact' | 'fallback'; sprite: number };
 
 function layoutNow(): Layout {
   const w = safeWidth() + 16;
@@ -165,10 +165,11 @@ export class NewKidPopup {
    * A new screen size, rotation or banner (the HUD calls this when its banners change): the
    * same arrival, laid out again, its line kept.
    */
-  relayout(): void {
+  relayout(forced?: Layout): void {
     const o = this.open;
     if (!o) return;
-    const layout = layoutNow();
+    // `forced`: a test's layout, laid out in the page with no viewport change.
+    const layout = forced ?? layoutNow();
     if (layout.mode === o.layout.mode && layout.sprite === o.layout.sprite) return;
     o.layout = layout;
     o.dialog.classList.toggle('is-compact', layout.mode === 'compact');
