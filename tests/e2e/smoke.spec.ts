@@ -6553,7 +6553,7 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     expect(pill!.height).toBeCloseTo(26, 0);
     expect(pill!.width).toBeLessThanOrEqual(120);
     // Decorative: it takes no taps, so a tap on it reaches the map.
-    const node = page.locator('.nameplate');
+    const node = page.locator('.nameplate:not(.nameplate-probe)');
     await expect(node).toHaveCSS('pointer-events', 'none');
     await expect(page.locator('.nameplates')).toHaveAttribute('aria-hidden', 'true');
   });
@@ -6592,6 +6592,23 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     expect(Math.abs((r!.top + r!.bottom) / 2 - c.y)).toBeLessThan(2);
     // At least 96 CSS px of sign canvas across means a paper wider than 40 px.
     expect(r!.right - r!.left).toBeGreaterThan(40);
+  });
+
+  test('with enlarged text the pill grows taller, never clipped, still 120 px at most, and names are fitted again (Codex review round 3, #114)', async ({ page }) => {
+    await named(page, 'Meadowsweetly');
+    const before = (await page.evaluate(() => window.__PK__!.nameplates()))[0]!;
+    expect(before.text).toBe('Meadowsweetly');
+    expect(before.height).toBeCloseTo(26, 0);
+    // The player's text size, enlarged one and a half times.
+    await page.addStyleTag({ content: '.nameplate { font-size: 24px; }' });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.nameplates()))[0]?.height ?? 0).toBeGreaterThan(34);
+    const after = (await page.evaluate(() => window.__PK__!.nameplates()))[0]!;
+    expect(after.width).toBeLessThanOrEqual(120.5);
+    // Fitted again at the new size: now it needs an ellipsis.
+    expect(after.text.endsWith('…')).toBe(true);
+    // Nothing clipped inside.
+    const clipped = await page.locator('.nameplate:not(.nameplate-probe)').evaluate((e) => e.scrollHeight > e.clientHeight + 1);
+    expect(clipped).toBe(false);
   });
 
   test('a long name is cut at whole letters with an ellipsis, and the pill stays 120 px', async ({ page }) => {

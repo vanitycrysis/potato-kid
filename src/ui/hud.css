@@ -903,16 +903,17 @@
   left: 0;
   top: 0;
   box-sizing: border-box;
-  height: 26px;
+  /* 26 px at 16 px type; taller, never clipped, with enlarged text (§27.7). */
+  min-height: 26px;
   max-width: 120px;
-  padding: 2px 6px;
+  padding: 0.125em 0.375em;
   border: 1px solid var(--ui-ink);
   border-radius: 6px;
   background: var(--ui-paper);
   color: var(--ui-ink);
   font-family: var(--ui-font);
   font-size: 16px;
-  line-height: 20px;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
 }

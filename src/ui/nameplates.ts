@@ -27,7 +27,7 @@ export interface Candidate {
 }
 
 /** The pill (§27.7): 16/20 type, 1 px border, 2/6 px padding, at most 120 px wide. */
-export const PILL = { height: 26, maxWidth: 120, textMax: 106, gap: 4, padX: 6, border: 1, clear: 4, exclude: 2, finger: 44 } as const;
+export const PILL = { height: 26, maxWidth: 120, gap: 4, padX: 6, border: 1, clear: 4, exclude: 2, finger: 44 } as const;
 /** A pill that was in the way shows again only after this long clear (§27.7). */
 export const REVEAL_MS = 200;
 const ELLIPSIS = '…';
@@ -65,6 +65,8 @@ export function layoutNameplates(
   band: Rect,
   exclusions: readonly Rect[],
   finger: { x: number; y: number } | null,
+  /** The pill's height as drawn now: taller with enlarged text (§27.7). */
+  height: number = PILL.height,
 ): Map<number, Rect> {
   const order = candidates.filter((c) => c.name).sort((a, b) => Number(b.held) - Number(a.held) || b.feet.y - a.feet.y || a.id - b.id);
   const fingerBox = finger ? { left: finger.x - PILL.finger / 2, top: finger.y - PILL.finger / 2, right: finger.x + PILL.finger / 2, bottom: finger.y + PILL.finger / 2 } : null;
@@ -72,7 +74,7 @@ export function layoutNameplates(
   for (const c of order) {
     const w = widthOf(c);
     const top = Math.max(c.feet.y, c.box.bottom) + PILL.gap;
-    const r = { left: c.feet.x - w / 2, top, right: c.feet.x + w / 2, bottom: top + PILL.height };
+    const r = { left: c.feet.x - w / 2, top, right: c.feet.x + w / 2, bottom: top + height };
     if (r.left < band.left || r.right > band.right || r.top < band.top || r.bottom > band.bottom) continue;
     if (candidates.some((o) => o.id !== c.id && overlaps(r, grow(o.box, PILL.exclude)))) continue;
     if (exclusions.some((x) => overlaps(r, grow(x, PILL.exclude)))) continue;
@@ -90,17 +92,23 @@ export class Nameplates {
   /** When each left-out pill was last in the way: it shows again 200 ms after (§27.7). */
   private readonly blocked = new Map<number, number>();
   private measureCtx: CanvasRenderingContext2D | null = null;
-  private font = '';
+  /** The pill as drawn now (its font, padding and border, and height), measured off `probe`. */
+  private metrics: { font: string; inset: number; height: number } | null = null;
+  /** A hidden pill: when its size changes (the font arrived, text was enlarged), every pill is fitted again. */
+  private readonly probe = el('span', 'nameplate nameplate-probe', 'Mg');
 
   constructor() {
     this.root.setAttribute('aria-hidden', 'true');
-    // Names fitted in a fallback font are fitted again once the pill's own font arrives.
+    this.probe.style.visibility = 'hidden';
+    this.root.append(this.probe);
+    // Names fitted in a fallback font, or at another text size, are fitted again (§27.7).
     document.fonts?.addEventListener('loadingdone', () => this.refit());
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.refit()).observe(this.probe);
   }
 
   /** Measure afresh: every pill's text is fitted again on its next frame. */
   refit(): void {
-    this.font = '';
+    this.metrics = null;
     for (const p of this.pills.values()) p.name = '';
   }
 
@@ -109,7 +117,7 @@ export class Nameplates {
     const candidates = kids.filter((c) => c.name);
     const widths = new Map<number, number>();
     for (const c of candidates) widths.set(c.id, this.width(c));
-    const placed = layoutNameplates(kids, (c) => widths.get(c.id)!, band, exclusions, finger);
+    const placed = layoutNameplates(kids, (c) => widths.get(c.id)!, band, exclusions, finger, this.measured().height);
     for (const c of candidates) if (!placed.has(c.id)) this.blocked.set(c.id, now);
     const live = new Set(candidates.map((c) => c.id));
     for (const id of this.blocked.keys()) if (!live.has(id)) this.blocked.delete(id);
@@ -154,29 +162,30 @@ export class Nameplates {
     return [...this.pills].map(([id, p]) => ({ id, text: p.text, rect: p.node.getBoundingClientRect() }));
   }
 
+  /** The words fit the 120 px pill less its padding and border, as drawn now (§27.7). */
   private text(name: string): string {
-    return fitName(name, PILL.textMax, (t) => this.measure(t));
+    return fitName(name, PILL.maxWidth - this.measured().inset, (t) => this.measure(t));
   }
 
   private width(c: Candidate): number {
     const t = this.pills.get(c.id)?.name === c.name ? this.pills.get(c.id)!.text : this.text(c.name);
-    return Math.min(PILL.maxWidth, Math.ceil(this.measure(t)) + 2 * (PILL.padX + PILL.border));
+    return Math.min(PILL.maxWidth, Math.ceil(this.measure(t)) + this.measured().inset);
+  }
+
+  private measured(): { font: string; inset: number; height: number } {
+    if (this.metrics) return this.metrics;
+    const s = getComputedStyle(this.probe);
+    const px = (v: string) => Number.parseFloat(v) || 0;
+    const inset = px(s.paddingLeft) + px(s.paddingRight) + px(s.borderLeftWidth) + px(s.borderRightWidth);
+    this.metrics = { font: `${s.fontSize} ${s.fontFamily}`, inset: inset || 2 * (PILL.padX + PILL.border), height: this.probe.offsetHeight || PILL.height };
+    return this.metrics;
   }
 
   private measure(text: string): number {
     if (!this.measureCtx) this.measureCtx = document.createElement('canvas').getContext('2d');
     const ctx = this.measureCtx;
     if (!ctx) return text.length * 8;
-    // The pill's own font, as the page has it now (it loads after start).
-    if (!this.font) {
-      const probe = el('span', 'nameplate');
-      probe.style.visibility = 'hidden';
-      this.root.append(probe);
-      const s = getComputedStyle(probe);
-      this.font = `${s.fontSize} ${s.fontFamily}`;
-      probe.remove();
-    }
-    ctx.font = this.font;
+    ctx.font = this.measured().font;
     return ctx.measureText(text).width;
   }
 }
