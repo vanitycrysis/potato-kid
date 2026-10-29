@@ -85,6 +85,7 @@ describe('a wild kid is its own box (kid_wild_v1 renderer.collision)', () => {
     const sprout = g.state.plots[0]!.seed!.sprout!;
     expect(c.kids.find((k) => k.id === sprout.type)?.special).toBe(true);
     g.step([], c.balance.planting.growSeconds + 1);
+    g.step([{ type: 'harvest', plot: 0 }], 0);
     const kid = g.state.world.kids.find((k) => k.type === sprout.type)!;
     // Born Classic, whatever face the roll gave (kid_wild_v1 renderer.appearance).
     expect(kid.look.face).toBe('classic');

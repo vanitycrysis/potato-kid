@@ -57,9 +57,12 @@ declare global {
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
-      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null } | { type: 'unlockField' } | { type: 'setFieldFood'; field: number; food: string } | { type: 'farm'; field: number; kidIds: number[] } | { type: 'unfarm'; field: number; kidId: number } | { type: 'emptyField'; field: number }) => void;
-      /** Only with `?debug=1`: readies a plot to sprout this kid at the next step (rare tests). */
-      debugReadySeed?: (plot: number, type: string) => void;
+      debugCommand?: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'harvest'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null } | { type: 'unlockField' } | { type: 'setFieldFood'; field: number; food: string } | { type: 'farm'; field: number; kidIds: number[] } | { type: 'unfarm'; field: number; kidId: number } | { type: 'emptyField'; field: number }) => void;
+      /**
+       * Only with `?debug=1`: readies a plot to sprout this kid (rare tests) and, unless `wait`,
+       * taps it (D-088), so the kid comes up at the next step.
+       */
+      debugReadySeed?: (plot: number, type: string, wait?: boolean) => void;
       /**
        * Only with `?debug=1`: calls `fn` with each sim step's event types, after the HUD has
        * answered them and before the next frame draws anything (timing tests).
@@ -85,7 +88,7 @@ declare global {
       /** The recipe a release would make, and whether the partner mark shows (D-083). */
       recipe: () => { view: import('./render/scene').RecipeView | null; mark: boolean };
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
-      plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[] }[];
+      plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[]; glow: boolean; signCss: number | null }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
       rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[];
       layers: () => string[];
@@ -259,7 +262,8 @@ async function boot(): Promise<void> {
         const seed = p.seed;
         const progress = seed?.sprout ? seed.grown / scene.game.growSeconds : 0;
         const state = !seed ? 'empty' : !seed.sprout ? 'filling' : progress >= 1 ? 'ready' : 'growing';
-        return { state, kids: seed?.planted.length ?? 0, progress, waiting: scene.game.plotWaiting(i), shown: scene.plotsShown[i] ?? [] };
+        const ready = scene.plotsReady[i];
+        return { state, kids: seed?.planted.length ?? 0, progress, waiting: scene.game.plotWaiting(i), shown: scene.plotsShown[i] ?? [], glow: ready?.glow ?? false, signCss: ready?.signCss ?? null };
       }),
     screenPointOf: (id) => scene.screenPointOf(id),
     presentationOf: (id) => scene.presentationOf(id),
@@ -280,7 +284,10 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
-          debugReadySeed: (plot: number, type: string) => scene.game.debugReadySeed(plot, { type }),
+          debugReadySeed: (plot: number, type: string, wait = false) => {
+            scene.game.debugReadySeed(plot, { type });
+            if (!wait) scene.command({ type: 'harvest', plot });
+          },
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
@@ -289,7 +296,7 @@ async function boot(): Promise<void> {
             scene.game.state.potatokens += amounts.potatokens ?? 0;
             for (const [food, n] of Object.entries(amounts.pantry ?? {})) scene.game.state.pantry[food] = (scene.game.state.pantry[food] ?? 0) + n;
           },
-          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null } | { type: 'unlockField' } | { type: 'setFieldFood'; field: number; food: string } | { type: 'farm'; field: number; kidIds: number[] } | { type: 'unfarm'; field: number; kidId: number } | { type: 'emptyField'; field: number }) => scene.command(cmd),
+          debugCommand: (cmd: { type: 'upgrade'; building: 'garden' | 'capacity' | 'bias' | 'compendium' } | { type: 'plant'; kidIds: number[]; plot?: number } | { type: 'startGrowing'; plot: number } | { type: 'harvest'; plot: number } | { type: 'unplant'; plot: number; kidId: number } | { type: 'emptyPlot'; plot: number } | { type: 'unlockPlot' } | { type: 'feed'; kidId: number; food: string } | { type: 'name'; kidId: number; name: string | null } | { type: 'unlockField' } | { type: 'setFieldFood'; field: number; food: string } | { type: 'farm'; field: number; kidIds: number[] } | { type: 'unfarm'; field: number; kidId: number } | { type: 'emptyField'; field: number }) => scene.command(cmd),
         }
       : {}),
     };

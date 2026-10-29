@@ -20,6 +20,8 @@ import type { OpenSheet } from './sheet';
 type Pending =
   | { type: 'unlockPlot' }
   | { type: 'startGrowing'; plot: number }
+  // A ready plot's kid comes up (D-088, §27.6).
+  | { type: 'harvest'; plot: number }
   | { type: 'plant'; plot: number; kidIds: number[] }
   // Taking kids back out (D-074, GUI_MVP §21): one from a filling plot, or all of them.
   | { type: 'unplant'; plot: number; kidId: number }
@@ -90,6 +92,8 @@ export class GardenPlots {
     spawnRate: HTMLElement[],
     /** Arrivals and Spawn now, first in the Garden (GUI_MVP §19.2). */
     private readonly arrivals: Arrivals,
+    /** Closes the Garden: a harvested kid's arrival shows on the map (§27.5). */
+    private readonly closeSheet: () => void,
     /** The Fields section (D-069), after the plots (GUI_MVP §22.2). */
     private readonly fields?: { node: HTMLElement; heading: HTMLElement; update(): void },
   ) {
@@ -222,6 +226,11 @@ export class GardenPlots {
         this.pending = null;
         this.unlocked = { text: `Plot ${e.plots} unlocked.`, until: performance.now() + 2000 };
         handled.push(e);
+      } else if (p.type === 'harvest' && e.type === 'spawned' && e.plot === p.plot) {
+        // Not answered here: the kid's arrival is the world's to show, once the sheet is gone.
+        this.pending = null;
+        this.closeSheet();
+        return handled;
       } else if (p.type === 'startGrowing' && e.type === 'growing' && e.plot === p.plot) {
         this.pending = null;
         this.note = { plot: p.plot, note: { lines: [`Plot ${p.plot + 1} is growing.`, `One kid sprouts in ${formatDuration(this.game.growSeconds)}.`], warn: false } };
@@ -276,7 +285,8 @@ export class GardenPlots {
     else if (p.type === 'startGrowing') {
       const lines = reason === 'plotsBusy' ? ['This plot is already growing.'] : [refusalText(reason, 'startGrowing')];
       this.note = { plot: p.plot, note: { lines, warn: true } };
-    } else this.pickerRefusal?.(reason);
+    } else if (p.type === 'harvest') this.note = { plot: p.plot, note: { lines: [refusalText(reason, 'harvest')], warn: true } };
+    else this.pickerRefusal?.(reason);
   }
 
   private send(cmd: Pending): void {
@@ -340,9 +350,16 @@ export class GardenPlots {
     };
   }
 
-  private waitingText(i: number): string {
-    const w = this.game.plotWaiting(i);
-    return w === 'noRoom' ? 'Waiting for a clear spot by the Garden.' : 'Sprouting…';
+  /** A ready plot's status (§27.6): waiting only after a tap actually found no clear spot. */
+  private readyText(i: number): string {
+    return this.game.plotWaiting(i) === 'noRoom' ? 'Ready · Waiting for a clear spot' : 'Ready to sprout';
+  }
+
+  /** A ready plot's `Harvest sprout` (§27.6): the same command as a tap on the plot. */
+  private harvestButton(i: number, className: string): HTMLButtonElement {
+    const b = this.button(this.pending?.type === 'harvest' && this.pending.plot === i ? 'Harvesting…' : 'Harvest sprout', className, () => this.send({ type: 'harvest', plot: i }));
+    b.dataset.cue = 'success';
+    return b;
   }
 
   private buildOverview(spawnRate: HTMLElement[]): { nodes: HTMLElement[]; update(): void } {
@@ -452,10 +469,11 @@ export class GardenPlots {
     const add = this.button('Add kids', 'plot-action', () => this.show({ kind: 'picker', plot: i }));
     const review = this.button('Review plot', 'plot-action', () => this.show({ kind: 'detail', plot: i }));
     const view = this.button('View plot', 'plot-action-full', () => this.show({ kind: 'detail', plot: i }));
+    const harvest = this.harvestButton(i, 'plot-action-full plot-harvest ui-primary');
     const actions = el('div', 'plot-actions', add, review);
     const lockIcon = icon('icon_lock', '', 'ui-icon-24');
     const lockHelp = el('p', 'sheet-helper', 'Unlock the next plot below.');
-    const node = el('div', 'plot-row ui-surface', el('div', 'plot-row-head', lockIcon, heading), status, slotHost, rail.node, waiting, actions, view, lockHelp);
+    const node = el('div', 'plot-row ui-surface', el('div', 'plot-row-head', lockIcon, heading), status, slotHost, rail.node, waiting, actions, harvest, view, lockHelp);
     let shape = '';
     // Null until first drawn: an empty plot's key is '' too, and still needs its spaces.
     let slotsFor: string | null = null;
@@ -476,6 +494,7 @@ export class GardenPlots {
           view.hidden = !started;
           rail.node.hidden = p.state !== 'growing';
           waiting.hidden = p.state !== 'ready';
+          harvest.hidden = p.state !== 'ready';
           heading.textContent = locked ? `Plot ${i + 1} · Locked` : `Plot ${i + 1}`;
           status.hidden = locked;
         }
@@ -490,13 +509,17 @@ export class GardenPlots {
           p.state === 'growing'
             ? `Growing · ${formatTimeLeft(p.left)}`
             : p.state === 'ready'
-              ? 'Ready'
+              ? this.readyText(i)
               : `${p.state === 'empty' ? 'Empty' : 'Filling'} · ${p.count} / ${max}`;
         if (status.textContent !== text) status.textContent = text;
         if (p.state === 'growing') rail.set(i, p);
         if (p.state === 'ready') {
-          const w = this.waitingText(i);
+          const w = 'Tap the plot or choose Harvest sprout.';
           if (waiting.textContent !== w) waiting.textContent = w;
+          const busy = this.pending?.type === 'harvest' && this.pending.plot === i;
+          const label = busy ? 'Harvesting…' : 'Harvest sprout';
+          if (harvest.textContent !== label) harvest.textContent = label;
+          this.setEnabled(harvest, !this.pending);
         }
         this.setEnabled(add, p.count < max);
       },
@@ -587,6 +610,7 @@ export class GardenPlots {
       empty: HTMLButtonElement | null;
       cancel: HTMLButtonElement | null;
       review: { room: HTMLElement; full: HTMLElement; action: HTMLButtonElement; label: string; count: number; kind: 'empty' | 'cancel' } | null;
+      harvest?: HTMLButtonElement;
     } = { takeOuts: new Map(), add: null, empty: null, cancel: null, review: null };
 
     const build = (p: PlotInfo, sig: string) => {
@@ -624,8 +648,9 @@ export class GardenPlots {
         h?.focus({ preventScroll: true });
       };
       if (p.state === 'ready') {
-        parts.push(el('p', 'sheet-helper', 'This sprout has finished growing and cannot be cancelled.'));
-        footer.append(this.button('Back to plots', 'sheet-action', () => this.show({ kind: 'overview' }, true)));
+        parts.push(el('p', 'sheet-helper', 'Tap the plot or choose Harvest sprout.'), el('p', 'sheet-helper', 'This sprout has finished growing and cannot be cancelled.'));
+        live.harvest = this.harvestButton(i, 'sheet-action ui-primary plot-harvest');
+        footer.append(this.button('Back to plots', 'sheet-action', () => this.show({ kind: 'overview' }, true)), live.harvest);
       } else if (p.state === 'growing') {
         if (confirm?.kind === 'cancel') {
           const block = this.confirmBlock(i, p, 'cancel');
@@ -756,9 +781,15 @@ export class GardenPlots {
         if (left.textContent !== t) left.textContent = t;
         (rail as ReturnType<GardenPlots['rail']>).set(i, p);
       } else if (left && p.state === 'ready') {
-        const w = `Ready · ${this.waitingText(i)}`;
+        const w = this.readyText(i);
         if (left.textContent !== w) left.textContent = w;
         (rail as ReturnType<GardenPlots['rail']> | null)?.node.remove();
+      }
+      if (live.harvest) {
+        const busy = this.pending?.type === 'harvest' && this.pending.plot === i;
+        const label = busy ? 'Harvesting…' : 'Harvest sprout';
+        if (live.harvest.textContent !== label) live.harvest.textContent = label;
+        this.setEnabled(live.harvest, !this.pending);
       }
       if (start && this.pending?.type === 'startGrowing' && this.pending.plot === i) {
         const label = start.querySelector('.action-label');

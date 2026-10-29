@@ -2725,12 +2725,12 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await expect(sheet(page).getByRole('button', { name: 'Add kids' })).toHaveCount(0);
   });
 
-  test('a plot that sprouts while away shows in the return summary; one with no planting has no such rows (§15.5)', async ({ page }) => {
+  test('a plot that ripens while away waits for a tap, and the return summary says so; one with no planting has no such row (§15.5, D-088)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.evaluate(() => window.__PK__!.debugAway!(60_000));
     const summary = page.getByRole('dialog', { name: 'Welcome back' });
     await expect(summary).toBeVisible();
-    await expect(summary).not.toContainText('Kids sprouted');
+    await expect(summary.locator('.offline-plots')).toHaveCount(0);
     await summary.getByRole('button', { name: 'Back to the garden' }).click();
     await plantPlain(page, 3);
     await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'startGrowing', plot: 0 }));
@@ -2738,10 +2738,10 @@ test.describe("Planting, the Garden's plots (GUI_MVP §15.3-15.4)", () => {
     await page.evaluate((s) => window.__PK__!.debugAway!((s + 60) * 1000), balance.planting.growSeconds);
     await expect(summary).toBeVisible();
     const report = (await page.evaluate(() => window.__PK__!.lastOffline()))!;
-    expect(report.sprouted).toHaveLength(1);
-    await expect(summary.locator('.stat-row', { hasText: 'Kids sprouted' })).toContainText('Kids sprouted1');
-    await expect(summary.locator('.stat-row', { hasText: 'Plots ready' })).toContainText('Plots ready0');
-    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+    expect(report.plotsWaiting).toBe(1);
+    await expect(summary).not.toContainText('Kids sprouted');
+    await expect(summary.locator('.offline-plots')).toHaveText('1 plot is ready to sprout.');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
   });
 });
 
@@ -2797,6 +2797,56 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     await tap(page, at);
     await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Plot 1');
     await expect(page.getByRole('dialog').locator('.sheet-subtitle')).toHaveText('3 / 5 kids · Growing');
+  });
+
+  test('a ready plot waits for a tap; the tap brings its kid up at the Garden and opens nothing (D-088)', async ({ page }) => {
+    const at = await setup(page);
+    // Growing: no glow.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugCommand!({ type: 'plant', kidIds: [0, 1, 2].map((i) => pk.debugAdd!('plain', 756 + i * 250, 4328)), plot: 0 });
+      pk.debugCommand!({ type: 'startGrowing', plot: 0 });
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('growing');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.glow)).toBe(false);
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero', true));
+    const before = await page.evaluate(() => window.__PK__!.kids().length);
+    // It waits, however long, glowing under its checked sign: nothing comes up by itself.
+    await page.waitForTimeout(600);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
+    const ready = await page.evaluate(() => window.__PK__!.plots()[0]!);
+    expect(ready.glow).toBe(true);
+    // The sign is at least 96 CSS px across at any zoom (§27.6); zoomed in, larger.
+    expect(ready.signCss!).toBeGreaterThanOrEqual(96 - 0.01);
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(before);
+    await tap(page, at);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+    expect(await page.evaluate(() => window.__PK__!.kids().filter((k) => k.type === 'hero').length)).toBe(1);
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(before + 1);
+    // No sheet opens over its arrival, and the glow is gone; an empty plot's tap opens its picker again.
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.glow)).toBe(false);
+    await tap(page, at);
+    await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
+  });
+
+  test('the Garden says a plot is ready to sprout; its Harvest sprout brings the kid up and closes the Garden (D-088, §27.6)', async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero', true));
+    await page.locator('[data-nav=garden]').click();
+    const sheet = page.getByRole('dialog');
+    const row = sheet.locator('.plot-row').first();
+    await expect(row.locator('.plot-row-status')).toHaveText('Ready to sprout');
+    await expect(row.locator('.plot-row-waiting')).toHaveText('Tap the plot or choose Harvest sprout.');
+    // The detail says the same and has the same button.
+    await row.getByRole('button', { name: 'View plot' }).click();
+    await expect(sheet.locator('.plot-row-status')).toHaveText('Ready to sprout');
+    await expect(sheet.getByRole('button', { name: 'Harvest sprout' })).toBeVisible();
+    await sheet.locator('.plot-back').click();
+    await row.getByRole('button', { name: 'Harvest sprout' }).click();
+    await expect(sheet).toHaveCount(0);
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+    expect(await page.evaluate(() => window.__PK__!.kids().filter((k) => k.type === 'hero').length)).toBe(1);
   });
 
   test('a long press or a pan opens nothing; a jitter within 8 px is still a tap, and the map holds', async ({ page }) => {
@@ -3881,7 +3931,7 @@ test.describe('the world lives on while away (D-053)', () => {
   });
 });
 
-test('a sprout that comes up while away is drawn like any arrival (Codex review, PR #72)', async ({ page }) => {
+test('a plot that ripens while away waits; tapped on return, its kid is drawn like any arrival (Codex review, PR #72; D-088)', async ({ page }) => {
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
   const sprouted = await page.evaluate(async () => {
     const pk = window.__PK__!;
@@ -3891,11 +3941,15 @@ test('a sprout that comes up while away is drawn like any arrival (Codex review,
     pk.debugCommand!({ type: 'startGrowing', plot: 0 });
     await pk.debugAway!(0); // a step: it starts growing
     await pk.debugAway!(2 * 3600 * 1000); // long enough to ripen
-    for (let i = 0; i < 2; i++) await new Promise((r) => requestAnimationFrame(() => r(null)));
-    return pk.lastOffline()!.sprouted.map((k) => ({ id: k.id, drawn: !!pk.screenPointOf(k.id) }));
+    return { waiting: pk.plots()[0]!.state, before: pk.kids().map((k) => k.id) };
   });
-  expect(sprouted).toHaveLength(1);
-  expect(sprouted[0]!.drawn).toBe(true);
+  expect(sprouted.waiting).toBe('ready');
+  await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'harvest', plot: 0 }));
+  await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+  await page.waitForTimeout(100);
+  const born = await page.evaluate((old) => window.__PK__!.kids().filter((k) => !old.includes(k.id)).map((k) => ({ id: k.id, drawn: !!window.__PK__!.screenPointOf(k.id) })), sprouted.before);
+  expect(born).toHaveLength(1);
+  expect(born[0]!.drawn).toBe(true);
   expect(errors).toEqual([]);
 });
 

@@ -1,23 +1,47 @@
-import { Container, Sprite, type Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { PlantingArt } from '../content/artData';
-import type { Plot, PlotWaiting } from '../sim/game';
+import type { Plot } from '../sim/game';
 
 // The plots on the map (D-061, GUI_MVP §15.2, Codex's art): soil always; an unstarted plot
 // shows its five holes with a stamp per kid in it; a growing seed shows its stage by
-// progress; a ready one its sign, or the waiting sign. Nothing hints at the sprout. Static:
-// no timers, pulses or per-type art. Locked plots don't exist on the map.
+// progress; a ready one its checked sign over a steady glow until it is tapped (D-088,
+// §27.6), waiting for room or not. Nothing hints at the sprout. Static: no timers, pulses or
+// per-type art. Locked plots don't exist on the map.
+
+/** The ripe glow (§27.6): two flat ellipses under the soil, grown past it by fixed CSS px. */
+const GLOW_COLOUR = 0xfff1d5;
+const GLOW = [
+  { grow: [28, 20], alpha: 0.28 },
+  { grow: [16, 12], alpha: 0.72 },
+] as const;
+/** At far zoom the ready sign's canvas is drawn at least this many CSS px across (§27.6). */
+const READY_SIGN_MIN_CSS = 96;
 
 /** What a plot shows, as asset names in draw order (also what tests check). */
-export function plotAssets(art: PlantingArt, plot: Plot, growSeconds: number, waiting: PlotWaiting | null): string[] {
+export function plotAssets(art: PlantingArt, plot: Plot, growSeconds: number): string[] {
   const seed = plot.seed;
   if (!seed?.sprout) {
     const stamps = Array.from({ length: Math.min(seed?.planted.length ?? 0, art.fillingSlotCentresSource.length) }, () => art.filledSlotAsset);
     return [art.empty, art.fillingAsset, ...stamps];
   }
   const p = Math.min(1, Math.max(0, seed.grown / growSeconds));
-  if (p >= 1) return [art.empty, waiting ? art.waitingAsset : (art.stages.find((s) => s.from >= 1)?.asset ?? art.waitingAsset)];
+  if (p >= 1) return [art.empty, readyAsset(art)];
   const stage = art.stages.find((s) => s.to !== undefined && p >= s.from && p < s.to) ?? art.stages[0]!;
   return [art.empty, stage.asset];
+}
+
+function readyAsset(art: PlantingArt): string {
+  return art.stages.find((s) => s.from >= 1)?.asset ?? art.waitingAsset;
+}
+
+/**
+ * The ripe glow's two ellipses about the soil (§27.6), in a plot's local world units at this
+ * `zoom` (CSS px per world unit): the soil's box grown by fixed screen px, whatever the zoom.
+ */
+export function glowEllipses(soil: { x: number; y: number; width: number; height: number }, zoom: number): { x: number; y: number; rx: number; ry: number; alpha: number }[] {
+  const x = soil.x + soil.width / 2;
+  const y = soil.y + soil.height / 2;
+  return GLOW.map((g) => ({ x, y, rx: (soil.width + g.grow[0] / zoom) / 2, ry: (soil.height + g.grow[1] / zoom) / 2, alpha: g.alpha }));
 }
 
 /** A plot's soil in world units: its drawn bounds (GUI_MVP §15.2). */
@@ -62,7 +86,7 @@ export function plotAt(art: PlantingArt, garden: { x: number; y: number }, unloc
 
 export class PlotsView {
   readonly root = new Container();
-  private readonly plots: { node: Container; key: string }[] = [];
+  private readonly plots: { node: Container; key: string; glow: Graphics | null; sign: Sprite | null; zoom: number }[] = [];
 
   constructor(
     private readonly art: PlantingArt,
@@ -71,10 +95,13 @@ export class PlotsView {
     private readonly textures: Map<string, Texture>,
   ) {}
 
-  /** Redraws a plot only when what it shows changes (once per stage, not per frame). */
-  update(plots: readonly Plot[], growSeconds: number, waiting: (i: number) => PlotWaiting | null): void {
+  /**
+   * Redraws a plot only when what it shows changes (once per stage, not per frame); a ready
+   * plot's glow and sign also follow the zoom (`zoom`: CSS px per world unit).
+   */
+  update(plots: readonly Plot[], growSeconds: number, zoom: number): void {
     plots.forEach((plot, i) => {
-      const assets = plotAssets(this.art, plot, growSeconds, waiting(i));
+      const assets = plotAssets(this.art, plot, growSeconds);
       const key = assets.join('|');
       let entry = this.plots[i];
       if (!entry) {
@@ -82,12 +109,19 @@ export class PlotsView {
         const [dx, dy] = this.art.plotOffsetsWorld[i] ?? [0, 0];
         node.position.set(this.garden.x + dx, this.garden.y + dy);
         this.root.addChild(node);
-        entry = { node, key: '' };
+        entry = { node, key: '', glow: null, sign: null, zoom: 0 };
         this.plots[i] = entry;
       }
-      if (entry.key === key) return;
+      if (entry.key === key) {
+        if (entry.zoom !== zoom) this.fitReady(entry, zoom);
+        return;
+      }
       entry.key = key;
       for (const c of entry.node.removeChildren()) c.destroy();
+      entry.glow = null;
+      entry.sign = null;
+      // A ripe plot glows under its soil (§27.6).
+      if (assets[assets.length - 1] === readyAsset(this.art)) entry.node.addChild((entry.glow = new Graphics()));
       assets.forEach((asset, n) => {
         const t = this.textures.get(asset);
         if (!t) return;
@@ -101,15 +135,53 @@ export class PlotsView {
           const [cx, cy] = this.art.filledSlotSourceCentre;
           s.position.set((slot[0] - cx) * this.art.plotCanvasScale, (slot[1] - cy) * this.art.plotCanvasScale);
         }
+        if (asset === readyAsset(this.art) && n > 0) entry.sign = s;
         entry.node.addChild(s);
       });
+      this.fitReady(entry, zoom);
     });
     // Plots never go away, but keep the view in step if a save had fewer.
     while (this.plots.length > plots.length) this.plots.pop()?.node.destroy({ children: true });
   }
 
+  /**
+   * A ready plot at this zoom: the glow's ellipses, and the sign drawn at least 96 CSS px
+   * across, enlarged about its checked paper so that stays over the soil (§27.6).
+   */
+  private fitReady(entry: (typeof this.plots)[number], zoom: number): void {
+    entry.zoom = zoom;
+    const soilTexture = this.textures.get(this.art.empty);
+    if (entry.glow && soilTexture) {
+      const k = this.art.plotCanvasScale;
+      const [px, py] = this.art.sourcePivot;
+      const t = soilTexture.trim ?? soilTexture.frame;
+      const soil = { x: (t.x - px) * k, y: (t.y - py) * k, width: t.width * k, height: t.height * k };
+      entry.glow.clear();
+      for (const e of glowEllipses(soil, zoom)) entry.glow.ellipse(e.x, e.y, e.rx, e.ry).fill({ color: GLOW_COLOUR, alpha: e.alpha });
+    }
+    const sign = entry.sign;
+    if (sign) {
+      const t = sign.texture;
+      const k = this.art.plotCanvasScale;
+      const scale = Math.max(k, READY_SIGN_MIN_CSS / (t.orig.width * zoom));
+      // The checked paper's centre, in source px, stays where it is drawn at the normal size.
+      const paper = t.trim ?? t.frame;
+      const cx = paper.x + paper.width / 2;
+      const cy = paper.y + paper.height / 2;
+      const [px, py] = this.art.sourcePivot;
+      sign.anchor.set(cx / t.orig.width, cy / t.orig.height);
+      sign.position.set((cx - px) * k, (cy - py) * k);
+      sign.scale.set(scale);
+    }
+  }
+
   /** Test hook: the assets each plot shows now. */
   shown(): string[][] {
     return this.plots.map((p) => (p.key ? p.key.split('|') : []));
+  }
+
+  /** Test hook: each plot's glow (whether it has one) and its sign's width in CSS px. */
+  ready(zoom: number): { glow: boolean; signCss: number | null }[] {
+    return this.plots.map((p) => ({ glow: !!p.glow, signCss: p.sign ? p.sign.texture.orig.width * p.sign.scale.x * zoom : null }));
   }
 }

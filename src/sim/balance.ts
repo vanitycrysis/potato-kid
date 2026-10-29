@@ -178,7 +178,6 @@ export function simulate(content: Content, options: GameOptions, scenario: Scena
       planned += session.away;
       clock = planned;
       const away = game.reconcile(clock * 1000);
-      sprouted += away.sprouted.length;
       grown += Object.values(away.food).reduce((a, n) => a + n, 0);
       // A tutorial that ends while away ends at its last spawn's arrival, not at the
       // return (Codex review, PR #68). Tutorial spawns are evenly spaced from the first due.
@@ -243,6 +242,10 @@ export function createBot(
   /** The bot's one action this turn, or null when it has nothing useful to do. */
   const decide = (): Command[] | null => {
     const s = game.state;
+    // 0. A ready plot glows: tap it, and its kid comes up (D-088). One refused for want of a
+    //    clear spot by the Garden is tried again only when there is nothing else to do.
+    const ripe = s.plots.findIndex((p, i) => game.plotReady(p) && game.plotWaiting(i) === null);
+    if (ripe >= 0) return [{ type: 'harvest', plot: ripe }];
     // 1. Buy: the cheaper of Garden and Capacity, the Compendium once a few kids are known.
     const buy = purchase(game, farm);
     if (buy) return [buy];
@@ -342,6 +345,8 @@ export function createBot(
       }
       if (s.potatokens >= content.balance.economy.instantSpawnPotatokens) return [{ type: 'instantSpawn' }];
     }
+    const waiting = s.plots.findIndex((p) => game.plotReady(p));
+    if (waiting >= 0) return [{ type: 'harvest', plot: waiting }];
     return null;
   };
   /** After the step that applied the bot's commands: learn what its last drop tested. */

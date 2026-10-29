@@ -482,6 +482,11 @@ export class MapScene {
     return this.plotsView?.shown() ?? [];
   }
 
+  /** Test hook: each plot's ripe glow and its ready sign's width in CSS px (§27.6). */
+  get plotsReady(): { glow: boolean; signCss: number | null }[] {
+    return this.plotsView?.ready(this.cam.zoom) ?? [];
+  }
+
   /** Whether a kid is drawn now, or still exists waiting for its costume. */
   viewState(kidId: number): 'shown' | 'pending' | 'gone' {
     if (this.views.has(kidId)) return 'shown';
@@ -499,7 +504,7 @@ export class MapScene {
   command(
     cmd: Extract<
       Command,
-      { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' | 'unlockField' | 'setFieldFood' | 'farm' | 'unfarm' | 'emptyField' }
+      { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'harvest' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' | 'unlockField' | 'setFieldFood' | 'farm' | 'unfarm' | 'emptyField' }
     >,
   ): void {
     this.pending.push(cmd);
@@ -533,7 +538,7 @@ export class MapScene {
     // there from where they were left.
     for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
     // Garden arrivals and sprouts alike need a view (Codex review, PR #72).
-    for (const kid of [...report.spawned, ...report.sprouted]) this.addView(kid);
+    for (const kid of report.spawned) this.addView(kid);
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
     return report;
@@ -1517,7 +1522,7 @@ export class MapScene {
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
     this.updateRecipe();
-    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
+    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, this.cam.zoom);
     this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();
     for (const k of kids) {

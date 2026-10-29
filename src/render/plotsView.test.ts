@@ -3,7 +3,7 @@ import type { PlantingArt } from '../content/artData';
 import { gate4Data } from '../content/artData';
 import type { Plot } from '../sim/game';
 import { DEFAULT_LOOK } from '../sim/world';
-import { plotAssets, plotAt, plotRect } from './plotsView';
+import { glowEllipses, plotAssets, plotAt, plotRect } from './plotsView';
 
 // What each plot shows (GUI_MVP §15.2): Codex's shipped tokens, so a token change shows up here.
 const art = gate4Data!.planting as PlantingArt;
@@ -14,15 +14,15 @@ const growing = (grown: number): Plot => ({ seed: { planted: [kid, kid, kid], sp
 
 describe('what a plot shows (GUI_MVP §15.2)', () => {
   it('an empty plot: soil and its five holes', () => {
-    expect(plotAssets(art, { seed: null }, grow, null)).toEqual([art.empty, art.fillingAsset]);
+    expect(plotAssets(art, { seed: null }, grow)).toEqual([art.empty, art.fillingAsset]);
   });
 
   it('a filling plot: one stamp per kid in it, up to five', () => {
-    for (const n of [1, 3, 5]) expect(plotAssets(art, filling(n), grow, null)).toEqual([art.empty, art.fillingAsset, ...Array(n).fill(art.filledSlotAsset)]);
+    for (const n of [1, 3, 5]) expect(plotAssets(art, filling(n), grow)).toEqual([art.empty, art.fillingAsset, ...Array(n).fill(art.filledSlotAsset)]);
   });
 
   it('a growing seed: its stage by progress, with no holes or stamps', () => {
-    const stage = (p: number) => plotAssets(art, growing(p * grow), grow, null);
+    const stage = (p: number) => plotAssets(art, growing(p * grow), grow);
     const [seed, shoot, leaves, ready] = art.stages.map((s) => s.asset);
     expect(stage(0)).toEqual([art.empty, seed]);
     expect(stage(0.2499)).toEqual([art.empty, seed]);
@@ -33,13 +33,27 @@ describe('what a plot shows (GUI_MVP §15.2)', () => {
     expect(stage(1)).toEqual([art.empty, ready]);
   });
 
-  it('a ready seed waiting for a clear spot shows the waiting sign (a full map no longer holds it, D-084)', () => {
-    expect(plotAssets(art, growing(grow), grow, 'noRoom')).toEqual([art.empty, art.waitingAsset]);
+  it('a ready seed shows its checked sign until it is tapped, also while it waits for a clear spot (D-088, §27.6)', () => {
+    const ready = art.stages.find((x) => x.from >= 1)!.asset;
+    expect(plotAssets(art, growing(grow), grow)).toEqual([art.empty, ready]);
+  });
+
+  it('the ripe glow: two ellipses grown past the soil by 28/20 and 16/12 CSS px at any zoom (§27.6)', () => {
+    const soil = { x: -80, y: -40, width: 160, height: 50 };
+    for (const zoom of [0.25, 0.4, 1.5]) {
+      const [outer, inner] = glowEllipses(soil, zoom);
+      expect([outer!.x, outer!.y]).toEqual([0, -15]);
+      expect(outer!.rx * 2 * zoom).toBeCloseTo(160 * zoom + 28, 9);
+      expect(outer!.ry * 2 * zoom).toBeCloseTo(50 * zoom + 20, 9);
+      expect(inner!.rx * 2 * zoom).toBeCloseTo(160 * zoom + 16, 9);
+      expect(inner!.ry * 2 * zoom).toBeCloseTo(50 * zoom + 12, 9);
+      expect([outer!.alpha, inner!.alpha]).toEqual([0.28, 0.72]);
+    }
   });
 
   it('never shows what the seed will be', () => {
-    const a = plotAssets(art, growing(50), grow, null);
-    const b = plotAssets(art, { seed: { planted: [kid, kid, kid], sprout: { type: 'hero' }, grown: 50 } }, grow, null);
+    const a = plotAssets(art, growing(50), grow);
+    const b = plotAssets(art, { seed: { planted: [kid, kid, kid], sprout: { type: 'hero' }, grown: 50 } }, grow);
     expect(a).toEqual(b);
   });
 });
