@@ -6611,6 +6611,26 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     expect(clipped).toBe(false);
   });
 
+  test('while a kid is held over the Garden, its drop target and label are things no pill may cover (Codex review round 4, #114)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1536, 2488));
+    const id = await page.evaluate(() => window.__PK__!.debugAdd!('fire', 1216, 2728));
+    await page.waitForTimeout(200);
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    const t = await page.evaluate(() => window.__PK__!.worldToScreen(1536, 2156));
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    await page.mouse.move(t.x, t.y, { steps: 6 });
+    const label = page.locator('.home-label:not(.home-probe)');
+    await expect(label).toBeVisible();
+    const box = (await label.boundingBox())!;
+    const ex = await page.evaluate(() => window.__PK__!.nameExclusions());
+    expect(ex.some((r) => Math.abs(r.left - box.x) < 1 && Math.abs(r.top - box.y) < 1 && Math.abs(r.right - (box.x + box.width)) < 1)).toBe(true);
+    await page.mouse.up();
+    // Let go: nothing of the target is left to avoid.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameExclusions().length)).toBe(0);
+  });
+
   test('a long name is cut at whole letters with an ellipsis, and the pill stays 120 px', async ({ page }) => {
     await named(page, 'Wwwwwwwwwwwwwwwwwwwwwwww');
     const [pill] = await page.evaluate(() => window.__PK__!.nameplates());

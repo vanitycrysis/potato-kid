@@ -92,6 +92,8 @@ export class Hud {
   private readonly notebook: Notebook;
   private readonly fields: FieldSheets;
   private readonly kidsOnMap: KidsOnMap;
+  /** What map nicknames kept clear of in the last frame (test hook). */
+  nameExclusions: { left: number; top: number; right: number; bottom: number }[] = [];
   /** Map nicknames (D-091); a test hook reads them. */
   private nameplates: Nameplates | null = null;
   private readonly arrivals: Arrivals;
@@ -255,7 +257,9 @@ export class Hud {
     scene.listenFrame(() => {
       if (!showNames) return;
       const n = scene.namedOnScreen();
-      names.update(n.kids, n.band, n.exclusions, n.finger, performance.now());
+      // Nor any drop target or recipe window on screen (Codex review round 4, #114).
+      this.nameExclusions = [...n.exclusions, ...home.visibleRects(), ...recipe.visibleRects()];
+      names.update(n.kids, n.band, this.nameExclusions, n.finger, performance.now());
     });
     this.nameplates = names;
 

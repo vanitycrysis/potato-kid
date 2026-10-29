@@ -262,7 +262,7 @@ async function boot(): Promise<void> {
     dropTarget: () => scene.dropTarget,
     recipe: () => scene.recipeShown,
     rares: () => scene.raresShown,
-    nameExclusions: () => scene.namedOnScreen().exclusions,
+    nameExclusions: () => hud.nameExclusions,
     nameplates: () => hud.nameplatesShown.map((n) => ({ id: n.id, text: n.text, left: n.rect.left, top: n.rect.top, width: n.rect.width, height: n.rect.height })),
     layers: () => scene.layerNames,
     plots: () =>
