@@ -162,7 +162,8 @@ export interface PlantedKid {
 export interface PendingArrival {
   source: 'garden' | 'plot' | 'fusion';
   type: KidId;
-  look: { body: string; face: string };
+  /** Its saved look; `scale` (absent in an older save: 1) is drawn too (§27.4). */
+  look: { body: string; face: string; scale?: number };
   /** Its kind was not in the Dex before this birth. */
   isNew: boolean;
   /** Potatokens the sim awarded with it. */

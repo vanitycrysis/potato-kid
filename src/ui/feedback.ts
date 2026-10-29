@@ -15,7 +15,7 @@ export type FeedbackItem =
    * The new-kid popup (D-087, D-088, GUI_MVP §27.5): a kind new to the Dex, from the Garden
    * (any arrival) or a fusion, and every kid a plot brings up. `potatokens`: its awards.
    */
-  | { kind: 'meet'; source: 'garden' | 'plot' | 'fusion'; type: KidId; kidId: number; look: { body: string; face: string }; isNew: boolean; potatokens: number }
+  | { kind: 'meet'; source: 'garden' | 'plot' | 'fusion'; type: KidId; kidId: number; look: { body: string; face: string; scale: number }; isNew: boolean; potatokens: number }
   /** A discovery award with no matching fusion in the batch. */
   | { kind: 'recipeReward'; potatokens: number }
   | { kind: 'milestone'; potatokens: number; kids: number }
@@ -44,8 +44,8 @@ export type FeedbackItem =
 export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: number): FeedbackItem[] {
   const out: FeedbackItem[] = [];
   let current: Extract<FeedbackItem, { kind: 'discovery' | 'meet' }> | null = null;
-  const meet = (source: 'garden' | 'plot' | 'fusion', kid: { id: number; type: KidId; look: { body: string; face: string } }, isNew: boolean) => {
-    const m: Extract<FeedbackItem, { kind: 'meet' }> = { kind: 'meet', source, type: kid.type, kidId: kid.id, look: { body: kid.look.body, face: kid.look.face }, isNew, potatokens: 0 };
+  const meet = (source: 'garden' | 'plot' | 'fusion', kid: { id: number; type: KidId; look: { body: string; face: string; scale: number } }, isNew: boolean) => {
+    const m: Extract<FeedbackItem, { kind: 'meet' }> = { kind: 'meet', source, type: kid.type, kidId: kid.id, look: { body: kid.look.body, face: kid.look.face, scale: kid.look.scale }, isNew, potatokens: 0 };
     out.push(m);
     return m;
   };

@@ -685,6 +685,9 @@ describe('what the player has yet to see (schema 11, D-087, GUI_MVP §27.5)', ()
       { arrivals: [{ source: 'moon', type: 'fire', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 0 }], recaps: [] },
       { arrivals: [{ source: 'plot', type: 'nobody', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 0 }], recaps: [] },
       { arrivals: [], recaps: [{ seconds: 'long' }] },
+      // A line past its source's ten, and a bad scale (Codex review round 3, #117).
+      { arrivals: [{ source: 'plot', type: 'fire', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 10 }], recaps: [] },
+      { arrivals: [{ source: 'plot', type: 'fire', look: { body: 'round', face: 'classic', scale: -1 }, isNew: false, potatokens: 0, line: 0 }], recaps: [] },
       undefined,
     ]) {
       expect(validateState({ ...state, presentation: bad } as unknown as PersistedState, content)).toContain('presentation is invalid');

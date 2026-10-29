@@ -1,7 +1,10 @@
-import { kidRig, type KidRig } from '../content/artData';
+import { kidRig, kidWild, type KidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { PendingArrival } from '../sim/game';
+import { LINES, type MeetSource } from '../content/arrivalLines';
 import { AnimatedPortrait } from './animatedPortrait';
+import { bodyBox } from '../content/artRules';
+import { wildBox, withSleeve } from './portrait';
 import { el, icon, tierBadge, tierName } from './dom';
 
 // The new-kid popup (D-087, D-088, docs/GUI_MVP.md §27.4-27.5, Codex's design): a large
@@ -10,17 +13,21 @@ import { el, icon, tierBadge, tierName } from './dom';
 // shown, each acknowledged by itself. The world keeps running underneath; nothing here
 // changes the game (the sim already admitted the kid and paid any award).
 
-export type MeetSource = PendingArrival['source'];
+export { LINES, type MeetSource } from '../content/arrivalLines';
 
 /** One arrival to show: as saved with the game (D-087, §27.5). */
 export type Meeting = PendingArrival;
 
-/** Ten lines per source (§27.5): every one names the kind once, with no pronoun. */
-export const LINES: Record<MeetSource, readonly string[]> = {
-  garden: ['{name} wandered in!', '{name} arrived!', '{name} stopped by!', '{name} joined the garden!', '{name} found the garden!', '{name} came to visit!', '{name} made an entrance!', '{name} is here!', '{name} came along!', '{name} paid a visit!'],
-  plot: ['{name} sprouted!', '{name} has sprouted!', '{name} grew from the plot!', '{name} is ready to meet!', "{name} is the plot's surprise!", '{name} has grown!', '{name} is fresh from the plot!', '{name} came from the plot!', '{name} is a growing surprise!', '{name} is the harvest!'],
-  fusion: ['{name} is a new discovery!', '{name} appeared in a fusion!', '{name} came from a fusion!', '{name} joined the discoveries!', '{name} is a fresh find!', '{name} is a fusion surprise!', '{name} arrived through fusion!', '{name} is a brand-new find!', '{name} is a new kind to meet!', '{name} is a discovery to keep!'],
-};
+
+/** The width between the safe-area insets (`--ui-ml`, `--ui-mr`), measured. */
+function safeWidth(): number {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;top:0;height:0;left:var(--ui-ml,8px);right:var(--ui-mr,8px)';
+  document.body.append(probe);
+  const w = probe.getBoundingClientRect().width;
+  probe.remove();
+  return w;
+}
 
 /** A line for `source`, uniformly, never the one it used last if another exists (§27.5). */
 export function pickLine(source: MeetSource, last: number | null, random: () => number = Math.random): number {
@@ -39,7 +46,7 @@ const COMPACT_MIN_WIDTH = 520;
 type Layout = { mode: 'portrait' | 'compact' | 'fallback'; sprite: number };
 
 function layoutNow(): Layout {
-  const w = window.innerWidth;
+  const w = safeWidth() + 16;
   const h = window.innerHeight;
   if (h > 520) return { mode: 'portrait', sprite: 256 };
   if (w - 16 < COMPACT_MIN_WIDTH) return { mode: 'fallback', sprite: 144 };
@@ -142,9 +149,19 @@ export class NewKidPopup {
     o.layout = layout;
     o.dialog.classList.toggle('is-compact', layout.mode === 'compact');
     o.dialog.classList.toggle('is-fallback', layout.mode === 'fallback');
-    const sprite = new AnimatedPortrait(this.rig!, o.meeting.type, layout.sprite, o.meeting.look, o.reduced);
-    o.art.replaceChildren(sprite.node);
-    o.sprite = sprite;
+    // The same portrait, resized: a greeting under way goes on where it was (§27.4).
+    o.sprite.resize(layout.sprite);
+    o.art.replaceChildren(this.dressed(o.meeting, o.sprite, layout.sprite));
+  }
+
+  /** A Rare's portrait moves in its sleeve, as everywhere else (D-094, §27.7). */
+  private dressed(m: Meeting, sprite: AnimatedPortrait, size: number): HTMLElement {
+    if (!this.rig || !this.content.kids.find((k) => k.id === m.type)?.rare) return sprite.node;
+    // Its box at scale 1, as the kid card measures it: a wild kind's own, else its body's.
+    const own = kidWild?.types[m.type];
+    const body = this.rig.bodies[m.look.body] ?? this.rig.bodies.round!;
+    const box = own ? wildBox(this.rig, own.lifetimeBoundsPx) : bodyBox(this.rig, body.boundsPx);
+    return withSleeve(this.rig, sprite.node, size, box, false);
   }
 
   private mount(m: Meeting): void {
@@ -186,7 +203,7 @@ export class NewKidPopup {
     const go = el('button', 'ui-button ui-primary arrival-continue', 'Continue');
     go.type = 'button';
     go.addEventListener('click', () => this.acknowledge());
-    const art = el('div', 'arrival-sprite', sprite.node);
+    const art = el('div', 'arrival-sprite', this.dressed(m, sprite, layout.sprite));
     const text = el('div', 'arrival-text', ...parts, go);
     const dialog = el('section', `arrival ui-surface${layout.mode === 'compact' ? ' is-compact' : ''}${layout.mode === 'fallback' ? ' is-fallback' : ''}`, el('header', 'arrival-header', status, close), art, text);
     dialog.setAttribute('role', 'dialog');
@@ -246,9 +263,9 @@ export class NewKidPopup {
   }
 
   /** Test hook: what is up now. */
-  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string } | null {
+  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string; scale: number; savedScale: number } | null {
     if (!this.open) return null;
     const m = this.open.meeting;
-    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode };
+    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode, scale: this.open.sprite.scale, savedScale: m.look.scale ?? 1 };
   }
 }

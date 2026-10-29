@@ -74,7 +74,7 @@ export class AnimatedPortrait {
     private readonly rig: KidRig,
     readonly type: KidId,
     sizePx: number,
-    look: { body: string; face: string },
+    look: { body: string; face: string; scale?: number },
     private reducedMotion: boolean,
     private readonly wild: WildData | undefined = kidWild,
   ) {
@@ -85,13 +85,22 @@ export class AnimatedPortrait {
     const canvas = holder('portrait-canvas');
     canvas.style.width = `${cw}px`;
     canvas.style.height = `${ch}px`;
-    canvas.style.transform = `scale(${sizePx / cw})`;
+    this.canvas = canvas;
+    // Its saved scale, about the ground point; held to 8 px inside the slot if it would
+    // overflow (§27.4), so nothing is cropped.
+    const scaler = holder('portrait-layer');
+    scaler.style.width = `${cw}px`;
+    scaler.style.height = `${ch}px`;
+    scaler.style.transformOrigin = `${rig.groundAnchor[0]}px ${rig.groundAnchor[1]}px`;
+    this.scale = this.contained(look.scale ?? 1);
+    scaler.style.transform = `scale(${this.scale})`;
     // The clip's root transform turns about the ground point, as on the map.
     this.rigEl = holder('portrait-layer portrait-rig');
     this.rigEl.style.width = `${cw}px`;
     this.rigEl.style.height = `${ch}px`;
     this.rigEl.style.transformOrigin = `${rig.groundAnchor[0]}px ${rig.groundAnchor[1]}px`;
-    canvas.append(this.rigEl);
+    scaler.append(this.rigEl);
+    canvas.append(scaler);
     const face = rig.faces[this.faceId]!;
     const faceSource = source(face.states[OPEN]!, face.sourcePivot);
     this.face = faceSource.img;
@@ -126,12 +135,41 @@ export class AnimatedPortrait {
     }
     const box = document.createElement('div');
     box.className = 'portrait portrait-animated';
-    box.style.width = `${sizePx}px`;
-    box.style.height = `${sizePx}px`;
     box.setAttribute('aria-hidden', 'true');
     box.append(canvas);
     this.node = box;
+    this.resize(sizePx);
     this.pose();
+  }
+
+  private readonly canvas: HTMLElement;
+  /** The scale drawn: the saved one, contained. */
+  readonly scale: number;
+
+  /** A new slot size (a rotation): the same portrait, its clip going on where it was. */
+  resize(sizePx: number): void {
+    this.node.style.width = `${sizePx}px`;
+    this.node.style.height = `${sizePx}px`;
+    this.canvas.style.transform = `scale(${sizePx / this.rig.canvas[0]})`;
+  }
+
+  /**
+   * `s`, or less if the lifetime box scaled by it about the ground point would come within
+   * 8 source-canvas px of the edge (at 256 px, 8 CSS px).
+   */
+  private contained(s: number): number {
+    const [cw, ch] = this.rig.canvas;
+    const [gx, gy] = this.rig.groundAnchor;
+    const b = this.wildType?.lifetimeBoundsPx ?? this.rig.bodies[this.bodyId]!.boundsPx;
+    const [l, t, r, bt] = b;
+    const room = 8;
+    const fit = Math.min(
+      l < gx ? (gx - room) / (gx - l) : Infinity,
+      r > gx ? (cw - room - gx) / (r - gx) : Infinity,
+      t < gy ? (gy - room) / (gy - t) : Infinity,
+      bt > gy ? (ch - room - gy) / (bt - gy) : Infinity,
+    );
+    return Math.max(0.1, Math.min(s, Math.max(1, fit)));
   }
 
   /** Plays clip `name` from its start, then stands; reduced motion stays still. */

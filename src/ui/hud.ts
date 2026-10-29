@@ -328,7 +328,7 @@ export class Hud {
       for (const k of report.spawned) {
         if (!this.options.arrivals || this.known.has(k.type) || fresh.has(k.type)) continue;
         fresh.add(k.type);
-        this.popup.add({ source: 'garden', type: k.type, look: { body: k.look.body, face: k.look.face }, isNew: true, potatokens: 0, kidId: k.id });
+        this.popup.add({ source: 'garden', type: k.type, look: { body: k.look.body, face: k.look.face, scale: k.look.scale }, isNew: true, potatokens: 0, kidId: k.id });
       }
       for (const t of scene.game.state.discoveredKids) this.known.add(t);
       this.offlineSummary(report, fresh.size);
@@ -349,9 +349,14 @@ export class Hud {
   }
 
   /** Test hook: the new-kid popup up now, if any (D-087). */
-  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; waiting: number } | null {
+  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; scale: number; savedScale: number; waiting: number } | null {
     const s = this.popup.shown;
     return s && { ...s, waiting: this.popup.waiting };
+  }
+
+  /** Debug: queues an arrival as given (tests of how the popup draws it). */
+  debugMeet(m: { source: 'garden' | 'plot' | 'fusion'; type: KidId; look: { body: string; face: string; scale?: number }; isNew: boolean; potatokens: number }): void {
+    this.popup.add(m);
   }
 
   /** Debug: treat `type` as found already (tests of the new-recipe card). */

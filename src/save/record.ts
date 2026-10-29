@@ -1,3 +1,4 @@
+import { LINES, type MeetSource } from '../content/arrivalLines';
 import { storedNameOk } from '../sim/names';
 import { BUILDING_IDS, type Content } from '../content/types';
 import type { PersistedState } from '../sim/game';
@@ -186,6 +187,8 @@ export function validateState(state: unknown, content: Content): string[] {
       typeof r.isNew === 'boolean' &&
       whole(r.potatokens) &&
       whole(r.line) &&
+      (r.line as number) < LINES[r.source as MeetSource].length &&
+      (look.scale === undefined || (finite(look.scale) && (look.scale as number) > 0)) &&
       (r.kidId === undefined || whole(r.kidId))
     );
   };

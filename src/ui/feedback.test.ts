@@ -7,7 +7,7 @@ import { feedbackFor, refusalText } from './feedback';
 
 const kid = (type: string, id = 0) => ({ id, type, look: { body: 'round', face: 'classic', scale: 1 } }) as never;
 /** The popup item (D-087) for a new kind or a plot's kid, its look the default. */
-const meet = (source: 'garden' | 'plot' | 'fusion', type: string, isNew: boolean, potatokens = 0, kidId = 0) => ({ kind: 'meet', source, type, kidId, look: { body: 'round', face: 'classic' }, isNew, potatokens });
+const meet = (source: 'garden' | 'plot' | 'fusion', type: string, isNew: boolean, potatokens = 0, kidId = 0) => ({ kind: 'meet', source, type, kidId, look: { body: 'round', face: 'classic', scale: 1 }, isNew, potatokens });
 
 describe('feedback cards (GUI_MVP §9)', () => {
   it('a new kind from a fusion is a popup that carries its own discovery and milestone awards (D-087)', () => {

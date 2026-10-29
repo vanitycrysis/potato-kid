@@ -7133,6 +7133,65 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
   });
 
+  test('the panel keeps inside the safe-area insets, and picks its layout from the width between them (Codex review round 3, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    // A landscape cutout on each side: 520 px left between them, still compact.
+    await page.addStyleTag({ content: ':root { --ui-ml: 60px !important; --ui-mr: 60px !important; }' });
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    let box = (await popup(page).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(60 - 0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(640 - 60 + 0.5);
+    // Wider cutouts: too narrow for the compact panel, so the single column, still inside.
+    await page.addStyleTag({ content: ':root { --ui-ml: 90px !important; --ui-mr: 90px !important; }' });
+    await page.setViewportSize({ width: 641, height: 360 });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('fallback');
+    box = (await popup(page).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(90 - 0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(641 - 90 + 0.5);
+  });
+
+  test("a Rare's popup portrait moves in its sleeve, also after a rotation (Codex review round 3, #117)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1&rare=hero,lantern');
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'harvest', plot: 0 }));
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Hero');
+    await expect(popup(page).locator('.arrival-sprite .portrait-sleeve')).toHaveCount(1);
+    await page.setViewportSize({ width: 640, height: 360 });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    await expect(popup(page).locator('.arrival-sprite .portrait-sleeve')).toHaveCount(1);
+  });
+
+  test("the popup draws the newborn's own saved scale, carried from its birth (Codex review round 3, #117)", async ({ page }) => {
+    await fuseNew(page);
+    const kid = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'firefighter')!);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.savedScale).toBe(kid.look.scale);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    // A small kid is drawn small; a large one as large as fits, uncropped.
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic', scale: 0.9 }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))?.scale).toBeCloseTo(0.9, 3);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic', scale: 1.1 }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))?.scale ?? 0).toBeGreaterThan(1);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.scale).toBeLessThanOrEqual(1.1);
+  });
+
+  test('a rotation mid-greeting lets the wave go on (Codex review round 3, #117)', async ({ page }) => {
+    await fuseNew(page);
+    // The greeting starts on mount; rotated straight away, it is still waving.
+    await page.setViewportSize({ width: 915, height: 412 });
+    await page.waitForTimeout(60);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/wave/);
+  });
+
   test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));

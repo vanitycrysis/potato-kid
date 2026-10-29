@@ -103,7 +103,7 @@ declare global {
       /** Only with `?debug=1`: Android's Back, as the native button calls it (returns whether the UI took it). */
       debugBack?: () => boolean;
       /** The new-kid popup up now (D-087), and how many arrivals wait, the one up included. */
-      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; waiting: number } | null;
+      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; scale: number; savedScale: number; waiting: number } | null;
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
@@ -113,6 +113,8 @@ declare global {
       debugKnown?: () => string[];
       /** Only with `?debug=1`: marks a kind as found already, so its next fusion is a new recipe's card, not a popup. */
       debugKnow?: (type: string) => void;
+      /** Only with `?debug=1`: queues a new-kid popup with this look. */
+      debugMeet?: (type: string, look: { body: string; face: string; scale?: number }) => void;
       /** Only with `?debug=1`: shows a save banner state until replaced (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
@@ -307,6 +309,7 @@ async function boot(): Promise<void> {
           },
           debugKnown: () => hud.knownKids,
           debugBack: () => hud.back(),
+          debugMeet: (type: string, look: { body: string; face: string; scale?: number }) => hud.debugMeet({ source: 'garden', type, look, isNew: true, potatokens: 0 }),
           debugKnow: (type: string) => {
             if (!scene.game.state.discoveredKids.includes(type)) scene.game.state.discoveredKids.push(type);
             hud.debugKnow(type);
