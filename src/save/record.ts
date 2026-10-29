@@ -8,7 +8,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 12;
+export const SAVE_SCHEMA = 13;
 
 /** The lesson ids a save may hold (GUI_MVP §27.2). */
 const LESSONS = new Set(['planting', 'potatokens', 'garden', 'capacity', 'naming', 'bias', 'fields', 'feeding', 'plot-space', 'field-space', 'compendium', 'returns']);
@@ -235,7 +235,7 @@ export function validateState(state: unknown, content: Content): string[] {
   if (typeof w !== 'object' || w === null || !Array.isArray(w.kids) || !whole(w.nextKidId)) return [...p, 'world is invalid'];
   const next = w.nextKidId as number;
   const seen = new Set<number>();
-  const kinds = new Set(['walk', 'pause', 'look', 'wave', 'sit', 'sleep']);
+  const kinds = new Set(['walk', 'pause', 'look', 'wave', 'sit', 'sleep', 'visit']);
   for (const raw of w.kids as unknown[]) {
     const k = raw as Record<string, unknown>;
     if (typeof k !== 'object' || k === null) {
@@ -252,8 +252,10 @@ export function validateState(state: unknown, content: Content): string[] {
     else {
       // Every rest needs its countdown, and sit/sleep their total, or the kid freezes or the
       // animation time is NaN (Codex review, PR #30).
-      const needs = a.kind === 'walk' ? [] : a.kind === 'sit' || a.kind === 'sleep' ? ['left', 'total'] : ['left'];
+      const needs = a.kind === 'walk' ? [] : a.kind === 'sit' || a.kind === 'sleep' ? ['left', 'total'] : a.kind === 'visit' ? ['left', 'site', 'leg'] : ['left'];
       for (const f of needs) if (!finite(a[f]) || (a[f] as number) < 0) p.push(`kid ${String(id)} activity ${f} is missing or invalid`);
+      // A visit (D-090): which slot, and which part of it; the map decides whether the slot exists.
+      if (a.kind === 'visit' && !(typeof a.slot === 'string' && whole(a.site) && whole(a.leg) && ['approach', 'dock', 'stay', 'leave'].includes(a.phase as string))) p.push(`kid ${String(id)} visit is invalid`);
     }
     const look = k.look as Record<string, unknown> | undefined;
     if (typeof look !== 'object' || look === null || typeof look.body !== 'string' || typeof look.face !== 'string' || !finite(look.scale) || (look.scale as number) <= 0) {
@@ -264,9 +266,11 @@ export function validateState(state: unknown, content: Content): string[] {
     if ('name' in k && !(typeof k.name === 'string' && storedNameOk(k.name, content.balance.naming.maxLength))) p.push(`kid ${String(id)} name is invalid`);
     // Happiness: time left, no more than a favourite lasts, and which kind (D-056).
     const h = k.happy as Record<string, unknown> | undefined;
-    if ('happy' in k && !(typeof h === 'object' && h !== null && finite(h.left) && (h.left as number) > 0 && (h.left as number) <= content.balance.feeding.favouriteSeconds && typeof h.favourite === 'boolean')) {
+    if ('happy' in k && !(typeof h === 'object' && h !== null && finite(h.left) && (h.left as number) > 0 && (h.left as number) <= content.balance.feeding.favouriteSeconds && typeof h.favourite === 'boolean' && (h.small === undefined || h.small === true))) {
       p.push(`kid ${String(id)} happy is invalid`);
     }
+    // A decoration's cooldown (D-090): seconds, not negative.
+    if ('visitCooldown' in k && !(finite(k.visitCooldown) && (k.visitCooldown as number) >= 0)) p.push(`kid ${String(id)} visitCooldown is invalid`);
     const box = k.box as Record<string, unknown> | undefined;
     if (typeof box !== 'object' || box === null || !(['left', 'top', 'right', 'bottom'] as const).every((f) => finite(box[f]))) {
       p.push(`kid ${String(id)} box is invalid`);

@@ -17,6 +17,25 @@ export interface RecipeDef {
   result: KidId;
 }
 
+/**
+ * Decorations kids use (D-090): how often a walker that stops sets off for one near enough,
+ * how long it tries to get there and stays, and its small happiness (less than any food).
+ */
+export interface DecorationBalance {
+  /** Chance a walker that stops heads for a free slot instead of resting. */
+  visitChance: number;
+  /** World units: only a slot whose approach is this near. */
+  visitRadius: number;
+  /** Seconds it tries to reach the approach before giving up. */
+  approachSeconds: number;
+  /** Seconds it stays, uniformly in this range. */
+  dwellSeconds: [number, number];
+  /** Seconds after a visit before it sets off for another on its own. */
+  cooldownSeconds: number;
+  happySeconds: number;
+  happyMultiplier: number;
+}
+
 export interface WanderBalance {
   /** World units per second. */
   speed: number;
@@ -172,6 +191,7 @@ export interface Balance {
   feeding: FeedingBalance;
   farming: FarmingBalance;
   naming: NamingBalance;
+  decorations: DecorationBalance;
 }
 
 export interface Content {

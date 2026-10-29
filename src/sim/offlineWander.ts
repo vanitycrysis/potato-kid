@@ -54,6 +54,8 @@ export function wanderOffline(
   const gauss = () => Math.sqrt(-2 * Math.log(1 - rng.next())) * Math.cos(2 * Math.PI * rng.next());
 
   for (const kid of world.kids) {
+    // Still seated on a decoration (its stay outlasts the absence, D-090): it stays there.
+    if (kid.activity.kind === 'visit') continue;
     const t = away(kid);
     const spread = wanderSpread(w, t);
     // Never farther than it could walk in the time: the spread formula holds for long

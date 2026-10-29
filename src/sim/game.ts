@@ -18,8 +18,10 @@ import {
   type Kid,
   type Look,
   type Obstacle,
+  type Site,
   type World,
 } from './world';
+import { approachOf, docked, dropSlot, maybeVisit, seatAt, seatClear, slotOf, slotTaken, stepVisits, visiting, visitOf, type Visit } from './visits';
 
 /** Player input, applied at the start of the next sim step. */
 export type Command =
@@ -31,7 +33,7 @@ export type Command =
    * `target`: the kid under the finger at release (D-051). The pair is tried first,
    * touching or not; a non-recipe pair just lands as usual (D-039).
    */
-  | { type: 'drop'; kidId: number; x: number; y: number; touching?: number[]; target?: number }
+  | { type: 'drop'; kidId: number; x: number; y: number; touching?: number[]; target?: number; pointer?: { x: number; y: number } }
   /**
    * A drag ends with no drop. `safe`: put down clear of recipe partners, with a newborn's
    * grace, so it can't fuse on the way back (a release over a field that didn't take it, §22.4).
@@ -267,6 +269,8 @@ export type GameEvent =
   | { type: 'fed'; kid: KidRef; food: string; favourite: boolean }
   /** A name given, or cleared (`null`) (D-057). */
   | { type: 'named'; kid: KidRef; name: string | null }
+  /** The player put a kid on a decoration's slot (D-090). */
+  | { type: 'visited'; kid: KidRef; site: number; slot: string }
   /** A plot started growing; its sprout is decided (not revealed until it comes up). */
   | { type: 'growing'; plot: number }
   | { type: 'plotUnlocked'; plots: number }
@@ -379,6 +383,16 @@ export interface GameOptions {
    * nothing wanders, spawns or lands in it (GUI_MVP §22.1).
    */
   fieldBays?: Obstacle[];
+  /** Decorations kids use (D-090); their obstacles come with `obstacles`, marked by site. */
+  sites?: Site[];
+}
+
+/**
+ * Whether a kid's happiness counts in planting (D-056): a food's does, a decoration's small one
+ * doesn't (D-090). Previews, cards and the seed all ask this.
+ */
+export function plantsHappy(kid: { happy?: { small?: true } }): boolean {
+  return !!kid.happy && !kid.happy.small;
 }
 
 export class Game {
@@ -393,6 +407,9 @@ export class Game {
   private readonly spawnAt: { x: number; y: number };
   private readonly ambient: Ambient | undefined;
   private readonly fieldBays: Obstacle[];
+  readonly sites: Site[];
+  /** Visits of kids held now, to put back if the press ends as a tap (D-090). */
+  private readonly lifted = new Map<number, { visit: Visit; x: number; y: number }>();
   /** A due Garden spawn found no free spot near the outlet (shown as "Waiting for room"). */
   private blocked = false;
   /** Ready plots that couldn't sprout in the last step, and why. */
@@ -414,6 +431,7 @@ export class Game {
     this.spawnAt = options.spawnAt;
     this.ambient = options.ambient;
     this.fieldBays = options.fieldBays ?? [];
+    this.sites = options.sites ?? [];
     this.looks = options.looks ?? {
       bodies: [{ id: DEFAULT_LOOK.body, weight: 1, box: defaultBox(content.balance.body.radius) }],
       faces: [{ id: DEFAULT_LOOK.face, weight: 1 }],
@@ -489,7 +507,10 @@ export class Game {
     // grown with new art, may leave a kid in scenery or another kid: it moves to the nearest
     // free spot clear of recipe partners, so loading never fuses it.
     for (const kid of this.state.world.kids) {
-      if (isFree(this.state.world, kid.box, kid.x, kid.y, kid.id)) continue;
+      // A visit to a decoration this map doesn't have (another map) ends (D-090).
+      const v = visitOf(kid);
+      if (v && !slotOf(this.sites, v)) kid.activity = { kind: 'walk' };
+      if (docked(kid) || isFree(this.state.world, kid.box, kid.x, kid.y, kid.id)) continue;
       const spot = clearSpotFor(this.state.world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
       if (spot) [kid.x, kid.y] = [spot.x, spot.y];
     }
@@ -540,6 +561,7 @@ export class Game {
   happyMultiplier(kid: Pick<Kid, 'happy'>): number {
     if (!kid.happy || kid.happy.left <= 0) return 1;
     const f = this.content.balance.feeding;
+    if (kid.happy.small) return this.content.balance.decorations.happyMultiplier;
     return kid.happy.favourite ? f.favouriteMultiplier : f.happyMultiplier;
   }
 
@@ -552,7 +574,8 @@ export class Game {
     const kids = this.state.world.kids;
     const a = kids.find((k) => k.id === heldId);
     const b = kids.find((k) => k.id === targetId);
-    if (!a || !b || a.grace > 0 || b.grace > 0) return null;
+    // A kid on a visit never fuses (D-090): no preview promises it (Codex review round 2, #121).
+    if (!a || !b || a.grace > 0 || b.grace > 0 || visiting(b)) return null;
     return this.recipes.get(pairKey(a.type, b.type)) ?? null;
   }
 
@@ -639,12 +662,14 @@ export class Game {
     }
     this.wearOffPlanted(dt);
     this.advanceFields(dt, events);
+    // Visits first (D-090): walking to, sitting at and leaving decorations.
+    stepVisits(world, this.sites, this.content.balance.wander.speed, this.content.balance.decorations, dt, this.rng, (kid, x, y) => blockedByScenery(world, kid.box, x, y), (kid) => this.cheer(kid));
     stepWander(
       world,
       this.rng,
       this.content.balance.wander,
       dt,
-      (_kid, phase) => this.rest(phase),
+      (kid, phase) => (phase === 'stop' && maybeVisit(world, this.sites, kid, this.content.balance.decorations, this.rng)) || this.rest(phase),
       (kid, x, y) => blockedByScenery(world, kid.box, x, y),
     );
     // Touching recipe pairs fuse first, so a kid dropped against its partner fuses.
@@ -672,6 +697,9 @@ export class Game {
     const s = this.state;
     const away = Math.max(0, (now - s.accountedUntil) / 1000);
     s.accountedUntil = Math.max(s.accountedUntil, now);
+    // A visit the absence outlasts ends (D-090): its kid is back at its slot's approach, or the
+    // nearest free spot, walking. A kid seated for longer than that (a reload) stays.
+    if (away > 0) this.endVisits(away);
 
     const events: GameEvent[] = [];
     const spawned: Kid[] = [];
@@ -812,8 +840,23 @@ export class Game {
       }
       if (c.type === 'pickUp') {
         kid.held = true;
+        // Its visit is remembered: a press that ends as a tap, or a drag let go nowhere, puts it
+        // back (Codex review, #121). The slot is free meanwhile.
+        const v = visitOf(kid);
+        if (v) this.lifted.set(kid.id, { visit: { ...v }, x: kid.x, y: kid.y });
+        else this.lifted.delete(kid.id);
         kid.activity = { kind: 'walk' };
         events.push({ type: 'pickedUp', kidId: kid.id });
+        continue;
+      }
+      // Dropped on a decoration with a free slot (D-090): it takes the slot nearest the finger.
+      const seat = c.type === 'drop' && c.pointer ? dropSlot(world, this.sites, c.pointer, kid.id) : null;
+      if (seat) {
+        kid.held = false;
+        seatAt(kid, seat.site, seat.slot, this.content.balance.decorations, this.rng);
+        this.cheer(kid);
+        events.push({ type: 'dropped', kidId: kid.id });
+        events.push({ type: 'visited', kid: { id: kid.id, type: kid.type }, site: seat.site, slot: seat.slot.id });
         continue;
       }
       // Land on the nearest free spot to the requested point: the same answer the scene
@@ -822,6 +865,15 @@ export class Game {
       const p = findFreeSpot(world, kid.box, c.x, c.y, kid.id) ?? clampToBounds(world.bounds, kid.x, kid.y);
       kid.x = p.x;
       kid.y = p.y;
+      // Cancelled (a tap on a sitter, a drag let go nowhere): back in its slot, if still free.
+      const lifted = this.lifted.get(kid.id);
+      const back = c.type === 'cancelDrag' ? this.restoredSeat(kid.id) : null;
+      this.lifted.delete(kid.id);
+      if (lifted && back) {
+        kid.activity = lifted.visit;
+        [kid.x, kid.y] = [lifted.x, lifted.y];
+        continue;
+      }
       if (c.type === 'cancelDrag' && c.safe) {
         const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
         if (spot) [kid.x, kid.y] = [spot.x, spot.y];
@@ -919,7 +971,8 @@ export class Game {
   private resolveFusions(events: GameEvent[], seen: [number, number][] = [], targeted: [number, number][] = []): void {
     const { world } = this.state;
     const slack = this.content.balance.body.touchSlack;
-    const eligible = world.kids.filter((k) => !k.held && k.grace === 0);
+    // Kids on a visit never fuse (D-090).
+    const eligible = world.kids.filter((k) => !k.held && k.grace === 0 && !visiting(k));
     const candidates: { d: number; a: Kid; b: Kid; result: KidId }[] = [];
     // Cell size covers the largest box plus slack, so only neighbouring cells can touch.
     const cell = Math.max(1, ...eligible.map((k) => Math.max(k.box.right - k.box.left, k.box.bottom - k.box.top))) + slack;
@@ -1146,7 +1199,8 @@ export class Game {
         type: kid.type,
         look: { ...kid.look },
         ...(kid.name ? { name: kid.name } : {}),
-        ...(kid.happy ? { happy: true, happiness: { ...kid.happy } } : {}),
+        // A decoration's small happiness doesn't count, and doesn't come along (D-090).
+        ...(plantsHappy(kid) ? { happy: true, happiness: { ...kid.happy! } } : {}),
       };
       if (target.seed) target.seed.planted.push(snapshot);
       else target.seed = { planted: [snapshot], sprout: null, grown: 0 };
@@ -1254,7 +1308,8 @@ export class Game {
     if (bay) {
       world.obstacles.push(bay);
       for (const kid of world.kids) {
-        if (isFree(world, kid.box, kid.x, kid.y, kid.id)) continue;
+        // A kid in a decoration sits inside its obstacles: it stays (Codex review round 3, #121).
+        if (docked(kid) || isFree(world, kid.box, kid.x, kid.y, kid.id)) continue;
         const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
         if (!spot) {
           for (const m of moved) [m.kid.x, m.kid.y] = [m.x, m.y];
@@ -1627,6 +1682,51 @@ export class Game {
     const look = this.rollLook();
     this.cosmetic.setState(saved);
     return look;
+  }
+
+  /**
+   * After `away` seconds (D-090): a seated kid whose stay is longer keeps its place, the time
+   * spent; every other visit ends, its kid set down at its approach or the nearest free spot.
+   */
+  private endVisits(away: number): void {
+    const world = this.state.world;
+    for (const kid of world.kids) {
+      const v = visitOf(kid);
+      if (!v) continue;
+      if (v.phase === 'stay' && v.left > away) {
+        v.left -= away;
+        continue;
+      }
+      kid.activity = { kind: 'walk' };
+      // Still on its way: it just stops where it is, and wanders from there (Codex review round
+      // 2, #121). Inside the decoration: out at its approach, or the nearest free spot.
+      if (v.phase === 'approach') continue;
+      const at = approachOf(this.sites, { ...kid, activity: v });
+      const p = at && isFree(world, kid.box, at.x, at.y, kid.id) ? at : findFreeSpot(world, kid.box, at?.x ?? kid.x, at?.y ?? kid.y, kid.id);
+      if (p) [kid.x, kid.y] = [p.x, p.y];
+    }
+  }
+
+  /**
+   * Where a cancelled drag of kid `id` puts it back in its seat (D-090): the slot it was lifted
+   * from, if that is still free; else null (it lands as any kid). The scene draws it there.
+   */
+  restoredSeat(id: number): { x: number; y: number } | null {
+    const l = this.lifted.get(id);
+    const kid = this.state.world.kids.find((k) => k.id === id);
+    if (!l || !kid || !slotOf(this.sites, l.visit) || slotTaken(this.state.world, l.visit.site, l.visit.slot, id)) return null;
+    // Nobody now stands where it sat (Codex review round 7, #121): else it lands as any kid.
+    if (!seatClear(this.state.world, kid, l)) return null;
+    return { x: l.x, y: l.y };
+  }
+
+  /**
+   * A kid took its place on a decoration (D-090): a small happiness, unless a food's (always
+   * stronger) is still on; another visit refreshes it.
+   */
+  private cheer(kid: Kid): void {
+    if (kid.happy && !kid.happy.small) return;
+    kid.happy = { left: this.content.balance.decorations.happySeconds, favourite: false, small: true };
   }
 
   /**

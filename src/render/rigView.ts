@@ -9,6 +9,8 @@ const OPEN = 'open';
 const WILD_STAND: WildFrame = { durationMs: 0, frame: 'stand', offsetPx: [0, 0], faceState: 'inherit', opacity: 1 };
 /** Farming (D-089, Codex's kid_activity_v1): the stomp clip and its soil stamp. */
 const FARM_CLIP = 'farm_stomp';
+/** What the clip picker is told a seated kid does: it draws the slot's clip itself. */
+const SEATED: Activity = { kind: 'pause', left: 1 };
 
 /**
  * Draws one kid from ChatGPT/Codex's rig (kid_rig_v2.json), following the spec's
@@ -199,6 +201,40 @@ export class KidRigView {
     }
     const frame = this.reducedMotion || !clip ? this.staticFrame(FARM_CLIP) : frameAt(clip, t, false);
     this.apply(frame, this.blink(dt));
+  }
+
+  /**
+   * A kid in a decoration's slot (D-090, Codex's kid_activity_v1): fixed there, it plays the
+   * slot's clip (`decoration_sitting`, `decoration_splash`) in a loop phased by its id, sorting
+   * at `depth` between the decoration's back and front. A wild kid uses its own bob. Reduced
+   * motion: the clip's still frame. Returns the frame index shown (-1: still), for the splash.
+   */
+  updateVisiting(x: number, y: number, clipName: string, depth: number, ms: number, dt: number): number {
+    this.root.position.set(x, y);
+    this.root.zIndex = depth;
+    this.shadow.alpha = 1;
+    this.showStamp(false);
+    // A one-shot under way (the drop that seated it) and any effect (a discovery) play out
+    // in their own time, not frozen until it leaves (Codex review round 3, #121).
+    this.picker.advance(SEATED, false, dt);
+    this.drawEffects(dt);
+    this.lastClip = clipName;
+    const clip = this.rig.clips[clipName];
+    const period = clip ? clip.frames.length / clip.fps : 0;
+    const t = period > 0 ? (((ms / 1000 + ((this.kid.id * 1301) % 1500) / 1000) % period) + period) % period : 0;
+    const index = !this.reducedMotion && clip ? Math.floor(t * clip.fps) % clip.frames.length : -1;
+    if (this.wildType) {
+      this.applyWild(this.wildFrame(clipName, t), this.blink(dt));
+      return index;
+    }
+    const frame = this.reducedMotion || !clip ? this.staticFrame(clipName) : frameAt(clip, t, false);
+    this.apply(frame, this.blink(dt));
+    return index;
+  }
+
+  /** Source px to world units for this kid (its rig scale and its look's). */
+  get sourceScale(): number {
+    return this.scaled.scale.x;
   }
 
   /** The farming stamp under the feet, on a landing (kid_activity_v1 `effects.farm_stomp`). */

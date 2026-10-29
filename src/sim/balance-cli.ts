@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, withFarmRelocations } from '../content/artRules';
-import type { FarmData, KidRig, MapData, WildData } from '../content/artData';
+import { ambientFrom, decorationObstacles, decorationSites, fieldBaysFrom, lookTable, obstaclesFrom, withFarmRelocations } from '../content/artRules';
+import type { DecorationData, FarmData, KidRig, MapData, WildData } from '../content/artData';
 import { content } from '../content';
 import { median, simulate, type Report, type Scenario } from './balance';
 import type { GameOptions } from './game';
@@ -10,16 +10,21 @@ import type { GameOptions } from './game';
 // one process per seed and scenario.
 
 const farm = JSON.parse(readFileSync('art/data/farm_v2.json', 'utf8')) as FarmData;
-// The map as the game has it: Codex's farm relocations applied (GUI_MVP §22.1).
-const map = withFarmRelocations(JSON.parse(readFileSync('art/data/map_garden_v4.json', 'utf8')) as MapData, farm);
+// The map as the game has it: v5 without the scenery its decorations replace (D-090), and
+// Codex's farm relocations applied (GUI_MVP §22.1).
+const v5 = JSON.parse(readFileSync('art/data/map_garden_v5.json', 'utf8')) as MapData;
+const replaced = new Set(v5.activityDecorations?.sceneryOverrideIds ?? []);
+const map = withFarmRelocations({ ...v5, instances: v5.instances.filter((i) => !replaced.has(i.id)) }, farm);
+const decorations = JSON.parse(readFileSync('art/data/decorations_v1.json', 'utf8')) as DecorationData;
 const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
 const wild = JSON.parse(readFileSync('art/data/kid_wild_v1.json', 'utf8')) as WildData;
 const [w, h] = map.worldSize;
 export const options: GameOptions = {
   bounds: { minX: 0, minY: 0, maxX: w, maxY: h },
   spawnAt: { x: map.garden.spawnOutlet[0], y: map.garden.spawnOutlet[1] },
-  obstacles: obstaclesFrom(map),
+  obstacles: [...obstaclesFrom(map), ...decorationObstacles(map, decorations)],
   fieldBays: fieldBaysFrom(farm, map),
+  sites: decorationSites(map, decorations),
   looks: lookTable(rig, wild),
   // The shipped rests (look, wave, sit, sleep), as main.ts sets up (Codex review, PR #45).
   ambient: ambientFrom(rig, content.balance.wander.ambientChance),

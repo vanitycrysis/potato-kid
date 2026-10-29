@@ -1,7 +1,7 @@
 import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
-import type { GameEvent, PlantedKid, RejectReason } from '../sim/game';
+import { plantsHappy, type GameEvent, type PlantedKid, type RejectReason } from '../sim/game';
 import type { Arrivals } from './arrivals';
 import { el, icon, tierName } from './dom';
 import { refusalText } from './feedback';
@@ -1018,7 +1018,7 @@ export class GardenPlots {
         rare: this.kind(k.type) === 'Rare',
         special: this.kind(k.type) === 'Special',
       };
-      row.named(k.name, !!k.happy);
+      row.named(k.name, plantsHappy(k));
       box.addEventListener('change', () => {
         const at = draft.indexOf(id);
         if (box.checked && at < 0) draft.push(id);
@@ -1037,7 +1037,7 @@ export class GardenPlots {
       const accepted = this.info(i).planted;
       const chosen = draft.flatMap((id) => {
         const k = live().find((c) => c.id === id);
-        return k ? [{ type: k.type, happy: !!k.happy }] : [];
+        return k ? [{ type: k.type, happy: plantsHappy(k) }] : [];
       });
       const now = { count: accepted.length, ...this.game.oddsFor(accepted) };
       const next = { count: accepted.length + chosen.length, ...this.game.oddsFor([...accepted, ...chosen]) };
@@ -1089,7 +1089,7 @@ export class GardenPlots {
       let visible = 0;
       for (const [id, r] of rows) {
         const now = live().find((k) => k.id === id);
-        r.named(now?.name, !!now?.happy);
+        r.named(now?.name, !!now && plantsHappy(now));
         const kind = kinds.get(id)!;
         const show = (filter === 'all' || (filter === 'rares' ? kind.rare : kind.special)) && (!query || r.text.includes(query));
         r.node.hidden = !show;

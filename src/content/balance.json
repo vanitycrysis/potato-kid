@@ -140,5 +140,14 @@
     "biteSeconds": 3600,
     "favouriteFactor": 2
   },
-  "naming": { "price": 50, "maxLength": 24 }
+  "naming": { "price": 50, "maxLength": 24 },
+  "decorations": {
+    "visitChance": 0.2,
+    "visitRadius": 700,
+    "approachSeconds": 20,
+    "dwellSeconds": [30, 75],
+    "cooldownSeconds": 180,
+    "happySeconds": 600,
+    "happyMultiplier": 1.25
+  }
 }

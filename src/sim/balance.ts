@@ -249,7 +249,8 @@ export function createBot(
     // 1. Buy: the cheaper of Garden and Capacity, the Compendium once a few kids are known.
     const buy = purchase(game, farm);
     if (buy) return [buy];
-    const free = s.world.kids.filter((k) => !k.held && k.grace === 0);
+    // A kid on a visit doesn't fuse (D-090): the bot leaves it be, as for one in grace.
+    const free = s.world.kids.filter((k) => !k.held && k.grace === 0 && k.activity.kind !== 'visit');
     if (farm) {
       // 1b. A bought field with no food: the favourite of the most kids on the map.
       const bare = s.fields.findIndex((f) => f.food === null);
@@ -272,7 +273,7 @@ export function createBot(
         mover: { id: a.id, type: a.type },
         contacts: contacts.flatMap((id) => {
           const k = s.world.kids.find((x) => x.id === id);
-          return k ? [{ id, type: k.type, grace: k.grace }] : [];
+          return k ? [{ id, type: k.type, grace: k.grace, visiting: k.activity.kind === 'visit' }] : [];
         }),
       };
       return commands;
@@ -368,16 +369,16 @@ export function deadlocked(game: Game, recipes: Map<string, string>, farm = true
   return purchase(game, farm) === null;
 }
 
-/** A drop the bot made: who moved, and whom the landing touched (with their grace then). */
+/** A drop the bot made: who moved, and whom the landing touched (with their grace then, and whether on a visit). */
 export interface Drop {
   mover: { id: number; type: string };
-  contacts: { id: number; type: string; grace: number }[];
+  contacts: { id: number; type: string; grace: number; visiting?: boolean }[];
 }
 
 /**
  * What a drop really tested (Codex review, PR #45): a touched pair that fused, or one where
- * both kids came through the step and the partner was out of its newborn grace. A pair
- * interrupted by another fusion, or by grace, stays untried.
+ * both kids came through the step and the partner was out of its newborn grace and not on a
+ * visit. A pair interrupted by another fusion, by grace or by a visit (D-090) stays untried.
  */
 export function learnFromDrop(tried: Set<string>, drop: Drop, events: GameEvent[]): void {
   const consumed = new Set<number>();
@@ -390,7 +391,7 @@ export function learnFromDrop(tried: Set<string>, drop: Drop, events: GameEvent[
     if (q.id === drop.mover.id) fusedWith.add(p.id);
   }
   for (const c of drop.contacts) {
-    const tested = fusedWith.has(c.id) || (!consumed.has(drop.mover.id) && !consumed.has(c.id) && c.grace === 0);
+    const tested = fusedWith.has(c.id) || (!consumed.has(drop.mover.id) && !consumed.has(c.id) && c.grace === 0 && !c.visiting);
     if (tested) tried.add(pairKey(drop.mover.type, c.type));
   }
 }

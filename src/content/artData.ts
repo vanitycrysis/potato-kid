@@ -139,7 +139,29 @@ export interface MapInstance {
   boundsPx: BoundsPx;
 }
 
+/** One of Codex's decorations kids can use (D-090, `decorations_v1.json`), about its ground. */
+export interface DecorationDef {
+  name: string;
+  capacity: number;
+  footprintRelative: [number, number, number, number];
+  collision: { solidRectsRelative: [number, number, number, number][]; ordinaryKidClearance: number; silhouetteBoxRelative: [number, number, number, number] };
+  layers: { asset: string; sourcePivot: Vec2; scale: number; rotationDeg: number; drawOrder: number }[];
+  slots: { id: string; groundRelative: Vec2; approachGroundRelative: Vec2; dockPathRelative: Vec2[]; drawOrder: number; clip: string }[];
+  dropTargetRelative: [number, number, number, number];
+}
+
+export interface DecorationData {
+  definitions: Record<string, DecorationDef>;
+}
+
+/** Where map v5 puts the decorations, and the scenery they replace or clear (D-090). */
+export interface MapActivities {
+  sceneryOverrideIds: string[];
+  instances: { id: string; definition: string; worldGround: Vec2 }[];
+}
+
 export interface MapData {
+  activityDecorations?: MapActivities;
   worldSize: Vec2;
   tileSize: number;
   groundCells: { col: number; row: number; asset: string }[];
@@ -247,8 +269,13 @@ export const kidWild: WildData | undefined = rawWild && {
   clips: { ...(kidActivity?.wild.clips as WildData['clips']), ...rawWild.clips },
   reducedMotion: { ...(kidActivity?.wild.reducedMotion as WildData['reducedMotion']), ...rawWild.reducedMotion },
 };
-// The map at half its area (D-076): Codex's v4 and its fields (farm_v2).
-const rawMap = pick<MapData>('map_garden_v4.json');
+// The map at half its area (D-076), with its fields (farm_v2) and, from v5, its decorations
+// (D-090): the scenery they replace or clear is left out, never drawn twice (Codex's overlay).
+const v5 = pick<MapData>('map_garden_v5.json');
+const rawMap = v5
+  ? { ...v5, instances: v5.instances.filter((i) => !(v5.activityDecorations?.sceneryOverrideIds ?? []).includes(i.id)) }
+  : pick<MapData>('map_garden_v4.json');
+export const decorationData = pick<DecorationData>('decorations_v1.json');
 
 /** One of Codex's four field sites (farm_v2, GUI_MVP §22.1): the bed, its pads, crops and target. */
 export interface FarmField {

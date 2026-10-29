@@ -1,6 +1,7 @@
 import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
+import { plantsHappy } from '../sim/game';
 import { el, tierName } from './dom';
 import { oddsLines } from './plantingNotes';
 import { portrait } from './portrait';
@@ -100,7 +101,7 @@ function confirmFor(o: PlotRouteOptions, plot: number) {
     const me = live();
     const now = { count: accepted.length, ...scene.game.oddsFor(accepted) };
     // A happy kid would count one tier higher (D-056): the projection says so while it lasts.
-    const next = { count: accepted.length + 1, ...scene.game.oddsFor([...accepted, { type, happy: !!me?.happy }]) };
+    const next = { count: accepted.length + 1, ...scene.game.oddsFor([...accepted, { type, happy: !!me && plantsHappy(me) }]) };
     const lines = oddsLines(plot, now, next, { minKids: p.minKids, maxKids: p.maxKids, ceiling: { special: p.specialOdds[1], rare: p.rareOdds[1] } });
     const text = lines.join('\n');
     if (odds.dataset.text !== text) {

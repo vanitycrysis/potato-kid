@@ -1,8 +1,8 @@
 import { watchedSleeves } from './ui/portrait';
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
-import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
+import { decorationData, farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
+import { ambientFrom, decorationObstacles, decorationSites, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
 import { Lifecycle } from './platform/lifecycle';
@@ -73,6 +73,8 @@ declare global {
       debugGive?: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => void;
       /** Only with `?debug=1`: a solid box in world units, so no spot inside it is clear (refusal tests); null removes the last. */
       debugObstacle?: (box: { minX: number; minY: number; maxX: number; maxY: number } | null) => void;
+      /** Only with `?debug=1`: holds the sim's steps (frames go on), or lets them run again. */
+      debugHoldSteps?: (on: boolean) => void;
       /** The audio runtime's state (tests). */
       audio: () => {
         unlocked: boolean;
@@ -185,8 +187,11 @@ async function boot(): Promise<void> {
       textures,
       looks: lookTable(kidRig, kidWild),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
-      obstacles: obstaclesFrom(mapData),
+      // Scenery, and the decorations kids use (D-090), which only their visitors may cross.
+      obstacles: [...obstaclesFrom(mapData), ...decorationObstacles(mapData, decorationData)],
       fieldBays: farmData ? fieldBaysFrom(farmData, mapData) : [],
+      sites: decorationSites(mapData, decorationData),
+      decorations: decorationData,
       farm: farmData,
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       home: homeArt(),
@@ -334,6 +339,7 @@ async function boot(): Promise<void> {
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
+          debugHoldSteps: (on: boolean) => void (scene.debugHoldSteps = on),
           debugObstacle: (box: { minX: number; minY: number; maxX: number; maxY: number } | null) => {
             if (box) scene.game.state.world.obstacles.push({ box, circle: { x: 0, y: 0, r: 0 } });
             else scene.game.state.world.obstacles.pop();

@@ -102,5 +102,8 @@ export function migrations(content: Content): Record<number, Migration> {
     // Schema 12 (D-086): lessons. Adopted at load from the old tutorial's record and this
     // save's own evidence (§27.3), which a migration can't see.
     11: (state) => ({ ...(state as object), lessons: null }),
+    // Schema 13 (D-090): kids may visit decorations and be a little happy from one. Nothing
+    // changes in an older save; the bump keeps a visit away from a build that can't read it.
+    12: (state) => state,
   };
 }
