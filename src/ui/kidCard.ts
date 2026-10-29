@@ -10,7 +10,7 @@ import { refusalText } from './feedback';
 import { formatDuration, formatExact, formatRate, formatTimeLeft } from './format';
 import type { PlantingNotes } from './plantingNotes';
 import { chosenPlotRefusal, kindMark, plotRoute } from './plotRoute';
-import { portrait } from './portrait';
+import { portrait, withSleeve } from './portrait';
 import type { OpenSheet, Sheets } from './sheet';
 
 // The kid card (D-056, D-057, D-058; docs/GUI_MVP.md §17-18, Codex's design): one live
@@ -428,7 +428,9 @@ export class KidCard {
     // Special (D-063) or rare (D-072): planting-only kinds, marked alike.
     const kind = kindMark(def);
     const status = this.statusBox();
-    const pic = el('div', 'kid-card-portrait', portrait(kidRig!, type, 96, seen.look));
+    // A rare kid's portrait moves in its sleeve (D-094).
+    const face = portrait(kidRig!, type, 96, seen.look, undefined, { sleeve: false });
+    const pic = el('div', 'kid-card-portrait', def?.rare ? withSleeve(kidRig!, face, 96, this.game.boxOf({ ...seen.look, scale: 1 }, type)) : face);
     const marks = el('div', 'kid-card-marks');
     if (kind) marks.append(el('span', 'kid-card-mark', `${kind} kid`));
     const income = el('p', 'sheet-helper kid-card-income');

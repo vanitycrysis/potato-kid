@@ -6209,6 +6209,15 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     const card = page.getByRole('dialog', { name: 'Rainbow Kid' });
     await expect(card.locator('.kid-card-portrait .portrait-layer')).toHaveCount(2);
     await expect(card.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildrainbow_stand');
+    // Its portrait moves in the rare sleeve (D-094, §27.7), behind the kid and unclipped.
+    const sleeve = card.locator('.kid-card-portrait .portrait-sleeve');
+    await expect(sleeve).toHaveCount(1);
+    await expect(sleeve).toHaveCSS('animation-name', 'portrait-sleeve');
+    await expect(sleeve).toHaveCSS('animation-duration', '2.4s');
+    const art = (await sleeve.locator('img').boundingBox())!;
+    const face = (await card.locator('.kid-card-portrait .portrait').boundingBox())!;
+    expect(art.width).toBeGreaterThan(face.width * 0.9);
+    expect(Math.abs(art.x + art.width / 2 - (face.x + face.width / 2))).toBeLessThan(12);
     await expect(card.locator('.kid-card-profile-label')).toHaveText('Rare · From planting');
     await expect(card.locator('.kid-card-profile')).toHaveText('A whole little day painted in six colours.');
     await expect(card).toContainText('Planting only. Cannot be bought.');
@@ -6222,6 +6231,8 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await page.mouse.click(g.x, g.y - 20);
     const special = page.getByRole('dialog', { name: 'Gift Kid' });
     await expect(special.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildgift_stand');
+    // Only a rare has the sleeve (§27.7).
+    await expect(special.locator('.portrait-sleeve')).toHaveCount(0);
     await expect(special.locator('.kid-card-profile-label')).toHaveCount(0);
     await expect(special).toContainText('Special kid');
     // The Special tier by name (D-082), and not the tier-5 badge it earns as.
@@ -6684,4 +6695,52 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     // No two pills overlap.
     for (const p of pills) for (const q of pills) if (p !== q) expect(p.left + p.width <= q.left || q.left + q.width <= p.left || p.top + p.height <= q.top || q.top + q.height <= p.top).toBe(true);
   });
+});
+
+test('reduced motion: a rare portrait\'s sleeve holds still (D-094, §27.7)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await boot(page, '?seed=3&debug=1&calm=1');
+  const id = await page.evaluate(() => {
+    const pk = window.__PK__!;
+    const id = pk.debugAdd!('rainbow', 1076, 3048);
+    pk.centerOn(1076, 2998);
+    return id;
+  });
+  await page.waitForTimeout(300);
+  const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+  await page.mouse.click(at.x, at.y - 20);
+  const sleeve = page.getByRole('dialog', { name: 'Rainbow Kid' }).locator('.portrait-sleeve');
+  await expect(sleeve).toHaveCount(1);
+  await expect(sleeve).toHaveCSS('animation-name', 'none');
+});
+
+test("every discovered rare's portrait moves in its sleeve, in lists too; hidden, it pauses (D-094, §27.7; Codex review, #116)", async ({ page }) => {
+  await boot(page, '?seed=3&debug=1&calm=1');
+  await page.evaluate(() => {
+    const pk = window.__PK__!;
+    pk.debugAdd!('rainbow', 1076, 3048);
+    pk.debugAdd!('gift', 1476, 3048);
+  });
+  await page.locator('[data-nav=dex]').click();
+  await page.getByRole('button', { name: /^Kids on map \(\d+\)$/ }).click();
+  const list = page.getByRole('dialog', { name: 'Kids on map' });
+  const row = (type: string) => list.locator('.kids-row').filter({ has: page.locator(`[data-asset^="kid_body_wild${type}"]`) });
+  // The rare's row has the sleeve, behind the words; the special's has none.
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCount(1);
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-name', 'portrait-sleeve');
+  await expect(row('gift').locator('.portrait-sleeve')).toHaveCount(0);
+  // The row keeps its height: a list's sleeve takes no room.
+  const wrap = row('rainbow').locator('.portrait-wrap');
+  await expect(wrap).toHaveCSS('margin-top', '0px');
+  // The app hidden: paused where it is.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-play-state', 'paused');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-play-state', 'running');
 });
