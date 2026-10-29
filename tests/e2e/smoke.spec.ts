@@ -54,6 +54,8 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
 
 test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ page }) => {
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+  await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
   // Place the pair far apart so they can't touch by wandering first.
   const { plain, water } = await page.evaluate(() => ({
     plain: window.__PK__!.debugAdd!('plain', 706, 3228),
@@ -96,7 +98,7 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   expect(ids).not.toContain(plain);
   expect(ids).not.toContain(water);
   expect(await page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
-  await expect(page.locator('.toast')).toContainText('New discovery');
+  await expect(page.locator('.toast')).toContainText('New recipe found');
   await page.screenshot({ path: 'test-results/fusion.png' });
   expect(errors).toEqual([]);
 });
@@ -550,6 +552,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
 
   test('a visible card keeps its time while a kid is held', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b, c } = await page.evaluate(() => ({
       a: window.__PK__!.debugAdd!('plain', 706, 3228),
       b: window.__PK__!.debugAdd!('water', 1286, 2428),
@@ -558,7 +562,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     // Hold another kid for longer than a card's 2.5 s.
     const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
     await page.mouse.move(p.x, p.y - 20);
@@ -566,7 +570,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.mouse.move(p.x + 30, p.y - 30, { steps: 4 });
     expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
     await page.waitForTimeout(3200);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     await page.mouse.up();
   });
 
@@ -632,10 +636,12 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a visible card that stops fitting goes back to the queue (640x360 + banner)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 756, 2878), b: window.__PK__!.debugAdd!('water', 1256, 2878) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     for (let i = 0; i < 6; i++) {
       await page.waitForTimeout(150);
@@ -646,6 +652,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a requeued reward never blocks a waiting refusal (640x360)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b, c } = await page.evaluate(() => ({
       a: window.__PK__!.debugAdd!('plain', 1076, 2878),
       b: window.__PK__!.debugAdd!('water', 1476, 2878),
@@ -656,7 +664,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.evaluate(() => window.__PK__!.centerOn(1276, 2848));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     // Hold a kid (feedback freezes), queue a refusal, then a banner that settles the drag
     // and leaves room for the short refusal but not the reward card. The camera may have
     // moved since (the narrow landscape view): bring the kid back, low in the play band.
@@ -699,6 +707,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a resize during a drag still takes a card that no longer fits off screen', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b, c } = await page.evaluate(() => ({
       a: window.__PK__!.debugAdd!('plain', 706, 3228),
       b: window.__PK__!.debugAdd!('water', 1286, 2428),
@@ -706,7 +716,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
     await page.mouse.move(p.x, p.y - 20);
     await page.mouse.down();
@@ -752,12 +762,14 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
     await route.continue();
   });
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+  await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'lantern');
   const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 756, 3228), glass: window.__PK__!.debugAdd!('glassblower', 1286, 2428) }));
   for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
   await dropOnto(page, hero, glass);
   await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
   const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
-  await expect(page.locator('.feedback')).toContainText('New discovery', { timeout: 15_000 });
+  await expect(page.locator('.feedback')).toContainText('New recipe found', { timeout: 15_000 });
   expect(await page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
   expect(errors).toEqual([]);
 });
@@ -1003,14 +1015,16 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
   test('a card visible when a sheet opens keeps its time until the sheet closes (Codex review, PR #39)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 706, 3228), b: window.__PK__!.debugAdd!('water', 1286, 2428) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     await garden(page).click();
     await page.waitForTimeout(3200); // longer than a card's 2.5 s
     await page.keyboard.press('Escape');
-    expect(await page.locator('.feedback').textContent()).toContain('New discovery');
+    expect(await page.locator('.feedback').textContent()).toContain('New recipe found');
   });
 
   test('opening a sheet ends a pan in progress (Codex review, PR #39)', async ({ page }) => {
@@ -1732,6 +1746,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('a discovery card opens that kid in the Dex', async ({ page }) => {
     await twoKnown(page);
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     await page.evaluate(() => {
       window.__PK__!.debugAdd!('plain', 1176, 3148);
       window.__PK__!.debugAdd!('water', 1176, 3148);
@@ -1793,6 +1809,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('Back focuses the search field when the kept search hides the kid (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     await dexButton(page).click();
     await dialog(page).getByLabel('Find a discovered kid').fill('wat');
     await page.keyboard.press('Escape');
@@ -1823,6 +1841,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('closing a Dex opened from a discovery card returns focus to the card (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     await page.evaluate(() => {
       window.__PK__!.debugAdd!('plain', 1176, 3148);
       window.__PK__!.debugAdd!('water', 1176, 3148);

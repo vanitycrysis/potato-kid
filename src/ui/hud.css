@@ -981,4 +981,98 @@
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
+/* The new-kid popup (D-087, D-088, §27.4): a big waving sprite and one line, one arrival at a
+   time over a light ink scrim. Portrait: 360 wide, header 44, sprite 256, sentence 56,
+   category 24, Continue 48, inset 16. Compact (a short window): sprite left, words right. */
+.arrival-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(26 26 26 / 0.24);
+}
+.arrival {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  top: calc(var(--ui-st, 0px) + var(--ui-banner, 0px) + (100vh - var(--ui-st, 0px) - var(--ui-sb, 0px) - var(--ui-banner, 0px)) / 2);
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 30px));
+  max-height: calc(100vh - var(--ui-st, 0px) - var(--ui-sb, 0px) - var(--ui-banner, 0px) - 16px);
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+.arrival-header {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+.arrival-status {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+.ui-button.arrival-close {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.arrival-sprite {
+  flex: none;
+}
+.arrival-text {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.arrival-sentence {
+  margin: 8px 0 0;
+  min-height: 56px;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.arrival-sentence:focus {
+  outline: none;
+}
+.arrival-category,
+.arrival-award {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.ui-button.arrival-continue {
+  margin-top: 16px;
+  min-width: 112px;
+  min-height: 48px;
+}
+.arrival.is-compact {
+  width: min(600px, calc(100vw - 16px));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 16px;
+  align-items: start;
+}
+.arrival.is-compact .arrival-header {
+  grid-column: 1 / -1;
+}
+.arrival.is-compact .arrival-text {
+  align-items: flex-start;
+}
+.arrival.is-compact .arrival-sentence {
+  text-align: start;
 }

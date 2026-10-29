@@ -107,6 +107,8 @@ declare global {
       debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
+      /** Only with `?debug=1`: marks a kind as found already, so its next fusion is a new recipe's card, not a popup. */
+      debugKnow?: (type: string) => void;
       /** Only with `?debug=1`: shows a save banner state until replaced (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
@@ -150,7 +152,7 @@ async function boot(): Promise<void> {
   const saves = new SaveManager(storage, content);
   // Settings live beside the save, not in it; defaults are Codex's (GUI_MVP §11).
   const tokenDefaults = (uiData?.mvp as { settings?: { defaults?: Omit<Settings, 'plantV2Explained' | 'guidedTutorial'> } } | undefined)?.settings?.defaults;
-  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 }, showNicknames: true };
+  const defaults: Settings = { ...(tokenDefaults ?? { audio: true, music: 70, sfx: 80 }), plantV2Explained: false, guidedTutorial: { version: 1, status: 'notStarted', nextStep: 1 }, showNicknames: true, arrivals: [] };
   const settings = new SettingsStore(storage, defaults);
   const [loaded] = await Promise.all([saves.load(), settings.load()]);
   // A newer app's save: nothing is written, settings included (GUI_MVP §10).
@@ -182,7 +184,8 @@ async function boot(): Promise<void> {
   );
   // The first-run tutorial (D-078) waits in tests (`debug`, `calm`) unless asked for.
   const testing = params.get('debug') === '1' || params.get('calm') === '1';
-  const hud = new Hud(scene, content, settings, { tutorialAuto: !testing || params.get('tutorial') === '1' });
+  // In tests the tutorial and the new-kid popups stay out of the way unless a test asks for them.
+  const hud = new Hud(scene, content, settings, { tutorialAuto: !testing || params.get('tutorial') === '1', arrivals: !testing || params.get('arrivals') === '1' });
   // Codex's cues and music (ART_AUDIO_PLAN): one cue per sim step, volumes from Settings.
   // Not in read-only mode: the game is frozen there and has no lifecycle to pause it
   // (Codex review, PR #53).
@@ -296,6 +299,10 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
+          debugKnow: (type: string) => {
+            if (!scene.game.state.discoveredKids.includes(type)) scene.game.state.discoveredKids.push(type);
+            hud.debugKnow(type);
+          },
           debugReadySeed: (plot: number, type: string, wait = false) => {
             scene.game.debugReadySeed(plot, { type });
             if (!wait) scene.command({ type: 'harvest', plot });

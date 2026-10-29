@@ -3,18 +3,21 @@ import { parseSettings, SettingsStore } from './settings';
 import { MemoryStorage, type SaveStorage } from './storage';
 
 const T0 = { version: 1 as const, status: 'notStarted' as const, nextStep: 1 };
-const DEFAULTS = { audio: true, music: 70, sfx: 80, plantV2Explained: false, guidedTutorial: T0, showNicknames: true };
+const DEFAULTS = { audio: true, music: 70, sfx: 80, plantV2Explained: false, guidedTutorial: T0, showNicknames: true, arrivals: [] };
 
 describe('settings', () => {
   it('fills missing or invalid fields from the defaults, and clamps volumes', () => {
     expect(parseSettings(null, DEFAULTS)).toEqual(DEFAULTS);
     expect(parseSettings('not json', DEFAULTS)).toEqual(DEFAULTS);
     expect(parseSettings('[1,2]', DEFAULTS)).toEqual(DEFAULTS);
-    expect(parseSettings('{"audio":"no","music":140,"sfx":-3}', DEFAULTS)).toEqual({ audio: true, music: 100, sfx: 0, plantV2Explained: false, guidedTutorial: T0, showNicknames: true });
-    expect(parseSettings('{"audio":false,"music":33.6,"plantV2Explained":true}', DEFAULTS)).toEqual({ audio: false, music: 34, sfx: 80, plantV2Explained: true, guidedTutorial: T0, showNicknames: true });
+    expect(parseSettings('{"audio":"no","music":140,"sfx":-3}', DEFAULTS)).toEqual({ audio: true, music: 100, sfx: 0, plantV2Explained: false, guidedTutorial: T0, showNicknames: true, arrivals: [] });
+    expect(parseSettings('{"audio":false,"music":33.6,"plantV2Explained":true}', DEFAULTS)).toEqual({ audio: false, music: 34, sfx: 80, plantV2Explained: true, guidedTutorial: T0, showNicknames: true, arrivals: [] });
     // Nicknames on the map (D-091): on unless stored off; anything else is the default.
     expect(parseSettings('{"showNicknames":false}', DEFAULTS).showNicknames).toBe(false);
     expect(parseSettings('{"showNicknames":"no"}', DEFAULTS).showNicknames).toBe(true);
+    // Waiting arrivals (§27.5): kept as stored, anything malformed dropped.
+    const a = { source: 'plot', type: 'hero', look: { body: 'round', face: 'classic' }, isNew: false, potatokens: 0, line: 3 };
+    expect(parseSettings(JSON.stringify({ arrivals: [a, { source: 'moon' }, 7] }), DEFAULTS).arrivals).toEqual([a]);
   });
 
   it('keeps a valid tutorial record (D-078, §24.1), and falls back for a broken one', () => {
@@ -36,7 +39,7 @@ describe('settings', () => {
     await a.flushed();
     const b = new SettingsStore(storage, DEFAULTS);
     await b.load();
-    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false, guidedTutorial: T0, showNicknames: true });
+    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false, guidedTutorial: T0, showNicknames: true, arrivals: [] });
   });
 
   it('keeps the defaults when storage fails, and survives failed writes', async () => {

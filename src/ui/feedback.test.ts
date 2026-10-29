@@ -5,21 +5,21 @@ import { createRng } from '../sim/rng';
 import { addKid, defaultBox } from '../sim/world';
 import { feedbackFor, refusalText } from './feedback';
 
-const kid = (type: string) => ({ type }) as never;
+const kid = (type: string, id = 0) => ({ id, type, look: { body: 'round', face: 'classic', scale: 1 } }) as never;
+/** The popup item (D-087) for a new kind or a plot's kid, its look the default. */
+const meet = (source: 'garden' | 'plot' | 'fusion', type: string, isNew: boolean, potatokens = 0, kidId = 0) => ({ kind: 'meet', source, type, kidId, look: { body: 'round', face: 'classic' }, isNew, potatokens });
 
 describe('feedback cards (GUI_MVP §9)', () => {
-  it('a first discovery absorbs its own discovery and milestone awards', () => {
+  it('a new kind from a fusion is a popup that carries its own discovery and milestone awards (D-087)', () => {
     const events = [
       { type: 'fused', parents: [kid('plain'), kid('water')], child: kid('firefighter'), firstDiscovery: true },
       { type: 'earned', potatokens: 1, reason: 'discovery' },
       { type: 'earned', potatokens: 2, reason: 'milestone' },
     ] as GameEvent[];
-    expect(feedbackFor(events, new Set(['plain', 'water']), 5)).toEqual([
-      { kind: 'discovery', childType: 'firefighter', newKid: true, potatokens: 1, milestone: 2 },
-    ]);
+    expect(feedbackFor(events, new Set(['plain', 'water']), 5)).toEqual([meet('fusion', 'firefighter', true, 3)]);
   });
 
-  it('two first discoveries in one step get one card each, never each other’s awards', () => {
+  it('two new kinds in one step get one popup each, never each other’s awards', () => {
     const events = [
       { type: 'fused', parents: [kid('a'), kid('b')], child: kid('chef'), firstDiscovery: true },
       { type: 'earned', potatokens: 1, reason: 'discovery' },
@@ -27,10 +27,7 @@ describe('feedback cards (GUI_MVP §9)', () => {
       { type: 'earned', potatokens: 1, reason: 'discovery' },
       { type: 'earned', potatokens: 3, reason: 'milestone' },
     ] as GameEvent[];
-    expect(feedbackFor(events, new Set(), 10)).toEqual([
-      { kind: 'discovery', childType: 'chef', newKid: true, potatokens: 1, milestone: 0 },
-      { kind: 'discovery', childType: 'steam', newKid: true, potatokens: 1, milestone: 3 },
-    ]);
+    expect(feedbackFor(events, new Set(), 10)).toEqual([meet('fusion', 'chef', true, 1), meet('fusion', 'steam', true, 4)]);
   });
 
   it('a repeat recipe gets no card; a known child says "new recipe"', () => {
@@ -40,7 +37,7 @@ describe('feedback cards (GUI_MVP §9)', () => {
     expect(feedbackFor(newRecipe, new Set(['chef']), 5)).toMatchObject([{ kind: 'discovery', newKid: false }]);
   });
 
-  it('a new Garden type gets a card with no invented reward; milestone-only awards collapse', () => {
+  it('a new Garden kind is a popup with no invented reward; milestone-only awards collapse', () => {
     const known = new Set(['plain']);
     const events = [
       { type: 'spawned', kid: kid('snow'), source: 'garden' },
@@ -48,10 +45,7 @@ describe('feedback cards (GUI_MVP §9)', () => {
       { type: 'earned', potatokens: 2, reason: 'milestone' },
       { type: 'earned', potatokens: 3, reason: 'milestone' },
     ] as GameEvent[];
-    expect(feedbackFor(events, known, 10)).toEqual([
-      { kind: 'newKid', childType: 'snow', milestone: 0 },
-      { kind: 'milestone', potatokens: 5, kids: 10 },
-    ]);
+    expect(feedbackFor(events, known, 10)).toEqual([meet('garden', 'snow', true), { kind: 'milestone', potatokens: 5, kids: 10 }]);
     expect(known.has('snow')).toBe(true);
   });
 
@@ -106,14 +100,12 @@ describe('feedback cards (GUI_MVP §9)', () => {
     addKid(g.state.world, 'plain', 300, 1500, createRng(0), 0, defaultBox(60));
     addKid(g.state.world, 'water', 340, 1500, createRng(0), 0, defaultBox(60));
     const items = feedbackFor(g.step([]), new Set(['plain', 'water']), g.state.discoveredKids.length);
-    expect(items).toEqual([
-      { kind: 'discovery', childType: 'firefighter', kidId: expect.any(Number), newKid: true, potatokens: c.balance.economy.discoveryPotatokens, milestone: 7 },
-    ]);
+    expect(items).toEqual([{ ...meet('fusion', 'firefighter', true, c.balance.economy.discoveryPotatokens + 7), kidId: expect.any(Number), look: expect.any(Object) }]);
   });
 });
 
 describe('planting cards (GUI_MVP §15.5, §15.6)', () => {
-  const k = (id: number, type: string) => ({ id, type }) as never;
+  const k = (id: number, type: string) => kid(type, id);
 
   it('kids added to a plot in one step make one card, with the plot and its count', () => {
     const events: GameEvent[] = [
@@ -128,12 +120,10 @@ describe('planting cards (GUI_MVP §15.5, §15.6)', () => {
     expect(feedbackFor([{ type: 'growing', plot: 2 }], new Set(), 0)).toEqual([{ kind: 'growing', plot: 2 }]);
   });
 
-  it('a known type sprouting is revealed with its plot; a new type gets the discovery card', () => {
+  it('every kid a plot brings up is a popup, new or not (D-088); a new kind says so', () => {
     const known = new Set(['fire']);
-    expect(feedbackFor([{ type: 'spawned', kid: k(9, 'fire'), source: 'sprout', plot: 0 }], known, 1)).toEqual([{ kind: 'sprouted', kidType: 'fire', kidId: 9, plot: 0 }]);
-    expect(feedbackFor([{ type: 'spawned', kid: k(10, 'hero'), source: 'sprout', plot: 0 }], known, 2)).toEqual([
-      { kind: 'newKid', childType: 'hero', kidId: 10, milestone: 0 },
-    ]);
+    expect(feedbackFor([{ type: 'spawned', kid: k(9, 'fire'), source: 'sprout', plot: 0 }], known, 1)).toEqual([meet('plot', 'fire', false, 0, 9)]);
+    expect(feedbackFor([{ type: 'spawned', kid: k(10, 'hero'), source: 'sprout', plot: 0 }], known, 2)).toEqual([meet('plot', 'hero', true, 0, 10)]);
     // Garden spawns of known types stay silent, as before.
     expect(feedbackFor([{ type: 'spawned', kid: k(11, 'fire'), source: 'garden' }], known, 2)).toEqual([]);
   });
