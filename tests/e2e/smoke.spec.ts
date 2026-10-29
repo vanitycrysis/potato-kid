@@ -7663,14 +7663,10 @@ test.describe('decorations kids use (D-090)', () => {
     expect((await kid(page, b!)).activity).toBe('visit');
     await dragTo(page, c!, BENCH.left);
     expect((await kid(page, c!)).activity).not.toBe('visit');
-    // The left sitter, picked up and dropped away from the bench, walks again.
-    const p = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, a!);
-    await page.mouse.move(p.x, p.y - 20);
-    await page.mouse.down();
-    const away = await page.evaluate((b) => window.__PK__!.worldToScreen(b.x - 500, b.y + 500), BENCH);
-    await page.mouse.move(away.x, away.y, { steps: 12 });
-    await page.mouse.up();
-    await page.waitForTimeout(200);
+    // The left sitter, picked up and dropped away from the bench, walks again. The spot stays
+    // clear of the screen's edge-scroll zone: a drag that ends there pans the map for as long
+    // as the drag lasts, which moved the bench under the next drop on slow runs.
+    await dragTo(page, a!, { x: BENCH.x - 250, y: BENCH.y + 450 });
     expect((await kid(page, a!)).activity).not.toBe('visit');
     // Its slot takes the next kid.
     await dragTo(page, c!, BENCH.left);
