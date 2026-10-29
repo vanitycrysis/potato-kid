@@ -1,7 +1,7 @@
 import type { Lessons } from '../sim/game';
 import { el } from './dom';
 import { lessonIcons, lessonTokens, type LessonItem } from './lessonNotes';
-import type { Sheets } from './sheet';
+import type { OpenSheet, Sheets } from './sheet';
 
 /**
  * `Tutorial & lessons` (D-086, docs/GUI_MVP.md §27.3, Codex's design and copy): the
@@ -9,6 +9,9 @@ import type { Sheets } from './sheet';
  * sheet. A replay changes nothing: no seen flag, no purchase, no reveal; no funds are needed.
  */
 export class LessonsSheet {
+  /** The lesson replayed in the sheet now, if any: a return summary brings it back (§27.3). */
+  private viewing: LessonItem | null = null;
+
   constructor(
     private readonly sheets: Sheets,
     private readonly lessons: () => Lessons | null,
@@ -20,9 +23,10 @@ export class LessonsSheet {
    * The list, as a page of the sheet it was asked from (`page`: its way back); `focusId` is the
    * row to focus, coming back from a lesson.
    */
-  open(launcher: HTMLElement | null, page: { label: string; run: () => void } | null, focusId?: string): void {
+  open(launcher: HTMLElement | null, page: { label: string; run: () => void } | null, focusId?: string): OpenSheet | null {
     const t = lessonTokens();
-    if (!t) return;
+    if (!t) return null;
+    this.viewing = null;
     this.sheets.asPage(page);
     const sheet = this.sheets.open({ key: 'lessons', icon: 'icon_compendium', title: t.replayTitle, requestedHeight: 600 }, launcher);
     const seen = new Set(this.lessons()?.seen ?? []);
@@ -42,13 +46,15 @@ export class LessonsSheet {
     const back = focusId ? rows.find((r) => r.dataset.lesson === focusId) : undefined;
     back?.focus({ preventScroll: true });
     back?.scrollIntoView({ block: 'nearest' });
+    return sheet;
   }
 
   /** One lesson, replayed in the same sheet with its route shown (§27.3). */
-  private lesson(item: LessonItem, launcher: HTMLElement | null, page: { label: string; run: () => void } | null): void {
+  private lesson(item: LessonItem, launcher: HTMLElement | null, page: { label: string; run: () => void } | null): OpenSheet {
     const t = lessonTokens()!;
     this.sheets.asPage(page);
     const sheet = this.sheets.open({ key: 'lessons', icon: 'icon_compendium', title: t.replayTitle, requestedHeight: 600 }, launcher);
+    this.viewing = item;
     const title = el('h3', 'lessons-lesson-title', ...lessonIcons(item, 'ui-icon-28'), el('span', '', item.title));
     title.tabIndex = -1;
     const back = el('button', 'ui-button sheet-action', t.replayBack);
@@ -62,5 +68,16 @@ export class LessonsSheet {
       el('div', 'lessons-actions', back, close),
     );
     title.focus({ preventScroll: true });
+    return sheet;
+  }
+
+  /**
+   * Back after a return summary (Codex review round 3, #120): the lesson that was being read,
+   * else the list, scrolled where it was.
+   */
+  reopen(launcher: HTMLElement | null, page: { label: string; run: () => void } | null, scrollTop: number): void {
+    const item = this.viewing;
+    const sheet = item ? this.lesson(item, launcher, page) : this.open(launcher, page);
+    sheet?.scrollTo(scrollTop);
   }
 }

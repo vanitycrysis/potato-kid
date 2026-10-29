@@ -925,6 +925,10 @@
   font-family: var(--ui-font);
   color: var(--ui-ink);
 }
+/* Constrained, the note scrolls as a whole: its parts keep their wrapped height (§27.3). */
+.lesson-note > * {
+  flex-shrink: 0;
+}
 .lesson-note[hidden],
 .lesson-spot[hidden] {
   display: none;

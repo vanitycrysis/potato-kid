@@ -6482,6 +6482,37 @@ test.describe('Tutorial & lessons (D-086, GUI_MVP §27.3)', () => {
     await expect(page.locator('[data-nav=notebook]')).toBeFocused();
   });
 
+  test('after a return summary, the lesson being read comes back, and the list where it was scrolled (Codex review round 3, #120)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 600 });
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const sheet = await openFromIconGuide(page);
+    // The list, scrolled down.
+    await sheet.locator('[data-lesson="returns"]').scrollIntoViewIfNeeded();
+    const scrolled = await page.evaluate(() => {
+      const b = document.querySelector('.sheet[data-key="lessons"] .sheet-body') as HTMLElement;
+      return b.scrollTop || document.scrollingElement!.scrollTop;
+    });
+    expect(scrolled).toBeGreaterThan(0);
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(sheet.locator('.lessons-row')).toHaveCount(13);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const b = document.querySelector('.sheet[data-key="lessons"]:not([aria-hidden]) .sheet-body') as HTMLElement;
+          return b.scrollTop || document.scrollingElement!.scrollTop;
+        }),
+      )
+      .toBe(scrolled);
+    // A lesson, open: it comes back, not the list.
+    await sheet.locator('[data-lesson="fields"]').click();
+    await expect(sheet.locator('.lessons-lesson-title')).toHaveText('Grow food');
+    await page.evaluate(() => window.__PK__!.debugAway!(120_000));
+    await page.getByRole('dialog', { name: 'Welcome back' }).getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(sheet.locator('.lessons-lesson-title')).toHaveText('Grow food');
+    await expect(sheet.getByRole('button', { name: 'Back to lessons' })).toBeVisible();
+  });
+
   test('Settings has it too, with its way back to Settings', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('[data-nav=notebook]').click();
@@ -6659,6 +6690,26 @@ test.describe('automatic lessons (D-086, GUI_MVP §27.2-27.3)', () => {
     await hide(true);
     await hide(false);
     await expect(note(page)).toBeVisible({ timeout: 3000 });
+  });
+
+  test('an expanded note too tall for the band scrolls as a whole, its parts never squeezed over each other (Codex review round 3, #120)', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    const title = await note(page).locator('.lesson-title').textContent();
+    await note(page).getByRole('button', { name: `Where is ${title}?` }).click();
+    // A route far too tall for the band (large text, or a short screen).
+    await page.addStyleTag({ content: '.lesson-route { font-size: 40px !important; line-height: 900px !important; }' });
+    await frames(page, 3);
+    const r = await note(page).evaluate((n) => {
+      const kids = [...n.children].filter((c) => !(c as HTMLElement).hidden) as HTMLElement[];
+      return {
+        scrolls: n.scrollHeight > n.clientHeight + 1,
+        squeezed: kids.some((c) => c.scrollHeight > c.clientHeight + 1),
+        overlap: kids.some((c, i) => i > 0 && c.getBoundingClientRect().top < kids[i - 1]!.getBoundingClientRect().bottom - 1),
+      };
+    });
+    expect(r).toEqual({ scrolls: true, squeezed: false, overlap: false });
   });
 
   test('Where is…? shows the route in place; Escape inside the note acknowledges it', async ({ page }) => {

@@ -634,7 +634,7 @@ export class Hud {
       // Every Notebook tool comes back as a page of it, with its way back (Codex review, PR #87).
       else if (Notebook.isTool(back.key)) this.notebook.openRow(back.key, back.launcher, undefined, { scrollTop: back.scrollTop, search: back.search, plots: back.plots });
       // A stat's help sheet comes back on the same stat (Codex review, #105).
-      else if (back.key === 'lessons') this.lessonsSheet.open(back.launcher, this.lessonsBack);
+      else if (back.key === 'lessons') this.lessonsSheet.reopen(back.launcher, this.lessonsBack, back.scrollTop);
       else if (back.key === 'stathelp') this.statHelp(this.helpKey, back.launcher, this.statContent(this.helpKey), back.scrollTop);
       // With the way back its Fields were opened with, if any (the Pantry, feeding).
       else if (back.key === 'garden') this.buildings.reopenGarden(back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots }, back.gardenBack);
