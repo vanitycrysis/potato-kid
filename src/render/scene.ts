@@ -364,6 +364,10 @@ export class MapScene {
       if (this.pan && e.pointerId === this.pan.pointerId) this.pan = undefined;
       if (this.pinch?.points.has(e.pointerId)) this.pinch = undefined;
     });
+    // A click listener makes the map a tap target in its own right. Otherwise a touch's
+    // fat-finger adjustment moves a tap on a kid just under the HUD onto the nearest stat chip
+    // (owner bug, kids at the top of the screen). Pixi handles the press itself.
+    app.canvas.addEventListener('click', () => {});
     // A mouse wheel zooms about the pointer (desktop and tests; D-071).
     app.canvas.addEventListener(
       'wheel',
