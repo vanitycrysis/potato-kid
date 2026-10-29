@@ -495,7 +495,7 @@ export class Dex {
     p.detail.replaceChildren(
       back,
       // A rare kid's portrait moves in its sleeve (D-094).
-      el('div', 'dex-detail-portrait', k.rare ? withSleeve(kidRig!, portrait(kidRig!, type, 96), 96, this.scene.game.boxOf({ body: 'round', face: 'classic', scale: 1 }, type)) : portrait(kidRig!, type, 96)),
+      el('div', 'dex-detail-portrait', k.rare ? withSleeve(kidRig!, portrait(kidRig!, type, 96, undefined, undefined, { sleeve: false }), 96, this.scene.game.boxOf({ body: 'round', face: 'classic', scale: 1 }, type)) : portrait(kidRig!, type, 96)),
       name,
       el('div', 'dex-detail-tier', this.tierMark(k, 24, tierName(k))),
       // Per hour: at the slow pacing (D-052) a per-second rate would round to 0.

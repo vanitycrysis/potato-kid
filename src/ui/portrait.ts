@@ -44,7 +44,26 @@ function layer(name: string, src: string, at: Attachment | undefined, pivot: [nu
  * A portrait of `type` at `sizePx` CSS px. Throws if any layer is missing: a discovered
  * kid without art is a validation error, never a seed packet (GUI_MVP §7).
  */
-export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }, wild: WildData | undefined = kidWild): HTMLElement {
+/**
+ * A discovered rare kid's portrait comes in its moving sleeve, wherever it is shown (D-094,
+ * §27.7): a list's sleeve takes no room (`room: false`), drawn behind the row's words. `sleeve:
+ * false` leaves it bare, for a caller that adds a sleeve with room of its own.
+ */
+export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }, wild: WildData | undefined = kidWild, opts: { sleeve?: boolean } = {}): HTMLElement {
+  const bare = bareportrait(rig, type, sizePx, look, wild);
+  const own = wild?.types[type];
+  if (opts.sleeve === false || own?.collection !== 'rare') return bare;
+  return withSleeve(rig, bare, sizePx, wildBox(rig, own.lifetimeBoundsPx), false);
+}
+
+/** A wild kid's lifetime box (absolute source px) in world units about its ground point, at scale 1. */
+export function wildBox(rig: KidRig, px: readonly number[]): { left: number; top: number; right: number; bottom: number } {
+  const k = rig.worldCanvasSize / rig.canvas[0];
+  const [gx, gy] = rig.groundAnchor;
+  return { left: (px[0]! - gx) * k, top: (px[1]! - gy) * k, right: (px[2]! - gx) * k, bottom: (px[3]! - gy) * k };
+}
+
+function bareportrait(rig: KidRig, type: KidId, sizePx: number, look?: { body: string; face: string }, wild: WildData | undefined = kidWild): HTMLElement {
   const url = (name: string) => {
     const u = assetUrl(name);
     if (!u) throw new Error(`Missing art "${name}" for the ${type} portrait`);
@@ -98,10 +117,12 @@ const SLEEVE_CENTRE = 128;
  * A rare kid's portrait in its moving sleeve (D-094, GUI_MVP §27.7): the map's six-glint
  * sparkle, centred on the kid's lifetime box and sized as on the map (§16.2: max(.24,
  * (box width + 8) / 140) CSS px per source px), behind the kid and never clipped by the
- * portrait. It loops in CSS (`.portrait-sleeve`); reduced motion holds it still. `box`: the
- * lifetime box in world units about the ground point, at look scale 1, as the portrait draws.
+ * portrait. It loops in CSS (`.portrait-sleeve`); reduced motion holds it still, and so does
+ * being offscreen or in a hidden app, without catching up after. `box`: the lifetime box in
+ * world units about the ground point, at look scale 1, as the portrait draws. `room`: the
+ * layout reserves the whole sleeve (a card), or it takes none and lies behind what follows (a row).
  */
-export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: { left: number; top: number; right: number; bottom: number }): HTMLElement {
+export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: { left: number; top: number; right: number; bottom: number }, room = true): HTMLElement {
   const src = assetUrl(SLEEVE);
   if (!src) return pic;
   const k = rig.canvas[0] / rig.worldCanvasSize;
@@ -133,22 +154,44 @@ export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: {
   sleeve.style.left = `${(left + right) / 2}px`;
   sleeve.style.top = `${(top + bottom) / 2}px`;
   sleeve.append(art);
+  watchSleeve(sleeve);
   const wrap = document.createElement('div');
   wrap.className = 'portrait-wrap';
   wrap.style.width = `${sizePx}px`;
   wrap.style.height = `${sizePx}px`;
+  wrap.append(sleeve, pic);
+  if (!room) return wrap;
   // Room for the whole sleeve at its largest, plus 8 px (§27.7): the layout grows, nothing clips.
   const [tx, ty, tw, th] = t ?? [0, 0, 256, 256];
   const reach = s * 1.02;
   const cx = (left + right) / 2;
   const cy = (top + bottom) / 2;
-  const room = (inside: number, edge: number) => `${Math.max(0, Math.ceil(edge - inside + 8 + 1))}px`;
-  wrap.style.marginTop = room(cy, (SLEEVE_CENTRE - ty) * reach);
-  wrap.style.marginBottom = room(sizePx - cy, (ty + th - SLEEVE_CENTRE) * reach);
-  wrap.style.marginLeft = room(cx, (SLEEVE_CENTRE - tx) * reach);
-  wrap.style.marginRight = room(sizePx - cx, (tx + tw - SLEEVE_CENTRE) * reach);
-  wrap.append(sleeve, pic);
+  const margin = (inside: number, edge: number) => `${Math.max(0, Math.ceil(edge - inside + 8 + 1))}px`;
+  wrap.style.marginTop = margin(cy, (SLEEVE_CENTRE - ty) * reach);
+  wrap.style.marginBottom = margin(sizePx - cy, (ty + th - SLEEVE_CENTRE) * reach);
+  wrap.style.marginLeft = margin(cx, (SLEEVE_CENTRE - tx) * reach);
+  wrap.style.marginRight = margin(sizePx - cx, (tx + tw - SLEEVE_CENTRE) * reach);
   return wrap;
+}
+
+/**
+ * Sleeves pause while offscreen and while the app is hidden, and resume where they were
+ * (§27.7): no catch-up. One observer and one listener for them all.
+ */
+let sleeveObserver: IntersectionObserver | null | undefined;
+function watchSleeve(sleeve: HTMLElement): void {
+  if (sleeveObserver === undefined) {
+    sleeveObserver =
+      typeof IntersectionObserver === 'undefined'
+        ? null
+        : new IntersectionObserver((entries) => {
+            for (const e of entries) e.target.classList.toggle('is-offscreen', !e.isIntersecting);
+          });
+    const hidden = () => document.documentElement.classList.toggle('app-hidden', document.hidden);
+    document.addEventListener('visibilitychange', hidden);
+    hidden();
+  }
+  sleeveObserver?.observe(sleeve);
 }
 
 /**

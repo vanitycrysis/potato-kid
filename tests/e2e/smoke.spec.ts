@@ -6556,3 +6556,35 @@ test('reduced motion: a rare portrait\'s sleeve holds still (D-094, §27.7)', as
   await expect(sleeve).toHaveCount(1);
   await expect(sleeve).toHaveCSS('animation-name', 'none');
 });
+
+test("every discovered rare's portrait moves in its sleeve, in lists too; hidden, it pauses (D-094, §27.7; Codex review, #116)", async ({ page }) => {
+  await boot(page, '?seed=3&debug=1&calm=1');
+  await page.evaluate(() => {
+    const pk = window.__PK__!;
+    pk.debugAdd!('rainbow', 1076, 3048);
+    pk.debugAdd!('gift', 1476, 3048);
+  });
+  await page.locator('[data-nav=dex]').click();
+  await page.getByRole('button', { name: /^Kids on map \(\d+\)$/ }).click();
+  const list = page.getByRole('dialog', { name: 'Kids on map' });
+  const row = (type: string) => list.locator('.kids-row').filter({ has: page.locator(`[data-asset^="kid_body_wild${type}"]`) });
+  // The rare's row has the sleeve, behind the words; the special's has none.
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCount(1);
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-name', 'portrait-sleeve');
+  await expect(row('gift').locator('.portrait-sleeve')).toHaveCount(0);
+  // The row keeps its height: a list's sleeve takes no room.
+  const wrap = row('rainbow').locator('.portrait-wrap');
+  await expect(wrap).toHaveCSS('margin-top', '0px');
+  // The app hidden: paused where it is.
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-play-state', 'paused');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-play-state', 'running');
+});
+

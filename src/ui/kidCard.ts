@@ -429,7 +429,7 @@ export class KidCard {
     const kind = kindMark(def);
     const status = this.statusBox();
     // A rare kid's portrait moves in its sleeve (D-094).
-    const face = portrait(kidRig!, type, 96, seen.look);
+    const face = portrait(kidRig!, type, 96, seen.look, undefined, { sleeve: false });
     const pic = el('div', 'kid-card-portrait', def?.rare ? withSleeve(kidRig!, face, 96, this.game.boxOf({ ...seen.look, scale: 1 }, type)) : face);
     const marks = el('div', 'kid-card-marks');
     if (kind) marks.append(el('span', 'kid-card-mark', `${kind} kid`));
