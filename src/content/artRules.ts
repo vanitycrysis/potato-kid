@@ -1,3 +1,4 @@
+import { activityEffects } from './artData';
 import type { Ambient, LookTable } from '../sim/game';
 import type { Obstacle } from '../sim/world';
 import type { BoundsPx, FarmData, KidRig, MapData, MapInstance, UiData, WildData } from './artData';
@@ -173,6 +174,8 @@ export function rigCoverage(rig: KidRig, kids: KidDef[], delivered: Set<string>,
     if (!face.states.open) problems.push(`face "${id}" has no "open" state`);
     for (const [s, asset] of Object.entries(face.states)) need(`face "${id}" state "${s}"`, asset);
   }
+  // The activity extension's effects (kid_activity_v1: the farming stamp, the splash).
+  for (const [name, fx] of Object.entries(activityEffects)) need(`activity effect "${name}"`, fx.asset);
   return problems;
 }
 

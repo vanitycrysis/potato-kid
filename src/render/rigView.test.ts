@@ -1,7 +1,7 @@
 import 'pixi.js/events';
 import { Container, EventBoundary, Texture, TextureSource, updateRenderGroupTransforms } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { kidRig, kidWild, type EventEffect } from '../content/artData';
+import { activityEffects, kidRig, kidWild, type EventEffect } from '../content/artData';
 import type { Kid } from '../sim/world';
 import { KidRigView } from './rigView';
 
@@ -18,6 +18,7 @@ function textures(): Map<string, Texture> {
     else for (const f of (e as EventEffect).frames) size.set(f.asset, (e as EventEffect).canvas);
   }
   for (const t of Object.values(kidWild!.types)) for (const f of Object.values(t.frames)) size.set(f.asset, kidCanvas);
+  for (const fx of Object.values(activityEffects)) size.set(fx.asset, fx.canvas);
   const out = new Map<string, Texture>();
   for (const [asset, [w, h]] of size) out.set(asset, new Texture({ source: new TextureSource({ width: w, height: h }) }));
   return out;
@@ -115,8 +116,68 @@ describe('a wild kid (kid_wild_v1, D-072/D-073)', () => {
     expect(view.presenting.clip).toBe('sleep');
     expect(view.drawn.face).toBe(rig.faces.classic!.states.asleep);
     const worker = new KidRigView(blimp, rig, textures(), false, wild);
-    worker.updateFarming(10, 20, 5000, 0.016);
-    expect(worker.drawn.body).toBe(wild.types.blimp!.frames.stand!.asset);
-    expect(worker.drawn.offset).toEqual([0, 0]);
+    // Farming (D-089): its own body all along, tamping with its 3 px bob, and the stamp.
+    const seen = new Set<string>();
+    let stamped = false;
+    for (let ms = 0; ms < 1500; ms += 25) {
+      worker.updateFarming(10, 20, ms, 0.025);
+      expect(worker.drawn.body).toBe(wild.types.blimp!.frames.stand!.asset);
+      seen.add(worker.drawn.offset.join(','));
+      stamped ||= worker.drawn.stamp;
+    }
+    expect([...seen].sort()).toEqual(['0,-3', '0,0']);
+    expect(stamped).toBe(true);
+  });
+});
+
+describe('farming (D-089, kid_activity_v1 farm_stomp)', () => {
+  const farmer = { ...kid, id: 0 } as Kid;
+
+  it('the extension is merged into the rig: the stomp clip, its body frames, its still frame', () => {
+    expect(rig.clips.farm_stomp!.frames).toHaveLength(12);
+    expect(rig.clips.farm_stomp!.fps).toBe(8);
+    for (const body of ['round', 'tall', 'squat', 'bean']) for (const f of ['farm_left', 'farm_right']) expect(rig.bodies[body]!.frames[f]!.asset).toBe(`kid_body_${body}_${f}`);
+    // Offsets written as "0 0" arrive as vectors.
+    expect(rig.clips.farm_stomp!.frames[0]!.rig!.offsetPx).toEqual([0, 0]);
+    expect(rig.reducedMotion.farm_stomp).toMatchObject({ bodyFrame: 'stand' });
+    // Nothing the rig had is replaced.
+    expect(rig.bodies.round!.frames.stand!.asset).toBe('kid_body_round_stand');
+  });
+
+  it('stomps left, then right, in a 1.5 s loop, with the stamp on each landing only', () => {
+    const view = new KidRigView(farmer, rig, textures(), false);
+    const at = (ms: number) => {
+      view.updateFarming(0, 0, ms, 0.001);
+      return { body: view.drawn.body, stamp: view.drawn.stamp };
+    };
+    // Frame n shows for [125 n, 125 n + 125) ms (id 0: no phase).
+    expect(at(10)).toEqual({ body: 'kid_body_round_stand', stamp: false });
+    expect(at(200)).toEqual({ body: 'kid_body_round_farm_left', stamp: false });
+    expect(at(400)).toEqual({ body: 'kid_body_round_stand', stamp: true });
+    expect(at(700)).toEqual({ body: 'kid_body_round_farm_right', stamp: false });
+    expect(at(900)).toEqual({ body: 'kid_body_round_stand', stamp: true });
+    expect(at(1200)).toEqual({ body: 'kid_body_round_stand', stamp: false });
+    expect(at(1500 + 200)).toEqual({ body: 'kid_body_round_farm_left', stamp: false });
+  });
+
+  it('two kids in a field stomp out of step', () => {
+    const a = new KidRigView({ ...kid, id: 1 } as Kid, rig, textures(), false);
+    const b = new KidRigView({ ...kid, id: 2 } as Kid, rig, textures(), false);
+    let differ = 0;
+    for (let ms = 0; ms < 1500; ms += 50) {
+      a.updateFarming(0, 0, ms, 0.05);
+      b.updateFarming(0, 0, ms, 0.05);
+      if (a.drawn.body !== b.drawn.body) differ++;
+    }
+    expect(differ).toBeGreaterThan(0);
+  });
+
+  it('reduced motion: it stands, with no stamp', () => {
+    const view = new KidRigView(farmer, rig, textures(), true);
+    for (let ms = 0; ms < 1500; ms += 25) {
+      view.updateFarming(0, 0, ms, 0.025);
+      expect(view.drawn.body).toBe('kid_body_round_stand');
+      expect(view.drawn.stamp).toBe(false);
+    }
   });
 });
