@@ -2933,7 +2933,7 @@
       }
     },
     "round4": {
-      "revision": "round4-design-1",
+      "revision": "round4-design-2",
       "status": "Claude review pending",
       "contract": "docs/GUI_MVP.md §27",
       "intro": {
@@ -3146,7 +3146,15 @@
             "pointer": "Notebook tray",
             "route": "Notebook → Compendium"
           }
-        ]
+        ],
+        "automaticGate": {
+          "predicate": "firstFusionDiscovery || discoveredRecipes.length > 0",
+          "scope": "all twelve automatic lesson enqueue and display predicates; replay unaffected",
+          "opensOn": "successful fused event with firstDiscovery (recipe discovery)",
+          "beforeGate": "no pending lessons; successful mechanic use may mark its lesson seen",
+          "onOpen": "evaluate current predicates in table order; first note waits for discovery feedback, completed/skipped intro and 1000 ms idle",
+          "noTimeoutBypass": true
+        }
       },
       "persistence": {
         "lessonVersion": 2,
@@ -3160,7 +3168,9 @@
         "lessonPending": "ordered unique IDs",
         "events": "durable birth-linked FIFO, acknowledge before advancing",
         "veteranMigration": "seed predicates already met or mechanics already used as seen; no historical discovery events",
-        "introIndependentOfPacing": true
+        "introIndependentOfPacing": true,
+        "firstFusionDiscovery": "per-save boolean latched atomically with first recipe discovery; nonempty discoveredRecipes proves gate on load/migration",
+        "round1Migration": "preserve seen IDs; if gate false discard unshown pending IDs, allow an already-open note to finish; veteran local-predicate seeding ignores shared gate"
       },
       "feedbackOrder": [
         "urgent save/recovery/read-only",
@@ -3229,7 +3239,20 @@
         "continue": "Continue",
         "closeQueued": "Continue to next arrival",
         "closeLast": "Close arrival",
-        "wave": "existing wave once, then stand; wild greeting_bob substitute; reduced motion stand",
+        "wave": {
+          "ordinaryClip": "wave",
+          "wildSubstitute": "greeting_bob",
+          "clipTiming": "existing native clip; ordinary 500 ms, wild 500 ms",
+          "idleAfterClipMs": 2500,
+          "ordinaryPeriodMs": 3000,
+          "wildPeriodMs": 3000,
+          "repeatWhileOpen": true,
+          "phase": "foreground time; pause hidden; preserve across remount/layout; no catch-up",
+          "reload": "stand then 2500 ms idle before greeting",
+          "reducedMotion": "stand/open; no wave or bob",
+          "resumeFromMotionPause": "stand for full 2500 ms then repeat",
+          "announcements": false
+        },
         "randomChoice": "cosmetic RNG, exclude immediately previous source index, save chosen index",
         "lines": {
           "garden": [
@@ -3359,12 +3382,80 @@
         "existingMapLoop": "preserve; do not stack"
       },
       "settings": {
-        "nicknameToggle": "Show nicknames on the map"
+        "nicknameToggle": "Show nicknames on the map",
+        "nicknameDefault": true
       },
       "budget": {
         "newRuntimeDecodedPngBytes": 0,
         "newSvgCount": 0,
         "newTextureCount": 0
+      },
+      "nicknameLabel": {
+        "enabledBy": "Show nicknames on the map",
+        "content": "nonempty saved nickname only; unnamed kids show nothing",
+        "fontFamily": "Patrick Hand",
+        "fontWeight": 400,
+        "fontCss": 16,
+        "lineCss": 20,
+        "ink": "#1a1a1a",
+        "paper": "#fff1d5",
+        "opacity": 1,
+        "borderCss": 1,
+        "borderColour": "#1a1a1a",
+        "radiusCss": 6,
+        "paddingCss": [
+          2,
+          6
+        ],
+        "heightCss": 26,
+        "maxWidthCss": 120,
+        "maxTextWidthCss": 106,
+        "feetGapCss": 4,
+        "anchor": "centre x at projected displayed ground; top = max(ground y, pose/clip lifetime ink bottom) + feetGapCss; no current-frame jitter",
+        "overflow": "one line; actual-font measured whole-grapheme end ellipsis …; no wrap/shrink/marquee",
+        "savedGraphemeLimit": 24,
+        "zoom": {
+          "factors": [
+            0.5,
+            2
+          ],
+          "screenConstant": true,
+          "hideByZoom": false
+        },
+        "textEnlargement": "scale font/line/padding, grow height, keep max width 120; repeat fit/collision",
+        "clip": "full pill must fit unobscured map band; otherwise hide, never dock",
+        "layer": "DOM overlay above world canvas (kids/decor/crops/rare sleeves/ripe glow), below drag feedback and GUI; checked sprout and held kid get visual priority through exclusions",
+        "heldLayer": "above held sprite, below drag feedback and GUI",
+        "exclude": "other kid lifetime ink boxes (including held), checked sprout signs, drag/partner/drop feedback",
+        "exclusionPadCss": 2,
+        "collision": {
+          "priority": [
+            "held",
+            "projected ground y descending",
+            "stable instance ID ascending"
+          ],
+          "labelGapCss": 4,
+          "strategy": "greedy accept; hide losers without stacking or displacement",
+          "revealClearMs": 200,
+          "hideImmediately": true
+        },
+        "poses": {
+          "held": "lifted displayed ground; suppress under 44x44 finger square",
+          "farming": "assigned worker ground and full farming-clip bounds",
+          "sitting": "seat displayed ground and sitting bounds",
+          "splashing": "splash-slot ground and full clip body/costume bounds, excluding droplets/ripples",
+          "plots": "none; planting clears nicknames and inputs/outcome are not live kids"
+        },
+        "fingerExclusionCss": 44,
+        "accessibility": {
+          "decorative": true,
+          "ariaHidden": true,
+          "pointerEvents": "none",
+          "focusable": false,
+          "fullNameRoute": "kid card; Potato-Dex → Kids on map"
+        },
+        "reducedMotion": "identical static pill; no fade/bob; same 200 ms clear delay",
+        "rasterBytes": 0
       }
     }
   },
