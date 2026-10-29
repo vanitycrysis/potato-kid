@@ -2,7 +2,7 @@
 
 Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not owner approval. Since D-027, ChatGPT's role is run as Codex (`gpt-6.1-sol`, high effort) by Claude; Claude does no art (D-036).
 
-## Where things stand (Claude, 2026-10-18)
+## Where things stand (Claude, 2026-10-28)
 
 **Gates 1–3 are approved. Gate 4 came back with feedback three times, and all three rounds are on `main`:** D-050..D-059, D-068..D-074, and the third round (D-075..D-084):
 - the map at half its area, with whole-map wandering (D-076, #99/#102);
@@ -15,7 +15,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 - dragging floats over other kids, marks a partner and shows the recipe (D-083, #103);
 - a ripe plot's kid always comes up, even on a full map (D-084, #106).
 
-**Now:** the third-round gate-4 build is with the owner (2026-10-18). Their feedback becomes decisions and rows here before anything is built.
+**Now:** the fourth gate-4 round (owner feedback 2026-10-28, D-085..D-094): the tutorial split into lessons shown when they become relevant (D-086), a big popup for new kids (D-087), ripe plots that wait for a tap (D-088), a farming animation (D-089), decorations kids use (D-090), a nickname toggle (D-091), the Happy sun at the top right (D-092), an animated rare sparkle (D-094), and the top-edge tap bug. Codex has ROUND4-DESIGN and ROUND4-ART; Claude starts with TOP-EDGE-TAP, NAME-TOGGLE, HAPPY-SUN and TAP-HARVEST.
 **Parked:** expeditions (D-065); TROPHY-MAP (D-064) and ANIM-POLISH after gate 4.
 
 **Built for the MVP so far**
@@ -72,7 +72,7 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | HOME-RANGE | Owner (decision) / Claude (engine) | On the 4 × 4 map kids wander everywhere; Codex proposed a soft preference for the Garden's neighbourhood | **done** (closed by D-076: the map shrinks to half its area and kids keep wandering the whole map; nothing built) | — |
 | TROPHY-MAP | Both | D-064: a map to display special kids, bought for an absurd price | later (after SPECIALS) | — |
 | WAVE-WIGGLE | ChatGPT (art) / Claude (engine check) | D-059: replace the wave with a really fast wiggle of the stubby arms | **done** (#62, Claude's review passed in round 2; Water's hood is the weakest case, for the owner's device check) | Claude's review passes; the owner sees it on device at the next gate-4 build |
-| GATE-4 | Owner | Approve the MVP | **with the owner** (feedback 2026-10-03: D-050..D-059; 2026-10-05: D-068..D-074; 2026-10-13: D-075..D-084; all done. The third-round build went to the owner on 2026-10-18) | Explicit approval before polish |
+| GATE-4 | Owner | Approve the MVP | **with the owner** (feedback 2026-10-03: D-050..D-059; 2026-10-05: D-068..D-074; 2026-10-13: D-075..D-084; all done. the third-round build went to the owner on 2026-10-18; its feedback on 2026-10-28: D-085..D-094) | Explicit approval before polish |
 | DEX-SEGMENTS | Claude | GUI_MVP §16.4: the Dex's Kids tab in Ordinary / Specials / Rares, each with its own search and scroll; apex kids' detail without recipes | **done** (#94, Codex review in 2 rounds) | e2e per segment; mutation-checked |
 | ANIM-POLISH | ChatGPT (art) / Claude (engine) | Polish animations (owner, D-047): richer motion and effects | todo (polish phase, after gate 4) | Owner is happy on device |
 | MAP-HALF | ChatGPT (composition) / Claude (engine) | D-076: recompose the map at half its area (about 2.8 × 2.8 phone screens): Garden, plots, fields, landmarks and paths, within the texture budget. Claude: the new world size, save migration (anything outside moves inside), zoom range, and spawning, wandering, offline catch-up and the simulator checked | **done** (#102: Codex's composition #99 plus the engine; Claude's review of the composition passed) | Claude's review of the composition passes; save-migration and e2e tests; `npm run balance` before and after; reviewed by Codex |
@@ -83,3 +83,13 @@ Status: `todo` · `doing` · `review` · `blocked` · `done`. PR review is not o
 | ICON-HUD | Claude | D-077: implement ROUND3-DESIGN's icon HUD and tray | **done** (#105, Codex review in 11 rounds; the Icon guide's Replay tutorial comes with TUTORIAL) | e2e at the GUI_MVP viewports; the world share measured |
 | TUTORIAL | Claude | D-078: implement ROUND3-DESIGN's tutorial: first run, progress in the save, replayable | **done** (#107, Codex review in 5 rounds) | e2e from a fresh save through the whole tutorial, and a replay on an existing save |
 | SPROUT-OVERFLOW | Claude | D-084: a ripe plot's kid comes up even on a full map (over capacity by up to one per plot); the Garden still waits for room; offline too | **done** (#106; Codex review clean in 2 rounds) | Unit tests online and offline, e2e for a sprout on a full map; `npm run balance` shows no deadlocked turns; reviewed by Codex |
+| ROUND4-DESIGN | ChatGPT | D-086: split the tutorial into a short first run (the point of the game, fusing, the Dex) and one short lesson per mechanic, each shown when the player can first afford it (plots, fields, Capacity, each building, Potatokens…): which lessons, their triggers, copy and look. D-087: the new-kid popup (large waving sprite, layout, how several queue after an absence) and about 10 lines each for a Garden arrival, a sprout and a fusion. D-088: a ripe plot's glow and its tap affordance. D-094: the rare sparkle's small loop | todo | Claude's review passes (technical fit, consistency, D-045); GUI_MVP.md updated |
+| ROUND4-ART | ChatGPT | D-089: a farming animation (digging or stomping) on the shared rig. D-090: a handful of decorations (benches, a bird bath, a few more) placed in the map v4 composition, with the poses for sitting and splashing, within the texture budget | todo | Claude's review passes (technical fit, consistency, D-045, texture budget) |
+| TOP-EDGE-TAP | Claude | Owner bug (2026-10-28): a kid at the very top of the screen can't be tapped to open its card | todo | e2e taps a kid at the top edge and its card opens; the cause is fixed, mutation-checked |
+| NAME-TOGGLE | Claude | D-091: the Settings toggle for nicknames under kids, saved | todo | Unit and e2e tests; reviewed by Codex |
+| HAPPY-SUN | Claude | D-092: the Happy sun at the kid's top right | todo | e2e checks the sun's position; reviewed by Codex |
+| TAP-HARVEST | Claude | D-088: a ripe plot waits for a tap (online and offline), glows, then shows the D-087 popup; the over-capacity rule at the tap; save migration; the simulator taps ripe plots | todo | Unit, save and e2e tests; `npm run balance` before and after; reviewed by Codex |
+| NEW-KID-POPUP | Claude | D-087: the new-kid popup from ROUND4-DESIGN for Garden arrivals, sprouts and fusions, online and after an absence | todo | e2e for each source and for several new kids after an absence; reviewed by Codex |
+| TUTORIAL-SPLIT | Claude | D-086: the short first run and the lessons, each triggered when first affordable, saved and replayable | todo | e2e from a fresh save: each lesson appears once at its trigger; replay; reviewed by Codex |
+| DECORATIONS | Claude | D-090: decorations as places kids sit or splash: drop a kid on one, kids visit on their own, stay a while, small happiness; the simulator; save | todo | Unit, save and e2e tests; `npm run balance` before and after; reviewed by Codex |
+| FARM-ANIM, SPARKLE-ANIM | Claude | D-089, D-094: play Codex's farming animation and the sparkle loop; reduced motion | todo | e2e and a device check by the owner; reviewed by Codex |
