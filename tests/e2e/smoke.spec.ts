@@ -6459,6 +6459,17 @@ test.describe('Tutorial & lessons (D-086, GUI_MVP §27.3)', () => {
     expect(await lessons(page)).toMatchObject({ intro: 'skipped', introPage: 1 });
   });
 
+  test('closed, focus goes back to the Notebook control that opened Settings, still on the page (Codex review, #120)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    await expect(page.getByRole('dialog', { name: 'Tutorial & lessons' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('[data-nav=notebook]')).toBeFocused();
+  });
+
   test('Settings has it too, with its way back to Settings', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('[data-nav=notebook]').click();
@@ -6565,6 +6576,40 @@ test.describe('automatic lessons (D-086, GUI_MVP §27.2-27.3)', () => {
     for (let i = 0; i < 40 && !(await page.evaluate(() => !!document.activeElement?.closest('#lesson-note'))); i++) await page.keyboard.press('Tab');
     expect(await page.evaluate(() => !!document.activeElement?.closest('#lesson-note'))).toBe(true);
     await expect(note(page)).toBeVisible();
+  });
+
+  test('a finger held down anywhere holds the note back; it waits a full idle second after the release (Codex review, #120)', async ({ page }) => {
+    await start(page);
+    // Pressed on the tray's own paper (no control), and held.
+    const tray = (await page.locator('.tray').boundingBox())!;
+    await page.mouse.move(tray.x + 3, tray.y + tray.height / 2);
+    await page.mouse.down();
+    await fuseFirst(page);
+    await page.waitForTimeout(1600);
+    await expect(note(page)).toBeHidden();
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    await expect(note(page)).toBeHidden();
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+  });
+
+  test('handling feedback is no deliberate action: after Got it, a popup acknowledged lets no next note through (Codex review, #120)', async ({ page }) => {
+    await start(page, '?seed=3&debug=1&calm=1&lessons=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await fuseFirst(page);
+    // The fusion's own popup first.
+    await page.getByRole('dialog').getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    // Only feedback handled since: another popup, acknowledged.
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic' }));
+    await page.getByRole('dialog').getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.waitForTimeout(6000);
+    await expect(note(page)).toBeHidden();
+    // A deliberate action, then 5 s: the next note.
+    const ground = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3500));
+    await page.mouse.click(ground.x, ground.y);
+    await expect(note(page)).toBeVisible({ timeout: 7000 });
   });
 
   test('Where is…? shows the route in place; Escape inside the note acknowledges it', async ({ page }) => {

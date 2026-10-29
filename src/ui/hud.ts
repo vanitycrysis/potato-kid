@@ -208,7 +208,7 @@ export class Hud {
     this.fields = new FieldSheets(scene, content, this.sheets, () => this.save.readOnly, (launcher, back) => this.buildings.openFields(launcher, back ?? null), (kidId, launcher, back, ordinal) => this.kidCard.open(kidId, launcher, back, undefined, ordinal), () => this.buildings.fieldsBack);
     this.buildings = new BuildingSheets(scene, content, this.sheets, this.notes, this.arrivals, (launcher) => this.fields.section(launcher));
     this.lessonsSheet = new LessonsSheet(this.sheets, () => scene.game.state.lessons, (launcher) => this.tutorial.replay(launcher));
-    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, (launcher) => this.openLessons(launcher), (launcher) =>
+    this.notebook = new Notebook(scene, this.sheets, this.buildings, settings, () => this.save.readOnly, () => this.openLessons(), (launcher) =>
       this.fields.openPantry(launcher, {
         label: 'Back to Notebook',
         run: () => {
@@ -528,9 +528,13 @@ export class Hud {
    * `Tutorial & lessons` (§27.3), from Settings or the Icon guide: a page of that sheet, with
    * its way back.
    */
-  private openLessons(launcher: HTMLElement): void {
+  private openLessons(): void {
     const from = this.sheets.openKey === 'iconguide' ? 'iconguide' : 'settings';
-    const scrollTop = this.sheets.snapshot()?.scrollTop ?? 0;
+    const open = this.sheets.snapshot();
+    const scrollTop = open?.scrollTop ?? 0;
+    // The Replay button goes with its sheet: closing comes back to what opened that sheet (the
+    // Notebook control), still on the page (Codex review, #120).
+    const launcher = (open?.launcher?.isConnected ? open.launcher : null) ?? this.trayCells.get('notebook') ?? null;
     this.lessonsBack = {
       label: from === 'iconguide' ? 'Back to Icon guide' : 'Back to Settings',
       run: () => this.notebook.openRow(from, null, undefined, { scrollTop }),

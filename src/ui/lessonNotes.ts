@@ -29,6 +29,9 @@ interface Tokens {
   items: LessonItem[];
 }
 
+/** What counts as feedback, not a deliberate action (§27.3): the popup, a return summary, cards. */
+const FEEDBACK = '.arrival, .arrival-scrim, .sheet[data-key="offline"], .feedback';
+
 export const lessonTokens = () => (uiData?.mvp as { round4?: { lessons?: Tokens } } | undefined)?.round4?.lessons;
 
 /** The control a lesson outlines (§27.2), when it is on screen. */
@@ -64,6 +67,8 @@ export class LessonNotes {
   private readonly announced = new Set<LessonId>();
   /** The last input anywhere: notes wait for the player to be idle. */
   private lastInput = performance.now();
+  /** Pointers down now: no note while any is. */
+  private readonly pointers = new Set<number>();
   /** After a note is acknowledged, the next waits for a deliberate action and a longer idle. */
   private acknowledged = false;
   private actedSince = false;
@@ -95,16 +100,35 @@ export class LessonNotes {
       e.stopPropagation();
       this.acknowledge(true);
     });
-    // A key counts as input but never hides it: Tab must be able to reach it.
+    // A key counts as input but never hides it: Tab must be able to reach it. Handling feedback
+    // (a new-kid popup, a return summary, a card) is input, but no deliberate action (§27.3).
     const input = (e: Event) => {
       if (this.note.contains(e.target as Node)) return;
       this.lastInput = performance.now();
-      if (this.acknowledged) this.actedSince = true;
+      const feedback = e.target instanceof Element && !!e.target.closest(FEEDBACK);
+      if (this.acknowledged && !feedback) this.actedSince = true;
       if (this.shown && e.type !== 'keydown') this.hide();
     };
     document.addEventListener('pointerdown', input, true);
     document.addEventListener('keydown', input, true);
     document.addEventListener('wheel', input, { capture: true, passive: true });
+    // A finger down anywhere holds notes back, and the idle time runs from its last move or its
+    // release, not its press (Codex review, #120).
+    const down = (e: PointerEvent) => this.pointers.add(e.pointerId);
+    const up = (e: PointerEvent) => {
+      this.pointers.delete(e.pointerId);
+      this.lastInput = performance.now();
+    };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('pointerup', up, true);
+    document.addEventListener('pointercancel', up, true);
+    document.addEventListener(
+      'pointermove',
+      (e) => {
+        if (this.pointers.has(e.pointerId)) this.lastInput = performance.now();
+      },
+      { capture: true, passive: true },
+    );
   }
 
   /** The lesson up now, if any. */
@@ -134,7 +158,7 @@ export class LessonNotes {
       return;
     }
     const next = l.pending[0];
-    if (!canShow || !next) return;
+    if (!canShow || !next || this.pointers.size > 0) return;
     const idle = now - this.lastInput;
     if (this.acknowledged ? !this.actedSince || idle < t.subsequentIdleMs : idle < t.initialIdleMs) return;
     const item = t.items.find((i) => i.id === next);
