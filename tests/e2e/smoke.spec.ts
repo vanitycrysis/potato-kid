@@ -2889,6 +2889,11 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     await expect(row.locator('.plot-row-status')).toHaveText('Ready · Waiting for a clear spot');
     expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
     await expect(page.getByRole('dialog')).toHaveCount(1);
+    // Room again: the row stops saying it waits, and nothing comes up until asked (Codex review round 3, #115).
+    await page.evaluate(() => window.__PK__!.debugObstacle!(null));
+    await expect(row.locator('.plot-row-waiting')).toHaveText('Tap the plot or choose Harvest sprout.');
+    await expect(row.locator('.plot-row-status')).toHaveText('Ready to sprout');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
   });
 
   test('a long press or a pan opens nothing; a jitter within 8 px is still a tap, and the map holds', async ({ page }) => {

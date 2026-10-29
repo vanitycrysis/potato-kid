@@ -3,7 +3,8 @@ import type { PlantingArt } from '../content/artData';
 import { gate4Data } from '../content/artData';
 import type { Plot } from '../sim/game';
 import { DEFAULT_LOOK } from '../sim/world';
-import { glowEllipses, plotAssets, plotAt, plotRect, readySignRect } from './plotsView';
+import { Texture } from 'pixi.js';
+import { glowEllipses, plotAssets, plotAt, plotRect, PlotsView, readySignRect } from './plotsView';
 
 // What each plot shows (GUI_MVP §15.2): Codex's shipped tokens, so a token change shows up here.
 const art = gate4Data!.planting as PlantingArt;
@@ -114,5 +115,20 @@ describe("a ready plot's sign is its own target (§27.6; Codex review, #115)", (
     const b = readySignRect(art, garden, 1, zoom)!;
     for (const r of [a, b]) expect(p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom).toBe(true);
     expect(plotAt(art, garden, 2, p, zoom, 44, () => true)).toBe(1);
+  });
+});
+
+describe('drawing a ready plot (§27.6)', () => {
+  it("draws ready signs above every plot's soil, so a sign reaching over a neighbour is seen there (Codex review round 3, #115)", () => {
+    const textures = new Map<string, Texture>(['fx_plant_plot', 'fx_plant_filling', ...art.stages.map((x) => x.asset)].map((n) => [n, Texture.WHITE]));
+    const view = new PlotsView(art, { x: 1536, y: 2348 }, textures);
+    view.update([growing(grow), { seed: null }], grow, 0.18);
+    const [soils, signs] = view.root.children as unknown as [{ children: unknown[] }, { children: unknown[] }];
+    expect(soils.children).toHaveLength(2);
+    expect(signs.children).toHaveLength(1);
+    expect(view.ready(0.18).map((r) => r.glow)).toEqual([true, false]);
+    // No longer ready: the sign goes.
+    view.update([{ seed: null }, { seed: null }], grow, 0.18);
+    expect(signs.children).toHaveLength(0);
   });
 });

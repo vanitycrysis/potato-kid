@@ -80,7 +80,8 @@ export class GardenPlots {
   private overview: { nodes: HTMLElement[]; update(): void };
   private current: { update(): void; escape(): boolean; snapshot?(): PlotsSnapshot['picker']; restore?(s: NonNullable<PlotsSnapshot['picker']>): void } | null = null;
   /** A note for a plot's detail, carried across a view change (an accepted Add, a refusal). */
-  private note: { plot: number; note: Note } | null = null;
+  /** `harvest`: a refused Harvest sprout, which lasts only while the plot still waits for room. */
+  private note: { plot: number; note: Note; harvest?: true } | null = null;
   private readonly tierOf: Map<KidId, number>;
 
   constructor(
@@ -285,8 +286,16 @@ export class GardenPlots {
     else if (p.type === 'startGrowing') {
       const lines = reason === 'plotsBusy' ? ['This plot is already growing.'] : [refusalText(reason, 'startGrowing')];
       this.note = { plot: p.plot, note: { lines, warn: true } };
-    } else if (p.type === 'harvest') this.note = { plot: p.plot, note: { lines: [refusalText(reason, 'harvest')], warn: true } };
+    } else if (p.type === 'harvest') this.note = { plot: p.plot, note: { lines: [refusalText(reason, 'harvest')], warn: true }, harvest: true };
     else this.pickerRefusal?.(reason);
+  }
+
+  /**
+   * A refused harvest's note goes once the plot no longer waits for room: its kid would now
+   * fit, or it came up another way (§27.6; Codex review round 3, #115).
+   */
+  private dropStaleHarvest(i: number): void {
+    if (this.note?.plot === i && this.note.harvest && this.game.plotWaiting(i) === null) this.note = null;
   }
 
   private send(cmd: Pending): void {
@@ -516,6 +525,7 @@ export class GardenPlots {
         if (status.textContent !== text) status.textContent = text;
         if (p.state === 'growing') rail.set(i, p);
         if (p.state === 'ready') {
+          this.dropStaleHarvest(i);
           const refusal = this.note?.plot === i && this.note.note.warn ? this.note.note.lines.join(' ') : null;
           const w = refusal ?? 'Tap the plot or choose Harvest sprout.';
           if (waiting.textContent !== w) waiting.textContent = w;
@@ -827,7 +837,8 @@ export class GardenPlots {
         if (full) r.action.setAttribute('aria-describedby', r.full.id);
         else r.action.removeAttribute('aria-describedby');
       }
-      note.set(this.note?.plot === i ? this.note.note : null);
+      this.dropStaleHarvest(i);
+    note.set(this.note?.plot === i ? this.note.note : null);
     };
 
     return {

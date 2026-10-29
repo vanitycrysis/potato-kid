@@ -111,6 +111,14 @@ export function plotAt(art: PlantingArt, garden: { x: number; y: number }, unloc
 
 export class PlotsView {
   readonly root = new Container();
+  /** Every plot's soil and stage, in plot order. */
+  private readonly soils = new Container();
+  /**
+   * Ready plots' checked signs, above every plot's soil: enlarged at far zoom, a sign may
+   * reach over a neighbour, and stays visible there, as picking assumes (§27.6; Codex review
+   * round 3, #115).
+   */
+  private readonly signs = new Container();
   private readonly plots: { node: Container; key: string; glow: Graphics | null; sign: Sprite | null; zoom: number }[] = [];
 
   constructor(
@@ -118,7 +126,9 @@ export class PlotsView {
     /** The Garden's world ground point; plots sit at fixed offsets from it. */
     private readonly garden: { x: number; y: number },
     private readonly textures: Map<string, Texture>,
-  ) {}
+  ) {
+    this.root.addChild(this.soils, this.signs);
+  }
 
   /**
    * Redraws a plot only when what it shows changes (once per stage, not per frame); a ready
@@ -133,7 +143,7 @@ export class PlotsView {
         const node = new Container();
         const [dx, dy] = this.art.plotOffsetsWorld[i] ?? [0, 0];
         node.position.set(this.garden.x + dx, this.garden.y + dy);
-        this.root.addChild(node);
+        this.soils.addChild(node);
         entry = { node, key: '', glow: null, sign: null, zoom: 0 };
         this.plots[i] = entry;
       }
@@ -143,6 +153,7 @@ export class PlotsView {
       }
       entry.key = key;
       for (const c of entry.node.removeChildren()) c.destroy();
+      entry.sign?.destroy();
       entry.glow = null;
       entry.sign = null;
       // A ripe plot glows under its soil (§27.6).
@@ -160,13 +171,22 @@ export class PlotsView {
           const [cx, cy] = this.art.filledSlotSourceCentre;
           s.position.set((slot[0] - cx) * this.art.plotCanvasScale, (slot[1] - cy) * this.art.plotCanvasScale);
         }
-        if (asset === readyAsset(this.art) && n > 0) entry.sign = s;
+        if (asset === readyAsset(this.art) && n > 0) {
+          // Its own layer, placed at its plot.
+          entry.sign = s;
+          this.signs.addChild(s);
+          return;
+        }
         entry.node.addChild(s);
       });
       this.fitReady(entry, zoom);
     });
     // Plots never go away, but keep the view in step if a save had fewer.
-    while (this.plots.length > plots.length) this.plots.pop()?.node.destroy({ children: true });
+    while (this.plots.length > plots.length) {
+      const gone = this.plots.pop()!;
+      gone.sign?.destroy();
+      gone.node.destroy({ children: true });
+    }
   }
 
   /**
@@ -195,7 +215,7 @@ export class PlotsView {
       const cy = paper.y + paper.height / 2;
       const [px, py] = this.art.sourcePivot;
       sign.anchor.set(cx / t.orig.width, cy / t.orig.height);
-      sign.position.set((cx - px) * k, (cy - py) * k);
+      sign.position.set(entry.node.x + (cx - px) * k, entry.node.y + (cy - py) * k);
       sign.scale.set(scale);
     }
   }
