@@ -36,7 +36,7 @@ describe('settings', () => {
     await a.flushed();
     const b = new SettingsStore(storage, DEFAULTS);
     await b.load();
-    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false, guidedTutorial: T0 });
+    expect(b.value).toEqual({ audio: false, music: 12, sfx: 80, plantV2Explained: false, guidedTutorial: T0, showNicknames: true });
   });
 
   it('keeps the defaults when storage fails, and survives failed writes', async () => {
