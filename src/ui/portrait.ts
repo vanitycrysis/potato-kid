@@ -137,6 +137,16 @@ export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: {
   wrap.className = 'portrait-wrap';
   wrap.style.width = `${sizePx}px`;
   wrap.style.height = `${sizePx}px`;
+  // Room for the whole sleeve at its largest, plus 8 px (§27.7): the layout grows, nothing clips.
+  const [tx, ty, tw, th] = t ?? [0, 0, 256, 256];
+  const reach = s * 1.02;
+  const cx = (left + right) / 2;
+  const cy = (top + bottom) / 2;
+  const room = (inside: number, edge: number) => `${Math.max(0, Math.ceil(edge - inside + 8 + 1))}px`;
+  wrap.style.marginTop = room(cy, (SLEEVE_CENTRE - ty) * reach);
+  wrap.style.marginBottom = room(sizePx - cy, (ty + th - SLEEVE_CENTRE) * reach);
+  wrap.style.marginLeft = room(cx, (SLEEVE_CENTRE - tx) * reach);
+  wrap.style.marginRight = room(sizePx - cx, (tx + tw - SLEEVE_CENTRE) * reach);
   wrap.append(sleeve, pic);
   return wrap;
 }
