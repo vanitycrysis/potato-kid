@@ -1,3 +1,4 @@
+import { graphemes } from '../sim/names';
 import { el } from './dom';
 
 // Nicknames on the map (D-091, docs/GUI_MVP.md §27.7, Codex's design): a decorative paper
@@ -31,11 +32,6 @@ export const PILL = { height: 26, maxWidth: 120, textMax: 106, gap: 4, padX: 6, 
 export const REVEAL_MS = 200;
 const ELLIPSIS = '…';
 
-const segmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
-
-function graphemes(s: string): string[] {
-  return segmenter ? [...segmenter.segment(s)].map((g) => g.segment) : Array.from(s);
-}
 
 /** The name if it fits `max` px; else whole graphemes off its end, plus an ellipsis (§27.7). */
 export function fitName(name: string, max: number, measure: (text: string) => number): string {

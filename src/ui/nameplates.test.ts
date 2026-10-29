@@ -17,6 +17,14 @@ describe('fitting a name (§27.7)', () => {
     const family = '👨‍👩‍👧';
     const cut = fitName(`Ab${family}Cdefghijkl`, 40, (t) => (t.match(/./gu) ?? []).length * 10);
     expect(cut === 'Ab…' || cut.includes(family)).toBe(true);
+    // Without Intl.Segmenter too (older WebViews): a combining mark stays with its letter (Codex review round 2, #114).
+    const Seg = (Intl as unknown as { Segmenter?: unknown }).Segmenter;
+    (Intl as unknown as { Segmenter?: unknown }).Segmenter = undefined;
+    try {
+      expect(fitName('Abcdéfgh', 50, (x) => [...x].length * 10)).toBe('Abcd…');
+    } finally {
+      (Intl as unknown as { Segmenter?: unknown }).Segmenter = Seg;
+    }
   });
 });
 
