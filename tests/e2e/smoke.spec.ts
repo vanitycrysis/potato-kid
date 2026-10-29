@@ -6732,6 +6732,27 @@ test("every discovered rare's portrait moves in its sleeve, in lists too; hidden
   // The row keeps its height: a list's sleeve takes no room.
   const wrap = row('rainbow').locator('.portrait-wrap');
   await expect(wrap).toHaveCSS('margin-top', '0px');
+  // The words paint above the sleeve where it reaches into them (Codex review round 4, #116):
+  // moved over the name, made hit-testable, the sleeve is still under it.
+  const top = await row('rainbow').evaluate((r) => {
+    const sleeve = r.querySelector<HTMLElement>('.portrait-sleeve')!;
+    const text = r.querySelector<HTMLElement>('.dex-home-row-text')!;
+    const was = sleeve.getAttribute('style') ?? '';
+    sleeve.style.animation = 'none';
+    sleeve.querySelectorAll<HTMLElement>('*').forEach((e) => (e.style.pointerEvents = 'auto'));
+    sleeve.style.pointerEvents = 'auto';
+    const t = text.getBoundingClientRect();
+    const art = sleeve.querySelector('img')!.getBoundingClientRect();
+    const x = t.left + 6;
+    const y = t.top + t.height / 2;
+    sleeve.style.transform = `translate(${x - (art.left + art.width / 2)}px, ${y - (art.top + art.height / 2)}px)`;
+    const hit = document.elementFromPoint(x, y);
+    const under = document.elementsFromPoint(x, y).some((e) => sleeve.contains(e));
+    sleeve.setAttribute('style', was);
+    sleeve.querySelectorAll<HTMLElement>('*').forEach((e) => (e.style.pointerEvents = ''));
+    return { text: !!hit && text.contains(hit), under };
+  });
+  expect(top).toEqual({ text: true, under: true });
   // The app hidden: paused where it is.
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
