@@ -7192,6 +7192,38 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/wave/);
   });
 
+  test("a Rare's whole sleeve fits its slot in the portrait panel: no sideways scroll, nothing clipped (Codex review round 4, #117)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugMeet!('rainbow', { body: 'round', face: 'classic' }));
+    await expect(popup(page).locator('.arrival-sprite .portrait-sleeve')).toHaveCount(1);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('portrait');
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    // The sleeve's reserved box lies inside the panel.
+    const wrap = (await popup(page).locator('.arrival-sprite .portrait-wrap').evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      const cs = getComputedStyle(e);
+      return { left: r.left - parseFloat(cs.marginLeft), right: r.right + parseFloat(cs.marginRight) };
+    }))!;
+    const panel = (await popup(page).boundingBox())!;
+    expect(wrap.left).toBeGreaterThanOrEqual(panel.x - 0.5);
+    expect(wrap.right).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
+  });
+
+  test('a short screen with a save banner gets the 224 px compact panel, and a banner appearing lays it out again (Codex review round 4, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic' }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))?.layout).toBe('compact');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.sprite).toBe(192);
+    // An unsaved-progress banner takes its height: the smaller compact panel, Continue in view.
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.sprite).toBe(128);
+    await expect(popup(page).getByRole('button', { name: 'Continue', exact: true })).toBeInViewport({ ratio: 1 });
+    const panel = (await popup(page).boundingBox())!;
+    const banner = (await page.locator('.banners').boundingBox())!;
+    expect(panel.y).toBeGreaterThanOrEqual(banner.y + banner.height - 0.5);
+  });
+
   test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));

@@ -49,8 +49,21 @@ function layoutNow(): Layout {
   const w = safeWidth() + 16;
   const h = window.innerHeight;
   if (h > 520) return { mode: 'portrait', sprite: 256 };
-  if (w - 16 < COMPACT_MIN_WIDTH) return { mode: 'fallback', sprite: 144 };
-  return { mode: 'compact', sprite: h < 280 + 16 ? 128 : 192 };
+  // The compact panels by the height left below any banner, within the safe insets (§27.4):
+  // 280 high with a 192 sprite, else 224 with a 128 one, else the single column.
+  const room = safeHeight();
+  if (w - 16 < COMPACT_MIN_WIDTH || room < 224) return { mode: 'fallback', sprite: 144 };
+  return { mode: 'compact', sprite: room < 280 ? 128 : 192 };
+}
+
+/** The height between the top safe inset (and any banner, `--ui-banner`) and the bottom one, measured. */
+function safeHeight(): number {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;left:0;width:0;top:calc(var(--ui-st,0px) + var(--ui-banner,0px));bottom:var(--ui-sb,0px)';
+  document.body.append(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return h;
 }
 
 export class NewKidPopup {
@@ -140,8 +153,11 @@ export class NewKidPopup {
     this.mount(next);
   }
 
-  /** A new screen size or rotation: the same arrival, laid out again, its line kept. */
-  private relayout(): void {
+  /**
+   * A new screen size, rotation or banner (the HUD calls this when its banners change): the
+   * same arrival, laid out again, its line kept.
+   */
+  relayout(): void {
     const o = this.open;
     if (!o) return;
     const layout = layoutNow();
@@ -149,6 +165,7 @@ export class NewKidPopup {
     o.layout = layout;
     o.dialog.classList.toggle('is-compact', layout.mode === 'compact');
     o.dialog.classList.toggle('is-fallback', layout.mode === 'fallback');
+    o.dialog.classList.toggle('is-short', layout.mode === 'compact' && layout.sprite < 192);
     // The same portrait, resized: a greeting under way goes on where it was (§27.4).
     o.sprite.resize(layout.sprite);
     o.art.replaceChildren(this.dressed(o.meeting, o.sprite, layout.sprite));
@@ -161,7 +178,17 @@ export class NewKidPopup {
     const own = kidWild?.types[m.type];
     const body = this.rig.bodies[m.look.body] ?? this.rig.bodies.round!;
     const box = own ? wildBox(this.rig, own.lifetimeBoundsPx) : bodyBox(this.rig, body.boundsPx);
-    return withSleeve(this.rig, sprite.node, size, box, false);
+    // The whole sleeve, at its largest, fits the sprite's slot (Codex review round 4, #117): the
+    // kid is drawn smaller until it does, and the layout reserves the sleeve, so nothing clips.
+    const extent = (px: number) => {
+      const w = withSleeve(this.rig!, el('div', ''), px, box, true);
+      const m = (k: 'marginLeft' | 'marginRight' | 'marginTop' | 'marginBottom') => parseFloat(w.style[k]) || 0;
+      return Math.max(px + m('marginLeft') + m('marginRight'), px + m('marginTop') + m('marginBottom'));
+    };
+    let px = size;
+    for (let i = 0; i < 4 && extent(px) > size; i++) px = Math.floor((px * size) / extent(px));
+    sprite.resize(px);
+    return withSleeve(this.rig, sprite.node, px, box, true);
   }
 
   private mount(m: Meeting): void {
@@ -205,7 +232,7 @@ export class NewKidPopup {
     go.addEventListener('click', () => this.acknowledge());
     const art = el('div', 'arrival-sprite', this.dressed(m, sprite, layout.sprite));
     const text = el('div', 'arrival-text', ...parts, go);
-    const dialog = el('section', `arrival ui-surface${layout.mode === 'compact' ? ' is-compact' : ''}${layout.mode === 'fallback' ? ' is-fallback' : ''}`, el('header', 'arrival-header', status, close), art, text);
+    const dialog = el('section', `arrival ui-surface${layout.mode === 'compact' ? ' is-compact' : ''}${layout.mode === 'compact' && layout.sprite < 192 ? ' is-short' : ''}${layout.mode === 'fallback' ? ' is-fallback' : ''}`, el('header', 'arrival-header', status, close), art, text);
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');
     dialog.setAttribute('aria-labelledby', 'arrival-sentence');
@@ -263,9 +290,9 @@ export class NewKidPopup {
   }
 
   /** Test hook: what is up now. */
-  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string; scale: number; savedScale: number } | null {
+  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number } | null {
     if (!this.open) return null;
     const m = this.open.meeting;
-    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode, scale: this.open.sprite.scale, savedScale: m.look.scale ?? 1 };
+    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode, sprite: this.open.layout.sprite, scale: this.open.sprite.scale, savedScale: m.look.scale ?? 1 };
   }
 }

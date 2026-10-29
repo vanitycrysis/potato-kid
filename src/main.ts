@@ -103,7 +103,7 @@ declare global {
       /** Only with `?debug=1`: Android's Back, as the native button calls it (returns whether the UI took it). */
       debugBack?: () => boolean;
       /** The new-kid popup up now (D-087), and how many arrivals wait, the one up included. */
-      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; scale: number; savedScale: number; waiting: number } | null;
+      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; waiting: number } | null;
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;

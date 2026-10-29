@@ -297,6 +297,8 @@ export class Hud {
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
       // The tutorial's spotlight is measured on the new layout.
       this.tutorial.relayout();
+      // And the new-kid popup, whose layout depends on the room a banner leaves (§27.4).
+      this.popup.relayout();
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
@@ -349,7 +351,7 @@ export class Hud {
   }
 
   /** Test hook: the new-kid popup up now, if any (D-087). */
-  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; scale: number; savedScale: number; waiting: number } | null {
+  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; waiting: number } | null {
     const s = this.popup.shown;
     return s && { ...s, waiting: this.popup.waiting };
   }

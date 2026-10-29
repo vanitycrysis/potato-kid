@@ -1079,3 +1079,16 @@
 .arrival.is-compact .arrival-sentence {
   text-align: start;
 }
+/* The 224 px compact panel (§27.4: a banner leaves less than 280): a 128 sprite, the text set
+   closer and a 44 px Continue, so all of it is in view. */
+.arrival.is-compact.is-short {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.arrival.is-short .arrival-sentence {
+  margin-top: 0;
+}
+.arrival.is-short .ui-button.arrival-continue {
+  margin-top: 8px;
+  min-height: 44px;
+}
