@@ -3135,20 +3135,25 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     expect(log.filter((a) => a < 0.5).length).toBeGreaterThan(0);
   });
 
-  test('turning reduced motion on mid-game stills the sleeves at once (Codex review, PR #77)', async ({ page }) => {
+  test('turning reduced motion on mid-game stills the sleeves at once (Codex review, PR #77; D-094)', async ({ page }) => {
     const ids = await rares(page);
-    const alphas = () => page.evaluate((id) => window.__PK__!.rares().find((r) => r.id === id)!.sleeveAlpha, ids[0]!);
-    // Pulsing: some frame below full opacity within a cycle.
-    const seen: number[] = [];
+    const sleeve = () => page.evaluate((id) => window.__PK__!.rares().find((r) => r.id === id)!, ids[0]!);
+    // Moving (D-094): within a cycle it dims, and it tilts both ways.
+    const seen: { a: number; r: number }[] = [];
     for (let i = 0; i < 12; i++) {
-      seen.push(await alphas());
+      const s = await sleeve();
+      seen.push({ a: s.sleeveAlpha, r: s.sleeveRotation });
       await page.waitForTimeout(200);
     }
-    expect(Math.min(...seen)).toBeLessThan(0.99);
+    expect(Math.min(...seen.map((s) => s.a))).toBeLessThan(0.99);
+    expect(Math.min(...seen.map((s) => s.r))).toBeLessThan(-0.01);
+    expect(Math.max(...seen.map((s) => s.r))).toBeGreaterThan(0.01);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForTimeout(100);
     for (let i = 0; i < 12; i++) {
-      expect(await alphas()).toBe(1);
+      const s = await sleeve();
+      expect(s.sleeveAlpha).toBe(1);
+      expect(s.sleeveRotation).toBe(0);
       await page.waitForTimeout(200);
     }
   });
@@ -6209,6 +6214,15 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     const card = page.getByRole('dialog', { name: 'Rainbow Kid' });
     await expect(card.locator('.kid-card-portrait .portrait-layer')).toHaveCount(2);
     await expect(card.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildrainbow_stand');
+    // Its portrait moves in the rare sleeve (D-094, §27.7), behind the kid and unclipped.
+    const sleeve = card.locator('.kid-card-portrait .portrait-sleeve');
+    await expect(sleeve).toHaveCount(1);
+    await expect(sleeve).toHaveCSS('animation-name', 'portrait-sleeve');
+    await expect(sleeve).toHaveCSS('animation-duration', '2.4s');
+    const art = (await sleeve.locator('img').boundingBox())!;
+    const face = (await card.locator('.kid-card-portrait .portrait').boundingBox())!;
+    expect(art.width).toBeGreaterThan(face.width * 0.9);
+    expect(Math.abs(art.x + art.width / 2 - (face.x + face.width / 2))).toBeLessThan(12);
     await expect(card.locator('.kid-card-profile-label')).toHaveText('Rare · From planting');
     await expect(card.locator('.kid-card-profile')).toHaveText('A whole little day painted in six colours.');
     await expect(card).toContainText('Planting only. Cannot be bought.');
@@ -6222,6 +6236,8 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
     await page.mouse.click(g.x, g.y - 20);
     const special = page.getByRole('dialog', { name: 'Gift Kid' });
     await expect(special.locator('.kid-card-portrait .portrait-layer').first()).toHaveAttribute('data-asset', 'kid_body_wildgift_stand');
+    // Only a rare has the sleeve (§27.7).
+    await expect(special.locator('.portrait-sleeve')).toHaveCount(0);
     await expect(special.locator('.kid-card-profile-label')).toHaveCount(0);
     await expect(special).toContainText('Special kid');
     // The Special tier by name (D-082), and not the tier-5 badge it earns as.
@@ -6522,4 +6538,21 @@ test.describe('A kid near the top of the screen opens its card by touch (owner b
     await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Fire Kid');
     await expect(page.locator('.name-bubble')).toBeHidden();
   });
+});
+
+test('reduced motion: a rare portrait\'s sleeve holds still (D-094, §27.7)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await boot(page, '?seed=3&debug=1&calm=1');
+  const id = await page.evaluate(() => {
+    const pk = window.__PK__!;
+    const id = pk.debugAdd!('rainbow', 1076, 3048);
+    pk.centerOn(1076, 2998);
+    return id;
+  });
+  await page.waitForTimeout(300);
+  const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+  await page.mouse.click(at.x, at.y - 20);
+  const sleeve = page.getByRole('dialog', { name: 'Rainbow Kid' }).locator('.portrait-sleeve');
+  await expect(sleeve).toHaveCount(1);
+  await expect(sleeve).toHaveCSS('animation-name', 'none');
 });

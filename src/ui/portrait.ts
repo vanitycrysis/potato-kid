@@ -90,6 +90,57 @@ export function portrait(rig: KidRig, type: KidId, sizePx: number, look?: { body
   return box;
 }
 
+/** The rare sleeve's source canvas centre (§16.2), as on the map. */
+const SLEEVE = 'fx_rare_sparkle';
+const SLEEVE_CENTRE = 128;
+
+/**
+ * A rare kid's portrait in its moving sleeve (D-094, GUI_MVP §27.7): the map's six-glint
+ * sparkle, centred on the kid's lifetime box and sized as on the map (§16.2: max(.24,
+ * (box width + 8) / 140) CSS px per source px), behind the kid and never clipped by the
+ * portrait. It loops in CSS (`.portrait-sleeve`); reduced motion holds it still. `box`: the
+ * lifetime box in world units about the ground point, at look scale 1, as the portrait draws.
+ */
+export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: { left: number; top: number; right: number; bottom: number }): HTMLElement {
+  const src = assetUrl(SLEEVE);
+  if (!src) return pic;
+  const k = rig.canvas[0] / rig.worldCanvasSize;
+  const css = sizePx / rig.canvas[0];
+  const [gx, gy] = rig.groundAnchor;
+  const left = (box.left * k + gx) * css;
+  const right = (box.right * k + gx) * css;
+  const top = (box.top * k + gy) * css;
+  const bottom = (box.bottom * k + gy) * css;
+  const s = Math.max(0.24, (right - left + 8) / 140);
+  const art = document.createElement('div');
+  art.className = 'portrait-sleeve-art';
+  art.style.transform = `scale(${s}) translate(${-SLEEVE_CENTRE}px, ${-SLEEVE_CENTRE}px)`;
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '';
+  img.draggable = false;
+  const t = trimOf(SLEEVE);
+  if (t) {
+    img.style.left = `${t[0]}px`;
+    img.style.top = `${t[1]}px`;
+    img.style.width = `${t[2]}px`;
+    img.style.height = `${t[3]}px`;
+  }
+  art.append(img);
+  const sleeve = document.createElement('div');
+  sleeve.className = 'portrait-sleeve';
+  sleeve.dataset.asset = SLEEVE;
+  sleeve.style.left = `${(left + right) / 2}px`;
+  sleeve.style.top = `${(top + bottom) / 2}px`;
+  sleeve.append(art);
+  const wrap = document.createElement('div');
+  wrap.className = 'portrait-wrap';
+  wrap.style.width = `${sizePx}px`;
+  wrap.style.height = `${sizePx}px`;
+  wrap.append(sleeve, pic);
+  return wrap;
+}
+
 /**
  * Portraits composed only when they scroll near view (long lists, GUI_MVP §7): each box
  * reserves its size at once, so rows never jump. One observer serves a whole list and is

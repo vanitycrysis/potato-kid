@@ -92,7 +92,7 @@ declare global {
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[]; glow: boolean; signCss: number | null }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
-      rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[];
+      rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; sleeveRotation: number; happy: boolean; sun?: { x: number; y: number } }[];
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
