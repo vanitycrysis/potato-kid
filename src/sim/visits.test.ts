@@ -221,6 +221,18 @@ describe('decorations kids use (D-090)', () => {
     expect(g.dropResult(water.id, plain.id)).toBe(null);
   });
 
+  it('buying a food field leaves a seated kid where it sits (Codex review round 3, #121)', () => {
+    const c = testContent();
+    const g = new Game(c, { bounds, spawnAt: { x: 1000, y: 1900 }, obstacles: decorationObstacles(map, data), sites, fieldBays: [{ box: { minX: 1700, minY: 1700, maxX: 1900, maxY: 1900 }, circle: { x: 1800, y: 1800, r: 0 } }] }, 1);
+    const kid = place(g, 'plain', 300, 1600);
+    dropAt(g, kid, { x: left!.x, y: left!.y });
+    g.state.materials = 1e9;
+    g.step([{ type: 'unlockField' }], 0);
+    expect(g.state.fields).toHaveLength(1);
+    expect(kid.activity).toMatchObject({ kind: 'visit', phase: 'stay' });
+    expect([kid.x, kid.y]).toEqual([left!.x, left!.y]);
+  });
+
   it("only a food's happiness counts in planting (Codex review, #121)", () => {
     expect(plantsHappy({ happy: { small: true } })).toBe(false);
     expect(plantsHappy({ happy: {} })).toBe(true);

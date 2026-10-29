@@ -9,6 +9,8 @@ const OPEN = 'open';
 const WILD_STAND: WildFrame = { durationMs: 0, frame: 'stand', offsetPx: [0, 0], faceState: 'inherit', opacity: 1 };
 /** Farming (D-089, Codex's kid_activity_v1): the stomp clip and its soil stamp. */
 const FARM_CLIP = 'farm_stomp';
+/** What the clip picker is told a seated kid does: it draws the slot's clip itself. */
+const SEATED: Activity = { kind: 'pause', left: 1 };
 
 /**
  * Draws one kid from ChatGPT/Codex's rig (kid_rig_v2.json), following the spec's
@@ -210,9 +212,13 @@ export class KidRigView {
   updateVisiting(x: number, y: number, clipName: string, depth: number, ms: number, dt: number): number {
     this.root.position.set(x, y);
     this.root.zIndex = depth;
-    this.lastClip = clipName;
     this.shadow.alpha = 1;
     this.showStamp(false);
+    // A one-shot under way (the drop that seated it) and any effect (a discovery) play out
+    // in their own time, not frozen until it leaves (Codex review round 3, #121).
+    this.picker.advance(SEATED, false, dt);
+    this.drawEffects(dt);
+    this.lastClip = clipName;
     const clip = this.rig.clips[clipName];
     const period = clip ? clip.frames.length / clip.fps : 0;
     const t = period > 0 ? (((ms / 1000 + ((this.kid.id * 1301) % 1500) / 1000) % period) + period) % period : 0;

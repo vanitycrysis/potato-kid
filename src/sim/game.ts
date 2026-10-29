@@ -1307,7 +1307,8 @@ export class Game {
     if (bay) {
       world.obstacles.push(bay);
       for (const kid of world.kids) {
-        if (isFree(world, kid.box, kid.x, kid.y, kid.id)) continue;
+        // A kid in a decoration sits inside its obstacles: it stays (Codex review round 3, #121).
+        if (docked(kid) || isFree(world, kid.box, kid.x, kid.y, kid.id)) continue;
         const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
         if (!spot) {
           for (const m of moved) [m.kid.x, m.kid.y] = [m.x, m.y];

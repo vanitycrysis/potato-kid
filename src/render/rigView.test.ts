@@ -110,6 +110,17 @@ describe('a wild kid (kid_wild_v1, D-072/D-073)', () => {
     expect(view.drawn.offset).toEqual(wild.clips.idle!.frames![0]!.offsetPx);
   });
 
+  it('seated on a decoration, its drop one-shot and effects play out on time (Codex review round 3, #121)', () => {
+    const view = new KidRigView(kid, rig, textures(), false);
+    view.dropped();
+    view.startEffect('fusion');
+    for (let i = 0; i < 100; i++) view.updateVisiting(0, 0, 'decoration_sitting', 0, i * 50, 0.05);
+    expect(view.presenting.effects).toEqual([]);
+    // Up again: no drop left over from before.
+    view.update(0, 0, { kind: 'walk' }, false, 0.05);
+    expect(view.presenting.clip).toBe('walk');
+  });
+
   it('sleeps with the shared face asleep; farms standing', () => {
     const view = new KidRigView(blimp, rig, textures(), false, wild);
     for (let i = 0; i < 200; i++) view.update(0, 0, { kind: 'sleep', left: 30 - i * 0.05, total: 30 }, false, 0.05);
