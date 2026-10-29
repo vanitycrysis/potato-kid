@@ -4,6 +4,7 @@ import type { MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
 import type { GameEvent, OfflineReport } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
+import { Nameplates } from './nameplates';
 import { formatCount, formatDuration, formatExact } from './format';
 import { Arrivals } from './arrivals';
 import { BuildingSheets } from './buildings';
@@ -91,6 +92,8 @@ export class Hud {
   private readonly notebook: Notebook;
   private readonly fields: FieldSheets;
   private readonly kidsOnMap: KidsOnMap;
+  /** Map nicknames (D-091); a test hook reads them. */
+  private nameplates: Nameplates | null = null;
   private readonly arrivals: Arrivals;
   /** The navigation row: Garden, Dex, Notebook (GUI_MVP §19.1). */
   private readonly trayCells = new Map<'garden' | 'dex' | 'notebook', HTMLButtonElement>();
@@ -240,6 +243,21 @@ export class Hud {
       { hud: this.hud, tray },
     );
     scene.listenRecipe((v) => recipe.render(v));
+    // Nicknames under named kids on the map (D-091, §27.7), while the setting is on: over the
+    // world, under every control.
+    const names = new Nameplates();
+    document.body.insertBefore(names.root, this.shield);
+    let showNames = settings.value.showNicknames;
+    settings.onChange(() => {
+      showNames = settings.value.showNicknames;
+      if (!showNames) names.clear();
+    });
+    scene.listenFrame(() => {
+      if (!showNames) return;
+      const n = scene.namedOnScreen();
+      names.update(n.kids, n.band, [], n.finger, performance.now());
+    });
+    this.nameplates = names;
 
     // The camera must bring any kid out from under the GUI: banners, HUD and feedback at
     // the top; the navigation at the bottom (GUI_MVP §§2, 19.1; Codex review, PR #15).
@@ -291,6 +309,11 @@ export class Hud {
   }
 
   /** Kid types the feedback treats as already discovered (tests). */
+  /** Test hook: the map nicknames shown now (D-091). */
+  get nameplatesShown(): { id: number; text: string; rect: DOMRect }[] {
+    return this.nameplates?.shown() ?? [];
+  }
+
   get knownKids(): string[] {
     return [...this.known];
   }

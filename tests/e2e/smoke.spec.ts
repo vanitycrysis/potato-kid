@@ -6523,3 +6523,92 @@ test.describe('A kid near the top of the screen opens its card by touch (owner b
     await expect(page.locator('.name-bubble')).toBeHidden();
   });
 });
+
+test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
+  /** Two kids mid-map, the first named `name`; returns their ids. */
+  async function named(page: Page, name: string, gap = 400): Promise<[number, number]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(([name, gap]) => {
+      const pk = window.__PK__!;
+      pk.debugGive!({ materials: 1000 });
+      pk.centerOn(1256, 3300);
+      const a = pk.debugAdd!('fire', 1256 - gap / 2, 3228);
+      const b = pk.debugAdd!('snow', 1256 + gap / 2, 3228);
+      pk.debugCommand!({ type: 'name', kidId: a, name });
+      return [a, b] as [number, number];
+    }, [name, gap] as const);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(1);
+    return ids;
+  }
+
+  test('a named kid has its name in a pill under its feet; an unnamed kid has none', async ({ page }) => {
+    const [a] = await named(page, 'Moss');
+    const [pill] = await page.evaluate(() => window.__PK__!.nameplates());
+    expect(pill!.id).toBe(a);
+    expect(pill!.text).toBe('Moss');
+    const feet = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, a);
+    // Centred under the feet, 4 px below them at least, 26 px tall, no wider than 120 px.
+    expect(pill!.left + pill!.width / 2).toBeCloseTo(feet.x, -0.5);
+    expect(pill!.top).toBeGreaterThanOrEqual(feet.y + 4 - 0.5);
+    expect(pill!.height).toBeCloseTo(26, 0);
+    expect(pill!.width).toBeLessThanOrEqual(120);
+    // Decorative: it takes no taps, so a tap on it reaches the map.
+    const node = page.locator('.nameplate');
+    await expect(node).toHaveCSS('pointer-events', 'none');
+    await expect(page.locator('.nameplates')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('a long name is cut at whole letters with an ellipsis, and the pill stays 120 px', async ({ page }) => {
+    await named(page, 'Wwwwwwwwwwwwwwwwwwwwwwww');
+    const [pill] = await page.evaluate(() => window.__PK__!.nameplates());
+    expect(pill!.text.endsWith('…')).toBe(true);
+    expect(pill!.text.length).toBeLessThan(24);
+    expect(pill!.width).toBeLessThanOrEqual(120.5);
+  });
+
+  test('the Settings switch hides every pill at once and shows them again, and is kept', async ({ page }) => {
+    await named(page, 'Moss');
+    const openSettings = async () => {
+      await page.locator('[data-nav=notebook]').click();
+      await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    };
+    await openSettings();
+    const toggle = page.getByRole('switch', { name: 'Show nicknames on the map' });
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(0);
+    // Kept across a reload; the card still names the kid.
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await page.evaluate(() => window.__PK__!.centerOn(1256, 3300));
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.__PK__!.nameplates().length)).toBe(0);
+    await openSettings();
+    await page.getByRole('switch', { name: 'Show nicknames on the map' }).click();
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(1);
+  });
+
+  test('pills never crowd: far apart both show; side by side only the frontmost', async ({ page }) => {
+    const [, b] = await named(page, 'Meadowsweet', 400);
+    await page.evaluate((b) => window.__PK__!.debugCommand!({ type: 'name', kidId: b, name: 'Bramblewood' }), b);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.nameplates().length)).toBe(2);
+    // Two more, side by side, the second a little lower (in front).
+    const [c, d] = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      const c = pk.debugAdd!('fire', 1180, 3428);
+      const d = pk.debugAdd!('snow', 1350, 3448);
+      pk.debugCommand!({ type: 'name', kidId: c, name: 'Meadowsweet' });
+      pk.debugCommand!({ type: 'name', kidId: d, name: 'Bramblewood' });
+      return [c, d];
+    });
+    await page.waitForTimeout(500);
+    const pills = await page.evaluate(() => window.__PK__!.nameplates());
+    const ids = pills.map((p) => p.id);
+    expect(ids).toContain(d);
+    expect(ids).not.toContain(c);
+    // No two pills overlap.
+    for (const p of pills) for (const q of pills) if (p !== q) expect(p.left + p.width <= q.left || q.left + q.width <= p.left || p.top + p.height <= q.top || q.top + q.height <= p.top).toBe(true);
+  });
+});
