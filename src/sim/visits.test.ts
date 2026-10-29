@@ -233,6 +233,28 @@ describe('decorations kids use (D-090)', () => {
     expect([kid.x, kid.y]).toEqual([left!.x, left!.y]);
   });
 
+  it('a slot a kid standing beside the decoration overlaps is not offered; the other is (Codex review round 6, #121)', () => {
+    // A big kid (its box reaches past the bench when seated) and one standing just below the
+    // bench, clear of it, under the right seat.
+    const big = (g: Game) => addKid(g.state.world, 'plain', 300, 1600, createRng(0), 0, defaultBox(120));
+    const g = game();
+    const kid = big(g);
+    const near = place(g, 'fire', right!.x + 92, 1090);
+    expect(isFree(g.state.world, near.box, near.x, near.y, near.id)).toBe(true);
+    const was = { x: near.x, y: near.y };
+    dropAt(g, kid, { x: right!.x, y: right!.y });
+    expect(kid.activity).toMatchObject({ kind: 'visit', slot: 'left' });
+    g.step([]);
+    expect([near.x, near.y]).toEqual([was.x, was.y]);
+    // Both seats blocked: the decoration is ground, and nobody is shoved.
+    const g2 = game();
+    const k2 = big(g2);
+    place(g2, 'fire', right!.x + 92, 1090);
+    place(g2, 'snow', left!.x - 92, 1090);
+    dropAt(g2, k2, { x: right!.x, y: right!.y });
+    expect(k2.activity.kind).not.toBe('visit');
+  });
+
   it("only a food's happiness counts in planting (Codex review, #121)", () => {
     expect(plantsHappy({ happy: { small: true } })).toBe(false);
     expect(plantsHappy({ happy: {} })).toBe(true);

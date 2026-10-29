@@ -36,8 +36,15 @@ export function slotTaken(world: World, site: number, slot: string, except?: num
   return world.kids.some((k) => k.id !== except && k.activity.kind === 'visit' && k.activity.site === site && k.activity.slot === slot);
 }
 
-/** The free slot of a decoration whose drop target holds `p`, nearest to it (ties: slot order). */
+/**
+ * The free slot of a decoration whose drop target holds `p`, nearest to it (ties: slot order),
+ * for kid `except`: free means no visit takes it and, there, its box clears every grounded kid
+ * (one standing just outside the decoration; Codex review round 6, #121). The scene's preview
+ * and the sim ask the same.
+ */
 export function dropSlot(world: World, sites: readonly Site[], p: Point, except?: number): { site: number; slot: SiteSlot } | null {
+  const kid = except === undefined ? undefined : world.kids.find((k) => k.id === except);
+  const clear = (slot: SiteSlot) => !kid || !world.kids.some((o) => o !== kid && !o.held && intersects(rectAt(kid.box, slot.x, slot.y), kidRect(o)));
   for (let i = 0; i < sites.length; i++) {
     const s = sites[i]!;
     const d = s.drop;
@@ -45,7 +52,7 @@ export function dropSlot(world: World, sites: readonly Site[], p: Point, except?
     let best: SiteSlot | null = null;
     let bestD = Infinity;
     for (const slot of s.slots) {
-      if (slotTaken(world, i, slot.id, except)) continue;
+      if (slotTaken(world, i, slot.id, except) || !clear(slot)) continue;
       const dist = Math.hypot(slot.x - p.x, slot.y - p.y);
       if (dist < bestD - EPS) [best, bestD] = [slot, dist];
     }
