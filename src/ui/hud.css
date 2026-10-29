@@ -981,6 +981,8 @@
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
+}
+
 /* The new-kid popup (D-087, D-088, §27.4): a big waving sprite and one line, one arrival at a
    time over a light ink scrim. Portrait: 360 wide, header 44, sprite 256, sentence 56,
    category 24, Continue 48, inset 16. Compact (a short window): sprite left, words right. */
