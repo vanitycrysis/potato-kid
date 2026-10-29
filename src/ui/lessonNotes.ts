@@ -83,6 +83,8 @@ export class LessonNotes {
     private readonly bandTop: () => number,
     /** Where focus goes when nothing that had it is left (the Garden control). */
     private readonly home: () => HTMLElement | null,
+    /** Saves the game: an acknowledged lesson is kept so (Codex review round 2, #120). */
+    private readonly persist: () => void = () => {},
   ) {
     this.note.hidden = true;
     this.note.setAttribute('role', 'region');
@@ -122,6 +124,18 @@ export class LessonNotes {
     document.addEventListener('pointerdown', down, true);
     document.addEventListener('pointerup', up, true);
     document.addEventListener('pointercancel', up, true);
+    // Hidden, a note goes back to waiting; back in front is a fresh session (§27.3): the first
+    // note needs only 1000 ms idle again, and no finger is still down.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (this.shown) this.hide();
+        return;
+      }
+      this.acknowledged = false;
+      this.actedSince = false;
+      this.pointers.clear();
+      this.lastInput = performance.now();
+    });
     document.addEventListener(
       'pointermove',
       (e) => {
@@ -150,6 +164,11 @@ export class LessonNotes {
     const l = this.lessons();
     const t = lessonTokens();
     if (!l || !t) return;
+    // Nothing while the app is hidden.
+    if (document.hidden) {
+      if (this.shown) this.hide();
+      return;
+    }
     if (this.shown) {
       // Seen meanwhile, its mechanic used: no longer needed.
       if (!l.pending.includes(this.shown.id)) this.hide();
@@ -254,6 +273,7 @@ export class LessonNotes {
     if (!this.shown || !l) return;
     const hadFocus = keyboard || this.note.contains(document.activeElement);
     markSeen(l, this.shown.id);
+    this.persist();
     this.hide();
     this.acknowledged = true;
     this.actedSince = false;

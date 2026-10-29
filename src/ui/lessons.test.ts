@@ -193,6 +193,15 @@ describe('a save from before lessons (GUI_MVP §27.3 migration)', () => {
     expect(adoptLegacy(game, b, 'completed').firstFusion).toBe(false);
   });
 
+  it("feeding counts as used from a farmer's happiness or a kid planted happy (Codex review round 2, #120)", () => {
+    const farmer = testGame();
+    farmer.state.fields = [{ food: null, workers: [{ id: 1, type: 'plain', look: { body: 'round', face: 'classic', scale: 1 }, happiness: { left: 100, favourite: false } }], progress: 0 }];
+    expect(adoptLegacy(farmer, b, 'completed').seen).toContain('feeding');
+    const planted = testGame();
+    planted.state.plots[0]!.seed = { planted: [{ id: 2, type: 'plain', look: { body: 'round', face: 'classic', scale: 1 }, happy: true }], sprout: null, grown: 0 };
+    expect(adoptLegacy(planted, b, 'completed').seen).toContain('feeding');
+  });
+
   it('an old save is not marked all seen: an unaffordable, unused lesson stays unseen', () => {
     const game = testGame();
     game.state.discoveredRecipes = ['plain+water'];

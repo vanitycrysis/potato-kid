@@ -6470,6 +6470,18 @@ test.describe('Tutorial & lessons (D-086, GUI_MVP §27.3)', () => {
     await expect(page.locator('[data-nav=notebook]')).toBeFocused();
   });
 
+  test('back to Settings, then closed: focus still goes back to the Notebook control (Codex review round 2, #120)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    await page.locator('[data-nav=notebook]').click();
+    await page.getByRole('dialog', { name: 'Notebook' }).getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'Replay tutorial' }).click();
+    await page.getByRole('dialog', { name: 'Tutorial & lessons' }).getByRole('button', { name: 'Back to Settings' }).click();
+    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('[data-nav=notebook]')).toBeFocused();
+  });
+
   test('Settings has it too, with its way back to Settings', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
     await page.locator('[data-nav=notebook]').click();
@@ -6610,6 +6622,43 @@ test.describe('automatic lessons (D-086, GUI_MVP §27.2-27.3)', () => {
     const ground = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3500));
     await page.mouse.click(ground.x, ground.y);
     await expect(note(page)).toBeVisible({ timeout: 7000 });
+  });
+
+  test('Got it is saved at once: after a crash the lesson is seen (Codex review round 2, #120)', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    const first = await page.evaluate(() => window.__PK__!.lessonShown());
+    await page.waitForTimeout(400);
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      Storage.prototype.setItem = () => {};
+    });
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    expect((await lessons(page)).seen).toContain(first);
+  });
+
+  test('back in front is a fresh session: a visible note waits again, and the next needs only 1 s idle (Codex review round 2, #120)', async ({ page }) => {
+    await start(page);
+    await page.evaluate(() => window.__PK__!.debugGive!({ materials: 100 }));
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    const hide = (hidden: boolean) =>
+      page.evaluate((h) => {
+        Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+        document.dispatchEvent(new Event('visibilitychange'));
+      }, hidden);
+    await hide(true);
+    await expect(note(page)).toBeHidden();
+    await hide(false);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    // No deliberate action, but a new session: the next note after 1 s idle.
+    await hide(true);
+    await hide(false);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
   });
 
   test('Where is…? shows the route in place; Escape inside the note acknowledges it', async ({ page }) => {

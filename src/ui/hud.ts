@@ -195,7 +195,7 @@ export class Hud {
     );
     const dex = this.trayCells.get('dex')!;
     document.body.append(this.shield, this.banners, this.top, tray, this.tip);
-    this.lessonNotes = new LessonNotes(() => scene.game.state.lessons, tray, () => this.top.getBoundingClientRect().bottom, () => this.trayCells.get('garden') ?? null);
+    this.lessonNotes = new LessonNotes(() => scene.game.state.lessons, tray, () => this.top.getBoundingClientRect().bottom, () => this.trayCells.get('garden') ?? null, () => this.persist());
     this.sheets = new Sheets(
       scene,
       () => [this.top, tray, document.getElementById('app')!].filter(Boolean),
@@ -537,7 +537,7 @@ export class Hud {
     const launcher = (open?.launcher?.isConnected ? open.launcher : null) ?? this.trayCells.get('notebook') ?? null;
     this.lessonsBack = {
       label: from === 'iconguide' ? 'Back to Icon guide' : 'Back to Settings',
-      run: () => this.notebook.openRow(from, null, undefined, { scrollTop }),
+      run: () => this.notebook.openRow(from, launcher, undefined, { scrollTop }),
     };
     this.lessonsSheet.open(launcher, this.lessonsBack);
   }

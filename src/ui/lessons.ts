@@ -125,7 +125,9 @@ export function usedInSave(game: Game, b: Balance): Set<LessonId> {
   if (s.plots.length > b.planting.startPlots) out.add('plot-space');
   const named = (k: { name?: string }) => !!k.name;
   if (s.world.kids.some(named) || s.plots.some((p) => p.seed?.planted.some(named)) || s.fields.some((f) => f.workers.some(named))) out.add('naming');
-  if (s.world.kids.some((k) => k.happy) || s.plots.some((p) => p.seed?.planted.some((k) => k.happiness))) out.add('feeding');
+  // Fed: a happy kid on the map or in a field, or one planted happy (the seed keeps that) or
+  // still with its happiness (Codex review round 2, #120).
+  if (s.world.kids.some((k) => k.happy) || s.fields.some((f) => f.workers.some((w) => w.happiness)) || s.plots.some((p) => p.seed?.planted.some((k) => k.happy || k.happiness))) out.add('feeding');
   return out;
 }
 
