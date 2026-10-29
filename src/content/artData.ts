@@ -163,7 +163,42 @@ function pick<T>(name: string): T | undefined {
   return hit?.[1] as T | undefined;
 }
 
-export const kidRig = pick<KidRig>('kid_rig_v2.json');
+/**
+ * Codex's activity extension (kid_activity_v1.json, D-089/D-090): more body frames, clips and
+ * still frames for the shared rig and for wild kids, and the effects that go with them. Its
+ * merge contract: add by key, keep every existing key.
+ */
+interface ActivityData {
+  bodies: Record<string, { frames: Record<string, unknown> }>;
+  clips: Record<string, { frames: { rig?: { offsetPx?: Vec2 | string } }[] }>;
+  reducedMotion: Record<string, unknown>;
+  effects: Record<string, { asset: string; canvas: Vec2; sourcePivot: Vec2; offsetPx: Vec2; drawLayer: string; onFrames: number[]; opacity: number }>;
+  wild: { clips: Record<string, unknown>; reducedMotion: Record<string, unknown> };
+}
+const kidActivity = pick<ActivityData>('kid_activity_v1.json');
+
+/** "x y" (as some of the extension writes it) or [x, y]: a vector. */
+function vec(v: Vec2 | string | undefined): Vec2 {
+  if (typeof v === 'string') {
+    const [x, y] = v.trim().split(/\s+/).map(Number);
+    return [x ?? 0, y ?? 0];
+  }
+  return v ?? [0, 0];
+}
+
+function withActivity(rig: KidRig | undefined, a: ActivityData | undefined): KidRig | undefined {
+  if (!rig || !a) return rig;
+  const bodies = Object.fromEntries(Object.entries(rig.bodies).map(([id, b]) => [id, { ...b, frames: { ...(a.bodies[id]?.frames ?? {}), ...b.frames } }])) as KidRig['bodies'];
+  const clips = Object.fromEntries(
+    Object.entries(a.clips).map(([name, c]) => [name, { ...c, frames: c.frames.map((f) => (f.rig ? { ...f, rig: { ...f.rig, offsetPx: vec(f.rig.offsetPx) } } : f)) }]),
+  ) as unknown as KidRig['clips'];
+  return { ...rig, bodies, clips: { ...clips, ...rig.clips }, reducedMotion: { ...(a.reducedMotion as KidRig['reducedMotion']), ...rig.reducedMotion } };
+}
+
+export const kidRig = withActivity(pick<KidRig>('kid_rig_v2.json'), kidActivity);
+
+/** The activity effects (kid_activity_v1): a farming stamp, a splash, on certain clip frames. */
+export const activityEffects = kidActivity?.effects ?? {};
 
 /** One wild clip frame (kid_wild_v1, D-072/D-073): the stand body, bobbed; the face's state. */
 export interface WildFrame {
@@ -205,7 +240,13 @@ export interface WildData {
     }
   >;
 }
-export const kidWild = pick<WildData>('kid_wild_v1.json');
+const rawWild = pick<WildData>('kid_wild_v1.json');
+/** Wild kids with the activity extension's clips (their own bobs for farming and decorations). */
+export const kidWild: WildData | undefined = rawWild && {
+  ...rawWild,
+  clips: { ...(kidActivity?.wild.clips as WildData['clips']), ...rawWild.clips },
+  reducedMotion: { ...(kidActivity?.wild.reducedMotion as WildData['reducedMotion']), ...rawWild.reducedMotion },
+};
 // The map at half its area (D-076): Codex's v4 and its fields (farm_v2).
 const rawMap = pick<MapData>('map_garden_v4.json');
 

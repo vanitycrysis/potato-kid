@@ -1,5 +1,5 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import type { Attachment, Clip, ClipFrame, ComponentTransform, KidRig, Vec2, WildData, WildFrame } from '../content/artData';
+import { activityEffects, type Attachment, type Clip, type ClipFrame, type ComponentTransform, type KidRig, type Vec2, type WildData, type WildFrame } from '../content/artData';
 import type { Activity, Kid } from '../sim/world';
 import { ClipPicker, EffectTracks, type OneShot } from './presentation';
 
@@ -7,13 +7,8 @@ const DEG = Math.PI / 180;
 const OPEN = 'open';
 /** A wild kid's frame when its clip has none of its own: the stand, still (kid_wild_v1 fallbackTiming). */
 const WILD_STAND: WildFrame = { durationMs: 0, frame: 'stand', offsetPx: [0, 0], faceState: 'inherit', opacity: 1 };
-/** A farming kid's steps (Codex's farm_v2 `workerLoop`): body frames and their times. */
-const FARM_STEPS = [
-  { frame: 'stand', ms: 600 },
-  { frame: 'step_left', ms: 160 },
-  { frame: 'stand', ms: 600 },
-  { frame: 'step_right', ms: 160 },
-] as const;
+/** Farming (D-089, Codex's kid_activity_v1): the stomp clip and its soil stamp. */
+const FARM_CLIP = 'farm_stomp';
 
 /**
  * Draws one kid from ChatGPT/Codex's rig (kid_rig_v2.json), following the spec's
@@ -35,6 +30,8 @@ export class KidRigView {
   private readonly scaled = new Container();
   private readonly rigC = new Container();
   private readonly canvas = new Container();
+  /** The farming stamp, made on the first landing (D-089). */
+  private stamp: Sprite | null = null;
   private readonly body = new Sprite();
   private readonly faceAttach = new Container();
   private readonly face = new Sprite();
@@ -140,7 +137,7 @@ export class KidRigView {
   private lastClip = '';
 
   /** What is drawn now, for tests: body and face assets, the clip's offset, the face's place, costume parts. */
-  get drawn(): { body: string; face: string; offset: [number, number]; faceAt: [number, number]; parts: number } {
+  get drawn(): { body: string; face: string; offset: [number, number]; faceAt: [number, number]; parts: number; stamp: boolean } {
     const name = (t: Texture) => [...this.textures].find(([, v]) => v === t)?.[0] ?? '';
     return {
       body: name(this.body.texture),
@@ -148,6 +145,7 @@ export class KidRigView {
       offset: [this.rigC.position.x, this.rigC.position.y],
       faceAt: [this.faceAttach.position.x, this.faceAttach.position.y],
       parts: this.parts.length,
+      stamp: this.stamp?.visible ?? false,
     };
   }
 
@@ -180,38 +178,44 @@ export class KidRigView {
   }
 
   /**
-   * A kid farming (D-069, Codex's farm_v2 `workerLoop`): fixed on its pad, its feet tend the
-   * furrow, stand → step_left → stand → step_right for 600 / 160 / 600 / 160 ms, then a pause
-   * of 3 to 5 s that depends on its id, so a field's kids never step together. It blinks as
-   * usual. Reduced motion: standing, blinking only. `ms`: the field's clock.
+   * A kid farming (D-089, Codex's kid_activity_v1 `farm_stomp`): fixed on its pad, it stomps,
+   * left foot then right, with a soil stamp on each landing, in a 1.5 s loop whose phase is
+   * its id's, so a field's kids never stomp together. A wild kid tamps with its own bob. It
+   * blinks as usual. Reduced motion: standing, blinking only, no stamp. `ms`: the field's clock.
    */
   updateFarming(x: number, y: number, ms: number, dt: number): void {
     this.root.position.set(x, y);
     this.root.zIndex = y;
+    this.lastClip = 'farming';
+    this.shadow.alpha = 1;
+    const clip = this.rig.clips[FARM_CLIP];
+    const period = clip ? clip.frames.length / clip.fps : 0;
+    const t = period > 0 ? (((ms / 1000 + ((this.kid.id * 1301) % 1500) / 1000) % period) + period) % period : 0;
+    const index = clip ? Math.floor(t * clip.fps) % clip.frames.length : -1;
+    this.showStamp(!this.reducedMotion && activityEffects[FARM_CLIP]?.onFrames.includes(index) === true);
     if (this.wildType) {
-      // No steps of its own: it stands at its pad and blinks (kid_wild_v1 has no step frames).
-      this.lastClip = 'farming';
-      this.applyWild(WILD_STAND, this.blink(dt));
-      this.shadow.alpha = 1;
+      this.applyWild(this.wildFrame(FARM_CLIP, t), this.blink(dt));
       return;
     }
-    let bodyFrame = 'stand';
-    if (!this.reducedMotion) {
-      const pause = 3000 + ((this.kid.id * 977) % 2001);
-      const steps = FARM_STEPS.reduce((a, s) => a + s.ms, 0);
-      let t = (ms + this.kid.id * 1301) % (steps + pause);
-      for (const s of FARM_STEPS) {
-        if (t < s.ms) {
-          bodyFrame = s.frame;
-          break;
-        }
-        t -= s.ms;
-      }
-    }
-    this.lastClip = 'farming';
-    this.apply({ bodyFrame, faceState: 'inherit' }, this.blink(dt));
-    this.shadow.alpha = 1;
+    const frame = this.reducedMotion || !clip ? this.staticFrame(FARM_CLIP) : frameAt(clip, t, false);
+    this.apply(frame, this.blink(dt));
   }
+
+  /** The farming stamp under the feet, on a landing (kid_activity_v1 `effects.farm_stomp`). */
+  private showStamp(on: boolean): void {
+    const fx = activityEffects[FARM_CLIP];
+    if (!fx) return;
+    if (on && !this.stamp) {
+      const s = new Sprite(this.tex(fx.asset));
+      s.anchor.set(fx.sourcePivot[0] / fx.canvas[0], fx.sourcePivot[1] / fx.canvas[1]);
+      s.position.set(fx.offsetPx[0], fx.offsetPx[1]);
+      // On the ground with the shadow: a wild kid's bob doesn't lift it.
+      this.scaled.addChildAt(s, this.scaled.getChildIndex(this.shadow) + 1);
+      this.stamp = s;
+    }
+    if (this.stamp) this.stamp.visible = on;
+  }
+
 
   /** The blink scheduler's face state now, or undefined (open). */
   private blink(dt: number): string | undefined {
