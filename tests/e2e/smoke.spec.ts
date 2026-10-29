@@ -2849,6 +2849,24 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     expect(await page.evaluate(() => window.__PK__!.kids().filter((k) => k.type === 'hero').length)).toBe(1);
   });
 
+  test("a refused Harvest sprout says why in the plot's own row, and the plot stays ready (Codex review, #115)", async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugReadySeed!(0, 'hero', true);
+      // Nothing by the Garden is clear.
+      pk.debugObstacle!({ minX: 0, minY: 0, maxX: 4000, maxY: 6000 });
+    });
+    await page.locator('[data-nav=garden]').click();
+    const row = page.getByRole('dialog').locator('.plot-row').first();
+    await row.getByRole('button', { name: 'Harvest sprout' }).click();
+    await expect(row.locator('.plot-row-waiting')).toHaveText('No clear spot near the Garden. Try again after kids move.');
+    await expect(row.locator('.plot-row-waiting')).toHaveAttribute('role', 'status');
+    await expect(row.locator('.plot-row-status')).toHaveText('Ready · Waiting for a clear spot');
+    expect(await page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('ready');
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+  });
+
   test('a long press or a pan opens nothing; a jitter within 8 px is still a tap, and the map holds', async ({ page }) => {
     const at = await setup(page);
     // Held past 220 ms.

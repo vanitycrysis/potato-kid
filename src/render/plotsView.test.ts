@@ -3,7 +3,7 @@ import type { PlantingArt } from '../content/artData';
 import { gate4Data } from '../content/artData';
 import type { Plot } from '../sim/game';
 import { DEFAULT_LOOK } from '../sim/world';
-import { glowEllipses, plotAssets, plotAt, plotRect } from './plotsView';
+import { glowEllipses, plotAssets, plotAt, plotRect, readySignRect } from './plotsView';
 
 // What each plot shows (GUI_MVP §15.2): Codex's shipped tokens, so a token change shows up here.
 const art = gate4Data!.planting as PlantingArt;
@@ -90,5 +90,19 @@ describe('tapping a plot (GUI_MVP §15.2)', () => {
     const cb = (b.top + b.bottom) / 2;
     expect(plotAt(art, garden, 4, { x: x - 90, y: ca + 0.7 * (cb - ca) }, 0.15)).toBe(2);
     expect(plotAt(art, garden, 4, { x: x - 90, y: (ca + cb) / 2 }, 0.15)).toBe(0);
+  });
+});
+
+describe("a ready plot's sign is its own target (§27.6; Codex review, #115)", () => {
+  const garden = { x: 1536, y: 2348 };
+  it('at far zoom, a tap on the enlarged sign past its soil is that plot, not the neighbour under it', () => {
+    const zoom = 0.18;
+    const sign = readySignRect(art, garden, 0, zoom)!;
+    const p = { x: sign.right - 1, y: (sign.top + sign.bottom) / 2 };
+    // Past plot 1's own soil edge: without the sign it would be plot 1's.
+    expect(plotAt(art, garden, 2, p, zoom)).toBe(1);
+    expect(plotAt(art, garden, 2, p, zoom, 44, (i) => i === 0)).toBe(0);
+    // The sign is at least 96 CSS px across.
+    expect((sign.right - sign.left) * zoom).toBeGreaterThan(40);
   });
 });

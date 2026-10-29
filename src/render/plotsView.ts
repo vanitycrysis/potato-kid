@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { PlantingArt } from '../content/artData';
+import { trimOf } from './art';
 import type { Plot } from '../sim/game';
 
 // The plots on the map (D-061, GUI_MVP §15.2, Codex's art): soil always; an unstarted plot
@@ -56,14 +57,45 @@ export function plotRect(art: PlantingArt, garden: { x: number; y: number }, i: 
 }
 
 /**
- * The unlocked plot a tap at world point `p` hits, or null (§15.2). The drawn soil first;
- * only when none is hit, each plot's envelope grown symmetrically to at least `minCss` CSS
- * px per axis at this `zoom` (CSS px per world unit). Grown envelopes may overlap when
+ * A ready plot's checked sign in world units at this `zoom` (§27.6): the paper, drawn at
+ * least 96 CSS px across about its own centre. Null without its art.
+ */
+export function readySignRect(art: PlantingArt, garden: { x: number; y: number }, i: number, zoom: number): { left: number; top: number; right: number; bottom: number } | null {
+  const t = trimOf(readyAsset(art));
+  if (!t) return null;
+  const [x, y, w, h, cw] = t;
+  const k = art.plotCanvasScale;
+  const scale = Math.max(k, READY_SIGN_MIN_CSS / (cw * zoom));
+  const [dx, dy] = art.plotOffsetsWorld[i] ?? [0, 0];
+  const [px, py] = art.sourcePivot;
+  const cx = garden.x + dx + (x + w / 2 - px) * k;
+  const cy = garden.y + dy + (y + h / 2 - py) * k;
+  return { left: cx - (w / 2) * scale, top: cy - (h / 2) * scale, right: cx + (w / 2) * scale, bottom: cy + (h / 2) * scale };
+}
+
+/**
+ * The unlocked plot a tap at world point `p` hits, or null (§15.2). A ready plot's sign
+ * first: drawn over its soil and, at far zoom, past it, it belongs to its own plot (§27.6;
+ * Codex review, #115), the nearest sign centre winning where signs overlap. Then the drawn
+ * soil; only when none is hit, each plot's envelope grown symmetrically to at least `minCss`
+ * CSS px per axis at this `zoom` (CSS px per world unit). Grown envelopes may overlap when
  * zoomed out: the nearest plot centre wins, then the lowest index. Locked plots never hit.
  */
-export function plotAt(art: PlantingArt, garden: { x: number; y: number }, unlocked: number, p: { x: number; y: number }, zoom: number, minCss = 44): number | null {
+export function plotAt(art: PlantingArt, garden: { x: number; y: number }, unlocked: number, p: { x: number; y: number }, zoom: number, minCss = 44, ready: (i: number) => boolean = () => false): number | null {
   const rects = Array.from({ length: unlocked }, (_, i) => plotRect(art, garden, i));
   const inside = (r: { left: number; top: number; right: number; bottom: number }) => p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom;
+  let sign: number | null = null;
+  let signD = Infinity;
+  for (let i = 0; i < unlocked; i++) {
+    const r = ready(i) ? readySignRect(art, garden, i, zoom) : null;
+    if (!r || !inside(r)) continue;
+    const d = Math.hypot(p.x - (r.left + r.right) / 2, p.y - (r.top + r.bottom) / 2);
+    if (d < signD) {
+      signD = d;
+      sign = i;
+    }
+  }
+  if (sign !== null) return sign;
   const hit = rects.findIndex(inside);
   if (hit >= 0) return hit;
   const min = minCss / zoom;

@@ -466,6 +466,8 @@ export class GardenPlots {
     const slotHost = el('div', 'plot-slot-host');
     const rail = this.rail();
     const waiting = el('p', 'sheet-helper plot-row-waiting');
+    // A refused Harvest sprout is said here, in the row it came from (Codex review, #115).
+    waiting.setAttribute('role', 'status');
     const add = this.button('Add kids', 'plot-action', () => this.show({ kind: 'picker', plot: i }));
     const review = this.button('Review plot', 'plot-action', () => this.show({ kind: 'detail', plot: i }));
     const view = this.button('View plot', 'plot-action-full', () => this.show({ kind: 'detail', plot: i }));
@@ -514,7 +516,8 @@ export class GardenPlots {
         if (status.textContent !== text) status.textContent = text;
         if (p.state === 'growing') rail.set(i, p);
         if (p.state === 'ready') {
-          const w = 'Tap the plot or choose Harvest sprout.';
+          const refusal = this.note?.plot === i && this.note.note.warn ? this.note.note.lines.join(' ') : null;
+          const w = refusal ?? 'Tap the plot or choose Harvest sprout.';
           if (waiting.textContent !== w) waiting.textContent = w;
           const busy = this.pending?.type === 'harvest' && this.pending.plot === i;
           const label = busy ? 'Harvesting…' : 'Harvest sprout';

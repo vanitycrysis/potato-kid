@@ -712,7 +712,7 @@ export class MapScene {
    * fusions use the drawn box.
    */
   private smallKidsAt(p: { x: number; y: number }): number[] {
-    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return [];
+    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0, (i) => this.game.plotReady(this.game.state.plots[i]!)) !== null) return [];
     // A bought field's own bed (and its farming kids) comes before any pickup halo (§20.1).
     if (this.art.farm && fieldAt(this.art.farm, this.game.state.fields.length, p, this.cam.zoom, 0) !== null) return [];
     const min = TAP_TARGET / this.cam.zoom;
@@ -1005,7 +1005,7 @@ export class MapScene {
         }
         // Rechecked at release, where the finger is now (§15.2).
         const at = this.toWorld(e);
-        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, at, this.cam.zoom) : null;
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, at, this.cam.zoom, 44, (i) => this.game.plotReady(this.game.state.plots[i]!)) : null;
         if (plot !== null) {
           for (const fn of this.plotTapListeners) fn(plot);
           return;

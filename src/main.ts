@@ -70,6 +70,8 @@ declare global {
       debugListenSteps?: (fn: (types: string[]) => void) => void;
       /** Only with `?debug=1`: adds currency (sheet tests and screenshots). */
       debugGive?: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => void;
+      /** Only with `?debug=1`: a solid box in world units, so no spot inside it is clear (refusal tests). */
+      debugObstacle?: (box: { minX: number; minY: number; maxX: number; maxY: number }) => void;
       /** The audio runtime's state (tests). */
       audio: () => {
         unlocked: boolean;
@@ -291,6 +293,7 @@ async function boot(): Promise<void> {
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
+          debugObstacle: (box: { minX: number; minY: number; maxX: number; maxY: number }) => void scene.game.state.world.obstacles.push({ box, circle: { x: 0, y: 0, r: 0 } }),
           debugGive: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => {
             scene.game.state.materials += amounts.materials ?? 0;
             scene.game.state.potatokens += amounts.potatokens ?? 0;
