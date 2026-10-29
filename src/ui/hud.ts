@@ -382,6 +382,11 @@ export class Hud {
   }
 
   /** Debug: queues an arrival as given (tests of how the popup draws it). */
+  /** Debug: lays the popup up out again as `mode` (a rotation, timed in the page). */
+  debugArrivalLayout(mode: 'portrait' | 'compact' | 'fallback', sprite: number): void {
+    this.popup.relayout({ mode, sprite });
+  }
+
   debugMeet(m: { source: 'garden' | 'plot' | 'fusion'; type: KidId; look: { body: string; face: string; scale?: number }; isNew: boolean; potatokens: number }): void {
     this.popup.add(m);
   }

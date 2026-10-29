@@ -7135,8 +7135,21 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     // Focus on the line; the world is paused behind it.
     await expect(p.locator('.arrival-sentence')).toBeFocused();
     expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(true);
-    // The wave plays: a wave frame within its half second.
-    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()!.body), { timeout: 4000 }).toMatch(/wave/);
+    // The wave plays: a wave frame, seen in the page every frame (the greeting repeats every
+    // 3 s, so CI's slow round trips can't miss it).
+    const waved = await page.evaluate(
+      () =>
+        new Promise<boolean>((done) => {
+          const until = performance.now() + 4000;
+          const tick = () => {
+            if (/wave/.test(window.__PK__!.arrival()?.body ?? '')) return done(true);
+            if (performance.now() > until) return done(false);
+            requestAnimationFrame(tick);
+          };
+          tick();
+        }),
+    );
+    expect(waved).toBe(true);
     await p.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(p).toHaveCount(0);
     await page.waitForTimeout(500);
@@ -7444,11 +7457,34 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
 
   test('a rotation mid-greeting lets the wave go on (Codex review round 3, #117)', async ({ page }) => {
     await fuseNew(page);
-    // The greeting starts on mount; rotated straight away, it is still waving.
-    await page.setViewportSize({ width: 915, height: 412 });
-    await page.waitForTimeout(60);
-    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
-    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/wave/);
+    // All in the page (CI stretches round trips): as a greeting begins, the popup is laid out
+    // again as compact; a frame later it is the same wave, further on.
+    const r = await page.evaluate(
+      () =>
+        new Promise<{ before: number; after: number | null; layout: string; body: string } | null>((done) => {
+          const until = performance.now() + 4000;
+          const tick = () => {
+            const a = window.__PK__!.arrival()!;
+            if (a.clipTime !== null && a.clipTime < 0.25 && a.layout === 'portrait') {
+              const before = a.clipTime;
+              window.__PK__!.debugArrivalLayout!('compact', 192);
+              requestAnimationFrame(() => {
+                const b = window.__PK__!.arrival()!;
+                done({ before, after: b.clipTime, layout: b.layout, body: b.body });
+              });
+              return;
+            }
+            if (performance.now() > until) return done(null);
+            requestAnimationFrame(tick);
+          };
+          tick();
+        }),
+    );
+    expect(r).not.toBeNull();
+    expect(r!.layout).toBe('compact');
+    expect(r!.after).not.toBeNull();
+    expect(r!.after!).toBeGreaterThan(r!.before);
+    expect(r!.body).toMatch(/wave/);
   });
 
   test("a Rare's whole sleeve fits its slot in the portrait panel: no sideways scroll, nothing clipped (Codex review round 4, #117)", async ({ page }) => {

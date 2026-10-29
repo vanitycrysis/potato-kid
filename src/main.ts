@@ -123,6 +123,8 @@ declare global {
       debugKnow?: (type: string) => void;
       /** Only with `?debug=1`: queues a new-kid popup with this look. */
       debugMeet?: (type: string, look: { body: string; face: string; scale?: number }) => void;
+      /** Only with `?debug=1`: lays the popup up out again as `mode`, as a rotation would. */
+      debugArrivalLayout?: (mode: 'portrait' | 'compact' | 'fallback', sprite: number) => void;
       /** Only with `?debug=1`: shows a save banner state until replaced (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
@@ -326,6 +328,7 @@ async function boot(): Promise<void> {
           },
           debugKnown: () => hud.knownKids,
           debugBack: () => hud.back(),
+          debugArrivalLayout: (mode: 'portrait' | 'compact' | 'fallback', sprite: number) => hud.debugArrivalLayout(mode, sprite),
           debugMeet: (type: string, look: { body: string; face: string; scale?: number }) => hud.debugMeet({ source: 'garden', type, look, isNew: true, potatokens: 0 }),
           debugLessons: (patch: Record<string, unknown>) => void Object.assign(scene.game.state.lessons!, patch),
           debugKnow: (type: string) => {
