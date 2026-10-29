@@ -21,7 +21,7 @@ import {
   type Site,
   type World,
 } from './world';
-import { approachOf, docked, dropSlot, maybeVisit, seatAt, slotOf, stepVisits, visiting, visitOf } from './visits';
+import { approachOf, docked, dropSlot, maybeVisit, seatAt, slotOf, slotTaken, stepVisits, visiting, visitOf, type Visit } from './visits';
 
 /** Player input, applied at the start of the next sim step. */
 export type Command =
@@ -387,6 +387,14 @@ export interface GameOptions {
   sites?: Site[];
 }
 
+/**
+ * Whether a kid's happiness counts in planting (D-056): a food's does, a decoration's small one
+ * doesn't (D-090). Previews, cards and the seed all ask this.
+ */
+export function plantsHappy(kid: { happy?: { small?: true } }): boolean {
+  return !!kid.happy && !kid.happy.small;
+}
+
 export class Game {
   readonly state: GameState;
   private readonly rng: Rng;
@@ -400,6 +408,8 @@ export class Game {
   private readonly ambient: Ambient | undefined;
   private readonly fieldBays: Obstacle[];
   readonly sites: Site[];
+  /** Visits of kids held now, to put back if the press ends as a tap (D-090). */
+  private readonly lifted = new Map<number, { visit: Visit; x: number; y: number }>();
   /** A due Garden spawn found no free spot near the outlet (shown as "Waiting for room"). */
   private blocked = false;
   /** Ready plots that couldn't sprout in the last step, and why. */
@@ -829,6 +839,11 @@ export class Game {
       }
       if (c.type === 'pickUp') {
         kid.held = true;
+        // Its visit is remembered: a press that ends as a tap, or a drag let go nowhere, puts it
+        // back (Codex review, #121). The slot is free meanwhile.
+        const v = visitOf(kid);
+        if (v) this.lifted.set(kid.id, { visit: { ...v }, x: kid.x, y: kid.y });
+        else this.lifted.delete(kid.id);
         kid.activity = { kind: 'walk' };
         events.push({ type: 'pickedUp', kidId: kid.id });
         continue;
@@ -849,6 +864,14 @@ export class Game {
       const p = findFreeSpot(world, kid.box, c.x, c.y, kid.id) ?? clampToBounds(world.bounds, kid.x, kid.y);
       kid.x = p.x;
       kid.y = p.y;
+      // Cancelled (a tap on a sitter, a drag let go nowhere): back in its slot, if still free.
+      const lifted = this.lifted.get(kid.id);
+      this.lifted.delete(kid.id);
+      if (c.type === 'cancelDrag' && lifted && !slotTaken(world, lifted.visit.site, lifted.visit.slot, kid.id) && slotOf(this.sites, lifted.visit)) {
+        kid.activity = lifted.visit;
+        [kid.x, kid.y] = [lifted.x, lifted.y];
+        continue;
+      }
       if (c.type === 'cancelDrag' && c.safe) {
         const spot = clearSpotFor(world, kid, this.content.balance.body.touchSlack, (a, b) => this.recipes.has(pairKey(a.type, b.type)));
         if (spot) [kid.x, kid.y] = [spot.x, spot.y];
@@ -1175,7 +1198,7 @@ export class Game {
         look: { ...kid.look },
         ...(kid.name ? { name: kid.name } : {}),
         // A decoration's small happiness doesn't count, and doesn't come along (D-090).
-        ...(kid.happy && !kid.happy.small ? { happy: true, happiness: { ...kid.happy } } : {}),
+        ...(plantsHappy(kid) ? { happy: true, happiness: { ...kid.happy! } } : {}),
       };
       if (target.seed) target.seed.planted.push(snapshot);
       else target.seed = { planted: [snapshot], sprout: null, grown: 0 };

@@ -4,7 +4,8 @@ import type { DecorationData, MapData } from '../content/artData';
 import { decorationData } from '../content/artData';
 import { decorationObstacles, decorationSites } from '../content/artRules';
 import type { Content } from '../content/types';
-import { Game, type GameEvent } from './game';
+import { validateState } from '../save/record';
+import { Game, plantsHappy, type GameEvent } from './game';
 import { createRng } from './rng';
 import { isFree } from './space';
 import { addKid, defaultBox, type Kid } from './world';
@@ -163,6 +164,46 @@ describe('decorations kids use (D-090)', () => {
     // On a map without that decoration, the visit just ends and the kid is put somewhere free.
     const elsewhere = new Game(testContent(), { bounds, spawnAt: { x: 1000, y: 1900 } }, 1, g.persisted());
     expect(elsewhere.state.world.kids.find((x) => x.id === kid.id)!.activity.kind).toBe('walk');
+  });
+
+  it('every step of a whole visit saves as a valid state: the path index never leaves the path (Codex review, #121)', () => {
+    const c = testContent({ visitChance: 1, dwellSeconds: [1, 1] }, { speed: 200, idleChancePerSecond: 50 });
+    const g = game(c);
+    const kid = place(g, 'plain', left!.approach.x - 150, left!.approach.y + 120);
+    const phases = new Set<string>();
+    for (let i = 0; i < 400; i++) {
+      g.step([]);
+      if (kid.activity.kind === 'visit') {
+        phases.add(kid.activity.phase);
+        expect(kid.activity.leg).toBeGreaterThanOrEqual(0);
+        expect(kid.activity.leg).toBeLessThan(left!.path.length);
+      }
+      expect(validateState(g.persisted(), c)).toEqual([]);
+    }
+    expect([...phases].sort()).toEqual(['approach', 'dock', 'leave', 'stay']);
+  });
+
+  it('a tap on a sitter (picked up, then cancelled) leaves it seated; not if its slot was taken meanwhile (Codex review, #121)', () => {
+    const g = game();
+    const kid = place(g, 'plain', 300, 1600);
+    dropAt(g, kid, { x: left!.x, y: left!.y });
+    g.step([{ type: 'pickUp', kidId: kid.id }], 0);
+    g.step([{ type: 'cancelDrag', kidId: kid.id, x: kid.x, y: kid.y }], 0);
+    expect(kid.activity).toMatchObject({ kind: 'visit', slot: 'left', phase: 'stay' });
+    expect([kid.x, kid.y]).toEqual([left!.x, left!.y]);
+    // Held while another takes its slot: cancelled, it walks.
+    g.step([{ type: 'pickUp', kidId: kid.id }], 0);
+    const other = place(g, 'fire', 700, 1600);
+    dropAt(g, other, { x: left!.x, y: left!.y });
+    expect(other.activity).toMatchObject({ kind: 'visit', slot: 'left' });
+    g.step([{ type: 'cancelDrag', kidId: kid.id, x: 300, y: 1600 }], 0);
+    expect(kid.activity.kind).toBe('walk');
+  });
+
+  it("only a food's happiness counts in planting (Codex review, #121)", () => {
+    expect(plantsHappy({ happy: { small: true } })).toBe(false);
+    expect(plantsHappy({ happy: {} })).toBe(true);
+    expect(plantsHappy({})).toBe(false);
   });
 
   it('the bench obstacle keeps walkers out, but not its own visitor', () => {

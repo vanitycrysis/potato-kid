@@ -1,7 +1,7 @@
 import { kidRig } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
-import type { GameEvent, PlantedKid, RejectReason } from '../sim/game';
+import { plantsHappy, type GameEvent, type PlantedKid, type RejectReason } from '../sim/game';
 import type { Arrivals } from './arrivals';
 import { el, icon, tierName } from './dom';
 import { refusalText } from './feedback';
@@ -1037,7 +1037,7 @@ export class GardenPlots {
       const accepted = this.info(i).planted;
       const chosen = draft.flatMap((id) => {
         const k = live().find((c) => c.id === id);
-        return k ? [{ type: k.type, happy: !!k.happy }] : [];
+        return k ? [{ type: k.type, happy: plantsHappy(k) }] : [];
       });
       const now = { count: accepted.length, ...this.game.oddsFor(accepted) };
       const next = { count: accepted.length + chosen.length, ...this.game.oddsFor([...accepted, ...chosen]) };

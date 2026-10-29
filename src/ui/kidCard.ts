@@ -554,7 +554,11 @@ export class KidCard {
                   el(
                     'p',
                     'sheet-helper',
-                    farm ? 'Happy income applies after this kid returns to the map. Farming still earns no Materials.' : `Income ×${this.game.happyMultiplier(kid!)} · Counts as Tier ${tierNow + 1} when added to a plot; odds stay capped.`,
+                    farm
+                      ? 'Happy income applies after this kid returns to the map. Farming still earns no Materials.'
+                      : 'small' in h && h.small
+                        ? `Income ×${this.game.happyMultiplier(kid!)} · From a decoration: no planting bonus.`
+                        : `Income ×${this.game.happyMultiplier(kid!)} · Counts as Tier ${tierNow + 1} when added to a plot; odds stay capped.`,
                   ),
                 ]
               : [el('p', 'sheet-helper', 'Not happy right now.')]),

@@ -129,29 +129,30 @@ export function stepVisits(world: World, sites: readonly Site[], speed: number, 
     }
     if (v.phase === 'stay') {
       v.left -= dt;
-      if (v.left <= 0) Object.assign(v, { phase: 'leave', leg: slot.path.length - 2, left: 0 });
+      if (v.left <= 0) Object.assign(v, { phase: 'leave', leg: Math.max(0, slot.path.length - 2), left: 0 });
       continue;
     }
     // Docking in or leaving along the path, one leg at a time; another kid in the way: wait.
-    const to = slot.path[v.leg];
-    if (!to) {
-      if (v.phase === 'dock') {
-        Object.assign(v, { phase: 'stay', left: d.dwellSeconds[0] + rng.next() * (d.dwellSeconds[1] - d.dwellSeconds[0]) });
-        [kid.x, kid.y] = [slot.x, slot.y];
-        seated(kid);
-      } else done();
-      continue;
-    }
+    // Arriving at the path's end finishes it in the same step, so `leg` always names a point on
+    // the path (a save in between stays valid; Codex review, #121).
+    const last = slot.path.length - 1;
+    const to = slot.path[Math.min(Math.max(v.leg, 0), last)]!;
     const next = toward(kid, to, step);
     if (crowded(world, kid, next)) continue;
     [kid.x, kid.y] = [next.x, next.y];
-    if (next.there) v.leg += v.phase === 'dock' ? 1 : -1;
+    if (!next.there) continue;
+    if (v.phase === 'dock' && v.leg >= last) {
+      Object.assign(v, { phase: 'stay', leg: last, left: d.dwellSeconds[0] + rng.next() * (d.dwellSeconds[1] - d.dwellSeconds[0]) });
+      [kid.x, kid.y] = [slot.x, slot.y];
+      seated(kid);
+    } else if (v.phase === 'leave' && v.leg <= 0) done();
+    else v.leg += v.phase === 'dock' ? 1 : -1;
   }
 }
 
 /** The player dropped a held kid into a free slot (D-090): it is seated there at once. */
 export function seatAt(kid: Kid, site: number, slot: SiteSlot, d: DecorationBalance, rng: Rng): void {
-  kid.activity = { kind: 'visit', site, slot: slot.id, phase: 'stay', left: d.dwellSeconds[0] + rng.next() * (d.dwellSeconds[1] - d.dwellSeconds[0]), leg: slot.path.length };
+  kid.activity = { kind: 'visit', site, slot: slot.id, phase: 'stay', left: d.dwellSeconds[0] + rng.next() * (d.dwellSeconds[1] - d.dwellSeconds[0]), leg: slot.path.length - 1 };
   [kid.x, kid.y] = [slot.x, slot.y];
 }
 

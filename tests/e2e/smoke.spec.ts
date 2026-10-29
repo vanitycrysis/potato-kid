@@ -7662,6 +7662,23 @@ test.describe('decorations kids use (D-090)', () => {
     await expect.poll(() => page.evaluate((i) => window.__PK__!.presentationOf(i)?.clip, id)).toBe('decoration_splash');
   });
 
+  test('a tap on a sitter opens its card and leaves it seated; the card makes no planting promise (Codex review, #121)', async ({ page }) => {
+    const [id] = await nearBench(page, ['plain']);
+    await dragTo(page, id!, BENCH.left);
+    expect((await kid(page, id!)).activity).toBe('visit');
+    const at = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id!);
+    await page.mouse.click(at.x, at.y - 20);
+    const card = page.getByRole('dialog', { name: /Potato Kid/ });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('From a decoration: no planting bonus.');
+    await expect(card).not.toContainText('when added to a plot');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    const k = await kid(page, id!);
+    expect(k.activity).toBe('visit');
+    expect([Math.round(k.x), Math.round(k.y)]).toEqual([BENCH.left.x, BENCH.left.y]);
+  });
+
   test('a kid sitting is saved so: after a reload it is still on the bench', async ({ page }) => {
     const [id] = await nearBench(page, ['plain']);
     await dragTo(page, id!, BENCH.left);
