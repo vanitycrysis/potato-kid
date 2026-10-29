@@ -774,15 +774,15 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
   expect(errors).toEqual([]);
 });
 
-test('a first rare card waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77)', async ({ page }) => {
+test("a first rare's popup waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77; D-087)", async ({ page }) => {
   test.setTimeout(60_000);
   await page.route('**/kid_lantern_*', async (route) => {
     await new Promise((r) => setTimeout(r, 3000));
     await route.continue();
   });
   // Lantern stands in for a rare kid (D-072) until the rares' content exists.
-  await boot(page, '?seed=3&debug=1&calm=1&rare=lantern');
-  // Per frame until its card shows: the Rare found card, and whether the kid is drawn.
+  await boot(page, '?seed=3&debug=1&calm=1&rare=lantern&arrivals=1');
+  // Per frame until its popup shows: the popup, and whether the kid is drawn.
   const log = await page.evaluate(
     () =>
       new Promise<[boolean, boolean][]>((done) => {
@@ -792,7 +792,7 @@ test('a first rare card waits until its sprout is drawn, even if the costume loa
         const out: [boolean, boolean][] = [];
         const end = performance.now() + 20_000;
         const frame = () => {
-          const card = (document.querySelector('.feedback')?.textContent ?? '').includes('Rare found');
+          const card = pk.arrival() !== null;
           const drawn = pk.rares().some((r) => !before.includes(r.id));
           out.push([card, drawn]);
           if (card || performance.now() > end) done(out);
@@ -1598,23 +1598,25 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(dialog(page).getByText('No discovered kids match.')).toBeVisible();
   });
 
-  test('each segment keeps its scroll, also when a discovery card opens another (Codex review, #94)', async ({ page }) => {
+  test("each segment keeps its scroll, also through another segment's kid detail (Codex review, #94)", async ({ page }) => {
     await twoKnown(page);
+    // A special sprouts, so the Specials segment has a kid to open.
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'gift'));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.debugKnown!().includes('gift'))).toBe(true);
     await dexButton(page).click();
     const body = dialog(page).locator('.sheet-body');
     await body.evaluate((e) => (e.scrollTop = 300));
     const kept = await body.evaluate((e) => e.scrollTop);
     expect(kept).toBeGreaterThan(100);
-    await page.keyboard.press('Escape');
-    // A special sprouts; its card opens the Dex at it, in Specials.
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'gift'));
-    await page.locator('.feedback').getByRole('button', { name: /found/ }).click();
+    // Switched where it is: a real click wouldn't scroll the list back up first.
+    await dialog(page).getByRole('button', { name: 'Specials', exact: true }).dispatchEvent('click');
+    await dialog(page).locator('[data-kid="gift"]').click();
     await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Gift Kid');
     await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
     await expect(dialog(page).getByRole('button', { name: 'Specials', exact: true })).toHaveAttribute('aria-pressed', 'true');
     // Ordinary is where it was left.
     await dialog(page).getByRole('button', { name: 'Ordinary', exact: true }).click();
-    expect(await body.evaluate((e) => e.scrollTop)).toBe(kept);
+    await expect.poll(() => body.evaluate((e) => e.scrollTop)).toBe(kept);
   });
 
   test('search finds discovered names only', async ({ page }) => {
@@ -3087,18 +3089,20 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     await expect(dex.getByText('Rare variants')).toHaveCount(0);
   });
 
-  test('a rare type new to the Dex reads as Rare found; the next one just sprouts, as a rare kid (§15.5)', async ({ page }) => {
-    await boot(page, RARE);
+  test('a rare kind new to the Dex meets the player as New!; the next one from the plot as From your plot (§15.5, D-087, D-088)', async ({ page }) => {
+    await boot(page, `${RARE}&arrivals=1`);
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
-    const found = page.locator('.feedback').getByRole('button', { name: /Rare found/ });
-    await expect(found).toContainText('Hero');
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await page.mouse.move(5, 5);
-    await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
+    const popup = page.getByRole('dialog');
+    await expect(popup.locator('.arrival-status')).toHaveText('New!');
+    await expect(popup.locator('.arrival-sentence')).toContainText('Hero Kid');
+    await expect(popup.locator('.arrival-category')).toHaveText('Rare');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.source).toBe('plot');
+    await popup.getByRole('button', { name: 'Continue' }).click();
+    await expect(popup).toHaveCount(0);
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
-    const card = page.locator('.feedback .toast-short');
-    await expect(card).toContainText('sprouted!');
-    await expect(card).toContainText('Rare kid · From Plot 1.');
+    await expect(popup.locator('.arrival-status')).toHaveText('From your plot');
+    await expect(popup.locator('.arrival-category')).toHaveText('Rare');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.isNew).toBe(false);
   });
 
   test("a press just outside a small kid's body, within 44 CSS px, picks it up (§16.1, any kid; Codex review, PR #77)", async ({ page }) => {
@@ -6267,15 +6271,17 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
   });
 
   test('a Special kid sprouts, is announced and shows in the Dex as the Special tier, with its own badge (D-082)', async ({ page }) => {
-    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    const errors = await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'treasure_chest'));
-    const found = page.locator('.feedback').getByRole('button', { name: /found/ });
-    await expect(found).toContainText('Treasure Chest');
-    await expect(found.locator('.tier')).toHaveText('Special');
-    await expect(found.locator('.tier')).toHaveAttribute('aria-label', 'Special');
-    // Its own Special badge (GUI_MVP §26), never the tier-5 one it earns as.
+    // Its popup (D-087): new, from the plot, the Special tier with its own badge (GUI_MVP §26),
+    // never the tier-5 one it earns as.
+    const popup = page.getByRole('dialog');
+    await expect(popup.locator('.arrival-sentence')).toContainText('Treasure Chest');
+    await expect(popup.locator('.arrival-status')).toHaveText('New!');
+    await expect(popup.locator('.arrival-category')).toHaveText('Special');
     const icons = (l: Locator) => l.locator('img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon));
-    expect(await icons(found.locator('.tier'))).toEqual(['badge_special']);
+    expect(await icons(popup.locator('.arrival-category'))).toEqual(['badge_special']);
+    await popup.getByRole('button', { name: 'Continue' }).click();
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.getByRole('button', { name: 'Specials', exact: true }).click();
@@ -6841,5 +6847,120 @@ test('opening and closing rare cards never piles up watched sleeves (Codex revie
   await page.mouse.click(at.x, at.y - 20);
   await page.waitForTimeout(100);
   expect(await page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(1);
+});
+
+test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
+  const popup = (page: Page) => page.getByRole('dialog');
+  /** Plain and Water touching: they fuse into Firefighter Kid, new to the Dex. */
+  async function fuseNew(page: Page, query = '?seed=3&debug=1&calm=1&arrivals=1'): Promise<void> {
+    await boot(page, query);
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  }
+
+  test('a new kind from a fusion: New!, its line, tier and award; the sprite waves; Continue closes it and no card follows', async ({ page }) => {
+    await fuseNew(page);
+    const p = popup(page);
+    await expect(p).toHaveAttribute('aria-modal', 'true');
+    await expect(p.locator('.arrival-status')).toHaveText('New!');
+    const shown = (await page.evaluate(() => window.__PK__!.arrival()))!;
+    expect(shown.source).toBe('fusion');
+    expect(shown.isNew).toBe(true);
+    await expect(p.locator('.arrival-category')).toHaveText('Tier 2');
+    await expect(p.locator('.arrival-award')).toContainText('Potatoken');
+    // Focus on the line; the world is paused behind it.
+    await expect(p.locator('.arrival-sentence')).toBeFocused();
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(true);
+    // The wave plays: a wave frame within its half second.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()!.body), { timeout: 4000 }).toMatch(/wave/);
+    await p.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(p).toHaveCount(0);
+    await page.waitForTimeout(500);
+    await expect(page.locator('.feedback')).not.toContainText('New');
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+  });
+
+  test('it greets again while it stays open, and Escape acknowledges it', async ({ page }) => {
+    await fuseNew(page);
+    // Every frame for 4 s: the wave, 2.5 s still, then the wave again.
+    const log = await page.evaluate(
+      () =>
+        new Promise<{ t: number; wave: boolean }[]>((done) => {
+          const out: { t: number; wave: boolean }[] = [];
+          const t0 = performance.now();
+          const frame = () => {
+            const t = performance.now() - t0;
+            out.push({ t, wave: /wave/.test(window.__PK__!.arrival()?.body ?? '') });
+            if (t < 4000) requestAnimationFrame(frame);
+            else done(out);
+          };
+          requestAnimationFrame(frame);
+        }),
+    );
+    // Waving at some frames, standing at others, and waving again after a long still spell.
+    const waves = log.filter((f) => f.wave).map((f) => f.t);
+    expect(waves.length).toBeGreaterThan(0);
+    const gaps = waves.slice(1).map((t, i) => t - waves[i]!);
+    expect(Math.max(...gaps)).toBeGreaterThan(2000);
+    await page.keyboard.press('Escape');
+    await expect(popup(page)).toHaveCount(0);
+  });
+
+  test('reduced motion: it stands still, no wave', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fuseNew(page);
+    for (let i = 0; i < 8; i++) {
+      expect(await page.evaluate(() => window.__PK__!.arrival()!.body)).toMatch(/stand/);
+      await page.waitForTimeout(150);
+    }
+  });
+
+  test('an arrival not yet acknowledged comes back after a reload, with the same line', async ({ page }) => {
+    await fuseNew(page);
+    const before = (await page.evaluate(() => window.__PK__!.arrival()))!.sentence;
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await expect(popup(page).locator('.arrival-sentence')).toHaveText(before);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.__PK__!.arrival())).toBeNull();
+  });
+
+  test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
+    const fresh = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      return new Set((pk.lastOffline()?.spawned ?? []).map((k) => k.type)).size;
+    });
+    const known = await page.evaluate(() => window.__PK__!.lastOffline()!.spawned.length);
+    expect(known).toBeGreaterThan(0);
+    // Each popup first, all from the Garden and new; the summary waits.
+    let seen = 0;
+    for (;;) {
+      const a = await page.evaluate(() => window.__PK__!.arrival());
+      if (!a) break;
+      expect(a.source).toBe('garden');
+      expect(a.isNew).toBe(true);
+      await expect(page.getByRole('dialog', { name: 'Welcome back' })).toHaveCount(0);
+      seen++;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+      await page.waitForTimeout(150);
+    }
+    expect(seen).toBeGreaterThan(0);
+    expect(seen).toBeLessThanOrEqual(fresh);
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toBeVisible();
+    await expect(summary.locator('.stat-row', { hasText: 'New kinds' })).toContainText(`${seen} · Shown above`);
+  });
 });
 

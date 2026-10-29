@@ -353,6 +353,12 @@ export class Hud {
     return this.nameplates?.shown() ?? [];
   }
 
+  /** Test hook: the new-kid popup up now, if any (D-087). */
+  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; waiting: number } | null {
+    const s = this.popup.shown;
+    return s && { ...s, waiting: this.popup.waiting };
+  }
+
   /** Debug: treat `type` as found already (tests of the new-recipe card). */
   debugKnow(type: KidId): void {
     this.known.add(type);

@@ -100,6 +100,8 @@ declare global {
       nameExclusions: () => { left: number; top: number; right: number; bottom: number }[];
       /** Map nicknames shown now (D-091, §27.7): kid id, text and screen box. */
       nameplates: () => { id: number; text: string; left: number; top: number; width: number; height: number }[];
+      /** The new-kid popup up now (D-087), and how many arrivals wait, the one up included. */
+      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; waiting: number } | null;
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
@@ -271,6 +273,7 @@ async function boot(): Promise<void> {
     watchedSleeves: () => watchedSleeves(),
     nameExclusions: () => hud.nameExclusions,
     nameplates: () => hud.nameplatesShown.map((n) => ({ id: n.id, text: n.text, left: n.rect.left, top: n.rect.top, width: n.rect.width, height: n.rect.height })),
+    arrival: () => hud.arrivalShown,
     layers: () => scene.layerNames,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
