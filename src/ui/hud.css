@@ -484,6 +484,71 @@
   width: 256px;
   height: 256px;
 }
+/* A rare portrait's sleeve (D-094, §27.7): behind the kid, unclipped, in a small 2.4 s loop
+   about its centre; reduced motion holds it at rest. */
+.portrait-wrap {
+  position: relative;
+  flex: none;
+  /* Its own layer: a row's sleeve lies behind the words that follow it. */
+  isolation: isolate;
+}
+.portrait-wrap > .portrait {
+  position: relative;
+}
+/* The words after a portrait lie above its sleeve, which may reach into them in a 48 px row
+   (Codex review round 4, #116). */
+.portrait-wrap ~ * {
+  position: relative;
+  z-index: 1;
+}
+.portrait-sleeve {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  animation: portrait-sleeve 2400ms ease-in-out infinite;
+}
+.portrait-sleeve-art,
+.portrait-sleeve-art img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.portrait-sleeve-art {
+  width: 256px;
+  height: 256px;
+}
+@keyframes portrait-sleeve {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(-1px) scale(1.02) rotate(2deg);
+    opacity: 0.82;
+  }
+  75% {
+    transform: translateY(1px) scale(0.98) rotate(-2deg);
+    opacity: 0.82;
+  }
+}
+.portrait-sleeve {
+  z-index: -1;
+}
+/* Offscreen, or the app hidden: paused where it is, never caught up (§27.7). */
+.portrait-sleeve.is-offscreen,
+.app-hidden .portrait-sleeve {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .portrait-sleeve {
+    animation: none;
+  }
+}
 
 /* --- Save banners and read-only (§10) ------------------------------------------------- */
 .banner {

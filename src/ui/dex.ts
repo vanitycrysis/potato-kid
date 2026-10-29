@@ -7,7 +7,7 @@ import type { BuildingSheets } from './buildings';
 import { el, icon, shortName, tierBadge, tierName, tierShort, type TierKid } from './dom';
 import { homeSection, type HomeSection } from './dexHome';
 import { formatRate } from './format';
-import { LazyPortraits, portrait } from './portrait';
+import { LazyPortraits, portrait, withSleeve } from './portrait';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
 // The Potato-Dex (docs/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
@@ -494,7 +494,8 @@ export class Dex {
       : [el('h3', 'sheet-section', 'Found recipes'), foundBox];
     p.detail.replaceChildren(
       back,
-      el('div', 'dex-detail-portrait', portrait(kidRig!, type, 96)),
+      // A rare kid's portrait moves in its sleeve (D-094).
+      el('div', 'dex-detail-portrait', k.rare ? withSleeve(kidRig!, portrait(kidRig!, type, 96, undefined, undefined, { sleeve: false }), 96, this.scene.game.boxOf({ body: 'round', face: 'classic', scale: 1 }, type)) : portrait(kidRig!, type, 96)),
       name,
       el('div', 'dex-detail-tier', this.tierMark(k, 24, tierName(k))),
       // Per hour: at the slow pacing (D-052) a per-second rate would round to 0.

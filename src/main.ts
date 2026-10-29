@@ -1,3 +1,4 @@
+import { watchedSleeves } from './ui/portrait';
 import { Application } from 'pixi.js';
 import { content } from './content';
 import { farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
@@ -92,6 +93,8 @@ declare global {
       /** Planting (D-061): each plot's state, kids in it, growth and what the map shows. */
       plots: () => { state: 'empty' | 'filling' | 'growing' | 'ready'; kids: number; progress: number; waiting: string | null; shown: string[]; glow: boolean; signCss: number | null }[];
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
+      /** Rare portrait sleeves the offscreen observer watches now (D-094). */
+      watchedSleeves: () => number;
       rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[];
       /** What a map nickname may not cover now (§27.7): screen boxes of ready signs and the partner mark. */
       nameExclusions: () => { left: number; top: number; right: number; bottom: number }[];
@@ -262,6 +265,7 @@ async function boot(): Promise<void> {
     dropTarget: () => scene.dropTarget,
     recipe: () => scene.recipeShown,
     rares: () => scene.raresShown,
+    watchedSleeves: () => watchedSleeves(),
     nameExclusions: () => hud.nameExclusions,
     nameplates: () => hud.nameplatesShown.map((n) => ({ id: n.id, text: n.text, left: n.rect.left, top: n.rect.top, width: n.rect.width, height: n.rect.height })),
     layers: () => scene.layerNames,
