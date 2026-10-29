@@ -150,9 +150,14 @@ export class Sheets {
 
     const scrim = el('div', 'sheet-scrim');
     // Close on click, after the press's default focus change, so focus can return to the
-    // launcher (a pointerdown close would lose it to the page).
+    // launcher (a pointerdown close would lose it to the page). Only for a press that began on
+    // the scrim: a touch tap that opened this sheet from the map gets its click after the sheet
+    // is up, aimed at whatever is now under the finger (owner bug, kids at the top of the screen).
+    let pressed = false;
+    scrim.addEventListener('pointerdown', () => (pressed = true));
     scrim.addEventListener('click', (e) => {
-      if (e.target === scrim) this.close();
+      if (e.target === scrim && pressed) this.close();
+      pressed = false;
     });
     const titleId = `sheet-title-${spec.key}`;
     const title = el('h2', 'sheet-title', spec.title);
