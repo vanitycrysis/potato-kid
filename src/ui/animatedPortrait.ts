@@ -188,6 +188,11 @@ export class AnimatedPortrait {
     }
   }
 
+  /** How far into its clip it is (seconds), or null: standing. */
+  get clipTime(): number | null {
+    return this.clip?.time ?? null;
+  }
+
   /** Whether a clip is still playing. */
   get playing(): boolean {
     return this.clip !== null;

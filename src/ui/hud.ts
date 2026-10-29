@@ -351,7 +351,7 @@ export class Hud {
   }
 
   /** Test hook: the new-kid popup up now, if any (D-087). */
-  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; waiting: number } | null {
+  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; clipTime: number | null; waiting: number } | null {
     const s = this.popup.shown;
     return s && { ...s, waiting: this.popup.waiting };
   }
@@ -655,7 +655,9 @@ export class Hud {
     this.feedback.style.visibility = this.bubble.openKey !== null ? 'hidden' : '';
     // The new-kid popup first (§27.3): once nothing else holds the screen (no sheet, gesture,
     // name bubble, tutorial card or unanswered recovery warning) and its kid is drawn.
-    const urgent = this.save.recovery && !this.recoveryDismissed;
+    // An unanswered recovery notice comes first, but only while it is on screen: the unsaved
+    // warning hides it, and the player can't answer what they can't see (Codex review round 5, #117).
+    const urgent = this.save.recovery && !this.recoveryDismissed && !this.save.unsaved;
     // An arrival found while the tutorial is up comes first: it steps aside, keeping its step,
     // and comes back after (§27.3). One previewed over a sheet waits with the sheet.
     if (this.popup.waiting > 0 && this.tutorial.isOpen && !this.sheets.isOpen) this.tutorial.stepAside();

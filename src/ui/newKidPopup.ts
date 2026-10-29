@@ -48,11 +48,16 @@ type Layout = { mode: 'portrait' | 'compact' | 'fallback'; sprite: number };
 function layoutNow(): Layout {
   const w = safeWidth() + 16;
   const h = window.innerHeight;
-  if (h > 520) return { mode: 'portrait', sprite: 256 };
+  // The portrait panel needs its 256 sprite inside its content (360 less its 16 px padding and
+  // 8 px border each side); a narrower screen gets the single column, its sprite no wider
+  // than the content either.
+  const content = Math.min(360, w - 16) - 48;
+  if (h > 520 && content >= 256) return { mode: 'portrait', sprite: 256 };
+  if (h > 520) return { mode: 'fallback', sprite: Math.max(48, Math.min(144, Math.floor(content))) };
   // The compact panels by the height left below any banner, within the safe insets (§27.4):
   // 280 high with a 192 sprite, else 224 with a 128 one, else the single column.
   const room = safeHeight();
-  if (w - 16 < COMPACT_MIN_WIDTH || room < 224) return { mode: 'fallback', sprite: 144 };
+  if (w - 16 < COMPACT_MIN_WIDTH || room < 224) return { mode: 'fallback', sprite: Math.max(48, Math.min(144, Math.floor(content))) };
   return { mode: 'compact', sprite: room < 280 ? 128 : 192 };
 }
 
@@ -93,6 +98,9 @@ export class NewKidPopup {
     private readonly rig: KidRig | undefined = kidRig,
   ) {
     window.addEventListener('resize', () => this.relayout());
+    // Frames stop while the app is hidden: back in front, the greeting goes on where it was,
+    // not a frame's worth on (Codex review round 5, #117).
+    document.addEventListener('visibilitychange', () => (this.last = 0));
   }
 
   /** Whether a popup is up. */
@@ -290,9 +298,9 @@ export class NewKidPopup {
   }
 
   /** Test hook: what is up now. */
-  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number } | null {
+  get shown(): { source: MeetSource; type: KidId; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; clipTime: number | null } | null {
     if (!this.open) return null;
     const m = this.open.meeting;
-    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode, sprite: this.open.layout.sprite, scale: this.open.sprite.scale, savedScale: m.look.scale ?? 1 };
+    return { source: m.source, type: m.type, isNew: m.isNew, sentence: this.open.dialog.querySelector('.arrival-sentence')?.textContent ?? '', body: this.open.sprite.bodyAsset, layout: this.open.layout.mode, sprite: this.open.layout.sprite, scale: this.open.sprite.scale, savedScale: m.look.scale ?? 1, clipTime: this.open.sprite.clipTime };
   }
 }

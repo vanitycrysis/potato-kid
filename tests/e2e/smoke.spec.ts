@@ -7224,6 +7224,52 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     expect(panel.y).toBeGreaterThanOrEqual(banner.y + banner.height - 0.5);
   });
 
+  test('a recovery notice hidden behind the unsaved warning holds no popup back (Codex review round 5, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: true, readOnly: false }));
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  });
+
+  test('a very narrow portrait screen gets the single column, its kid inside the panel (Codex review round 5, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 200, height: 700 });
+    await fuseNew(page);
+    const a = (await page.evaluate(() => window.__PK__!.arrival()))!;
+    expect(a.layout).toBe('fallback');
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    const art = (await popup(page).locator('.arrival-sprite .portrait').first().boundingBox())!;
+    const panel = (await popup(page).boundingBox())!;
+    expect(art.x).toBeGreaterThanOrEqual(panel.x - 0.5);
+    expect(art.x + art.width).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
+  });
+
+  test('back from hidden, the greeting goes on where it was (Codex review round 5, #117)', async ({ page }) => {
+    await fuseNew(page);
+    // All in the page: the greeting's time, then hidden with no frames for 400 ms (the main
+    // thread held), back, and one frame on. It moves by that frame, not by the gap.
+    const { before, after, frame } = await page.evaluate(async () => {
+      const at = () => window.__PK__!.arrival()!.clipTime;
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const before = at();
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      const until = performance.now() + 400;
+      while (performance.now() < until);
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+      const t = performance.now();
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      return { before, after: at(), frame: (performance.now() - t) / 1000 };
+    });
+    expect(before).not.toBeNull();
+    expect(after! - before!).toBeLessThanOrEqual(frame + 0.02);
+  });
+
   test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
