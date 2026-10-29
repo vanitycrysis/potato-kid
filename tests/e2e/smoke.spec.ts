@@ -7580,3 +7580,96 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
   });
 });
 
+test.describe('decorations kids use (D-090)', () => {
+  // Map v5's southeast bench and southwest bird bath (Codex's decorations_v1 slots).
+  const BENCH = { x: 2392, y: 3960, left: { x: 2284, y: 3905 }, right: { x: 2500, y: 3905 } };
+  const BATH = { x: 680, y: 3960, left: { x: 572, y: 3920 } };
+  const kid = (page: Page, id: number) => page.evaluate((i) => window.__PK__!.kids().find((k) => k.id === i)!, id);
+
+  /** Drags kid `id` with the finger ending on world point `w`, and lets go. */
+  async function dragTo(page: Page, id: number, w: { x: number; y: number }): Promise<void> {
+    const k = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, id);
+    await page.mouse.move(k.x, k.y - 20);
+    await page.mouse.down();
+    const p = await page.evaluate((w) => window.__PK__!.worldToScreen(w.x, w.y), w);
+    await page.mouse.move(p.x, p.y, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+  }
+
+  async function nearBench(page: Page, types: string[]): Promise<number[]> {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const ids = await page.evaluate(
+      ([types, b]) => {
+        const pk = window.__PK__!;
+        pk.centerOn(b.x, b.y + 200);
+        return types.map((t, i) => pk.debugAdd!(t, b.x - 300 + i * 200, b.y + 420));
+      },
+      [types, BENCH] as const,
+    );
+    await page.waitForTimeout(300);
+    return ids;
+  }
+
+  test('a kid dropped on the bench sits in the slot under the finger, and plays its sitting clip', async ({ page }) => {
+    const [id] = await nearBench(page, ['plain']);
+    await dragTo(page, id!, BENCH.right);
+    const k = await kid(page, id!);
+    expect(k.activity).toBe('visit');
+    expect([Math.round(k.x), Math.round(k.y)]).toEqual([BENCH.right.x, BENCH.right.y]);
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.presentationOf(i)?.clip, id!)).toBe('decoration_sitting');
+  });
+
+  test('a full bench is just ground: the third kid lands beside it; picked up, a sitter frees its slot', async ({ page }) => {
+    const [a, b, c] = await nearBench(page, ['plain', 'fire', 'snow']);
+    await dragTo(page, a!, BENCH.left);
+    await dragTo(page, b!, BENCH.right);
+    expect((await kid(page, b!)).activity).toBe('visit');
+    await dragTo(page, c!, BENCH.left);
+    expect((await kid(page, c!)).activity).not.toBe('visit');
+    // The left sitter, picked up and dropped away from the bench, walks again.
+    const p = await page.evaluate((i) => window.__PK__!.screenPointOf(i)!, a!);
+    await page.mouse.move(p.x, p.y - 20);
+    await page.mouse.down();
+    const away = await page.evaluate((b) => window.__PK__!.worldToScreen(b.x - 500, b.y + 500), BENCH);
+    await page.mouse.move(away.x, away.y, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    expect((await kid(page, a!)).activity).not.toBe('visit');
+    // Its slot takes the next kid.
+    await dragTo(page, c!, BENCH.left);
+    expect((await kid(page, c!)).activity).toBe('visit');
+  });
+
+  test('recipe partners on one bench never fuse', async ({ page }) => {
+    const [a, b] = await nearBench(page, ['plain', 'water']);
+    await dragTo(page, a!, BENCH.left);
+    await dragTo(page, b!, BENCH.right);
+    await page.waitForTimeout(500);
+    expect((await page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).sort()).toEqual(['plain', 'water']);
+  });
+
+  test('a kid in the bird bath splashes', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1');
+    const id = await page.evaluate((b) => {
+      const pk = window.__PK__!;
+      pk.centerOn(b.x, b.y + 200);
+      return pk.debugAdd!('plain', b.x + 200, b.y + 420);
+    }, BATH);
+    await page.waitForTimeout(300);
+    await dragTo(page, id, BATH.left);
+    expect((await kid(page, id)).activity).toBe('visit');
+    await expect.poll(() => page.evaluate((i) => window.__PK__!.presentationOf(i)?.clip, id)).toBe('decoration_splash');
+  });
+
+  test('a kid sitting is saved so: after a reload it is still on the bench', async ({ page }) => {
+    const [id] = await nearBench(page, ['plain']);
+    await dragTo(page, id!, BENCH.left);
+    await page.waitForTimeout(400);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    const k = await kid(page, id!);
+    expect(k.activity).toBe('visit');
+    expect([Math.round(k.x), Math.round(k.y)]).toEqual([BENCH.left.x, BENCH.left.y]);
+  });
+});

@@ -1,7 +1,7 @@
 import { activityEffects } from './artData';
 import type { Ambient, LookTable } from '../sim/game';
-import type { Obstacle } from '../sim/world';
-import type { BoundsPx, FarmData, KidRig, MapData, MapInstance, UiData, WildData } from './artData';
+import type { Obstacle, Site } from '../sim/world';
+import type { BoundsPx, DecorationData, FarmData, KidRig, MapData, MapInstance, UiData, WildData } from './artData';
 import type { KidDef } from './types';
 
 // Pure derivations from ChatGPT/Codex's art data into what the simulation needs.
@@ -192,4 +192,43 @@ export function uiPaletteCoverage(ui: UiData | undefined): string[] {
   const type = ui.typography as { family?: unknown; fallback?: unknown } | undefined;
   if (typeof type?.family !== 'string' || typeof type.fallback !== 'string') problems.push('ui_v2.json typography needs "family" and "fallback"');
   return problems;
+}
+
+/** The map's decorations kids can use (D-090), in world coordinates, in the map's order. */
+export function decorationSites(map: MapData, data: DecorationData | undefined): Site[] {
+  if (!data) return [];
+  return (map.activityDecorations?.instances ?? []).flatMap((i) => {
+    const d = data.definitions[i.definition];
+    if (!d) return [];
+    const [x, y] = i.worldGround;
+    const at = ([dx, dy]: readonly number[]) => ({ x: x + dx!, y: y + dy! });
+    const [l, t, r, b] = d.dropTargetRelative;
+    return [
+      {
+        id: i.id,
+        name: d.name,
+        drop: { minX: x + l, minY: y + t, maxX: x + r, maxY: y + b },
+        slots: d.slots.map((s) => ({ id: s.id, ...at(s.groundRelative), approach: at(s.approachGroundRelative), path: s.dockPathRelative.map(at), clip: s.clip })),
+      },
+    ];
+  });
+}
+
+/**
+ * What ordinary walkers keep clear of at each decoration (D-090): its solid rects and silhouette
+ * box, each with its clearance. `site` marks them, so a reserved visitor may cross its own.
+ */
+export function decorationObstacles(map: MapData, data: DecorationData | undefined): Obstacle[] {
+  if (!data) return [];
+  return (map.activityDecorations?.instances ?? []).flatMap((i, site) => {
+    const d = data.definitions[i.definition];
+    if (!d) return [];
+    const [x, y] = i.worldGround;
+    const gap = d.collision.ordinaryKidClearance;
+    return [...d.collision.solidRectsRelative, d.collision.silhouetteBoxRelative].map(([l, t, r, b]) => ({
+      box: { minX: x + l - gap, minY: y + t - gap, maxX: x + r + gap, maxY: y + b + gap },
+      circle: { x, y, r: 0 },
+      site,
+    }));
+  });
 }

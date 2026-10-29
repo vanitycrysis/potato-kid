@@ -201,6 +201,36 @@ export class KidRigView {
     this.apply(frame, this.blink(dt));
   }
 
+  /**
+   * A kid in a decoration's slot (D-090, Codex's kid_activity_v1): fixed there, it plays the
+   * slot's clip (`decoration_sitting`, `decoration_splash`) in a loop phased by its id, sorting
+   * at `depth` between the decoration's back and front. A wild kid uses its own bob. Reduced
+   * motion: the clip's still frame. Returns the frame index shown (-1: still), for the splash.
+   */
+  updateVisiting(x: number, y: number, clipName: string, depth: number, ms: number, dt: number): number {
+    this.root.position.set(x, y);
+    this.root.zIndex = depth;
+    this.lastClip = clipName;
+    this.shadow.alpha = 1;
+    this.showStamp(false);
+    const clip = this.rig.clips[clipName];
+    const period = clip ? clip.frames.length / clip.fps : 0;
+    const t = period > 0 ? (((ms / 1000 + ((this.kid.id * 1301) % 1500) / 1000) % period) + period) % period : 0;
+    const index = !this.reducedMotion && clip ? Math.floor(t * clip.fps) % clip.frames.length : -1;
+    if (this.wildType) {
+      this.applyWild(this.wildFrame(clipName, t), this.blink(dt));
+      return index;
+    }
+    const frame = this.reducedMotion || !clip ? this.staticFrame(clipName) : frameAt(clip, t, false);
+    this.apply(frame, this.blink(dt));
+    return index;
+  }
+
+  /** Source px to world units for this kid (its rig scale and its look's). */
+  get sourceScale(): number {
+    return this.scaled.scale.x;
+  }
+
   /** The farming stamp under the feet, on a landing (kid_activity_v1 `effects.farm_stomp`). */
   private showStamp(on: boolean): void {
     const fx = activityEffects[FARM_CLIP];

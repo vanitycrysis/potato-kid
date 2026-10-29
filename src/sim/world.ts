@@ -41,7 +41,12 @@ export type Activity =
   | { kind: 'look'; left: number }
   | { kind: 'wave'; left: number }
   | { kind: 'sit'; left: number; total: number }
-  | { kind: 'sleep'; left: number; total: number };
+  | { kind: 'sleep'; left: number; total: number }
+  /**
+   * On a decoration (D-090): walking to slot `slot` of site `site` (`left`: time before giving
+   * up), docking along its path (`leg`: the point it heads for), staying (`left`), or leaving.
+   */
+  | { kind: 'visit'; site: number; slot: string; phase: 'approach' | 'dock' | 'stay' | 'leave'; left: number; leg: number };
 
 export interface Kid {
   /** Stable, monotonically increasing; used for deterministic tie-breaks. */
@@ -60,8 +65,13 @@ export interface Kid {
   look: Look;
   /** The name the player gave this kid (D-057); it ends when the kid fuses or is planted. */
   name?: string;
-  /** Happy from a bite (D-056): seconds left, and whether it was its favourite food. */
-  happy?: { left: number; favourite: boolean };
+  /**
+   * Happy from a bite (D-056): seconds left, and whether it was its favourite food; `small`: from
+   * a decoration instead (D-090), weaker than any food.
+   */
+  happy?: { left: number; favourite: boolean; small?: true };
+  /** Seconds before it may set off for a decoration again on its own (D-090). */
+  visitCooldown?: number;
 }
 
 /** Static scenery a kid's box may not enter (map v2 exclusions, already inflated by the gap). */
@@ -70,6 +80,36 @@ export interface Obstacle {
   box: { minX: number; minY: number; maxX: number; maxY: number };
   /** Ground reserve: the kid box's nearest point must be at least `r` from (x, y). */
   circle: { x: number; y: number; r: number };
+  /** A decoration's (index into the game's sites): only its own visitors may cross it (D-090). */
+  site?: number;
+}
+
+/** A point in the world. */
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** One place on a decoration a kid can sit or splash (D-090, Codex's `decorations_v1.json`). */
+export interface SiteSlot {
+  id: string;
+  /** Where the visiting kid's ground point is. */
+  x: number;
+  y: number;
+  /** Where a walker must reach first; the dock path runs from it to the slot. */
+  approach: Point;
+  path: Point[];
+  /** The clip it plays there. */
+  clip: string;
+}
+
+/** A fixed decoration kids can use (D-090), in world coordinates. */
+export interface Site {
+  id: string;
+  name: string;
+  /** Where a drop of a held kid lands it in a slot (the raw pointer). */
+  drop: { minX: number; minY: number; maxX: number; maxY: number };
+  slots: SiteSlot[];
 }
 
 export interface World {
@@ -137,7 +177,8 @@ export function stepWander(
 ): void {
   const { minX, minY, maxX, maxY } = world.bounds;
   for (const kid of world.kids) {
-    if (kid.held) continue;
+    // A visit moves on its own (`visits.ts`).
+    if (kid.held || kid.activity.kind === 'visit') continue;
     const a = kid.activity;
     if (a.kind !== 'walk') {
       a.left = Math.max(0, a.left - dt);

@@ -112,6 +112,9 @@ export class ClipPicker {
         return { name: 'look_around', clip: clips.look_around, time: t, reverse: false };
       case 'wave':
         return { name: 'wave', clip: clips.wave, time: t, reverse: false };
+      // On its way to, into or out of a decoration it walks; in its slot the scene draws it (D-090).
+      case 'visit':
+        return { name: 'walk', clip: clips.walk, time: t, reverse: false };
       case 'sit': {
         const down = clipLength(this.rig, 'sit_down');
         const elapsed = a.total - a.left;

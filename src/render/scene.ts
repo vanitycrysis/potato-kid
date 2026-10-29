@@ -2,7 +2,10 @@ import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js
 import type { FarmData, KidRig, MapData, PlantingArt, WildData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import { Game, type Ambient, type Command, type GameEvent, type LookTable, type OfflineReport, type PersistedState } from '../sim/game';
-import { STEP, type Kid, type Obstacle } from '../sim/world';
+import { STEP, type Kid, type Obstacle, type Site } from '../sim/world';
+import type { DecorationData } from '../content/artData';
+import { DecorationsView } from './decorationsView';
+import { dropSlot } from '../sim/visits';
 import { rectAt, resolveDrawn, touching } from '../sim/space';
 import type { TextureStore } from './art';
 import { buildMap } from './mapView';
@@ -36,6 +39,9 @@ export interface SceneArt {
   obstacles: Obstacle[];
   /** Each food field's bay, in field order: scenery once bought (GUI_MVP §22.1). */
   fieldBays?: Obstacle[];
+  /** Decorations kids use (D-090): where they are, and how they are drawn. */
+  sites?: Site[];
+  decorations?: DecorationData | undefined;
   /** Codex's food fields (farm_v1): how bought fields are drawn (GUI_MVP §22.1). */
   farm?: FarmData | undefined;
   reducedMotion: boolean;
@@ -188,6 +194,7 @@ export class MapScene {
   /** The plots on the map, if the art has them. */
   private readonly plotsView: PlotsView | null;
   private readonly fieldsView: FieldsView | null;
+  private readonly decorationsView: DecorationsView | null;
   /** Each bought field's drop target (§22.4): the Garden's dwell rules, on Codex's drag rect. */
   private fieldTargets: HomeTarget[] = [];
   /** What each field's dwell was started for (its food and places): a change starts it over (§22.4). */
@@ -295,6 +302,7 @@ export class MapScene {
         spawnAt: { x: sx, y: sy },
         obstacles: art.obstacles,
         fieldBays: art.fieldBays ?? [],
+        sites: art.sites ?? [],
         looks: art.looks,
         ambient: art.ambient,
         // A new game is accounted up to now (plan §3), never from the epoch.
@@ -325,6 +333,8 @@ export class MapScene {
       this.fieldsView.root.eventMode = 'none';
       this.fieldsView.workers.eventMode = 'none';
     }
+    // Decorations kids use (D-090): back layers under the kids, fronts sorted with them.
+    this.decorationsView = art.decorations ? new DecorationsView(art.map, art.decorations, art.textures.map, this.kidLayer) : null;
     this.rareLayer = new RareLayer(art.textures.map, art.reducedMotion, art.rig);
     // The preference can change while the game is open: the rare layer follows it at once.
     const motion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -333,6 +343,7 @@ export class MapScene {
       buildMap(art.map, art.textures.map),
       ...(this.plotsView ? [this.plotsView.root] : []),
       ...(this.fieldsView ? [this.fieldsView.root] : []),
+      ...(this.decorationsView ? [this.decorationsView.back] : []),
       this.homeLayer,
       this.rareLayer.root,
       // Farming kids cover the marks behind them, as kids on the map do (§16; Codex review, #90).
@@ -1160,6 +1171,14 @@ export class MapScene {
       this.home.reset();
       return;
     }
+    // Released over a decoration with a free slot (D-090): into the slot nearest the finger.
+    // A full one is just ground: the kid lands beside it as anywhere else.
+    const seat = dropSlot(this.game.state.world, this.game.sites, w, this.drag.kidId);
+    if (seat) {
+      const { kidId } = this.drag;
+      this.finishDrag({ type: 'drop', kidId, x: seat.slot.x, y: seat.slot.y, pointer: { x: w.x, y: w.y } });
+      return;
+    }
     this.drag.x = w.x;
     this.drag.y = w.y - HOLD_LIFT;
     this.resolveHeld();
@@ -1353,7 +1372,9 @@ export class MapScene {
     this.pending.push(cmd);
     // Draw the kid exactly where the sim will put it until the command is applied
     // (Codex review, PR #5): the same free-spot answer, so it never jumps or overlaps.
-    const spot = this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn) ?? { x: cmd.x, y: cmd.y };
+    // Into a decoration's slot (D-090), exactly there: the slot is inside the decoration.
+    const seat = cmd.type === 'drop' && cmd.pointer !== undefined;
+    const spot = (seat ? null : this.game.landingSpot(cmd.kidId, cmd.x, cmd.y, this.drawn)) ?? { x: cmd.x, y: cmd.y };
     this.placing.set(this.drag.kidId, spot);
     this.views.get(this.drag.kidId)?.dropped();
     this.endHeld();
@@ -1586,11 +1607,22 @@ export class MapScene {
     this.plotsView?.update(this.game.state.plots, this.game.growSeconds, this.cam.zoom);
     this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();
+    this.decorationsView?.hideSplashes();
     for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
       if (this.drag?.kidId === k.id) {
         view.update(this.drag.spot.x, this.drag.spot.y, k.activity, true, dt);
+        continue;
+      }
+      // In a decoration's slot (D-090): its clip, between the decoration's back and front.
+      const v = k.activity.kind === 'visit' && k.activity.phase === 'stay' ? k.activity : null;
+      const site = v ? this.game.sites[v.site] : undefined;
+      const order = site && v ? site.slots.findIndex((s) => s.id === v.slot) : -1;
+      if (v && site && order >= 0 && this.decorationsView) {
+        const slot = site.slots[order]!;
+        const frame = view.updateVisiting(k.x, k.y, slot.clip, this.decorationsView.slotDepth(v.site, order), performance.now(), dt);
+        this.decorationsView.splash(v.site, slot.id, k.x, k.y, view.sourceScale, DecorationsView.splashFrames(slot.clip).includes(frame));
         continue;
       }
       // Only the dragged kid is drawn held: one just let go is released from that moment,

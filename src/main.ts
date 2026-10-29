@@ -1,8 +1,8 @@
 import { watchedSleeves } from './ui/portrait';
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
-import { ambientFrom, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
+import { decorationData, farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
+import { ambientFrom, decorationObstacles, decorationSites, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
 import { Lifecycle } from './platform/lifecycle';
@@ -185,8 +185,11 @@ async function boot(): Promise<void> {
       textures,
       looks: lookTable(kidRig, kidWild),
       ambient: ambientFrom(kidRig, gameContent.balance.wander.ambientChance),
-      obstacles: obstaclesFrom(mapData),
+      // Scenery, and the decorations kids use (D-090), which only their visitors may cross.
+      obstacles: [...obstaclesFrom(mapData), ...decorationObstacles(mapData, decorationData)],
       fieldBays: farmData ? fieldBaysFrom(farmData, mapData) : [],
+      sites: decorationSites(mapData, decorationData),
+      decorations: decorationData,
       farm: farmData,
       reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
       home: homeArt(),

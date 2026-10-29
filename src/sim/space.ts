@@ -162,6 +162,8 @@ export function findFreeSpot(
  */
 export function separate(world: World): void {
   const grounded = world.kids.filter((k) => !k.held).sort((p, q) => p.id - q.id);
+  // A kid inside its decoration (D-090) stays put: the other one moves the whole way.
+  const fixed = (k: Kid) => k.activity.kind === 'visit' && k.activity.phase !== 'approach';
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
     let moved = false;
     for (let i = 0; i < grounded.length; i++) {
@@ -172,6 +174,10 @@ export function separate(world: World): void {
         const rc = kidRect(c);
         const { dx, dy } = gaps(ra, rc);
         if (!(dx < -EPS && dy < -EPS)) continue;
+        if (fixed(a) && fixed(c)) continue;
+        // Shares of the push: half each, or all of it for the one that can move.
+        const ka = fixed(a) ? 0 : fixed(c) ? 2 : 1;
+        const kc = 2 - ka;
         // Direction: from a's box centre towards c's; exact ties break on ids (a is lower).
         const cax = (ra.minX + ra.maxX) / 2;
         const ccx = (rc.minX + rc.maxX) / 2;
@@ -180,15 +186,15 @@ export function separate(world: World): void {
         if (-dx <= -dy) {
           const s = ccx > cax || (ccx === cax && c.id > a.id) ? 1 : -1;
           const push = -dx / 2 + EPS;
-          a.x -= s * push;
-          c.x += s * push;
+          a.x -= s * push * ka;
+          c.x += s * push * kc;
           a.heading = s > 0 ? Math.PI : 0;
           c.heading = s > 0 ? 0 : Math.PI;
         } else {
           const s = ccy > cay || (ccy === cay && c.id > a.id) ? 1 : -1;
           const push = -dy / 2 + EPS;
-          a.y -= s * push;
-          c.y += s * push;
+          a.y -= s * push * ka;
+          c.y += s * push * kc;
           a.heading = s > 0 ? -Math.PI / 2 : Math.PI / 2;
           c.heading = s > 0 ? Math.PI / 2 : -Math.PI / 2;
         }
@@ -202,7 +208,7 @@ export function separate(world: World): void {
   // Anyone still overlapping (crowded against a wall) or pushed into scenery moves to
   // the nearest free spot. If there is none, it stays (only possible in a full world).
   for (const k of grounded) {
-    if (isFree(world, k.box, k.x, k.y, k.id)) continue;
+    if (fixed(k) || isFree(world, k.box, k.x, k.y, k.id)) continue;
     const p = findFreeSpot(world, k.box, k.x, k.y, k.id);
     if (p) {
       k.x = p.x;
