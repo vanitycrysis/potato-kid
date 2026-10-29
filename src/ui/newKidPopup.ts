@@ -68,6 +68,8 @@ export class NewKidPopup {
     private readonly pauseInput: (paused: boolean) => void,
     /** Where focus goes when nothing that had it is left (the Garden control). */
     private readonly fallbackFocus: () => HTMLElement | null,
+    /** Saves the game: an acknowledgement is kept before the next popup (§27.5). */
+    private readonly persist: () => void = () => {},
     private readonly rig: KidRig | undefined = kidRig,
   ) {
     window.addEventListener('resize', () => this.relayout());
@@ -225,6 +227,7 @@ export class NewKidPopup {
     const shown = this.open.meeting;
     this.unmount();
     if (queue[0] === shown) queue.shift();
+    this.persist();
     if (queue.length > 0) return;
     // The run is over: focus back where it was, else on the Garden.
     const to = this.restoreTo?.isConnected ? this.restoreTo : this.fallbackFocus();

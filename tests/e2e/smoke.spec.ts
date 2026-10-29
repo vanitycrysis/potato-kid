@@ -7076,6 +7076,63 @@ test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
     expect(await page.locator('.banners').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
   });
 
+  /** A crash from here on: the saves land nowhere, then the app starts again (Codex review round 2, #117). */
+  async function crashAndRestart(page: Page, query = '?seed=3&debug=1&calm=1&arrivals=1'): Promise<void> {
+    // Let any save under way land first.
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      Storage.prototype.setItem = () => {};
+    });
+    await page.goto('/' + query);
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+  }
+
+  test('a new kind found by fusion is saved with its popup: a crash right after still shows it (Codex review round 2, #117)', async ({ page }) => {
+    await fuseNew(page);
+    await crashAndRestart(page);
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  });
+
+  test('a popup or summary acknowledged is saved so: after a crash it does not come back (Codex review round 2, #117)', async ({ page }) => {
+    await fuseNew(page);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(popup(page)).toHaveCount(0);
+    await crashAndRestart(page);
+    await page.waitForTimeout(500);
+    await expect(popup(page)).toHaveCount(0);
+    // A return summary, likewise.
+    await page.evaluate(() => window.__PK__!.debugAway!(2 * 3600 * 1000));
+    for (;;) {
+      await page.waitForTimeout(150);
+      if (!(await page.evaluate(() => window.__PK__!.arrival()))) break;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    }
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(summary).toHaveCount(0);
+    await crashAndRestart(page);
+    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toHaveCount(0);
+  });
+
+  test('a kind found while the tutorial is up: the tutorial steps aside for its popup and comes back at its step (Codex review round 2, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1&tutorial=1');
+    const card = page.locator('#tutorial-card');
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+    await expect(card).toBeHidden();
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(card).toBeVisible();
+    await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
+  });
+
   test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));

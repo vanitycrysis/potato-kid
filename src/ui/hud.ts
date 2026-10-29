@@ -109,6 +109,11 @@ export class Hud {
   private readonly popup: NewKidPopup;
   /** A sheet put aside at a return, for its popups and summaries: it comes back after them. */
   private asideForReturn = false;
+  /**
+   * Saves the game now (set by the app): a popup or summary acknowledged is kept before the
+   * next is shown (§27.5).
+   */
+  persist: () => void = () => {};
 
   constructor(
     private readonly scene: MapScene,
@@ -164,6 +169,7 @@ export class Hud {
       () => [this.top, tray, this.feedback, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
       (paused) => (scene.inputPaused = paused),
       () => this.trayCells.get('garden') ?? null,
+      () => this.persist(),
     );
     this.tutorial = new Tutorial(
       scene,
@@ -523,6 +529,7 @@ export class Hud {
       (replaced) => {
         const queue = this.scene.game.state.presentation.recaps;
         if (queue[0] === recap) queue.shift();
+        this.persist();
         this.summaryOpen = false;
         // Replaced by a sheet it handed back (a kid card, the Garden): that sheet is in front.
         if (replaced) this.asideForReturn = false;
@@ -641,6 +648,9 @@ export class Hud {
     // The new-kid popup first (§27.3): once nothing else holds the screen (no sheet, gesture,
     // name bubble, tutorial card or unanswered recovery warning) and its kid is drawn.
     const urgent = this.save.recovery && !this.recoveryDismissed;
+    // An arrival found while the tutorial is up comes first: it steps aside, keeping its step,
+    // and comes back after (§27.3). One previewed over a sheet waits with the sheet.
+    if (this.popup.waiting > 0 && this.tutorial.isOpen && !this.sheets.isOpen) this.tutorial.stepAside();
     this.popup.tick(
       now,
       !this.sheets.isOpen && !this.summaryOpen && !this.scene.busy && this.bubble.openKey === null && !this.tutorial.isOpen && !this.save.readOnly && !urgent,

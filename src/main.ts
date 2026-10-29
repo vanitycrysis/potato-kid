@@ -236,13 +236,15 @@ async function boot(): Promise<void> {
   window.setInterval(() => {
     if (lifecycle.state === 'active') void save();
   }, SAVE_EVERY_MS);
-  // Also after every fusion, purchase and upgrade (plan §4).
+  // Also after every fusion, purchase and upgrade (plan §4), once the step's listeners have run:
+  // the HUD's, registered first, queue the popups those births bring, saved with them (§27.5).
+  hud.persist = () => void save();
   const saveAfter = (e: GameEvent) =>
     e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'unplanted' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden') ||
     // Fields (D-069): bought, a food chosen, kids sent or taken back (Codex review, #90).
     e.type === 'fieldUnlocked' || e.type === 'fieldFood' || e.type === 'farming' || e.type === 'unfarmed';
-  scene.listen((e) => {
-    if (saveAfter(e)) void save();
+  scene.listenSteps((events) => {
+    if (events.some(saveAfter)) void save();
   });
 
   function hooks(): Omit<NonNullable<Window['__PK__']>, 'lastOffline'> {
