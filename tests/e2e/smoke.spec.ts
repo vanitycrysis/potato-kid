@@ -6712,6 +6712,20 @@ test.describe('automatic lessons (D-086, GUI_MVP §27.2-27.3)', () => {
     expect(r).toEqual({ scrolls: true, squeezed: false, overlap: false });
   });
 
+  test('the tip announcement stays hidden in the fallback layouts too (Codex review round 4, #120)', async ({ page }) => {
+    await start(page);
+    await fuseFirst(page);
+    await expect(note(page)).toBeVisible({ timeout: 3000 });
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    // A layout where the tray's labels show: the announcement must not.
+    await page.setViewportSize({ width: 300, height: 200 });
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    const tip = page.locator('[aria-live="polite"]', { hasText: /^Tip: / });
+    await expect(tip).toHaveCount(1);
+    expect(await tip.evaluate((e) => { const r = e.getBoundingClientRect(); return r.width <= 1 && r.height <= 1; })).toBe(true);
+  });
+
   test('Where is…? shows the route in place; Escape inside the note acknowledges it', async ({ page }) => {
     await start(page);
     await fuseFirst(page);

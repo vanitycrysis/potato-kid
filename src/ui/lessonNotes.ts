@@ -62,7 +62,7 @@ export class LessonNotes {
   private readonly note = el('section', 'lesson-note ui-surface');
   private readonly spot = el('div', 'tutorial-spot lesson-spot');
   /** Tips are announced here, politely, once each a session (§27.3). */
-  private readonly live = el('p', 'tray-label');
+  private readonly live = el('p', 'visually-hidden');
   private shown: LessonItem | null = null;
   private readonly announced = new Set<LessonId>();
   /** The last input anywhere: notes wait for the player to be idle. */
