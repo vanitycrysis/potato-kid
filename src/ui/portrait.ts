@@ -179,40 +179,49 @@ export function withSleeve(rig: KidRig, pic: HTMLElement, sizePx: number, box: {
  * (§27.7): no catch-up. One observer and one listener for them all.
  */
 let sleeveObserver: IntersectionObserver | null | undefined;
-/** The sleeves observed now: one gone from the page is let go, so nothing detached is kept (Codex review, #116). */
+/**
+ * Only sleeves on the page are observed. One taken off is let go at once, so nothing detached is
+ * kept, and is held only weakly while off: a cached list put back is observed again (Codex
+ * review rounds 3 and 5, #116).
+ */
 const watched = new Set<Element>();
-function release(sleeve: Element): void {
-  sleeveObserver?.unobserve(sleeve);
-  watched.delete(sleeve);
+const parked = new Set<WeakRef<Element>>();
+/** After any change to the page: sleeves taken off are let go, sleeves put back are observed. */
+function resettle(): void {
+  for (const w of watched) {
+    if (w.isConnected) continue;
+    sleeveObserver!.unobserve(w);
+    watched.delete(w);
+    parked.add(new WeakRef(w));
+  }
+  for (const r of parked) {
+    const w = r.deref();
+    if (w && !w.isConnected) continue;
+    parked.delete(r);
+    if (w) {
+      sleeveObserver!.observe(w);
+      watched.add(w);
+    }
+  }
 }
 function watchSleeve(sleeve: HTMLElement): void {
   if (sleeveObserver === undefined) {
     sleeveObserver =
-      typeof IntersectionObserver === 'undefined'
+      typeof IntersectionObserver === 'undefined' || typeof MutationObserver === 'undefined' || typeof WeakRef === 'undefined'
         ? null
         : new IntersectionObserver((entries) => {
-            for (const e of entries) {
-              if (!e.target.isConnected) release(e.target);
-              else e.target.classList.toggle('is-offscreen', !e.isIntersecting);
-            }
+            for (const e of entries) if (e.target.isConnected) e.target.classList.toggle('is-offscreen', !e.isIntersecting);
           });
+    if (sleeveObserver) new MutationObserver(resettle).observe(document.documentElement, { childList: true, subtree: true });
     const hidden = () => document.documentElement.classList.toggle('app-hidden', document.hidden);
     document.addEventListener('visibilitychange', hidden);
     hidden();
   }
   if (!sleeveObserver) return;
-  sleeveObserver.observe(sleeve);
-  watched.add(sleeve);
-  // Next frame (after a list is appended), any sleeve whose portrait was thrown away is released.
-  if (!sweeping) {
-    sweeping = true;
-    requestAnimationFrame(() => {
-      sweeping = false;
-      for (const w of [...watched]) if (!w.isConnected) release(w);
-    });
-  }
+  // Built before it is put on the page: observed once it is.
+  parked.add(new WeakRef(sleeve));
+  if (sleeve.isConnected) resettle();
 }
-let sweeping = false;
 
 /** Test hook: how many sleeves are observed now. */
 export function watchedSleeves(): number {

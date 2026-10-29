@@ -6766,6 +6766,34 @@ test("every discovered rare's portrait moves in its sleeve, in lists too; hidden
   await expect(row('rainbow').locator('.portrait-sleeve')).toHaveCSS('animation-play-state', 'running');
 });
 
+test('a cached Dex tile put back is watched again; a list closed lets its sleeves go at once (Codex review round 5, #116)', async ({ page }) => {
+  await boot(page, '?seed=3&debug=1&calm=1');
+  await page.evaluate(() => window.__PK__!.debugAdd!('rainbow', 1076, 3048));
+  await page.locator('[data-nav=dex]').click();
+  const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
+  await dex.getByRole('button', { name: 'Rares', exact: true }).click();
+  const sleeve = dex.locator('[data-kid="rainbow"] .portrait-sleeve');
+  await expect(sleeve).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(1);
+  const cached = (await sleeve.elementHandle())!;
+  // Another segment: the rare tile is off the page, and let go.
+  await dex.getByRole('button', { name: 'Ordinary', exact: true }).click();
+  await expect(sleeve).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(0);
+  // Marked offscreen while away: only a fresh observation, back on screen, clears it.
+  await cached.evaluate((e) => e.classList.add('is-offscreen'));
+  // Back: the same cached tile, observed again, so it pauses when scrolled away.
+  await dex.getByRole('button', { name: 'Rares', exact: true }).click();
+  await expect(sleeve).toHaveCount(1);
+  expect(await cached.evaluate((e) => e.isConnected)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(1);
+  await expect(sleeve).not.toHaveClass(/is-offscreen/);
+  // Closing the Dex, with nothing opened after: nothing stays watched.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(0);
+});
+
 test('opening and closing rare cards never piles up watched sleeves (Codex review round 3, #116)', async ({ page }) => {
   await boot(page, '?seed=3&debug=1&calm=1');
   const id = await page.evaluate(() => {
