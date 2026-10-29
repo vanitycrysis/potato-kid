@@ -12,6 +12,7 @@
   - SPARKLE-ANIM (#116: portraits, 6 Codex rounds) and SPARKLE-MAP (#119: the map too, D-095, the owner's call);
   - NEW-KID-POPUP (#117, 7 rounds), TUTORIAL-SPLIT (#120, 6 rounds), DECORATIONS (#121, 8 rounds);
   - CI-POPUP-TIMING (#122): two popup tests timed in the page, since CI was red on `main` after #117.
+  - CI-BENCH-EDGE (#124): the full-bench decorations test (#121) dropped a kid inside the 56 px edge-scroll zone, so the map panned by timing and the next drop missed the bench (a timeout on #123's CI).
 - **Next: the fourth gate-4 build for the owner**, once `main`'s CI is green. Builds go out as CI artifacts (D-060): the web zip and the debug APK from the run on `main`.
 - **Codex has no open design task.** TROPHY-MAP (D-064) and ANIM-POLISH wait until after gate 4.
 - **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
@@ -74,6 +75,7 @@
 
 ## Testing gotchas learned in the fourth round
 
+- **Keep e2e drags out of the edge-scroll zone** (56 CSS px, `EDGE_ZONE` in `scene.ts`). A drag that ends there pans the map for as long as it lasts, so later screen positions depend on timing (#124). At the decorations tests' zoom, 500 world units from the screen's centre is already inside it.
 - **CI's slower runners miss half-second animations.** Anything checked against a short clip (the popup's 500 ms wave) is sampled every frame inside the page, and a layout change is forced from the page (`debugArrivalLayout`), not with `setViewportSize` from the runner (#122).
 - **A frame "while a command is pending" can be staged:** `debugHoldSteps(true)` stops sim steps while frames go on, so a test sees only the scene's preview (#121). Release it after.
 - **Mutation-check with the real timing.** A test that sampled frames after a real tap passed with the bug too (the one wrong step fell between frames); and a tap held 150 ms didn't always reach the sim under 4 parallel workers. Wait for the sim state (`kids()[…].held`) rather than a fixed delay.
