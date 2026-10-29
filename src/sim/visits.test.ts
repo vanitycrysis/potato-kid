@@ -255,6 +255,22 @@ describe('decorations kids use (D-090)', () => {
     expect(k2.activity.kind).not.toBe('visit');
   });
 
+  it('a cancelled sitter is not put back where another kid now stands: it lands beside, nobody shoved (Codex review round 7, #121)', () => {
+    const big = (g: Game) => addKid(g.state.world, 'plain', 300, 1600, createRng(0), 0, defaultBox(120));
+    const g = game();
+    const kid = big(g);
+    dropAt(g, kid, { x: right!.x, y: right!.y });
+    expect(kid.activity).toMatchObject({ kind: 'visit', slot: 'right' });
+    g.step([{ type: 'pickUp', kidId: kid.id }], 0);
+    // Meanwhile a kid comes to stand just below the bench, under the seat.
+    const near = place(g, 'fire', right!.x + 92, 1090);
+    const was = { x: near.x, y: near.y };
+    expect(g.restoredSeat(kid.id)).toBe(null);
+    g.step([{ type: 'cancelDrag', kidId: kid.id, x: right!.x, y: right!.y }], 0);
+    expect(kid.activity.kind).not.toBe('visit');
+    expect([near.x, near.y]).toEqual([was.x, was.y]);
+  });
+
   it("only a food's happiness counts in planting (Codex review, #121)", () => {
     expect(plantsHappy({ happy: { small: true } })).toBe(false);
     expect(plantsHappy({ happy: {} })).toBe(true);

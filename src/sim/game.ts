@@ -21,7 +21,7 @@ import {
   type Site,
   type World,
 } from './world';
-import { approachOf, docked, dropSlot, maybeVisit, seatAt, slotOf, slotTaken, stepVisits, visiting, visitOf, type Visit } from './visits';
+import { approachOf, docked, dropSlot, maybeVisit, seatAt, seatClear, slotOf, slotTaken, stepVisits, visiting, visitOf, type Visit } from './visits';
 
 /** Player input, applied at the start of the next sim step. */
 export type Command =
@@ -1713,7 +1713,10 @@ export class Game {
    */
   restoredSeat(id: number): { x: number; y: number } | null {
     const l = this.lifted.get(id);
-    if (!l || !slotOf(this.sites, l.visit) || slotTaken(this.state.world, l.visit.site, l.visit.slot, id)) return null;
+    const kid = this.state.world.kids.find((k) => k.id === id);
+    if (!l || !kid || !slotOf(this.sites, l.visit) || slotTaken(this.state.world, l.visit.site, l.visit.slot, id)) return null;
+    // Nobody now stands where it sat (Codex review round 7, #121): else it lands as any kid.
+    if (!seatClear(this.state.world, kid, l)) return null;
     return { x: l.x, y: l.y };
   }
 

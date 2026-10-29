@@ -44,7 +44,7 @@ export function slotTaken(world: World, site: number, slot: string, except?: num
  */
 export function dropSlot(world: World, sites: readonly Site[], p: Point, except?: number): { site: number; slot: SiteSlot } | null {
   const kid = except === undefined ? undefined : world.kids.find((k) => k.id === except);
-  const clear = (slot: SiteSlot) => !kid || !world.kids.some((o) => o !== kid && !o.held && intersects(rectAt(kid.box, slot.x, slot.y), kidRect(o)));
+  const clear = (slot: SiteSlot) => !kid || seatClear(world, kid, slot);
   for (let i = 0; i < sites.length; i++) {
     const s = sites[i]!;
     const d = s.drop;
@@ -78,6 +78,12 @@ export function maybeVisit(world: World, sites: readonly Site[], kid: Kid, d: De
   });
   const b = best as { site: number; slot: SiteSlot; dist: number } | null;
   return b ? { kind: 'visit', site: b.site, slot: b.slot.id, phase: 'approach', left: d.approachSeconds, leg: 0 } : null;
+}
+
+/** Whether `kid`, at `p` (a seat), would overlap no other grounded kid (Codex review rounds 6-7, #121). */
+export function seatClear(world: World, kid: Kid, p: Point): boolean {
+  const r = rectAt(kid.box, p.x, p.y);
+  return !world.kids.some((o) => o !== kid && !o.held && intersects(r, kidRect(o)));
 }
 
 /** Whether a box at `p` would overlap another grounded kid. */
