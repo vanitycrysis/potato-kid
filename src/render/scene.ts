@@ -195,6 +195,8 @@ export class MapScene {
   private readonly plotsView: PlotsView | null;
   private readonly fieldsView: FieldsView | null;
   private readonly decorationsView: DecorationsView | null;
+  /** Test-only (`?debug=1`): no sim steps while set, so a frame shows what waits to be applied. */
+  debugHoldSteps = false;
   /** Each bought field's drop target (§22.4): the Garden's dwell rules, on Codex's drag rect. */
   private fieldTargets: HomeTarget[] = [];
   /** What each field's dwell was started for (its food and places): a change starts it over (§22.4). */
@@ -1584,10 +1586,11 @@ export class MapScene {
     // Clamp long frames (tab switch) so the sim never spirals. Long absences are
     // offline catch-up's job (M3), not the frame loop's.
     this.acc += Math.min(dt, 0.25);
-    while (this.acc >= STEP) {
+    while (this.acc >= STEP && !this.debugHoldSteps) {
       this.stepOnce();
       this.acc -= STEP;
     }
+    if (this.debugHoldSteps) this.acc = 0;
     const alpha = this.acc / STEP;
     // This frame's drawn positions first (interpolated, overlap-free), then the held kid
     // resolves against exactly those (Codex review, PR #14), then everything is drawn.

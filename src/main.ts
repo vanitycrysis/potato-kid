@@ -73,6 +73,8 @@ declare global {
       debugGive?: (amounts: { materials?: number; potatokens?: number; pantry?: Record<string, number> }) => void;
       /** Only with `?debug=1`: a solid box in world units, so no spot inside it is clear (refusal tests); null removes the last. */
       debugObstacle?: (box: { minX: number; minY: number; maxX: number; maxY: number } | null) => void;
+      /** Only with `?debug=1`: holds the sim's steps (frames go on), or lets them run again. */
+      debugHoldSteps?: (on: boolean) => void;
       /** The audio runtime's state (tests). */
       audio: () => {
         unlocked: boolean;
@@ -337,6 +339,7 @@ async function boot(): Promise<void> {
           debugListenSteps: (fn: (types: string[]) => void) => scene.listenSteps((events) => fn(events.map((e) => e.type))),
           debugAudioInterrupt: () => audio?.debugInterrupt(),
           debugLoadedCostumes: () => scene.loadedCostumes,
+          debugHoldSteps: (on: boolean) => void (scene.debugHoldSteps = on),
           debugObstacle: (box: { minX: number; minY: number; maxX: number; maxY: number } | null) => {
             if (box) scene.game.state.world.obstacles.push({ box, circle: { x: 0, y: 0, r: 0 } });
             else scene.game.state.world.obstacles.pop();
