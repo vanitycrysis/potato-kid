@@ -143,7 +143,8 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
     case 'full':
       return 'Garden is full. Make room for a kid.';
     case 'noRoom':
-      return 'No clear spot by the Garden. Move a kid aside.';
+      // A ready plot's tap (D-088, §27.6).
+      return command === 'harvest' ? 'No clear spot near the Garden. Try again after kids move.' : 'No clear spot by the Garden. Move a kid aside.';
     case 'locked':
       // Bias is locked until built (engine guard); the Compendium locks respawns.
       return command === 'setBias' ? 'Build Spawn bias first.' : 'Build the Compendium first.';
@@ -165,6 +166,9 @@ export function refusalText(reason: RejectReason, command?: string, currency?: '
     // D-074: interim copy until LAYOUT-DESIGN settles taking kids out of plots.
     case 'ready':
       return 'This plot’s kid is ready to sprout. It can’t be cancelled now.';
+    // D-088: interim copy until ROUND4-DESIGN.
+    case 'notReady':
+      return 'This plot is still growing.';
     // GUI_MVP §17.2, §18.2: the sheets say these with the kid's name and the food.
     case 'hated':
       return 'This kid won’t eat that. Nothing was spent.';

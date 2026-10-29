@@ -3,7 +3,8 @@ import type { PlantingArt } from '../content/artData';
 import { gate4Data } from '../content/artData';
 import type { Plot } from '../sim/game';
 import { DEFAULT_LOOK } from '../sim/world';
-import { plotAssets, plotAt, plotRect } from './plotsView';
+import { Texture } from 'pixi.js';
+import { glowEllipses, plotAssets, plotAt, plotRect, PlotsView, readySignRect } from './plotsView';
 
 // What each plot shows (GUI_MVP §15.2): Codex's shipped tokens, so a token change shows up here.
 const art = gate4Data!.planting as PlantingArt;
@@ -14,15 +15,15 @@ const growing = (grown: number): Plot => ({ seed: { planted: [kid, kid, kid], sp
 
 describe('what a plot shows (GUI_MVP §15.2)', () => {
   it('an empty plot: soil and its five holes', () => {
-    expect(plotAssets(art, { seed: null }, grow, null)).toEqual([art.empty, art.fillingAsset]);
+    expect(plotAssets(art, { seed: null }, grow)).toEqual([art.empty, art.fillingAsset]);
   });
 
   it('a filling plot: one stamp per kid in it, up to five', () => {
-    for (const n of [1, 3, 5]) expect(plotAssets(art, filling(n), grow, null)).toEqual([art.empty, art.fillingAsset, ...Array(n).fill(art.filledSlotAsset)]);
+    for (const n of [1, 3, 5]) expect(plotAssets(art, filling(n), grow)).toEqual([art.empty, art.fillingAsset, ...Array(n).fill(art.filledSlotAsset)]);
   });
 
   it('a growing seed: its stage by progress, with no holes or stamps', () => {
-    const stage = (p: number) => plotAssets(art, growing(p * grow), grow, null);
+    const stage = (p: number) => plotAssets(art, growing(p * grow), grow);
     const [seed, shoot, leaves, ready] = art.stages.map((s) => s.asset);
     expect(stage(0)).toEqual([art.empty, seed]);
     expect(stage(0.2499)).toEqual([art.empty, seed]);
@@ -33,13 +34,27 @@ describe('what a plot shows (GUI_MVP §15.2)', () => {
     expect(stage(1)).toEqual([art.empty, ready]);
   });
 
-  it('a ready seed waiting for a clear spot shows the waiting sign (a full map no longer holds it, D-084)', () => {
-    expect(plotAssets(art, growing(grow), grow, 'noRoom')).toEqual([art.empty, art.waitingAsset]);
+  it('a ready seed shows its checked sign until it is tapped, also while it waits for a clear spot (D-088, §27.6)', () => {
+    const ready = art.stages.find((x) => x.from >= 1)!.asset;
+    expect(plotAssets(art, growing(grow), grow)).toEqual([art.empty, ready]);
+  });
+
+  it('the ripe glow: two ellipses grown past the soil by 28/20 and 16/12 CSS px at any zoom (§27.6)', () => {
+    const soil = { x: -80, y: -40, width: 160, height: 50 };
+    for (const zoom of [0.25, 0.4, 1.5]) {
+      const [outer, inner] = glowEllipses(soil, zoom);
+      expect([outer!.x, outer!.y]).toEqual([0, -15]);
+      expect(outer!.rx * 2 * zoom).toBeCloseTo(160 * zoom + 28, 9);
+      expect(outer!.ry * 2 * zoom).toBeCloseTo(50 * zoom + 20, 9);
+      expect(inner!.rx * 2 * zoom).toBeCloseTo(160 * zoom + 16, 9);
+      expect(inner!.ry * 2 * zoom).toBeCloseTo(50 * zoom + 12, 9);
+      expect([outer!.alpha, inner!.alpha]).toEqual([0.28, 0.72]);
+    }
   });
 
   it('never shows what the seed will be', () => {
-    const a = plotAssets(art, growing(50), grow, null);
-    const b = plotAssets(art, { seed: { planted: [kid, kid, kid], sprout: { type: 'hero' }, grown: 50 } }, grow, null);
+    const a = plotAssets(art, growing(50), grow);
+    const b = plotAssets(art, { seed: { planted: [kid, kid, kid], sprout: { type: 'hero' }, grown: 50 } }, grow);
     expect(a).toEqual(b);
   });
 });
@@ -76,5 +91,60 @@ describe('tapping a plot (GUI_MVP §15.2)', () => {
     const cb = (b.top + b.bottom) / 2;
     expect(plotAt(art, garden, 4, { x: x - 90, y: ca + 0.7 * (cb - ca) }, 0.15)).toBe(2);
     expect(plotAt(art, garden, 4, { x: x - 90, y: (ca + cb) / 2 }, 0.15)).toBe(0);
+  });
+});
+
+describe("a ready plot's sign is its own target (§27.6; Codex review, #115)", () => {
+  const garden = { x: 1536, y: 2348 };
+  it('at far zoom, a tap on the enlarged sign past its soil is that plot, not the neighbour under it', () => {
+    const zoom = 0.18;
+    const sign = readySignRect(art, garden, 0, zoom)!;
+    const p = { x: sign.right - 1, y: (sign.top + sign.bottom) / 2 };
+    // Past plot 1's own soil edge: without the sign it would be plot 1's.
+    expect(plotAt(art, garden, 2, p, zoom)).toBe(1);
+    expect(plotAt(art, garden, 2, p, zoom, 44, (i) => i === 0)).toBe(0);
+    // The sign is at least 96 CSS px across.
+    expect((sign.right - sign.left) * zoom).toBeGreaterThan(40);
+  });
+
+  it('where two ready signs overlap, the one drawn on top (the later plot) is hit (Codex review round 2, #115)', () => {
+    const zoom = 0.18;
+    // Codex's point: inside both enlarged signs, nearer plot 0's centre.
+    const p = { x: 1502, y: 2382.75 };
+    const a = readySignRect(art, garden, 0, zoom)!;
+    const b = readySignRect(art, garden, 1, zoom)!;
+    for (const r of [a, b]) expect(p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom).toBe(true);
+    expect(plotAt(art, garden, 2, p, zoom, 44, () => true)).toBe(1);
+  });
+});
+
+describe('drawing a ready plot (§27.6)', () => {
+  it("draws ready signs above every plot's soil, so a sign reaching over a neighbour is seen there (Codex review round 3, #115)", () => {
+    const textures = new Map<string, Texture>(['fx_plant_plot', 'fx_plant_filling', ...art.stages.map((x) => x.asset)].map((n) => [n, Texture.WHITE]));
+    const view = new PlotsView(art, { x: 1536, y: 2348 }, textures);
+    view.update([growing(grow), { seed: null }], grow, 0.18);
+    const [soils, signs] = view.root.children as unknown as [{ children: unknown[] }, { children: unknown[] }];
+    expect(soils.children).toHaveLength(2);
+    expect(signs.children).toHaveLength(1);
+    expect(view.ready(0.18).map((r) => r.glow)).toEqual([true, false]);
+    // No longer ready: the sign goes.
+    view.update([{ seed: null }, { seed: null }], grow, 0.18);
+    expect(signs.children).toHaveLength(0);
+  });
+
+  it('keeps signs in plot order whichever ripened first (Codex review round 4, #115)', () => {
+    const textures = new Map<string, Texture>(['fx_plant_plot', 'fx_plant_filling', ...art.stages.map((x) => x.asset)].map((n) => [n, Texture.WHITE]));
+    const view = new PlotsView(art, { x: 1536, y: 2348 }, textures);
+    const signs = view.root.children[1]!;
+    // Plot 2 ripens first, then plot 1: plot 2's sign must still be drawn on top.
+    view.update([growing(grow / 2), growing(grow)], grow, 0.18);
+    const second = signs.children[0]!;
+    view.update([growing(grow), growing(grow)], grow, 0.18);
+    expect(signs.children).toHaveLength(2);
+    expect(signs.children[1]).toBe(second);
+    // Plot 1 harvested and ripe again: still under plot 2's.
+    view.update([{ seed: null }, growing(grow)], grow, 0.18);
+    view.update([growing(grow), growing(grow)], grow, 0.18);
+    expect(signs.children[1]).toBe(second);
   });
 });

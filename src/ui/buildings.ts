@@ -318,7 +318,7 @@ export class BuildingSheets {
         // plots follow (GUI_MVP §15.4).
         if (building === 'garden') {
           act.button.classList.add('garden-upgrade');
-          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button], this.arrivals, this.fieldsSection?.(() => this.gardenLauncher));
+          this.plots = new GardenPlots(this.scene, this.content, sheet, this.notes, [...parts, act.button], this.arrivals, () => this.sheets.close(), this.fieldsSection?.(() => this.gardenLauncher));
         } else {
           body.append(...parts);
           footer.append(act.button);

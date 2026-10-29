@@ -53,6 +53,8 @@ export type Command =
   | { type: 'plant'; kidIds: number[]; plot?: number }
   /** Start a plot growing (D-061): it needs `minKids` kids; never automatic. */
   | { type: 'startGrowing'; plot: number }
+  /** The player taps a ready plot (D-088): its kid comes up at the Garden, even on a full map (D-084). */
+  | { type: 'harvest'; plot: number }
   /** Take one kid back out of a plot still filling (D-074): it comes back to the map as it went in. */
   | { type: 'unplant'; plot: number; kidId: number }
   /**
@@ -104,6 +106,8 @@ export type RejectReason =
   | 'tooFewKids'
   /** The plot's sprout is ready: it can't be cancelled (D-074). */
   | 'ready'
+  /** The plot's sprout is still growing: there is nothing to bring up yet (D-088). */
+  | 'notReady'
   /** The kid won't eat that food (D-056). Nothing is spent. */
   | 'hated'
   /** Not a food, or not an allowed name (GUI_MVP §18.2). */
@@ -170,7 +174,7 @@ export interface Plot {
 }
 
 /**
- * Why a ready plot hasn't sprouted (GUI_MVP §15.3): no spot by the Garden is clear. A full map
+ * Why a ready plot hasn't sprouted when tapped (GUI_MVP §15.3): no spot by the Garden is clear. A full map
  * no longer holds a sprout back (D-084).
  */
 export type PlotWaiting = 'noRoom';
@@ -183,8 +187,6 @@ export interface OfflineReport {
   /** Potatokens from Dex milestones that offline spawns reached. */
   potatokens: number;
   spawned: Kid[];
-  /** Kids that sprouted from plots while away (D-054). */
-  sprouted: Kid[];
   /** Plots ready on return but waiting for room. */
   plotsWaiting: number;
   /** Bites the fields grew while away, by food (D-069). */
@@ -578,8 +580,8 @@ export class Game {
     // Touching recipe pairs fuse first, so a kid dropped against its partner fuses.
     this.resolveFusions(events);
     separate(world);
-    // Ready sprouts come up before the Garden's own spawn (GUI_MVP §15.3).
-    this.advancePlots(dt, events);
+    // Started seeds grow; a ready one waits for the player's tap (D-088).
+    this.advancePlots(dt);
     this.advanceSpawn(dt, events);
     // This step's time is now credited (plan §3): online time is never credited again offline.
     this.state.accountedUntil += dt * 1000;
@@ -603,7 +605,6 @@ export class Game {
 
     const events: GameEvent[] = [];
     const spawned: Kid[] = [];
-    const sprouted: Kid[] = [];
     /** Offline arrivals, seconds into the absence. */
     const arrived = new Map<number, number>();
     // Each kid earns its base rate for the whole absence, and its happy extra only until the
@@ -621,43 +622,26 @@ export class Game {
     // Fields keep growing while away, for the credited time (D-069).
     const food: Record<string, number> = {};
     for (const e of this.advanceFields(away, [])) if (e.type === 'harvested') food[e.food] = (food[e.food] ?? 0) + e.bites;
-    const admit = (kid: Kid, at: number, into: Kid[]) => {
+    const admit = (kid: Kid, at: number) => {
       kid.grace = 0; // it has been around for a while
-      into.push(kid);
+      spawned.push(kid);
       arrived.set(kid.id, at);
       materials += this.incomeOfKid(kid) * Math.max(0, away - at);
     };
-    // Started seeds keep growing (D-061); those that ripen while away, in time then plot order.
-    const grow = this.content.balance.planting.growSeconds;
-    const ripening = s.plots
-      .flatMap((p, i) => (p.seed?.sprout ? [{ i, at: Math.max(0, grow - p.seed.grown) }] : []))
-      .filter((r) => r.at <= away + 1e-6)
-      .sort((a, b) => a.at - b.at || a.i - b.i);
-    for (const p of s.plots) if (p.seed?.sprout) p.seed.grown = Math.min(grow, p.seed.grown + away);
+    // Started seeds keep growing (D-061); a ripe one waits for the player's tap (D-088).
+    this.advancePlots(away);
     // First spawn when the current interval completes; a banked spawn (progress at the
     // interval) is due at once. The interval is read per spawn: the tutorial can end
-    // partway through (D-052). Garden spawns and sprouts share one timeline, a sprout first
-    // on a tie, as online. Nothing leaves the map offline, so once it's full the Garden stops;
-    // sprouts still come up (D-084). Once no spot near the outlet is free, nothing more
-    // arrives; each turn admits a kid or stops.
+    // partway through (D-052). Nothing leaves the map offline, so once it's full the Garden
+    // stops; once no spot near the outlet is free, nothing more arrives either.
     let t = Math.max(0, this.interval - s.spawnProgress);
     let last: number | undefined;
     // Tolerance absorbs float drift, as in advanceSpawn.
-    for (;;) {
-      const seed = ripening[0];
-      const gardenDue = s.world.kids.length < this.capacity && t <= away + 1e-6;
-      if (seed && (!gardenDue || seed.at <= t + 1e-9)) {
-        const kid = this.sproutFrom(seed.i, events);
-        if (!kid) break;
-        ripening.shift();
-        admit(kid, seed.at, sprouted);
-        continue;
-      }
-      if (!gardenDue) break;
+    while (s.world.kids.length < this.capacity && t <= away + 1e-6) {
       const kid = this.spawnAtOutlet(() => this.rollSpawnType(), 'offline', events);
       if (!kid) break;
       s.gardenSpawns++;
-      admit(kid, t, spawned);
+      admit(kid, t);
       last = t;
       t += this.interval;
     }
@@ -682,8 +666,8 @@ export class Game {
     this.syncRngState();
     let potatokens = 0;
     for (const e of events) if (e.type === 'earned') potatokens += e.potatokens;
-    const plotsWaiting = s.plots.filter((p) => p.seed && p.seed.grown >= grow).length;
-    return { seconds: away, materials, potatokens, spawned, sprouted, plotsWaiting, food };
+    const plotsWaiting = s.plots.filter((p) => this.plotReady(p)).length;
+    return { seconds: away, materials, potatokens, spawned, plotsWaiting, food };
   }
 
   /**
@@ -720,6 +704,10 @@ export class Game {
       }
       if (c.type === 'plant') {
         this.plant(c, events);
+        continue;
+      }
+      if (c.type === 'harvest') {
+        this.harvest(c.plot, events);
         continue;
       }
       if (c.type === 'unplant' || c.type === 'emptyPlot') {
@@ -935,21 +923,40 @@ export class Game {
    * one spawn is banked and fires as soon as there is room.
    */
   /**
-   * Started seeds grow; a ready one sprouts at the Garden outlet, in plot order, if the map
-   * has room and a spot there is clear. Otherwise it waits, ready, as long as it takes (D-061).
+   * Started seeds grow; a ready one waits, as long as it takes, for the player to tap it
+   * (D-088). A plot no longer ready forgets why its last tap was refused, and so does one
+   * whose kid would now find a clear spot: it says so without coming up (§27.6; Codex
+   * review, #115).
    */
-  private advancePlots(dt: number, events: GameEvent[]): void {
+  private advancePlots(dt: number): void {
     const grow = this.content.balance.planting.growSeconds;
-    this.plotWaits.clear();
     this.state.plots.forEach((plot, i) => {
-      const seed = plot.seed;
-      if (!seed?.sprout) return;
-      seed.grown = Math.min(grow, seed.grown + dt);
-      if (seed.grown < grow) return;
-      // A sprout comes up even on a full map (D-084): a map of kids that can't fuse, with every
-      // plot holding a sprout, would otherwise be stuck for good. Only the Garden waits for room.
-      if (!this.sproutFrom(i, events)) return void this.plotWaits.set(i, 'noRoom');
+      if (plot.seed?.sprout) plot.seed.grown = Math.min(grow, plot.seed.grown + dt);
+      if (!this.plotReady(plot)) this.plotWaits.delete(i);
+      else if (this.plotWaits.has(i) && this.freeSpot(this.typed(plot.seed!.sprout!.type, this.peekLook()).box, this.spawnAt.x, this.spawnAt.y)) this.plotWaits.delete(i);
     });
+  }
+
+  /** A started seed that has grown its full time: its kid comes up when the plot is tapped (D-088). */
+  plotReady(plot: Plot): boolean {
+    return !!plot.seed?.sprout && plot.seed.grown >= this.content.balance.planting.growSeconds;
+  }
+
+  /**
+   * The player taps a ready plot (D-088): its kid comes up at the Garden outlet. A full map
+   * doesn't stop it (D-084): a map of kids that can't fuse would otherwise be stuck for good.
+   * Without a clear spot by the Garden it is refused, and the plot says why until it works.
+   */
+  private harvest(index: number, events: GameEvent[]): void {
+    const reject = (reason: RejectReason) => void events.push({ type: 'rejected', command: 'harvest', reason });
+    const plot = this.state.plots[index];
+    if (!plot?.seed) return reject('gone');
+    if (!this.plotReady(plot)) return reject('notReady');
+    if (!this.sproutFrom(index, events)) {
+      this.plotWaits.set(index, 'noRoom');
+      return reject('noRoom');
+    }
+    this.plotWaits.delete(index);
   }
 
   /** A ready plot's kid comes up at the outlet; the plot empties. Null if no spot. */
@@ -963,7 +970,7 @@ export class Game {
     return kid;
   }
 
-  /** Why plot `i` is ready but hasn't sprouted, as of the last step; null if it isn't waiting. */
+  /** Why plot `i` is ready but its last tap brought nothing up; null if it isn't waiting. */
   plotWaiting(i: number): PlotWaiting | null {
     return this.plotWaits.get(i) ?? null;
   }

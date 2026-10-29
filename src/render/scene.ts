@@ -482,6 +482,11 @@ export class MapScene {
     return this.plotsView?.shown() ?? [];
   }
 
+  /** Test hook: each plot's ripe glow and its ready sign's width in CSS px (§27.6). */
+  get plotsReady(): { glow: boolean; signCss: number | null }[] {
+    return this.plotsView?.ready(this.cam.zoom) ?? [];
+  }
+
   /** Whether a kid is drawn now, or still exists waiting for its costume. */
   viewState(kidId: number): 'shown' | 'pending' | 'gone' {
     if (this.views.has(kidId)) return 'shown';
@@ -499,7 +504,7 @@ export class MapScene {
   command(
     cmd: Extract<
       Command,
-      { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' | 'unlockField' | 'setFieldFood' | 'farm' | 'unfarm' | 'emptyField' }
+      { type: 'upgrade' | 'setBias' | 'instantSpawn' | 'respawn' | 'plant' | 'startGrowing' | 'harvest' | 'unplant' | 'emptyPlot' | 'unlockPlot' | 'feed' | 'name' | 'unlockField' | 'setFieldFood' | 'farm' | 'unfarm' | 'emptyField' }
     >,
   ): void {
     this.pending.push(cmd);
@@ -533,7 +538,7 @@ export class MapScene {
     // there from where they were left.
     for (const k of this.game.state.world.kids) this.prev.set(k.id, { x: k.x, y: k.y });
     // Garden arrivals and sprouts alike need a view (Codex review, PR #72).
-    for (const kid of [...report.spawned, ...report.sprouted]) this.addView(kid);
+    for (const kid of report.spawned) this.addView(kid);
     this.app.ticker.start();
     for (const fn of this.resumeListeners) fn(report);
     return report;
@@ -707,7 +712,7 @@ export class MapScene {
    * fusions use the drawn box.
    */
   private smallKidsAt(p: { x: number; y: number }): number[] {
-    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0) !== null) return [];
+    if (this.plotsView && plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, p, this.cam.zoom, 0, (i) => this.game.plotReady(this.game.state.plots[i]!)) !== null) return [];
     // A bought field's own bed (and its farming kids) comes before any pickup halo (§20.1).
     if (this.art.farm && fieldAt(this.art.farm, this.game.state.fields.length, p, this.cam.zoom, 0) !== null) return [];
     const min = TAP_TARGET / this.cam.zoom;
@@ -1000,7 +1005,7 @@ export class MapScene {
         }
         // Rechecked at release, where the finger is now (§15.2).
         const at = this.toWorld(e);
-        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, at, this.cam.zoom) : null;
+        const plot = this.plotsView ? plotAt(this.art.planting!, this.gardenGround, this.game.state.plots.length, at, this.cam.zoom, 44, (i) => this.game.plotReady(this.game.state.plots[i]!)) : null;
         if (plot !== null) {
           for (const fn of this.plotTapListeners) fn(plot);
           return;
@@ -1517,7 +1522,7 @@ export class MapScene {
       this.drag.target = this.dropTargetAt(this.camera.toLocal(this.dragScreen));
     }
     this.updateRecipe();
-    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, (i) => this.game.plotWaiting(i));
+    this.plotsView?.update(this.game.state.plots, this.game.growSeconds, this.cam.zoom);
     this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();
     for (const k of kids) {

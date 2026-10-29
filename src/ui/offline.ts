@@ -35,11 +35,11 @@ export function openOfflineSummary(sheets: Sheets, report: OfflineReport, foods:
       stat('icon_materials', 'Materials earned', `+${materials}`, materials === exact ? undefined : `(${exact} Materials)`),
       stat('icon_kids', 'Kids arrived', formatExact(report.spawned.length)),
       stat('icon_potatokens', 'Milestone Potatokens', `+${formatExact(report.potatokens)}`),
-      // Planting (GUI_MVP §15.5): only when a plot grew while away.
-      ...(report.sprouted.length || report.plotsWaiting
-        ? [stat('icon_garden', 'Kids sprouted', formatExact(report.sprouted.length)), stat('icon_timer', 'Plots ready', formatExact(report.plotsWaiting))]
-        : []),
     ),
+    // Planting (§27.6): plots ready for a tap (D-088), only when there are some.
+    ...(report.plotsWaiting
+      ? [el('p', 'sheet-body-text offline-plots', report.plotsWaiting === 1 ? '1 plot is ready to sprout.' : `${formatExact(report.plotsWaiting)} plots are ready to sprout.`)]
+      : []),
     ...food,
     el('p', 'sheet-body-text', 'Kids wandered in. Recipes wait for you.'),
   );

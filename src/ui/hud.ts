@@ -193,8 +193,24 @@ export class Hud {
     // From the map: a new visit, with no way back to an earlier one's Pantry (Codex review, #90).
     scene.listenFieldTap((field) => this.fields.openField(field, gardenCell, { gardenBack: null }));
     scene.listenWorkerTap((kidId) => this.kidCard.open(kidId, dex));
+    // A ready plot's tap brings its kid up instead (D-088): the plot glows until then.
+    // One harvest a plot until its answer arrives: a second quick tap is not a second request
+    // (§27.6; Codex review, #115).
+    const harvesting = new Set<number>();
+    scene.listenSteps((events) => {
+      for (const e of events) {
+        if (e.type === 'spawned' && e.source === 'sprout' && e.plot !== undefined) harvesting.delete(e.plot);
+        else if (e.type === 'rejected' && e.command === 'harvest') harvesting.clear();
+      }
+    });
     scene.listenPlotTap((plot) => {
-      if (!this.save.readOnly) this.buildings.openPlot(plot, gardenCell);
+      if (this.save.readOnly) return;
+      const p = scene.game.state.plots[plot];
+      if (p && scene.game.plotReady(p)) {
+        if (harvesting.has(plot)) return;
+        harvesting.add(plot);
+        scene.command({ type: 'harvest', plot });
+      } else this.buildings.openPlot(plot, gardenCell);
     });
     // Send home (D-048): the target's label stays in the world area between HUD and tray.
     const home = new HomeOverlay(() => {
