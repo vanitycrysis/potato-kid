@@ -2,9 +2,10 @@ import { kidRig, uiData } from '../content/artData';
 import type { Content, KidId } from '../content/types';
 import type { MapScene } from '../render/scene';
 import type { SettingsStore } from '../save/settings';
-import type { GameEvent, OfflineReport } from '../sim/game';
+import type { GameEvent, OfflineReport, Recap } from '../sim/game';
 import { feedbackFor, refusalText, type FeedbackItem } from './feedback';
 import { Nameplates } from './nameplates';
+import { NewKidPopup } from './newKidPopup';
 import { formatCount, formatDuration, formatExact } from './format';
 import { Arrivals } from './arrivals';
 import { BuildingSheets } from './buildings';
@@ -21,7 +22,6 @@ import { PlantingNotes } from './plantingNotes';
 import { el, icon, tierBadge, tierName, tierShort, ui } from './dom';
 import { NOTEBOOK_KEYS, Notebook } from './notebook';
 import { openOfflineSummary } from './offline';
-import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
 import { Sheets, type SheetSnapshot } from './sheet';
 import './hud.css';
@@ -105,13 +105,22 @@ export class Hud {
 
   /** The first-run tutorial and its replays (D-078, GUI_MVP §24). */
   private readonly tutorial: Tutorial;
+  /** The new-kid popup (D-087, D-088). */
+  private readonly popup: NewKidPopup;
+  /** A sheet put aside at a return, for its popups and summaries: it comes back after them. */
+  private asideForReturn = false;
+  /**
+   * Saves the game now (set by the app): a popup or summary acknowledged is kept before the
+   * next is shown (§27.5).
+   */
+  persist: () => void = () => {};
 
   constructor(
     private readonly scene: MapScene,
     private readonly content: Content,
     private readonly settings: SettingsStore,
     /** Offer the tutorial on a first run: off in tests unless asked for (`?tutorial=1`). */
-    private readonly options: { tutorialAuto: boolean } = { tutorialAuto: true },
+    private readonly options: { tutorialAuto: boolean; arrivals: boolean } = { tutorialAuto: true, arrivals: true },
   ) {
     this.applyTokens();
     this.known = new Set(scene.game.state.discoveredKids);
@@ -151,6 +160,17 @@ export class Hud {
       this.trayCell('notebook', 'Notebook', 'icon_r3_notebook', (b) => this.notebook.open(b)),
     );
     tray.setAttribute('aria-label', 'Main');
+    // The arrivals waiting live in the game state, saved with the births they show (§27.5).
+    this.popup = new NewKidPopup(
+      content,
+      () => scene.game.state.presentation.arrivals,
+      () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+      // Save banners stay usable above it (§27.3).
+      () => [this.top, tray, this.feedback, document.getElementById('app')].filter((e): e is HTMLElement => !!e),
+      (paused) => (scene.inputPaused = paused),
+      () => this.trayCells.get('garden') ?? null,
+      () => this.persist(),
+    );
     this.tutorial = new Tutorial(
       scene,
       settings,
@@ -277,6 +297,8 @@ export class Hud {
       scene.setInsets(this.top.getBoundingClientRect().bottom, window.innerHeight - tray.getBoundingClientRect().top);
       // The tutorial's spotlight is measured on the new layout.
       this.tutorial.relayout();
+      // And the new-kid popup, whose layout depends on the room a banner leaves (§27.4).
+      this.popup.relayout();
     };
     new ResizeObserver(measure).observe(document.body);
     new ResizeObserver(measure).observe(this.top);
@@ -302,9 +324,19 @@ export class Hud {
     // Offline catch-up can discover types; the summary reports them, so no card later
     // should call them new (Codex review, PR #33).
     scene.listenResume((report) => {
+      // Each kind first found while away meets the player first, one popup each, in the
+      // report's order (D-087, §27.5); known arrivals are only counted in the summary.
+      const fresh = new Set<KidId>();
+      for (const k of report.spawned) {
+        if (!this.options.arrivals || this.known.has(k.type) || fresh.has(k.type)) continue;
+        fresh.add(k.type);
+        this.popup.add({ source: 'garden', type: k.type, look: { body: k.look.body, face: k.look.face, scale: k.look.scale }, isNew: true, potatokens: report.awards[k.id] ?? 0, kidId: k.id });
+      }
       for (const t of scene.game.state.discoveredKids) this.known.add(t);
-      this.offlineSummary(report);
+      this.offlineSummary(report, fresh.size);
     });
+    // With no summary after the popups, a sheet put aside for them comes back.
+    this.popup.onDrained(() => this.returnDone());
     const tick = (now: number) => {
       this.render(now);
       requestAnimationFrame(tick);
@@ -316,6 +348,22 @@ export class Hud {
   /** Test hook: the map nicknames shown now (D-091). */
   get nameplatesShown(): { id: number; text: string; rect: DOMRect }[] {
     return this.nameplates?.shown() ?? [];
+  }
+
+  /** Test hook: the new-kid popup up now, if any (D-087). */
+  get arrivalShown(): { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; clipTime: number | null; waiting: number } | null {
+    const s = this.popup.shown;
+    return s && { ...s, waiting: this.popup.waiting };
+  }
+
+  /** Debug: queues an arrival as given (tests of how the popup draws it). */
+  debugMeet(m: { source: 'garden' | 'plot' | 'fusion'; type: KidId; look: { body: string; face: string; scale?: number }; isNew: boolean; potatokens: number }): void {
+    this.popup.add(m);
+  }
+
+  /** Debug: treat `type` as found already (tests of the new-recipe card). */
+  debugKnow(type: KidId): void {
+    this.known.add(type);
   }
 
   get knownKids(): string[] {
@@ -437,8 +485,9 @@ export class Hud {
     };
   }
 
-  /** Android Back: closes a name bubble, else an open sheet (returns whether it did). */
+  /** Android Back: the new-kid popup first, then a name bubble, else an open sheet (returns whether it did). */
   back(): boolean {
+    if (this.popup.back()) return true;
     if (this.tutorial.back()) return true;
     if (this.bubble.openKey !== null) {
       this.bubble.hide(true);
@@ -448,24 +497,66 @@ export class Hud {
   }
 
   /**
-   * The offline-return summary, once per report (GUI_MVP §8). A sheet that was open is put
-   * away and comes back, where it was, when the summary is dismissed; a second report while
-   * the summary is up replaces it. A short absence (a quick app switch) shows nothing: the
-   * rewards are credited all the same (D-049).
+   * A return (GUI_MVP §8, §27.5): its summary joins the saved queue, oldest first, and waits
+   * for the new kinds' popups; a sheet that was open steps aside and comes back, where it was,
+   * after all of them. A short absence (a quick app switch) gets no summary, though its new
+   * kinds still meet the player; the rewards are credited all the same (D-049).
    */
-  private offlineSummary(report: OfflineReport): void {
+  private offlineSummary(report: OfflineReport, newKinds = 0): void {
     if (this.save.readOnly) return;
-    if (report.seconds < this.content.balance.economy.offlineSummaryMinSeconds) return;
-    // The summary comes first: an open tutorial steps aside until it is dismissed (§24.1).
-    this.tutorial.stepAside();
-    if (!this.summaryOpen) {
-      const open = this.sheets.snapshot();
-      this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
+    const recap = report.seconds >= this.content.balance.economy.offlineSummaryMinSeconds;
+    if (recap) {
+      this.scene.game.state.presentation.recaps.push({
+        seconds: report.seconds,
+        materials: report.materials,
+        potatokens: report.potatokens,
+        arrived: report.spawned.length,
+        newKinds,
+        plotsWaiting: report.plotsWaiting,
+        food: { ...report.food },
+      });
     }
+    if (!recap && newKinds === 0) return;
+    // The return comes first: an open tutorial steps aside until it is over (§24.1).
+    this.tutorial.stepAside();
+    if (this.asideForReturn || this.summaryOpen) return;
+    const open = this.sheets.snapshot();
+    this.interrupted = open && { ...open, search: this.buildings.searchText, plots: this.buildings.plotsSnapshot, card: this.kidCard.snapshot(), farm: this.fields.snapshot(), gardenBack: this.buildings.fieldsBack };
+    // Gone at once: it comes back after the return, and must not still be fading out then.
+    if (this.sheets.isOpen) this.sheets.close(false, true);
+    this.asideForReturn = true;
+  }
+
+  /** The oldest summary waiting; dismissed, it leaves the queue. */
+  private openSummary(recap: Recap): void {
     this.summaryOpen = true;
-    openOfflineSummary(this.sheets, report, this.content.balance.feeding.foods, (replaced) => {
-      if (replaced) return;
-      this.summaryOpen = false;
+    openOfflineSummary(
+      this.sheets,
+      recap,
+      this.content.balance.feeding.foods,
+      (replaced) => {
+        const queue = this.scene.game.state.presentation.recaps;
+        if (queue[0] === recap) queue.shift();
+        this.persist();
+        this.summaryOpen = false;
+        // Replaced by a sheet it handed back (a kid card, the Garden): that sheet is in front.
+        if (replaced) this.asideForReturn = false;
+        else this.returnDone();
+      },
+      recap.newKinds,
+    );
+  }
+
+  /** Every popup and summary of a return seen: the sheet it put aside comes back. */
+  private returnDone(): void {
+    if (!this.asideForReturn || this.popup.waiting > 0 || this.summaryOpen || this.scene.game.state.presentation.recaps.length > 0) return;
+    this.asideForReturn = false;
+    this.restoreInterrupted();
+  }
+
+  /** Brings back the sheet the return put aside, where it was. */
+  private restoreInterrupted(): void {
+    {
       const back = this.interrupted;
       this.interrupted = null;
       if (!back) return;
@@ -483,7 +574,7 @@ export class Hud {
       else if (back.key === 'stathelp') this.statHelp(this.helpKey, back.launcher, this.statContent(this.helpKey), back.scrollTop);
       // With the way back its Fields were opened with, if any (the Pantry, feeding).
       else if (back.key === 'garden') this.buildings.reopenGarden(back.launcher, { scrollTop: back.scrollTop, search: back.search, plots: back.plots }, back.gardenBack);
-    });
+    }
   }
 
   /**
@@ -562,13 +653,30 @@ export class Hud {
     else if (open !== null) this.bubble.update(open, this.statContent(open));
 
     this.feedback.style.visibility = this.bubble.openKey !== null ? 'hidden' : '';
+    // The new-kid popup first (§27.3): once nothing else holds the screen (no sheet, gesture,
+    // name bubble, tutorial card or unanswered recovery warning) and its kid is drawn.
+    // An unanswered recovery notice comes first, but only while it is on screen: the unsaved
+    // warning hides it, and the player can't answer what they can't see (Codex review round 5, #117).
+    const urgent = this.save.recovery && !this.recoveryDismissed && !this.save.unsaved;
+    // An arrival found while the tutorial is up comes first: it steps aside, keeping its step,
+    // and comes back after (§27.3). One previewed over a sheet waits with the sheet.
+    if (this.popup.waiting > 0 && this.tutorial.isOpen && !this.sheets.isOpen) this.tutorial.stepAside();
+    this.popup.tick(
+      now,
+      !this.sheets.isOpen && !this.summaryOpen && !this.scene.busy && this.bubble.openKey === null && !this.tutorial.isOpen && !this.save.readOnly && !urgent,
+      (m) => m.kidId === undefined || this.scene.viewState(m.kidId) !== 'pending',
+    );
+    // Then the return summaries waiting, oldest first, each once its popups are seen (§27.5).
+    const recaps = this.scene.game.state.presentation.recaps;
+    if (recaps.length && !this.summaryOpen && this.popup.waiting === 0 && !this.sheets.isOpen && !this.scene.busy && !this.save.readOnly && !urgent) this.openSummary(recaps[0]!);
     this.tickFeedback(now, dt);
-    // The first-run offer waits for the return summary, an unanswered recovery banner, a sheet
-    // or a name bubble to be out of the way; a read-only save gets none (§24.1).
-    if (!this.summaryOpen && this.sheets.openKey === null && this.bubble.openKey === null && !(this.save.recovery && !this.recoveryDismissed))
-      this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
-    // One put aside for the summary comes back once it is dismissed (over any sheet it brought back).
-    if (this.tutorial.waiting && !this.summaryOpen) this.tutorial.comeBack();
+    // The first-run offer, and a tutorial put aside, wait for every popup and return summary,
+    // an unanswered recovery banner, a sheet or a name bubble to be out of the way; a read-only
+    // save gets none (§24.1, §27.3).
+    const returning = this.summaryOpen || this.popup.waiting > 0 || recaps.length > 0;
+    if (!returning && this.sheets.openKey === null && this.bubble.openKey === null && !urgent) this.tutorial.maybeOffer(this.options.tutorialAuto && !this.save.readOnly);
+    // One put aside for the return comes back once it is over (over any sheet it brought back).
+    if (this.tutorial.waiting && !returning) this.tutorial.comeBack();
     this.sheets.tick();
     const sheet = this.sheets.openKey;
     const selected = sheet === null ? null : NOTEBOOK_KEYS.has(sheet) ? 'notebook' : sheet === 'dex' || sheet === 'kid' ? 'dex' : sheet === 'garden' ? 'garden' : null;
@@ -587,6 +695,12 @@ export class Hud {
     );
     const now = performance.now();
     for (const item of items) {
+      // A new kind, or a kid a plot brought up: the big popup (D-087, D-088).
+      if (item.kind === 'meet') {
+        if (!this.options.arrivals) continue;
+        this.popup.add({ source: item.source, type: item.type, look: item.look, isNew: item.isNew, potatokens: item.potatokens, kidId: item.kidId });
+        continue;
+      }
       const notBefore = this.readyAt(item, now);
       // The command implies the currency, except a respawn (whose sheet keeps its own context).
       const currency = item.kind === 'refusal' ? ({ instantSpawn: 'potatokens', upgrade: 'materials' } as const)[item.command as 'instantSpawn' | 'upgrade'] : undefined;
@@ -605,18 +719,14 @@ export class Hud {
    * after its effect); Infinity while its costume is still loading.
    */
   private readyAt(item: FeedbackItem, now: number): number {
-    // A sprout's card waits for its kid too: a costume still loading would leave it on show
-    // for a kid nobody can see yet (Codex review, PR #77).
-    if (item.kind === 'sprouted') return this.scene.viewState(item.kidId) === 'pending' ? Infinity : now;
-    if (item.kind !== 'discovery' && item.kind !== 'newKid') return now;
-    const after = item.kind === 'discovery' ? this.scene.discoveryToastDelayMs : 0;
+    if (item.kind !== 'discovery') return now;
     const state = item.kidId === undefined ? 'shown' : this.scene.viewState(item.kidId);
-    return state === 'pending' ? Infinity : now + after;
+    return state === 'pending' ? Infinity : now + this.scene.discoveryToastDelayMs;
   }
 
   private kidShown(kidId: number, now: number): void {
     for (const c of this.queue) {
-      if ((c.item.kind === 'discovery' || c.item.kind === 'newKid' || c.item.kind === 'sprouted') && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
+      if (c.item.kind === 'discovery' && c.item.kidId === kidId) c.notBefore = this.readyAt(c.item, now);
     }
   }
 
@@ -637,6 +747,8 @@ export class Hud {
     // Likewise while a name bubble or the tutorial is open: feedback waits, out of sight
     // (GUI_MVP §§23.2, 24.1).
     if (this.bubble.openKey !== null || this.tutorial.isOpen) return;
+    // And while the new-kid popup holds the screen (§27.3: it comes first).
+    if (this.popup.isOpen || this.popup.waiting > 0) return;
     const refusal = this.queue.findIndex((c) => c.item.kind === 'refusal');
     if (this.showing && this.showing.item.kind !== 'refusal' && refusal >= 0 && this.fits(this.queue[refusal]!.node)) {
       const r = this.queue.splice(refusal, 1)[0]!;
@@ -710,15 +822,13 @@ export class Hud {
   }
 
   /** One feedback card, per GUI_MVP §9. */
-  private card(item: FeedbackItem, text?: string): HTMLElement {
+  private card(item: Exclude<FeedbackItem, { kind: 'meet' }>, text?: string): HTMLElement {
     switch (item.kind) {
-      case 'discovery':
-      case 'newKid': {
-        // A planting-only special or rare found for the first time says so (GUI_MVP §15.5, D-072).
-        const kind = kindMark(this.content.kids.find((k) => k.id === item.childType));
-        const heading = item.kind === 'newKid' ? (kind ? `${kind} found` : 'New kid discovered') : item.newKid ? 'New discovery' : 'New recipe found';
+      case 'discovery': {
+        // A new recipe for a kind already found (a new kind is a popup, D-087).
+        const heading = 'New recipe found';
         const lines: Node[] = [el('span', 'card-heading', heading), el('span', 'card-name', this.name(item.childType)), this.tier(item.childType)];
-        if (item.kind === 'discovery' && item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
+        if (item.potatokens > 0) lines.push(this.coinLine(`+${formatExact(item.potatokens)} Potatokens`));
         if (item.milestone > 0) lines.push(el('span', 'card-line', `Dex milestone · +${formatExact(item.milestone)} Potatokens`));
         // The whole card opens this kid in the Potato-Dex (GUI_MVP §9).
         const card = el('button', 'toast toast-reward toast-button', portrait(kidRig!, item.childType, 56), el('div', 'card-text', ...lines));
@@ -806,14 +916,6 @@ export class Hud {
           icon('icon_check', '', 'ui-icon-28'),
           el('span', 'card-heading', item.name ? `Named ${item.name}.` : `Called ${this.name(item.kidType)} again.`),
         );
-      case 'sprouted': {
-        // The reveals (GUI_MVP §15.5): by the actual kid, never by which roll hit. A type new to
-        // the Dex gets the discovery card instead.
-        const kind = kindMark(this.content.kids.find((k) => k.id === item.kidType));
-        const from = `From Plot ${item.plot + 1}.`;
-        const helper = kind ? `${kind} kid · ${from}` : from;
-        return el('div', 'toast toast-short', portrait(kidRig!, item.kidType, 48), el('div', 'card-text', el('span', 'card-heading', `${this.name(item.kidType)} sprouted!`), el('span', 'card-line', helper)));
-      }
     }
   }
 

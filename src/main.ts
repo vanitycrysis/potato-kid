@@ -100,6 +100,10 @@ declare global {
       nameExclusions: () => { left: number; top: number; right: number; bottom: number }[];
       /** Map nicknames shown now (D-091, §27.7): kid id, text and screen box. */
       nameplates: () => { id: number; text: string; left: number; top: number; width: number; height: number }[];
+      /** Only with `?debug=1`: Android's Back, as the native button calls it (returns whether the UI took it). */
+      debugBack?: () => boolean;
+      /** The new-kid popup up now (D-087), and how many arrivals wait, the one up included. */
+      arrival: () => { source: string; type: string; isNew: boolean; sentence: string; body: string; layout: string; sprite: number; scale: number; savedScale: number; clipTime: number | null; waiting: number } | null;
       layers: () => string[];
       /** The stored player settings (GUI_MVP §11). */
       settings: () => Settings;
@@ -107,6 +111,10 @@ declare global {
       debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
+      /** Only with `?debug=1`: marks a kind as found already, so its next fusion is a new recipe's card, not a popup. */
+      debugKnow?: (type: string) => void;
+      /** Only with `?debug=1`: queues a new-kid popup with this look. */
+      debugMeet?: (type: string, look: { body: string; face: string; scale?: number }) => void;
       /** Only with `?debug=1`: shows a save banner state until replaced (screenshots and tests). */
       debugSaveStatus?: (status: { unsaved: boolean; recovery: boolean; readOnly: boolean }) => void;
     };
@@ -182,7 +190,8 @@ async function boot(): Promise<void> {
   );
   // The first-run tutorial (D-078) waits in tests (`debug`, `calm`) unless asked for.
   const testing = params.get('debug') === '1' || params.get('calm') === '1';
-  const hud = new Hud(scene, content, settings, { tutorialAuto: !testing || params.get('tutorial') === '1' });
+  // In tests the tutorial and the new-kid popups stay out of the way unless a test asks for them.
+  const hud = new Hud(scene, content, settings, { tutorialAuto: !testing || params.get('tutorial') === '1', arrivals: !testing || params.get('arrivals') === '1' });
   // Codex's cues and music (ART_AUDIO_PLAN): one cue per sim step, volumes from Settings.
   // Not in read-only mode: the game is frozen there and has no lifecycle to pause it
   // (Codex review, PR #53).
@@ -229,13 +238,15 @@ async function boot(): Promise<void> {
   window.setInterval(() => {
     if (lifecycle.state === 'active') void save();
   }, SAVE_EVERY_MS);
-  // Also after every fusion, purchase and upgrade (plan §4).
+  // Also after every fusion, purchase and upgrade (plan §4), once the step's listeners have run:
+  // the HUD's, registered first, queue the popups those births bring, saved with them (§27.5).
+  hud.persist = () => void save();
   const saveAfter = (e: GameEvent) =>
     e.type === 'fused' || e.type === 'planted' || e.type === 'growing' || e.type === 'unplanted' || e.type === 'plotUnlocked' || e.type === 'upgraded' || e.type === 'biasSet' || e.type === 'fed' || e.type === 'named' || (e.type === 'spawned' && e.source !== 'garden') ||
     // Fields (D-069): bought, a food chosen, kids sent or taken back (Codex review, #90).
     e.type === 'fieldUnlocked' || e.type === 'fieldFood' || e.type === 'farming' || e.type === 'unfarmed';
-  scene.listen((e) => {
-    if (saveAfter(e)) void save();
+  scene.listenSteps((events) => {
+    if (events.some(saveAfter)) void save();
   });
 
   function hooks(): Omit<NonNullable<Window['__PK__']>, 'lastOffline'> {
@@ -268,6 +279,7 @@ async function boot(): Promise<void> {
     watchedSleeves: () => watchedSleeves(),
     nameExclusions: () => hud.nameExclusions,
     nameplates: () => hud.nameplatesShown.map((n) => ({ id: n.id, text: n.text, left: n.rect.left, top: n.rect.top, width: n.rect.width, height: n.rect.height })),
+    arrival: () => hud.arrivalShown,
     layers: () => scene.layerNames,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
@@ -296,6 +308,12 @@ async function boot(): Promise<void> {
             hud.setSaveStatus(status);
           },
           debugKnown: () => hud.knownKids,
+          debugBack: () => hud.back(),
+          debugMeet: (type: string, look: { body: string; face: string; scale?: number }) => hud.debugMeet({ source: 'garden', type, look, isNew: true, potatokens: 0 }),
+          debugKnow: (type: string) => {
+            if (!scene.game.state.discoveredKids.includes(type)) scene.game.state.discoveredKids.push(type);
+            hud.debugKnow(type);
+          },
           debugReadySeed: (plot: number, type: string, wait = false) => {
             scene.game.debugReadySeed(plot, { type });
             if (!wait) scene.command({ type: 'harvest', plot });

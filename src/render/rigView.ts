@@ -353,7 +353,8 @@ export class KidRigView {
   }
 }
 
-function frameAt(clip: Clip, time: number, reverse: boolean): ClipFrame {
+/** A clip's frame at 	ime seconds (looping or held at its end), as the map plays it. */
+export function frameAt(clip: Clip, time: number, reverse: boolean): ClipFrame {
   const n = clip.frames.length;
   let i = Math.floor(time * clip.fps);
   i = clip.loop ? ((i % n) + n) % n : Math.min(n - 1, Math.max(0, i));

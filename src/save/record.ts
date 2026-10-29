@@ -1,3 +1,4 @@
+import { LINES, type MeetSource } from '../content/arrivalLines';
 import { storedNameOk } from '../sim/names';
 import { BUILDING_IDS, type Content } from '../content/types';
 import type { PersistedState } from '../sim/game';
@@ -7,7 +8,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 10;
+export const SAVE_SCHEMA = 11;
 
 export interface SaveRecord {
   schema: number;
@@ -171,6 +172,32 @@ export function validateState(state: unknown, content: Content): string[] {
   if (s.biasTarget !== null && !(typeof s.biasTarget === 'string' && s.biasTarget in content.balance.spawnWeights)) p.push('biasTarget is invalid');
   if (!Array.isArray(s.discoveredKids) || !s.discoveredKids.every((k) => typeof k === 'string' && kidIds.has(k))) p.push('discoveredKids has unknown kids');
   if (!Array.isArray(s.discoveredRecipes) || !s.discoveredRecipes.every((k) => typeof k === 'string')) p.push('discoveredRecipes is invalid');
+  // What the player has yet to see (D-087, §27.5): arrivals and return summaries.
+  const pr = s.presentation as { arrivals?: unknown; recaps?: unknown } | undefined;
+  const arrival = (a: unknown) => {
+    const r = a as Record<string, unknown> | null;
+    const look = r?.look as Record<string, unknown> | undefined;
+    return (
+      !!r &&
+      ['garden', 'plot', 'fusion'].includes(r.source as string) &&
+      typeof r.type === 'string' &&
+      kidIds.has(r.type) &&
+      typeof look?.body === 'string' &&
+      typeof look.face === 'string' &&
+      typeof r.isNew === 'boolean' &&
+      whole(r.potatokens) &&
+      whole(r.line) &&
+      (r.line as number) < LINES[r.source as MeetSource].length &&
+      (look.scale === undefined || (finite(look.scale) && (look.scale as number) > 0)) &&
+      (r.kidId === undefined || whole(r.kidId))
+    );
+  };
+  const recap = (a: unknown) => {
+    const r = a as Record<string, unknown> | null;
+    const food = r?.food as Record<string, unknown> | undefined;
+    return !!r && finite(r.seconds) && finite(r.materials) && whole(r.potatokens) && whole(r.arrived) && whole(r.newKinds) && whole(r.plotsWaiting) && typeof food === 'object' && food !== null && Object.entries(food).every(([k, v]) => foodIds.has(k) && whole(v));
+  };
+  if (typeof pr !== 'object' || pr === null || !Array.isArray(pr.arrivals) || !pr.arrivals.every(arrival) || !Array.isArray(pr.recaps) || !pr.recaps.every(recap)) p.push('presentation is invalid');
   // Rare variants are retired (D-072): a state still recording them wasn't migrated.
   if ('discoveredVariants' in s) p.push('discoveredVariants is retired');
 

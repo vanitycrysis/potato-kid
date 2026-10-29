@@ -96,5 +96,8 @@ export function migrations(content: Content): Record<number, Migration> {
       }
       return s;
     },
+    // Schema 11 (D-087): nothing yet to show. Arrivals an older build kept with the settings
+    // stay there unseen; a save never shows popups for its history (§27.3).
+    10: (state) => ({ ...(state as object), presentation: { arrivals: [], recaps: [] } }),
   };
 }

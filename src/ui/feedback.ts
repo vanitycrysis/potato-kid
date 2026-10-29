@@ -6,10 +6,16 @@ import type { GameEvent, RejectReason } from '../sim/game';
 // fusion belong to that fusion's card until the next birth.
 
 export type FeedbackItem =
-  /** A recipe's first discovery; `newKid` when the child type is new to the Dex too. */
+  /**
+   * A recipe's first discovery whose child was already in the Dex (`newKid` false): a card.
+   * A new kind of child is a `meet` instead (D-087).
+   */
   | { kind: 'discovery'; childType: KidId; kidId?: number; newKid: boolean; potatokens: number; milestone: number }
-  /** A kid type first seen from the Garden, Compendium or a plot (no recipe, no invented reward). */
-  | { kind: 'newKid'; childType: KidId; kidId?: number; milestone: number }
+  /**
+   * The new-kid popup (D-087, D-088, GUI_MVP §27.5): a kind new to the Dex, from the Garden
+   * (any arrival) or a fusion, and every kid a plot brings up. `potatokens`: its awards.
+   */
+  | { kind: 'meet'; source: 'garden' | 'plot' | 'fusion'; type: KidId; kidId: number; look: { body: string; face: string; scale: number }; isNew: boolean; potatokens: number }
   /** A discovery award with no matching fusion in the batch. */
   | { kind: 'recipeReward'; potatokens: number }
   | { kind: 'milestone'; potatokens: number; kids: number }
@@ -29,9 +35,7 @@ export type FeedbackItem =
   /** Field results whose page had closed (§22): bought, a food chosen, kids back by the Garden. */
   | { kind: 'fieldUnlocked'; field: number }
   | { kind: 'fieldFood'; field: number; food: string }
-  | { kind: 'unfarmed'; kidType: KidId; name: string | undefined; field: number; count: number }
-  /** A known type sprouted from a plot (§15.5); a new type gets the discovery card instead. */
-  | { kind: 'sprouted'; kidType: KidId; kidId: number; plot: number };
+  | { kind: 'unfarmed'; kidType: KidId; name: string | undefined; field: number; count: number };
 
 /**
  * Builds the cards for one step. `known` is the Dex before the step; it is updated so the
@@ -39,13 +43,20 @@ export type FeedbackItem =
  */
 export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: number): FeedbackItem[] {
   const out: FeedbackItem[] = [];
-  let current: Extract<FeedbackItem, { kind: 'discovery' | 'newKid' }> | null = null;
+  let current: Extract<FeedbackItem, { kind: 'discovery' | 'meet' }> | null = null;
+  const meet = (source: 'garden' | 'plot' | 'fusion', kid: { id: number; type: KidId; look: { body: string; face: string; scale: number } }, isNew: boolean) => {
+    const m: Extract<FeedbackItem, { kind: 'meet' }> = { kind: 'meet', source, type: kid.type, kidId: kid.id, look: { body: kid.look.body, face: kid.look.face, scale: kid.look.scale }, isNew, potatokens: 0 };
+    out.push(m);
+    return m;
+  };
   for (const e of events) {
     switch (e.type) {
       case 'fused': {
+        // New to the Dex: compared before this birth, whatever the recipe (§27.5).
         const newKid = !known.has(e.child.type);
         known.add(e.child.type);
-        if (e.firstDiscovery) {
+        if (newKid) current = meet('fusion', e.child, true);
+        else if (e.firstDiscovery) {
           current = { kind: 'discovery', childType: e.child.type, kidId: e.child.id, newKid, potatokens: 0, milestone: 0 };
           out.push(current);
         } else {
@@ -55,16 +66,11 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
         break;
       }
       case 'spawned': {
-        if (!known.has(e.kid.type)) {
-          known.add(e.kid.type);
-          current = { kind: 'newKid', childType: e.kid.type, kidId: e.kid.id, milestone: 0 };
-          out.push(current);
-        } else {
-          current = null;
-        }
-        if (e.source === 'sprout' && current === null && e.plot !== undefined) {
-          out.push({ kind: 'sprouted', kidType: e.kid.type, kidId: e.kid.id, plot: e.plot });
-        }
+        const newKid = !known.has(e.kid.type);
+        known.add(e.kid.type);
+        // Every kid a plot brings up meets the player (D-088); from anywhere else, a new kind.
+        if (e.source === 'sprout') current = meet('plot', e.kid, newKid);
+        else current = newKid ? meet('garden', e.kid, true) : null;
         if (e.source === 'instant') {
           const last = out[out.length - 1];
           if (last?.kind === 'arrival') last.count++;
@@ -74,8 +80,10 @@ export function feedbackFor(events: GameEvent[], known: Set<KidId>, discovered: 
       }
       case 'earned':
         if (e.reason === 'discovery') {
-          if (current?.kind === 'discovery') current.potatokens += e.potatokens;
+          if (current) current.potatokens += e.potatokens;
           else out.push({ kind: 'recipeReward', potatokens: e.potatokens });
+        } else if (current?.kind === 'meet') {
+          current.potatokens += e.potatokens;
         } else if (current) {
           current.milestone += e.potatokens;
         } else {

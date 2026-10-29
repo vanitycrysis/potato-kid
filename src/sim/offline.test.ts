@@ -182,3 +182,26 @@ describe('the accounting boundary (plan §3)', () => {
     expect(g.state.discoveredRecipes).toEqual([]);
   });
 });
+
+describe('offline arrivals and their awards (D-087, Codex review round 6, #117)', () => {
+  it('an arrival that reaches a Dex milestone brings its Potatokens, reported on that arrival, once', () => {
+    const g = game();
+    // Four kinds found: the next new one is the fifth, a milestone.
+    g.state.discoveredKids = ['firefighter', 'chef', 'snowman', 'steam'];
+    const before = g.state.potatokens;
+    const r = g.reconcile(T0 + 13 * S);
+    expect(r.spawned).toHaveLength(1);
+    const kid = r.spawned[0]!;
+    expect(r.awards[kid.id]).toBe(content.balance.economy.dexMilestones[0]!.potatokens);
+    expect(r.potatokens).toBe(r.awards[kid.id]);
+    expect(g.state.potatokens - before).toBe(r.potatokens);
+  });
+
+  it('an arrival of a kind already found brings nothing', () => {
+    const g = game();
+    g.state.discoveredKids = Object.keys(content.balance.spawnWeights);
+    const r = g.reconcile(T0 + 13 * S);
+    expect(r.spawned).toHaveLength(1);
+    expect(r.awards).toEqual({});
+  });
+});

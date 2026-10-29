@@ -54,6 +54,8 @@ test('boots, renders and spawns from the Garden', async ({ page }) => {
 
 test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ page }) => {
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+  await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
   // Place the pair far apart so they can't touch by wandering first.
   const { plain, water } = await page.evaluate(() => ({
     plain: window.__PK__!.debugAdd!('plain', 706, 3228),
@@ -96,7 +98,7 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   expect(ids).not.toContain(plain);
   expect(ids).not.toContain(water);
   expect(await page.evaluate(() => window.__PK__!.discoveredRecipes())).toContain('plain|water');
-  await expect(page.locator('.toast')).toContainText('New discovery');
+  await expect(page.locator('.toast')).toContainText('New recipe found');
   await page.screenshot({ path: 'test-results/fusion.png' });
   expect(errors).toEqual([]);
 });
@@ -550,6 +552,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
 
   test('a visible card keeps its time while a kid is held', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b, c } = await page.evaluate(() => ({
       a: window.__PK__!.debugAdd!('plain', 706, 3228),
       b: window.__PK__!.debugAdd!('water', 1286, 2428),
@@ -558,7 +562,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     // Hold another kid for longer than a card's 2.5 s.
     const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
     await page.mouse.move(p.x, p.y - 20);
@@ -566,7 +570,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.mouse.move(p.x + 30, p.y - 30, { steps: 4 });
     expect(['pick_up', 'held']).toContain(await page.evaluate((id) => window.__PK__!.presentationOf(id)?.clip, c));
     await page.waitForTimeout(3200);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     await page.mouse.up();
   });
 
@@ -632,10 +636,12 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a visible card that stops fitting goes back to the queue (640x360 + banner)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 756, 2878), b: window.__PK__!.debugAdd!('water', 1256, 2878) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
     for (let i = 0; i < 6; i++) {
       await page.waitForTimeout(150);
@@ -646,6 +652,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a requeued reward never blocks a waiting refusal (640x360)', async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 360 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b, c } = await page.evaluate(() => ({
       a: window.__PK__!.debugAdd!('plain', 1076, 2878),
       b: window.__PK__!.debugAdd!('water', 1476, 2878),
@@ -656,7 +664,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     await page.evaluate(() => window.__PK__!.centerOn(1276, 2848));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     // Hold a kid (feedback freezes), queue a refusal, then a banner that settles the drag
     // and leaves room for the short refusal but not the reward card. The camera may have
     // moved since (the narrow landscape view): bring the kid back, low in the play band.
@@ -699,6 +707,8 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
   test('a resize during a drag still takes a card that no longer fits off screen', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b, c } = await page.evaluate(() => ({
       a: window.__PK__!.debugAdd!('plain', 706, 3228),
       b: window.__PK__!.debugAdd!('water', 1286, 2428),
@@ -706,7 +716,7 @@ test.describe('GUI-MVP feedback rules (Codex review, PR #33)', () => {
     }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     const p = await page.evaluate((id) => window.__PK__!.screenPointOf(id)!, c);
     await page.mouse.move(p.x, p.y - 20);
     await page.mouse.down();
@@ -752,25 +762,27 @@ test('a discovery card waits until its kid is drawn, even if the costume loads s
     await route.continue();
   });
   const errors = await boot(page, '?seed=3&debug=1&calm=1');
+  // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+  await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'lantern');
   const { hero, glass } = await page.evaluate(() => ({ hero: window.__PK__!.debugAdd!('hero', 756, 3228), glass: window.__PK__!.debugAdd!('glassblower', 1286, 2428) }));
   for (const id of [hero, glass]) await expect.poll(() => page.evaluate((k) => !!window.__PK__!.screenPointOf(k), id)).toBe(true);
   await dropOnto(page, hero, glass);
   await expect.poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type))).toContain('lantern');
   const lantern = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'lantern')!.id);
-  await expect(page.locator('.feedback')).toContainText('New discovery', { timeout: 15_000 });
+  await expect(page.locator('.feedback')).toContainText('New recipe found', { timeout: 15_000 });
   expect(await page.evaluate((id) => !!window.__PK__!.screenPointOf(id), lantern)).toBe(true);
   expect(errors).toEqual([]);
 });
 
-test('a first rare card waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77)', async ({ page }) => {
+test("a first rare's popup waits until its sprout is drawn, even if the costume loads slowly (Codex review, PR #77; D-087)", async ({ page }) => {
   test.setTimeout(60_000);
   await page.route('**/kid_lantern_*', async (route) => {
     await new Promise((r) => setTimeout(r, 3000));
     await route.continue();
   });
   // Lantern stands in for a rare kid (D-072) until the rares' content exists.
-  await boot(page, '?seed=3&debug=1&calm=1&rare=lantern');
-  // Per frame until its card shows: the Rare found card, and whether the kid is drawn.
+  await boot(page, '?seed=3&debug=1&calm=1&rare=lantern&arrivals=1');
+  // Per frame until its popup shows: the popup, and whether the kid is drawn.
   const log = await page.evaluate(
     () =>
       new Promise<[boolean, boolean][]>((done) => {
@@ -780,7 +792,7 @@ test('a first rare card waits until its sprout is drawn, even if the costume loa
         const out: [boolean, boolean][] = [];
         const end = performance.now() + 20_000;
         const frame = () => {
-          const card = (document.querySelector('.feedback')?.textContent ?? '').includes('Rare found');
+          const card = pk.arrival() !== null;
           const drawn = pk.rares().some((r) => !before.includes(r.id));
           out.push([card, drawn]);
           if (card || performance.now() > end) done(out);
@@ -1003,14 +1015,16 @@ test.describe('building sheets (GUI_MVP §§2, 4, 5)', () => {
 
   test('a card visible when a sheet opens keeps its time until the sheet closes (Codex review, PR #39)', async ({ page }) => {
     await boot(page, '?seed=3&debug=1&calm=1');
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     const { a, b } = await page.evaluate(() => ({ a: window.__PK__!.debugAdd!('plain', 706, 3228), b: window.__PK__!.debugAdd!('water', 1286, 2428) }));
     await page.waitForTimeout(200);
     await dropOnto(page, a, b);
-    await expect(page.locator('.feedback')).toContainText('New discovery');
+    await expect(page.locator('.feedback')).toContainText('New recipe found');
     await garden(page).click();
     await page.waitForTimeout(3200); // longer than a card's 2.5 s
     await page.keyboard.press('Escape');
-    expect(await page.locator('.feedback').textContent()).toContain('New discovery');
+    expect(await page.locator('.feedback').textContent()).toContain('New recipe found');
   });
 
   test('opening a sheet ends a pan in progress (Codex review, PR #39)', async ({ page }) => {
@@ -1584,23 +1598,25 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
     await expect(dialog(page).getByText('No discovered kids match.')).toBeVisible();
   });
 
-  test('each segment keeps its scroll, also when a discovery card opens another (Codex review, #94)', async ({ page }) => {
+  test("each segment keeps its scroll, also through another segment's kid detail (Codex review, #94)", async ({ page }) => {
     await twoKnown(page);
+    // A special sprouts, so the Specials segment has a kid to open.
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'gift'));
+    await expect.poll(() => page.evaluate(() => window.__PK__!.debugKnown!().includes('gift'))).toBe(true);
     await dexButton(page).click();
     const body = dialog(page).locator('.sheet-body');
     await body.evaluate((e) => (e.scrollTop = 300));
     const kept = await body.evaluate((e) => e.scrollTop);
     expect(kept).toBeGreaterThan(100);
-    await page.keyboard.press('Escape');
-    // A special sprouts; its card opens the Dex at it, in Specials.
-    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'gift'));
-    await page.locator('.feedback').getByRole('button', { name: /found/ }).click();
+    // Switched where it is: a real click wouldn't scroll the list back up first.
+    await dialog(page).getByRole('button', { name: 'Specials', exact: true }).dispatchEvent('click');
+    await dialog(page).locator('[data-kid="gift"]').click();
     await expect(dialog(page).locator('.dex-detail-name')).toHaveText('Gift Kid');
     await dialog(page).getByRole('button', { name: 'Back to kids' }).click();
     await expect(dialog(page).getByRole('button', { name: 'Specials', exact: true })).toHaveAttribute('aria-pressed', 'true');
     // Ordinary is where it was left.
     await dialog(page).getByRole('button', { name: 'Ordinary', exact: true }).click();
-    expect(await body.evaluate((e) => e.scrollTop)).toBe(kept);
+    await expect.poll(() => body.evaluate((e) => e.scrollTop)).toBe(kept);
   });
 
   test('search finds discovered names only', async ({ page }) => {
@@ -1732,6 +1748,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('a discovery card opens that kid in the Dex', async ({ page }) => {
     await twoKnown(page);
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     await page.evaluate(() => {
       window.__PK__!.debugAdd!('plain', 1176, 3148);
       window.__PK__!.debugAdd!('water', 1176, 3148);
@@ -1793,6 +1811,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('Back focuses the search field when the kept search hides the kid (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     await dexButton(page).click();
     await dialog(page).getByLabel('Find a discovered kid').fill('wat');
     await page.keyboard.press('Escape');
@@ -1823,6 +1843,8 @@ test.describe('Potato-Dex (GUI_MVP §§7, 9)', () => {
 
   test('closing a Dex opened from a discovery card returns focus to the card (Codex review, PR #43)', async ({ page }) => {
     await twoKnown(page);
+    // A kind already found: its new recipe is a card (a new kind would be a popup, D-087).
+    await page.evaluate((t) => window.__PK__!.debugKnow!(t), 'firefighter');
     await page.evaluate(() => {
       window.__PK__!.debugAdd!('plain', 1176, 3148);
       window.__PK__!.debugAdd!('water', 1176, 3148);
@@ -3067,18 +3089,20 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     await expect(dex.getByText('Rare variants')).toHaveCount(0);
   });
 
-  test('a rare type new to the Dex reads as Rare found; the next one just sprouts, as a rare kid (§15.5)', async ({ page }) => {
-    await boot(page, RARE);
+  test('a rare kind new to the Dex meets the player as New!; the next one from the plot as From your plot (§15.5, D-087, D-088)', async ({ page }) => {
+    await boot(page, `${RARE}&arrivals=1`);
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
-    const found = page.locator('.feedback').getByRole('button', { name: /Rare found/ });
-    await expect(found).toContainText('Hero');
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await page.mouse.move(5, 5);
-    await expect(page.locator('.feedback')).toBeEmpty({ timeout: 8000 });
+    const popup = page.getByRole('dialog');
+    await expect(popup.locator('.arrival-status')).toHaveText('New!');
+    await expect(popup.locator('.arrival-sentence')).toContainText('Hero Kid');
+    await expect(popup.locator('.arrival-category')).toHaveText('Rare');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.source).toBe('plot');
+    await popup.getByRole('button', { name: 'Continue' }).click();
+    await expect(popup).toHaveCount(0);
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
-    const card = page.locator('.feedback .toast-short');
-    await expect(card).toContainText('sprouted!');
-    await expect(card).toContainText('Rare kid · From Plot 1.');
+    await expect(popup.locator('.arrival-status')).toHaveText('From your plot');
+    await expect(popup.locator('.arrival-category')).toHaveText('Rare');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.isNew).toBe(false);
   });
 
   test("a press just outside a small kid's body, within 44 CSS px, picks it up (§16.1, any kid; Codex review, PR #77)", async ({ page }) => {
@@ -6247,15 +6271,17 @@ test.describe('wild kids: the ten rares and twenty specials (D-072, D-073)', () 
   });
 
   test('a Special kid sprouts, is announced and shows in the Dex as the Special tier, with its own badge (D-082)', async ({ page }) => {
-    const errors = await boot(page, '?seed=3&debug=1&calm=1');
+    const errors = await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'treasure_chest'));
-    const found = page.locator('.feedback').getByRole('button', { name: /found/ });
-    await expect(found).toContainText('Treasure Chest');
-    await expect(found.locator('.tier')).toHaveText('Special');
-    await expect(found.locator('.tier')).toHaveAttribute('aria-label', 'Special');
-    // Its own Special badge (GUI_MVP §26), never the tier-5 one it earns as.
+    // Its popup (D-087): new, from the plot, the Special tier with its own badge (GUI_MVP §26),
+    // never the tier-5 one it earns as.
+    const popup = page.getByRole('dialog');
+    await expect(popup.locator('.arrival-sentence')).toContainText('Treasure Chest');
+    await expect(popup.locator('.arrival-status')).toHaveText('New!');
+    await expect(popup.locator('.arrival-category')).toHaveText('Special');
     const icons = (l: Locator) => l.locator('img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLElement).dataset.icon));
-    expect(await icons(found.locator('.tier'))).toEqual(['badge_special']);
+    expect(await icons(popup.locator('.arrival-category'))).toEqual(['badge_special']);
+    await popup.getByRole('button', { name: 'Continue' }).click();
     await page.locator('[data-nav=dex]').click();
     const dex = page.getByRole('dialog', { name: 'Potato-Dex' });
     await dex.getByRole('button', { name: 'Specials', exact: true }).click();
@@ -6618,10 +6644,10 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     // The player's text size, enlarged one and a half times.
     await page.addStyleTag({ content: '.nameplate { font-size: 24px; }' });
     await expect.poll(async () => (await page.evaluate(() => window.__PK__!.nameplates()))[0]?.height ?? 0).toBeGreaterThan(34);
+    // Fitted again at the new size, a frame later (its size is observed): now it needs an ellipsis.
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.nameplates()))[0]?.text ?? '').toMatch(/…$/);
     const after = (await page.evaluate(() => window.__PK__!.nameplates()))[0]!;
     expect(after.width).toBeLessThanOrEqual(120.5);
-    // Fitted again at the new size: now it needs an ellipsis.
-    expect(after.text.endsWith('…')).toBe(true);
     // Nothing clipped inside.
     const clipped = await page.locator('.nameplate:not(.nameplate-probe)').evaluate((e) => e.scrollHeight > e.clientHeight + 1);
     expect(clipped).toBe(false);
@@ -6821,5 +6847,477 @@ test('opening and closing rare cards never piles up watched sleeves (Codex revie
   await page.mouse.click(at.x, at.y - 20);
   await page.waitForTimeout(100);
   expect(await page.evaluate(() => window.__PK__!.watchedSleeves())).toBe(1);
+});
+
+test.describe('the new-kid popup (D-087, GUI_MVP §27.4-27.5)', () => {
+  const popup = (page: Page) => page.getByRole('dialog');
+  /** Plain and Water touching: they fuse into Firefighter Kid, new to the Dex. */
+  async function fuseNew(page: Page, query = '?seed=3&debug=1&calm=1&arrivals=1'): Promise<void> {
+    await boot(page, query);
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  }
+
+  test('a new kind from a fusion: New!, its line, tier and award; the sprite waves; Continue closes it and no card follows', async ({ page }) => {
+    await fuseNew(page);
+    const p = popup(page);
+    await expect(p).toHaveAttribute('aria-modal', 'true');
+    await expect(p.locator('.arrival-status')).toHaveText('New!');
+    const shown = (await page.evaluate(() => window.__PK__!.arrival()))!;
+    expect(shown.source).toBe('fusion');
+    expect(shown.isNew).toBe(true);
+    await expect(p.locator('.arrival-category')).toHaveText('Tier 2');
+    await expect(p.locator('.arrival-award')).toContainText('Potatoken');
+    // Focus on the line; the world is paused behind it.
+    await expect(p.locator('.arrival-sentence')).toBeFocused();
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(true);
+    // The wave plays: a wave frame within its half second.
+    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()!.body), { timeout: 4000 }).toMatch(/wave/);
+    await p.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(p).toHaveCount(0);
+    await page.waitForTimeout(500);
+    await expect(page.locator('.feedback')).not.toContainText('New');
+    expect(await page.locator('.top-stack').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+  });
+
+  test('it greets again while it stays open, and Escape acknowledges it', async ({ page }) => {
+    await fuseNew(page);
+    // Every frame for 4 s: the wave, 2.5 s still, then the wave again.
+    const log = await page.evaluate(
+      () =>
+        new Promise<{ t: number; wave: boolean }[]>((done) => {
+          const out: { t: number; wave: boolean }[] = [];
+          const t0 = performance.now();
+          const frame = () => {
+            const t = performance.now() - t0;
+            out.push({ t, wave: /wave/.test(window.__PK__!.arrival()?.body ?? '') });
+            if (t < 4000) requestAnimationFrame(frame);
+            else done(out);
+          };
+          requestAnimationFrame(frame);
+        }),
+    );
+    // Waving at some frames, standing at others, and waving again after a long still spell.
+    const waves = log.filter((f) => f.wave).map((f) => f.t);
+    expect(waves.length).toBeGreaterThan(0);
+    const gaps = waves.slice(1).map((t, i) => t - waves[i]!);
+    expect(Math.max(...gaps)).toBeGreaterThan(2000);
+    await page.keyboard.press('Escape');
+    await expect(popup(page)).toHaveCount(0);
+  });
+
+  test('reduced motion: it stands still, no wave', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fuseNew(page);
+    for (let i = 0; i < 8; i++) {
+      expect(await page.evaluate(() => window.__PK__!.arrival()!.body)).toMatch(/stand/);
+      await page.waitForTimeout(150);
+    }
+  });
+
+  test('an arrival not yet acknowledged comes back after a reload, with the same line', async ({ page }) => {
+    await fuseNew(page);
+    const before = (await page.evaluate(() => window.__PK__!.arrival()))!.sentence;
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await expect(popup(page).locator('.arrival-sentence')).toHaveText(before);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.__PK__!.arrival())).toBeNull();
+  });
+
+  test("Android's Back acknowledges the popup up, and only it (Codex review, #117)", async ({ page }) => {
+    await fuseNew(page);
+    expect(await page.evaluate(() => window.__PK__!.debugBack!())).toBe(true);
+    await expect(popup(page)).toHaveCount(0);
+    // Nothing else open: Back is the app's again.
+    expect(await page.evaluate(() => window.__PK__!.debugBack!())).toBe(false);
+  });
+
+  test('a short screen too narrow for the compact panel gets the single column, without sideways overflow; a rotation lays it out again with its line (Codex review, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 480 });
+    await fuseNew(page);
+    const a = (await page.evaluate(() => window.__PK__!.arrival()))!;
+    expect(a.layout).toBe('fallback');
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    await page.setViewportSize({ width: 640, height: 360 });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.sentence).toBe(a.sentence);
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+  });
+
+  test('a kind found mid-pan waits for the finger to lift (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.centerOn(1256, 3228));
+    const at = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3428));
+    await page.mouse.move(at.x, at.y);
+    await page.mouse.down();
+    await page.mouse.move(at.x + 30, at.y - 20, { steps: 6 });
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.debugKnown!().includes('firefighter'))).toBe(true);
+    await page.waitForTimeout(400);
+    await expect(popup(page)).toHaveCount(0);
+    // Still panning: the map follows the finger.
+    const before = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3228));
+    await page.mouse.move(at.x + 60, at.y - 40, { steps: 6 });
+    const after = await page.evaluate(() => window.__PK__!.worldToScreen(1256, 3228));
+    expect(after.x - before.x).toBeGreaterThan(20);
+    await page.mouse.up();
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  });
+
+  test('a motion preference changed while it is up applies at once (Codex review, #117)', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fuseNew(page);
+    await page.waitForTimeout(600);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/stand/);
+    // Allowed again: after a full rest, it waves.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()!.body), { timeout: 5000, intervals: [50] }).toMatch(/wave/);
+    // Reduced mid-wave: it stands at once.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForTimeout(100);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/stand/);
+  });
+
+  test('after the last of several popups from the map, focus goes to the Garden (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    // Two new kinds in one step.
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+      pk.debugAdd!('fire', 1536, 3228);
+      pk.debugAdd!('water', 1576, 3228);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.arrival()?.waiting ?? 0)).toBe(2);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(popup(page).locator('.arrival-sentence')).toBeFocused();
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(popup(page)).toHaveCount(0);
+    await expect(page.locator('[data-nav=garden]')).toBeFocused();
+  });
+
+  test('a return summary still waiting is kept with the game: after a reload it follows its popups (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
+    await expect(popup(page).locator('.arrival-status')).toHaveText('New!');
+    await page.waitForTimeout(300);
+    await page.reload();
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    for (;;) {
+      if (!(await page.evaluate(() => window.__PK__!.arrival()))) break;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+      await page.waitForTimeout(150);
+    }
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toBeVisible();
+  });
+
+  test('two returns before the first is seen: both summaries, oldest first (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
+    await expect(popup(page).locator('.arrival-status')).toHaveText('New!');
+    await page.evaluate(() => window.__PK__!.debugAway!(2 * 3600 * 1000));
+    for (;;) {
+      if (!(await page.evaluate(() => window.__PK__!.arrival()))) break;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+      await page.waitForTimeout(150);
+    }
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toContainText('6 h');
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(summary).toContainText('2 h');
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('the first-run tutorial waits for a popup restored at start (Codex review, #117)', async ({ page }) => {
+    await fuseNew(page);
+    await page.waitForTimeout(300);
+    await page.goto('/?seed=3&debug=1&calm=1&arrivals=1&tutorial=1');
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+    await page.waitForTimeout(500);
+    await expect(page.locator('#tutorial-card')).toBeHidden();
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.locator('#tutorial-card')).toBeVisible();
+  });
+
+  test('an unanswered recovery warning comes first; a save banner stays usable above a popup (Codex review, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: false, recovery: true, readOnly: false }));
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect.poll(() => page.evaluate(() => window.__PK__!.debugKnown!().includes('firefighter'))).toBe(true);
+    await page.waitForTimeout(400);
+    await expect(page.locator('.arrival')).toHaveCount(0);
+    await page.locator('.banner').getByRole('button').first().click();
+    await expect(page.locator('.arrival')).toHaveCount(1);
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect(page.locator('.banner')).toBeVisible();
+    expect(await page.locator('.banners').evaluate((e) => (e as HTMLElement).inert)).toBe(false);
+  });
+
+  /** A crash from here on: the saves land nowhere, then the app starts again (Codex review round 2, #117). */
+  async function crashAndRestart(page: Page, query = '?seed=3&debug=1&calm=1&arrivals=1'): Promise<void> {
+    // Let any save under way land first.
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      Storage.prototype.setItem = () => {};
+    });
+    await page.goto('/' + query);
+    await page.waitForFunction(() => window.__PK__?.ready === true);
+  }
+
+  test('a new kind found by fusion is saved with its popup: a crash right after still shows it (Codex review round 2, #117)', async ({ page }) => {
+    await fuseNew(page);
+    await crashAndRestart(page);
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  });
+
+  test('a popup or summary acknowledged is saved so: after a crash it does not come back (Codex review round 2, #117)', async ({ page }) => {
+    await fuseNew(page);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(popup(page)).toHaveCount(0);
+    await crashAndRestart(page);
+    await page.waitForTimeout(500);
+    await expect(popup(page)).toHaveCount(0);
+    // A return summary, likewise.
+    await page.evaluate(() => window.__PK__!.debugAway!(2 * 3600 * 1000));
+    for (;;) {
+      await page.waitForTimeout(150);
+      if (!(await page.evaluate(() => window.__PK__!.arrival()))) break;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    }
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await summary.getByRole('button', { name: 'Back to the garden' }).click();
+    await expect(summary).toHaveCount(0);
+    await crashAndRestart(page);
+    await page.waitForTimeout(500);
+    await expect(page.getByRole('dialog', { name: 'Welcome back' })).toHaveCount(0);
+  });
+
+  test('a kind found while the tutorial is up: the tutorial steps aside for its popup and comes back at its step (Codex review round 2, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1&tutorial=1');
+    const card = page.locator('#tutorial-card');
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+    await expect(card).toBeHidden();
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(card).toBeVisible();
+    await expect(card.locator('.tutorial-step')).toHaveText('Step 2 of 8');
+  });
+
+  test('the panel keeps inside the safe-area insets, and picks its layout from the width between them (Codex review round 3, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 640, height: 360 });
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    // A landscape cutout on each side: 520 px left between them, still compact.
+    await page.addStyleTag({ content: ':root { --ui-ml: 60px !important; --ui-mr: 60px !important; }' });
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    let box = (await popup(page).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(60 - 0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(640 - 60 + 0.5);
+    // Wider cutouts: too narrow for the compact panel, so the single column, still inside.
+    await page.addStyleTag({ content: ':root { --ui-ml: 90px !important; --ui-mr: 90px !important; }' });
+    await page.setViewportSize({ width: 641, height: 360 });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('fallback');
+    box = (await popup(page).boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(90 - 0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(641 - 90 + 0.5);
+  });
+
+  test("a Rare's popup portrait moves in its sleeve, also after a rotation (Codex review round 3, #117)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1&rare=hero,lantern');
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero'));
+    await page.evaluate(() => window.__PK__!.debugCommand!({ type: 'harvest', plot: 0 }));
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Hero');
+    await expect(popup(page).locator('.arrival-sprite .portrait-sleeve')).toHaveCount(1);
+    await page.setViewportSize({ width: 640, height: 360 });
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    await expect(popup(page).locator('.arrival-sprite .portrait-sleeve')).toHaveCount(1);
+  });
+
+  test("the popup draws the newborn's own saved scale, carried from its birth (Codex review round 3, #117)", async ({ page }) => {
+    await fuseNew(page);
+    const kid = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'firefighter')!);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.savedScale).toBe(kid.look.scale);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    // A small kid is drawn small; a large one as large as fits, uncropped.
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic', scale: 0.9 }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))?.scale).toBeCloseTo(0.9, 3);
+    await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic', scale: 1.1 }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))?.scale ?? 0).toBeGreaterThan(1);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.scale).toBeLessThanOrEqual(1.1);
+  });
+
+  test('a rotation mid-greeting lets the wave go on (Codex review round 3, #117)', async ({ page }) => {
+    await fuseNew(page);
+    // The greeting starts on mount; rotated straight away, it is still waving.
+    await page.setViewportSize({ width: 915, height: 412 });
+    await page.waitForTimeout(60);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('compact');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.body).toMatch(/wave/);
+  });
+
+  test("a Rare's whole sleeve fits its slot in the portrait panel: no sideways scroll, nothing clipped (Codex review round 4, #117)", async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugMeet!('rainbow', { body: 'round', face: 'classic' }));
+    await expect(popup(page).locator('.arrival-sprite .portrait-sleeve')).toHaveCount(1);
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.layout).toBe('portrait');
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    // The sleeve's reserved box lies inside the panel.
+    const wrap = (await popup(page).locator('.arrival-sprite .portrait-wrap').evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      const cs = getComputedStyle(e);
+      return { left: r.left - parseFloat(cs.marginLeft), right: r.right + parseFloat(cs.marginRight) };
+    }))!;
+    const panel = (await popup(page).boundingBox())!;
+    expect(wrap.left).toBeGreaterThanOrEqual(panel.x - 0.5);
+    expect(wrap.right).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
+  });
+
+  test('a short screen with a save banner gets the 224 px compact panel, and a banner appearing lays it out again (Codex review round 4, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic' }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))?.layout).toBe('compact');
+    expect((await page.evaluate(() => window.__PK__!.arrival()))!.sprite).toBe(192);
+    // An unsaved-progress banner takes its height: the smaller compact panel, Continue in view.
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(async () => (await page.evaluate(() => window.__PK__!.arrival()))!.sprite).toBe(128);
+    await expect(popup(page).getByRole('button', { name: 'Continue', exact: true })).toBeInViewport({ ratio: 1 });
+    const panel = (await popup(page).boundingBox())!;
+    const banner = (await page.locator('.banners').boundingBox())!;
+    expect(panel.y).toBeGreaterThanOrEqual(banner.y + banner.height - 0.5);
+  });
+
+  test('a recovery notice hidden behind the unsaved warning holds no popup back (Codex review round 5, #117)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: true, readOnly: false }));
+    await page.evaluate(() => {
+      const pk = window.__PK__!;
+      pk.centerOn(1256, 3228);
+      pk.debugAdd!('plain', 1236, 3228);
+      pk.debugAdd!('water', 1276, 3228);
+    });
+    await expect(popup(page).locator('.arrival-sentence')).toContainText('Firefighter Kid');
+  });
+
+  test('a very narrow portrait screen gets the single column, its kid inside the panel (Codex review round 5, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 200, height: 700 });
+    await fuseNew(page);
+    const a = (await page.evaluate(() => window.__PK__!.arrival()))!;
+    expect(a.layout).toBe('fallback');
+    expect(await popup(page).evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+    const art = (await popup(page).locator('.arrival-sprite .portrait').first().boundingBox())!;
+    const panel = (await popup(page).boundingBox())!;
+    expect(art.x).toBeGreaterThanOrEqual(panel.x - 0.5);
+    expect(art.x + art.width).toBeLessThanOrEqual(panel.x + panel.width + 0.5);
+  });
+
+  test('back from hidden, the greeting goes on where it was (Codex review round 5, #117)', async ({ page }) => {
+    await fuseNew(page);
+    // All in the page: the greeting's time, then hidden with no frames for 400 ms (the main
+    // thread held), back, and one frame on. It moves by that frame, not by the gap.
+    const { before, after, frame } = await page.evaluate(async () => {
+      const at = () => window.__PK__!.arrival()!.clipTime;
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const before = at();
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+      const until = performance.now() + 400;
+      while (performance.now() < until);
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+      const t = performance.now();
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      return { before, after: at(), frame: (performance.now() - t) / 1000 };
+    });
+    expect(before).not.toBeNull();
+    expect(after! - before!).toBeLessThanOrEqual(frame + 0.02);
+  });
+
+  test('page mode: the popup is in the page flow below the banner, all of it reachable, in place of the HUD and tray (Codex review round 6, #117)', async ({ page }) => {
+    await page.setViewportSize({ width: 300, height: 200 });
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false }));
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
+    await page.evaluate(() => window.__PK__!.debugMeet!('plain', { body: 'round', face: 'classic' }));
+    await expect(popup(page)).toHaveCount(1);
+    await expect(popup(page)).toHaveCSS('position', 'static');
+    await expect(page.locator('.top-stack')).toBeHidden();
+    await expect(page.locator('.tray')).toBeHidden();
+    // Below the banner, and every control can be scrolled to.
+    const banner = (await page.locator('.banners').boundingBox())!;
+    const top = await popup(page).evaluate((e) => e.getBoundingClientRect().top + document.scrollingElement!.scrollTop);
+    expect(top).toBeGreaterThanOrEqual(banner.y + banner.height - 0.5);
+    const go = popup(page).getByRole('button', { name: 'Continue', exact: true });
+    await go.scrollIntoViewIfNeeded();
+    await expect(go).toBeInViewport({ ratio: 1 });
+    await go.click();
+    await expect(popup(page)).toHaveCount(0);
+    await expect(page.locator('.top-stack')).toBeVisible();
+  });
+
+  test('kinds first found while away meet the player one by one, then the summary counts them (§27.5)', async ({ page }) => {
+    await boot(page, '?seed=3&debug=1&calm=1&arrivals=1');
+    await page.evaluate(() => window.__PK__!.debugAway!(6 * 3600 * 1000));
+    const fresh = await page.evaluate(() => {
+      const pk = window.__PK__!;
+      return new Set((pk.lastOffline()?.spawned ?? []).map((k) => k.type)).size;
+    });
+    const known = await page.evaluate(() => window.__PK__!.lastOffline()!.spawned.length);
+    expect(known).toBeGreaterThan(0);
+    // Each popup first, all from the Garden and new; the summary waits.
+    let seen = 0;
+    for (;;) {
+      const a = await page.evaluate(() => window.__PK__!.arrival());
+      if (!a) break;
+      expect(a.source).toBe('garden');
+      expect(a.isNew).toBe(true);
+      await expect(page.getByRole('dialog', { name: 'Welcome back' })).toHaveCount(0);
+      seen++;
+      await popup(page).getByRole('button', { name: 'Continue', exact: true }).click();
+      await page.waitForTimeout(150);
+    }
+    expect(seen).toBeGreaterThan(0);
+    expect(seen).toBeLessThanOrEqual(fresh);
+    const summary = page.getByRole('dialog', { name: 'Welcome back' });
+    await expect(summary).toBeVisible();
+    await expect(summary.locator('.stat-row', { hasText: 'New kinds' })).toContainText(`${seen} · Shown above`);
+  });
 });
 
