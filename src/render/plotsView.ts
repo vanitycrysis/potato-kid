@@ -76,7 +76,7 @@ export function readySignRect(art: PlantingArt, garden: { x: number; y: number }
 /**
  * The unlocked plot a tap at world point `p` hits, or null (§15.2). A ready plot's sign
  * first: drawn over its soil and, at far zoom, past it, it belongs to its own plot (§27.6;
- * Codex review, #115), the nearest sign centre winning where signs overlap. Then the drawn
+ * Codex review, #115), the one drawn on top winning where signs overlap. Then the drawn
  * soil; only when none is hit, each plot's envelope grown symmetrically to at least `minCss`
  * CSS px per axis at this `zoom` (CSS px per world unit). Grown envelopes may overlap when
  * zoomed out: the nearest plot centre wins, then the lowest index. Locked plots never hit.
@@ -84,18 +84,11 @@ export function readySignRect(art: PlantingArt, garden: { x: number; y: number }
 export function plotAt(art: PlantingArt, garden: { x: number; y: number }, unlocked: number, p: { x: number; y: number }, zoom: number, minCss = 44, ready: (i: number) => boolean = () => false): number | null {
   const rects = Array.from({ length: unlocked }, (_, i) => plotRect(art, garden, i));
   const inside = (r: { left: number; top: number; right: number; bottom: number }) => p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom;
-  let sign: number | null = null;
-  let signD = Infinity;
-  for (let i = 0; i < unlocked; i++) {
+  // Signs are drawn in plot order, so where they overlap the later one is the one you see.
+  for (let i = unlocked - 1; i >= 0; i--) {
     const r = ready(i) ? readySignRect(art, garden, i, zoom) : null;
-    if (!r || !inside(r)) continue;
-    const d = Math.hypot(p.x - (r.left + r.right) / 2, p.y - (r.top + r.bottom) / 2);
-    if (d < signD) {
-      signD = d;
-      sign = i;
-    }
+    if (r && inside(r)) return i;
   }
-  if (sign !== null) return sign;
   const hit = rects.findIndex(inside);
   if (hit >= 0) return hit;
   const min = minCss / zoom;

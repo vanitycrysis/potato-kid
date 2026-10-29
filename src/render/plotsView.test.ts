@@ -105,4 +105,14 @@ describe("a ready plot's sign is its own target (§27.6; Codex review, #115)", (
     // The sign is at least 96 CSS px across.
     expect((sign.right - sign.left) * zoom).toBeGreaterThan(40);
   });
+
+  it('where two ready signs overlap, the one drawn on top (the later plot) is hit (Codex review round 2, #115)', () => {
+    const zoom = 0.18;
+    // Codex's point: inside both enlarged signs, nearer plot 0's centre.
+    const p = { x: 1502, y: 2382.75 };
+    const a = readySignRect(art, garden, 0, zoom)!;
+    const b = readySignRect(art, garden, 1, zoom)!;
+    for (const r of [a, b]) expect(p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom).toBe(true);
+    expect(plotAt(art, garden, 2, p, zoom, 44, () => true)).toBe(1);
+  });
 });

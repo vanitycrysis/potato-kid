@@ -2830,6 +2830,30 @@ test.describe('Planting, tapping a plot on the map (GUI_MVP §15.2)', () => {
     await expect(page.getByRole('dialog').locator('.sheet-title')).toHaveText('Pick kids for Plot 1');
   });
 
+  test('two quick taps on a ready plot are one harvest: no refusal follows the arrival (Codex review round 2, #115)', async ({ page }) => {
+    const at = await setup(page);
+    await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero', true));
+    await page.waitForTimeout(300);
+    const before = await page.evaluate(() => window.__PK__!.kids().length);
+    await page.evaluate(() => {
+      const w = window as unknown as { stepTypes: string[] };
+      w.stepTypes = [];
+      window.__PK__!.debugListenSteps!((t) => w.stepTypes.push(...t));
+    });
+    // Both taps in one task, so no sim step can run between them.
+    await press(page, [
+      ['pointerdown', at.x, at.y],
+      ['pointerup', at.x, at.y],
+      ['pointerdown', at.x, at.y],
+      ['pointerup', at.x, at.y],
+    ]);
+    await expect.poll(() => page.evaluate(() => window.__PK__!.plots()[0]!.state)).toBe('empty');
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => window.__PK__!.kids().length)).toBe(before + 1);
+    // One request, so no refusal at all.
+    expect(await page.evaluate(() => (window as unknown as { stepTypes: string[] }).stepTypes)).not.toContain('rejected');
+  });
+
   test('the Garden says a plot is ready to sprout; its Harvest sprout brings the kid up and closes the Garden (D-088, §27.6)', async ({ page }) => {
     await setup(page);
     await page.evaluate(() => window.__PK__!.debugReadySeed!(0, 'hero', true));

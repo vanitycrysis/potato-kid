@@ -924,13 +924,16 @@ export class Game {
    */
   /**
    * Started seeds grow; a ready one waits, as long as it takes, for the player to tap it
-   * (D-088). A plot no longer ready forgets why its last tap was refused.
+   * (D-088). A plot no longer ready forgets why its last tap was refused, and so does one
+   * whose kid would now find a clear spot: it says so without coming up (§27.6; Codex
+   * review, #115).
    */
   private advancePlots(dt: number): void {
     const grow = this.content.balance.planting.growSeconds;
     this.state.plots.forEach((plot, i) => {
       if (plot.seed?.sprout) plot.seed.grown = Math.min(grow, plot.seed.grown + dt);
       if (!this.plotReady(plot)) this.plotWaits.delete(i);
+      else if (this.plotWaits.has(i) && this.freeSpot(this.typed(plot.seed!.sprout!.type, this.peekLook()).box, this.spawnAt.x, this.spawnAt.y)) this.plotWaits.delete(i);
     });
   }
 

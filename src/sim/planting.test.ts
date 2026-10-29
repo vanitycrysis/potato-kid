@@ -256,9 +256,12 @@ describe('planting 3 to 5 kids (D-061)', () => {
     run(g, 5);
     expect(g.plotWaiting(0)).toBe('noRoom');
     expect(g.plotReady(g.state.plots[0]!)).toBe(true);
+    // Room appears: the plot stops saying it waits, but nothing comes up until a tap (Codex review round 2, #115).
     g.state.world.kids.pop();
-    expect(sprouts(tap(g, 0))).toHaveLength(1);
+    expect(sprouts(run(g, 1))).toEqual([]);
     expect(g.plotWaiting(0)).toBeNull();
+    expect(g.plotReady(g.state.plots[0]!)).toBe(true);
+    expect(sprouts(tap(g, 0))).toHaveLength(1);
   });
 
   it('a ready plot never takes the Garden\'s place: the Garden fills the last one, and a tap still brings the sprout up (D-084, D-088)', () => {
