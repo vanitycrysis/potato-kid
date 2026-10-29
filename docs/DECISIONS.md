@@ -205,6 +205,7 @@ The owner answered the gate-4 build of 2026-10-10 (CI run 38079082704) in chat, 
 | D-092 | Approved (owner) / Claude | **The Happy sun moves to the kid's top right** (it was at the bottom left) | Owner: "For the 'Happy' status after feeding a potato kid, put the sun on the top right instead of the bottom left." |
 | D-093 | Approved (owner) | **Claude may force-push its own `claude/` branches** (with `--force-with-lease`), never `main` or `chatgpt/` | Owner, answering Claude's question: "As for your request to allow force-pushes, that is approved." |
 | D-094 | Approved (owner) / design by Codex and Claude (engine) | **The rare sparkle moves:** the sparkle on a rare kid's card portrait (and wherever else it is a still image) gets a small looping animation; reduced motion keeps it still | Owner: "As for the sparkle, it looks good but it's a static image, I'd like more of a small animation if possible." |
+| D-095 | Approved (owner) / Claude (engine), Codex's §27.7 loop | **The map sparkle moves the same way:** a rare kid's sparkle on the map uses the portrait's 2.4 s loop (±1 px, ±2 %, ±2°, down to .82 opacity) instead of its opacity breathing; reduced motion still. Codex had read §27.7 as keeping the map's loop and Claude as the owner's "static" meaning the map; the owner chose to move it, revertible if it doesn't look right | Owner, asked in #116: "Sure, lets give the rare kids the animation on the map. If we don't like it we can always revert." |
 
 ## Art v2 review settlement (2026-10-01)
 

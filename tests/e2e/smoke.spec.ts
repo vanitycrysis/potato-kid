@@ -3135,20 +3135,25 @@ test.describe('Rare kids on the map (D-072, GUI_MVP §16.2, §15.5)', () => {
     expect(log.filter((a) => a < 0.5).length).toBeGreaterThan(0);
   });
 
-  test('turning reduced motion on mid-game stills the sleeves at once (Codex review, PR #77)', async ({ page }) => {
+  test('on the map the sleeve moves in its small loop (D-095); turning reduced motion on stills it at once (Codex review, PR #77)', async ({ page }) => {
     const ids = await rares(page);
-    const alphas = () => page.evaluate((id) => window.__PK__!.rares().find((r) => r.id === id)!.sleeveAlpha, ids[0]!);
-    // Pulsing: some frame below full opacity within a cycle.
-    const seen: number[] = [];
+    const sleeve = () => page.evaluate((id) => window.__PK__!.rares().find((r) => r.id === id)!, ids[0]!);
+    // Moving (D-094): within a cycle it dims, and it tilts both ways.
+    const seen: { a: number; r: number }[] = [];
     for (let i = 0; i < 12; i++) {
-      seen.push(await alphas());
+      const s = await sleeve();
+      seen.push({ a: s.sleeveAlpha, r: s.sleeveRotation });
       await page.waitForTimeout(200);
     }
-    expect(Math.min(...seen)).toBeLessThan(0.99);
+    expect(Math.min(...seen.map((s) => s.a))).toBeLessThan(0.99);
+    expect(Math.min(...seen.map((s) => s.r))).toBeLessThan(-0.01);
+    expect(Math.max(...seen.map((s) => s.r))).toBeGreaterThan(0.01);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForTimeout(100);
     for (let i = 0; i < 12; i++) {
-      expect(await alphas()).toBe(1);
+      const s = await sleeve();
+      expect(s.sleeveAlpha).toBe(1);
+      expect(s.sleeveRotation).toBe(0);
       await page.waitForTimeout(200);
     }
   });

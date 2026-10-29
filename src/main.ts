@@ -95,7 +95,7 @@ declare global {
       /** Rare sleeves and happy suns drawn now (GUI_MVP §16.2, §17.2). */
       /** Rare portrait sleeves the offscreen observer watches now (D-094). */
       watchedSleeves: () => number;
-      rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; happy: boolean; sun?: { x: number; y: number } }[];
+      rares: () => { id: number; sleeve: boolean; sleeveAlpha: number; sleeveScale: number; sleeveRotation: number; happy: boolean; sun?: { x: number; y: number } }[];
       /** What a map nickname may not cover now (§27.7): screen boxes of ready signs and the partner mark. */
       nameExclusions: () => { left: number; top: number; right: number; bottom: number }[];
       /** Map nicknames shown now (D-091, §27.7): kid id, text and screen box. */
