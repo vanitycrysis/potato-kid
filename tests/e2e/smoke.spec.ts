@@ -3128,7 +3128,7 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('its favourite: one bite from the pantry, happy for longer, the sun at its foot; the hated food is refused, nothing used', async ({ page }) => {
+  test('its favourite: one bite from the pantry, happy for longer, the sun at its top right (D-092); the hated food is refused, nothing used', async ({ page }) => {
     const id = await open(page);
     await card(page).getByRole('button', { name: 'Feed', exact: true }).click();
     await expect(card(page).locator('.sheet-title')).toHaveText('Feed Fire Kid');
@@ -3147,6 +3147,14 @@ test.describe('The kid card: feeding and naming (D-056, D-057, GUI_MVP §17-18)'
     // Feeding costs no Materials (D-069).
     expect(await page.evaluate(() => window.__PK__!.wallet().materials)).toBeGreaterThanOrEqual(1000);
     await expect.poll(() => page.evaluate((i) => window.__PK__!.rares().find((r) => r.id === i)?.happy ?? false, id)).toBe(true);
+    // The sun sits by its head on the right (D-092): right of its middle, above most of its body.
+    const marks = await page.evaluate((i) => {
+      const pk = window.__PK__!;
+      const sun = pk.rares().find((r) => r.id === i)!.sun!;
+      return { sun: pk.worldToScreen(sun.x, sun.y), feet: pk.screenPointOf(i)! };
+    }, id);
+    expect(marks.sun.x).toBeGreaterThan(marks.feet.x + 10);
+    expect(marks.sun.y).toBeLessThan(marks.feet.y - 30);
     await card(page).getByRole('button', { name: 'Back' }).click();
     await expect(card(page).locator('.kid-card-happy')).toContainText(/Happy · (1:00:00|59:5\d)/);
     await expect(card(page).locator('.kid-card-happy')).toContainText('Counts as Tier 2 when added to a plot; odds stay capped.');
