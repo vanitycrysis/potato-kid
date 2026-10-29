@@ -111,6 +111,12 @@ declare global {
       debugLoadedCostumes?: () => string[];
       /** Only with `?debug=1`: the kid types the feedback cards treat as already known. */
       debugKnown?: () => string[];
+      /** This save's introduction and lessons (§27.3), a copy. */
+      lessons: () => unknown;
+      /** The lesson note up now, if any. */
+      lessonShown: () => string | null;
+      /** Only with `?debug=1`: changes the introduction and lessons record. */
+      debugLessons?: (patch: Record<string, unknown>) => void;
       /** Only with `?debug=1`: marks a kind as found already, so its next fusion is a new recipe's card, not a popup. */
       debugKnow?: (type: string) => void;
       /** Only with `?debug=1`: queues a new-kid popup with this look. */
@@ -191,7 +197,11 @@ async function boot(): Promise<void> {
   // The first-run tutorial (D-078) waits in tests (`debug`, `calm`) unless asked for.
   const testing = params.get('debug') === '1' || params.get('calm') === '1';
   // In tests the tutorial and the new-kid popups stay out of the way unless a test asks for them.
-  const hud = new Hud(scene, content, settings, { tutorialAuto: !testing || params.get('tutorial') === '1', arrivals: !testing || params.get('arrivals') === '1' });
+  const hud = new Hud(scene, content, settings, {
+    tutorialAuto: !testing || params.get('tutorial') === '1',
+    arrivals: !testing || params.get('arrivals') === '1',
+    lessons: !testing || params.get('lessons') === '1',
+  });
   // Codex's cues and music (ART_AUDIO_PLAN): one cue per sim step, volumes from Settings.
   // Not in read-only mode: the game is frozen there and has no lifecycle to pause it
   // (Codex review, PR #53).
@@ -280,6 +290,8 @@ async function boot(): Promise<void> {
     nameExclusions: () => hud.nameExclusions,
     nameplates: () => hud.nameplatesShown.map((n) => ({ id: n.id, text: n.text, left: n.rect.left, top: n.rect.top, width: n.rect.width, height: n.rect.height })),
     arrival: () => hud.arrivalShown,
+    lessons: () => structuredClone(scene.game.state.lessons),
+    lessonShown: () => hud.lessonShown,
     layers: () => scene.layerNames,
     plots: () =>
       scene.game.state.plots.map((p, i) => {
@@ -310,6 +322,7 @@ async function boot(): Promise<void> {
           debugKnown: () => hud.knownKids,
           debugBack: () => hud.back(),
           debugMeet: (type: string, look: { body: string; face: string; scale?: number }) => hud.debugMeet({ source: 'garden', type, look, isNew: true, potatokens: 0 }),
+          debugLessons: (patch: Record<string, unknown>) => void Object.assign(scene.game.state.lessons!, patch),
           debugKnow: (type: string) => {
             if (!scene.game.state.discoveredKids.includes(type)) scene.game.state.discoveredKids.push(type);
             hud.debugKnow(type);

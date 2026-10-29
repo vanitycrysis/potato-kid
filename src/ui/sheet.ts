@@ -173,6 +173,7 @@ export class Sheets {
     const body = el('div', 'sheet-body');
     const footer = el('footer', 'sheet-footer');
     const sheet = el('section', 'sheet ui-surface', header, bar, body, footer);
+    sheet.dataset.key = spec.key;
     // A page's way back sits above whatever its sheet puts in its bar and body.
     if (page?.back) {
       const back = el('button', 'ui-button sheet-page-back', page.back.label);

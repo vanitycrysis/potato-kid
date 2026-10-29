@@ -187,6 +187,26 @@ export interface Recap {
   food: Record<string, number>;
 }
 
+/** The twelve affordability lessons (D-086, GUI_MVP §27.2). */
+export type LessonId = 'planting' | 'potatokens' | 'garden' | 'capacity' | 'naming' | 'bias' | 'fields' | 'feeding' | 'plot-space' | 'field-space' | 'compendium' | 'returns';
+
+/**
+ * The introduction and lessons of this save (D-086, GUI_MVP §27.3, `lessonVersion` 2): kept with
+ * the game, so one save's unlocks never touch another's. The sim never reads it.
+ */
+export interface Lessons {
+  version: 2;
+  intro: 'notStarted' | 'inProgress' | 'skipped' | 'completed';
+  /** The introduction's page to show next, 1 to 3. */
+  introPage: number;
+  /** Lessons seen for good, in the order they were. */
+  seen: LessonId[];
+  /** Lessons waiting to be shown, oldest first. */
+  pending: LessonId[];
+  /** The player's first fusion discovery opened the lessons (§27.3); it never closes. */
+  firstFusion: boolean;
+}
+
 /** What the player has yet to see, oldest first. */
 export interface Presentation {
   arrivals: PendingArrival[];
@@ -295,6 +315,11 @@ export interface GameState {
    * never reads it; the HUD adds and acknowledges.
    */
   presentation: Presentation;
+  /**
+   * The introduction and lessons (§27.3). Null in a save from before them, until the HUD adopts
+   * it from the old first-run tutorial's record and the save's own evidence.
+   */
+  lessons: Lessons | null;
   /** Kid types the player has seen born from a recipe or the Garden. */
   discoveredKids: KidId[];
   /** Recipe pair keys (`pairKey`) the player has triggered. */
@@ -406,6 +431,7 @@ export class Game {
       fields: [],
       pantry: {},
       presentation: { arrivals: [], recaps: [] },
+      lessons: { version: 2, intro: 'notStarted', introPage: 1, seen: [], pending: [], firstFusion: false },
       discoveredKids: [],
       discoveredRecipes: [],
       materials: content.balance.economy.startingMaterials,

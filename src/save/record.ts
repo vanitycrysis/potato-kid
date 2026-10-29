@@ -8,7 +8,10 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 11;
+export const SAVE_SCHEMA = 12;
+
+/** The lesson ids a save may hold (GUI_MVP §27.2). */
+const LESSONS = new Set(['planting', 'potatokens', 'garden', 'capacity', 'naming', 'bias', 'fields', 'feeding', 'plot-space', 'field-space', 'compendium', 'returns']);
 
 export interface SaveRecord {
   schema: number;
@@ -198,6 +201,24 @@ export function validateState(state: unknown, content: Content): string[] {
     return !!r && finite(r.seconds) && finite(r.materials) && whole(r.potatokens) && whole(r.arrived) && whole(r.newKinds) && whole(r.plotsWaiting) && typeof food === 'object' && food !== null && Object.entries(food).every(([k, v]) => foodIds.has(k) && whole(v));
   };
   if (typeof pr !== 'object' || pr === null || !Array.isArray(pr.arrivals) || !pr.arrivals.every(arrival) || !Array.isArray(pr.recaps) || !pr.recaps.every(recap)) p.push('presentation is invalid');
+  // The introduction and lessons (D-086, §27.3), or null until an older save's are adopted.
+  const ls = s.lessons as Record<string, unknown> | null | undefined;
+  const ids = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === 'string' && LESSONS.has(x)) && new Set(v).size === v.length;
+  if (
+    ls !== null &&
+    !(
+      typeof ls === 'object' &&
+      ls.version === 2 &&
+      ['notStarted', 'inProgress', 'skipped', 'completed'].includes(ls.intro as string) &&
+      whole(ls.introPage) &&
+      (ls.introPage as number) >= 1 &&
+      (ls.introPage as number) <= 3 &&
+      ids(ls.seen) &&
+      ids(ls.pending) &&
+      typeof ls.firstFusion === 'boolean'
+    )
+  )
+    p.push('lessons is invalid');
   // Rare variants are retired (D-072): a state still recording them wasn't migrated.
   if ('discoveredVariants' in s) p.push('discoveredVariants is retired');
 

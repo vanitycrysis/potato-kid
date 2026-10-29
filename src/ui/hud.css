@@ -730,13 +730,19 @@
 }
 
 
-/* --- The first-run tutorial (D-078, GUI_MVP §24) -----------------------------------------
-   A paper card at the bottom over a light ink scrim, above sheets (a replay opens over the
-   one it was asked from) and below banners; a static outline marks the lesson's control. */
+/* --- The first-run introduction (D-086, GUI_MVP §27.1) ------------------------------------
+   A 360 px paper card centred in the safe space below any banner, over a light ink scrim, above
+   sheets (a preview opens over the one it was asked from) and below banners; a static outline
+   marks the control a page names. */
 .tutorial {
   position: fixed;
   inset: 0;
   z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: calc(var(--ui-st) + var(--ui-banner, 0px) + 8px) var(--ui-mr) calc(var(--ui-sb) + 8px) var(--ui-ml);
   transition: opacity 120ms ease-out;
 }
 .tutorial[hidden],
@@ -760,14 +766,12 @@
   pointer-events: none;
 }
 .tutorial-card {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--ui-sb) + 8px);
-  width: min(600px, calc(100vw - var(--ui-ml) - var(--ui-mr)));
-  /* Clear of a persistent banner, as sheets are (`--ui-banner`, set by the HUD; Codex review
-     round 4, #107). */
-  max-height: calc(100vh - var(--ui-st) - var(--ui-sb) - 16px - var(--ui-banner, 0px));
+  position: relative;
+  box-sizing: border-box;
+  width: min(360px, 100%);
+  min-height: min(280px, 100%);
+  /* Clear of a persistent banner, as sheets are (`--ui-banner`, set by the HUD). */
+  max-height: 100%;
   /* The body scrolls when it must; the header and the controls stay in view (§24.2). */
   overflow: hidden;
   padding: 4px;
@@ -890,6 +894,138 @@
     justify-content: safe center;
     gap: 2px;
   }
+}
+
+/* Page 2's labelled demo: two kids, a plus, an arrow and the unknown result (§27.1). */
+.tutorial-sign {
+  font-size: 16px;
+  line-height: 48px;
+}
+.tutorial-diagram {
+  align-items: center;
+  min-height: 48px;
+}
+
+/* --- Automatic lessons (D-086, GUI_MVP §27.3) ----------------------------------------------
+   A quiet notebook note above the tray: nonmodal, no scrim, below the HUD (z20); it takes no
+   focus and gets out of the way of any gesture. */
+.lesson-note {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - var(--ui-ml) - var(--ui-mr)));
+  min-height: 176px;
+  overflow-y: auto;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--ui-font);
+  color: var(--ui-ink);
+}
+/* Constrained, the note scrolls as a whole: its parts keep their wrapped height (§27.3). */
+.lesson-note > * {
+  flex-shrink: 0;
+}
+.lesson-note[hidden],
+.lesson-spot[hidden] {
+  display: none;
+}
+.lesson-spot {
+  z-index: 19;
+}
+.lesson-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.lesson-title,
+.lessons-lesson-title {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: normal;
+}
+.ui-button.lesson-close,
+.ui-button.lesson-where {
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 22px;
+}
+.lesson-body,
+.lesson-route {
+  margin: 0;
+  min-height: 22px;
+  font-size: 16px;
+  line-height: 22px;
+}
+.lesson-route-label {
+  font-weight: bold;
+}
+.lesson-route[hidden] {
+  display: none;
+}
+.lesson-footer {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 44px;
+}
+.ui-button.lesson-ok {
+  min-width: 88px;
+  min-height: 44px;
+  font-size: 18px;
+  line-height: 24px;
+}
+/* The plot's map art as a pictogram, whole within its square. */
+.lesson-fx {
+  object-fit: contain;
+}
+/* `Tutorial & lessons` (§27.3): the introduction, then every lesson, Seen or Not seen. */
+.lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ui-button.lessons-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  text-align: left;
+}
+.lessons-title {
+  flex: 1 1 auto;
+  font-size: 18px;
+  line-height: 24px;
+}
+.lessons-state {
+  flex: none;
+  font-size: 16px;
+  line-height: 22px;
+}
+.lessons-lesson {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lessons-lesson-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lessons-lesson-title:focus {
+  outline: none;
+}
+.lessons-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* The recipe window and rail (D-083, GUI_MVP §25.2-25.3): beside the finger, above the world and

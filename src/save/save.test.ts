@@ -387,7 +387,7 @@ describe('schema 2: the tutorial counter (D-052)', () => {
     const old = schema1();
     storage.data.set('slotA', encode(1, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toMatchObject({ ...v3(old), gardenSpawns: content.balance.spawn.tutorialSpawns });
+    expect(r.state).toMatchObject({ ...v3(old), gardenSpawns: content.balance.spawn.tutorialSpawns, lessons: null });
     // It plays on the slow schedule at once.
     const game = new Game(structuredClone(content), options, 5, r.state!);
     expect(game.interval).toBe(content.balance.spawn.intervalSeconds * content.balance.economy.gardenIntervalFactor ** (game.state.buildings.garden - 1));
@@ -411,7 +411,7 @@ describe('schema 3: plots (D-061)', () => {
     storage.data.set('slotA', encode(2, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
     // Schema 4 added the variants found, and schema 7 retired them (D-072).
-    expect(r.state).toEqual({ ...v3(old as PersistedState), plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })) });
+    expect(r.state).toEqual({ ...v3(old as PersistedState), plots: Array.from({ length: content.balance.planting.startPlots }, () => ({ seed: null })), lessons: null });
   });
 
   it('a schema-3 save must carry valid plots (D-061)', () => {
@@ -519,7 +519,7 @@ describe('schema 7: rare variants retired (D-072)', () => {
     expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x + 1080 - 624, k.y + 2880 - 1152]));
     // Planted kids have no position; everything else is as it was.
     expect(r.state!.plots).toEqual(old.plots);
-    expect({ ...r.state!, world: null, fields: null, pantry: null }).toEqual({ ...old, world: null, fields: null, pantry: null });
+    expect({ ...r.state!, world: null, fields: null, pantry: null }).toEqual({ ...old, world: null, fields: null, pantry: null, lessons: null });
   });
 
   it('a schema-8 save loads with no fields and an empty pantry, all else as it was (D-069)', async () => {
@@ -530,11 +530,11 @@ describe('schema 7: rare variants retired (D-072)', () => {
     const storage = new TestStorage();
     storage.data.set('slotA', encode(8, 4, 1, old as PersistedState));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual({ ...v4(old as PersistedState), fields: [], pantry: {} });
+    expect(r.state).toEqual({ ...v4(old as PersistedState), fields: [], pantry: {}, lessons: null });
   });
 
   it('a schema-9 save keeps its kids beside the Garden, which moved with map v4 (D-076); fields and plots as they were', async () => {
-    expect(SAVE_SCHEMA).toBe(11);
+    expect(SAVE_SCHEMA).toBeGreaterThanOrEqual(11);
     const g = newGame();
     g.state.materials = 1e6;
     g.step([{ type: 'unlockField' }, { type: 'setFieldFood', field: 0, food: content.balance.feeding.foods[0]!.id }], 0);
@@ -543,7 +543,7 @@ describe('schema 7: rare variants retired (D-072)', () => {
     storage.data.set('slotA', encode(9, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
     expect(r.state!.world.kids.map((k) => [k.id, k.x, k.y])).toEqual(old.world.kids.map((k) => [k.id, k.x - 624, k.y - 1152]));
-    expect(r.state).toEqual(v4(old));
+    expect(r.state).toEqual({ ...v4(old), lessons: null });
   });
 
   it('loading puts a kid the smaller map left outside (D-076) back inside, on a free spot', () => {
@@ -593,7 +593,7 @@ describe('schema 5: names and happiness (D-056, D-057)', () => {
     const storage = new TestStorage();
     storage.data.set('slotA', encode(4, 4, 1, old));
     const r = await new SaveManager(storage, content).load();
-    expect(r.state).toEqual(v3(old));
+    expect(r.state).toEqual({ ...v3(old), lessons: null });
   });
 
   it('a kid may carry a normalized, allowed name and some happiness; a planted kid whether it was happy', () => {
@@ -695,3 +695,35 @@ describe('what the player has yet to see (schema 11, D-087, GUI_MVP §27.5)', ()
   });
 });
 
+describe('the introduction and lessons (schema 12, D-086, GUI_MVP §27.3)', () => {
+  const fresh = () => new Game(content, { bounds: { minX: 0, minY: 0, maxX: 2000, maxY: 2000 }, spawnAt: { x: 1000, y: 300 } }, 1).persisted();
+
+  it('a new game starts with no introduction seen, nothing queued and the gate closed', () => {
+    expect(fresh().lessons).toEqual({ version: 2, intro: 'notStarted', introPage: 1, seen: [], pending: [], firstFusion: false });
+  });
+
+  it('a schema-11 save waits to be adopted (null), and validates', () => {
+    const { lessons: _, ...old } = fresh();
+    void _;
+    const migrated = migrations(content)[11]!(old) as PersistedState;
+    expect(migrated.lessons).toBe(null);
+    expect(validateState(migrated, content)).toEqual([]);
+  });
+
+  it('lessons are saved with the game, and malformed ones are refused', () => {
+    const state = fresh();
+    state.lessons = { version: 2, intro: 'completed', introPage: 3, seen: ['garden'], pending: ['naming', 'planting'], firstFusion: true };
+    expect(validateState(state, content)).toEqual([]);
+    for (const bad of [
+      { ...state.lessons, version: 1 },
+      { ...state.lessons, intro: 'done' },
+      { ...state.lessons, introPage: 4 },
+      { ...state.lessons, seen: ['tea'] },
+      { ...state.lessons, pending: ['naming', 'naming'] },
+      { ...state.lessons, firstFusion: 'yes' },
+      undefined,
+    ]) {
+      expect(validateState({ ...state, lessons: bad } as unknown as PersistedState, content)).toContain('lessons is invalid');
+    }
+  });
+});
