@@ -163,6 +163,13 @@ describe('what a drop tested (Codex review, PR #45)', () => {
     learnFromDrop(tried, graced, [{ type: 'fused', parents: [kid(3, 'fire'), kid(7, 'water')], child: kid(9, 'steam'), firstDiscovery: false }]);
     expect([...tried]).toEqual([]);
   });
+
+  it('a partner on a visit (D-090) was not tested either: the recipe stays to be tried (Codex review round 5, #121)', () => {
+    const tried = new Set<string>();
+    const visiting = { ...drop, contacts: [{ id: 2, type: 'water', grace: 0, visiting: true }] };
+    learnFromDrop(tried, visiting, []);
+    expect([...tried]).toEqual([]);
+  });
 });
 
 describe('the bot never buys what the Compendium refuses (Codex review, PR #84)', () => {
