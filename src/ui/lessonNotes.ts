@@ -243,7 +243,10 @@ export class LessonNotes {
     const bottom = this.tray.getBoundingClientRect().top - 8;
     const room = bottom - this.bandTop() - 8;
     this.note.style.bottom = `${window.innerHeight - bottom}px`;
-    // Its own height, without an expanded route (which may scroll instead), must fit.
+    // Its own height, without an expanded route (which may scroll instead), must fit. Measuring
+    // drops the overflow for a moment: the scroll the player is at is put back (Codex review
+    // round 5, #120).
+    const scrolled = this.note.scrollTop;
     this.note.style.maxHeight = '';
     const route = this.note.querySelector<HTMLElement>('.lesson-route');
     const open = !!route && !route.hidden;
@@ -251,6 +254,7 @@ export class LessonNotes {
     const base = this.note.offsetHeight;
     if (open) route.hidden = false;
     this.note.style.maxHeight = `${Math.max(0, room)}px`;
+    this.note.scrollTop = scrolled;
     return base <= room;
   }
 

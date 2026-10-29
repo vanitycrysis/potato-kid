@@ -6710,6 +6710,13 @@ test.describe('automatic lessons (D-086, GUI_MVP §27.2-27.3)', () => {
       };
     });
     expect(r).toEqual({ scrolls: true, squeezed: false, overlap: false });
+    // Scrolled to its end, it stays there frame after frame, Got it in reach (Codex review round 5, #120).
+    await note(page).evaluate((n) => (n.scrollTop = n.scrollHeight));
+    await frames(page, 6);
+    expect(await note(page).evaluate((n) => n.scrollTop)).toBeGreaterThan(100);
+    await note(page).getByRole('button', { name: 'Got it' }).scrollIntoViewIfNeeded();
+    await note(page).getByRole('button', { name: 'Got it' }).click();
+    await expect(note(page)).toBeHidden();
   });
 
   test('the tip announcement stays hidden in the fallback layouts too (Codex review round 4, #120)', async ({ page }) => {
