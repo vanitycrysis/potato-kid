@@ -131,4 +131,20 @@ describe('drawing a ready plot (§27.6)', () => {
     view.update([{ seed: null }, { seed: null }], grow, 0.18);
     expect(signs.children).toHaveLength(0);
   });
+
+  it('keeps signs in plot order whichever ripened first (Codex review round 4, #115)', () => {
+    const textures = new Map<string, Texture>(['fx_plant_plot', 'fx_plant_filling', ...art.stages.map((x) => x.asset)].map((n) => [n, Texture.WHITE]));
+    const view = new PlotsView(art, { x: 1536, y: 2348 }, textures);
+    const signs = view.root.children[1]!;
+    // Plot 2 ripens first, then plot 1: plot 2's sign must still be drawn on top.
+    view.update([growing(grow / 2), growing(grow)], grow, 0.18);
+    const second = signs.children[0]!;
+    view.update([growing(grow), growing(grow)], grow, 0.18);
+    expect(signs.children).toHaveLength(2);
+    expect(signs.children[1]).toBe(second);
+    // Plot 1 harvested and ripe again: still under plot 2's.
+    view.update([{ seed: null }, growing(grow)], grow, 0.18);
+    view.update([growing(grow), growing(grow)], grow, 0.18);
+    expect(signs.children[1]).toBe(second);
+  });
 });

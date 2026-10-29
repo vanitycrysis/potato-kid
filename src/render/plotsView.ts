@@ -172,9 +172,11 @@ export class PlotsView {
           s.position.set((slot[0] - cx) * this.art.plotCanvasScale, (slot[1] - cy) * this.art.plotCanvasScale);
         }
         if (asset === readyAsset(this.art) && n > 0) {
-          // Its own layer, placed at its plot.
+          // Its own layer, placed at its plot, in plot order whenever it ripened: picking takes
+          // the later plot's sign where two overlap (Codex review round 4, #115).
           entry.sign = s;
-          this.signs.addChild(s);
+          const before = this.plots.slice(0, i).filter((e) => e?.sign).length;
+          this.signs.addChildAt(s, before);
           return;
         }
         entry.node.addChild(s);
