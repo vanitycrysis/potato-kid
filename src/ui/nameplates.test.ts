@@ -48,6 +48,12 @@ describe('placing pills (§27.7)', () => {
     expect(layoutNameplates([a, kid(2, 266, 400)], width, band, [], null).size).toBe(2);
   });
 
+  it('an unnamed kid never gets a pill, but no pill covers it (Codex review, #114)', () => {
+    const placed = layoutNameplates([kid(1, 200, 400), kid(2, 200, 470, false, '')], width, band, [], null);
+    expect(placed.size).toBe(0);
+    expect(layoutNameplates([kid(2, 200, 470, false, '')], width, band, [], null).size).toBe(0);
+  });
+
   it('while a kid is held, no pill under the 44 px square at the finger', () => {
     const held = kid(1, 200, 400, true);
     expect(layoutNameplates([held], width, band, [], { x: 200, y: 420 }).size).toBe(0);

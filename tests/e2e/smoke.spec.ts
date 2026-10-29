@@ -6558,6 +6558,26 @@ test.describe('Nicknames on the map (D-091, GUI_MVP §27.7)', () => {
     await expect(page.locator('.nameplates')).toHaveAttribute('aria-hidden', 'true');
   });
 
+  test('no pill covers a kid, named or not (Codex review, #114)', async ({ page }) => {
+    const [a] = await named(page, 'Moss');
+    // An unnamed kid just below the named one, where its pill would go.
+    const below = await page.evaluate((a) => {
+      const pk = window.__PK__!;
+      const k = pk.kids().find((x) => x.id === a)!;
+      return pk.debugAdd!('snow', k.x, k.y + 175);
+    }, a);
+    await page.waitForTimeout(400);
+    const box = await page.evaluate((i) => {
+      const pk = window.__PK__!;
+      const k = pk.kids().find((x) => x.id === i)!;
+      return { a: pk.worldToScreen(k.x + k.box.left, k.y + k.box.top), b: pk.worldToScreen(k.x + k.box.right, k.y + k.box.bottom) };
+    }, below);
+    for (const p of await page.evaluate(() => window.__PK__!.nameplates())) {
+      const clear = p.left + p.width <= box.a.x || box.b.x <= p.left || p.top + p.height <= box.a.y || box.b.y <= p.top;
+      expect(clear).toBe(true);
+    }
+  });
+
   test('a long name is cut at whole letters with an ellipsis, and the pill stays 120 px', async ({ page }) => {
     await named(page, 'Wwwwwwwwwwwwwwwwwwwwwwww');
     const [pill] = await page.evaluate(() => window.__PK__!.nameplates());

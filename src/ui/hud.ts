@@ -255,7 +255,7 @@ export class Hud {
     scene.listenFrame(() => {
       if (!showNames) return;
       const n = scene.namedOnScreen();
-      names.update(n.kids, n.band, [], n.finger, performance.now());
+      names.update(n.kids, n.band, n.exclusions, n.finger, performance.now());
     });
     this.nameplates = names;
 

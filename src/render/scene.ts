@@ -462,22 +462,23 @@ export class MapScene {
   }
 
   /**
-   * The named kids drawn now, in screen CSS px (D-091, §27.7): where each one's feet are drawn
-   * (lifted while held), its lifetime box there, and the visible map band between the HUD and
-   * the tray. Farming kids stand on their pads. The finger, while a kid is held.
+   * Every kid drawn now, in screen CSS px (D-091, §27.7): where each one's feet are drawn
+   * (lifted while held), its lifetime box there and its nickname (empty without one); the
+   * visible map band between the HUD and the tray; what a name must never cover (the partner
+   * mark); and the finger, while a kid is held. Farming kids stand on their pads.
    */
   namedOnScreen(): {
     kids: { id: number; name: string; feet: { x: number; y: number }; box: { left: number; top: number; right: number; bottom: number }; held: boolean }[];
     band: { left: number; top: number; right: number; bottom: number };
+    exclusions: { left: number; top: number; right: number; bottom: number }[];
     finger: { x: number; y: number } | null;
   } {
     const out: ReturnType<MapScene['namedOnScreen']>['kids'] = [];
     const add = (id: number, name: string | undefined, at: { x: number; y: number }, box: { left: number; top: number; right: number; bottom: number }, held: boolean) => {
-      if (!name) return;
       const feet = this.camera.toGlobal(at);
       const a = this.camera.toGlobal({ x: at.x + box.left, y: at.y + box.top });
       const b = this.camera.toGlobal({ x: at.x + box.right, y: at.y + box.bottom });
-      out.push({ id, name, feet: { x: feet.x, y: feet.y }, box: { left: a.x, top: a.y, right: b.x, bottom: b.y }, held });
+      out.push({ id, name: name ?? '', feet: { x: feet.x, y: feet.y }, box: { left: a.x, top: a.y, right: b.x, bottom: b.y }, held });
     };
     for (const k of this.game.state.world.kids) {
       const view = this.views.get(k.id);
@@ -490,7 +491,13 @@ export class MapScene {
       }
     }
     const { width, height } = this.app.screen;
-    return { kids: out, band: { left: 0, top: this.insets.top, right: width, bottom: height - this.insets.bottom }, finger: this.drag ? { ...this.dragScreen } : null };
+    const exclusions: { left: number; top: number; right: number; bottom: number }[] = [];
+    // The partner mark while a held kid is over a partner (D-083): its whole outline.
+    if (this.partnerMark.getLocalBounds().width > 0) {
+      const r = this.partnerMark.getBounds();
+      exclusions.push({ left: r.x, top: r.y, right: r.x + r.width, bottom: r.y + r.height });
+    }
+    return { kids: out, band: { left: 0, top: this.insets.top, right: width, bottom: height - this.insets.bottom }, exclusions, finger: this.drag ? { ...this.dragScreen } : null };
   }
 
   listenSteps(fn: (events: GameEvent[]) => void): void {

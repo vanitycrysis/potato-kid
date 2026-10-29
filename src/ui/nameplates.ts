@@ -13,9 +13,10 @@ export interface Rect {
   bottom: number;
 }
 
-/** A named kid drawn this frame, in screen CSS px. */
+/** A kid drawn this frame, in screen CSS px. Only one with a name gets a pill; all are obstacles. */
 export interface Candidate {
   id: number;
+  /** Its nickname, or '' for none. */
   name: string;
   /** Its displayed ground point (the lifted feet while held). */
   feet: { x: number; y: number };
@@ -69,7 +70,7 @@ export function layoutNameplates(
   exclusions: readonly Rect[],
   finger: { x: number; y: number } | null,
 ): Map<number, Rect> {
-  const order = [...candidates].sort((a, b) => Number(b.held) - Number(a.held) || b.feet.y - a.feet.y || a.id - b.id);
+  const order = candidates.filter((c) => c.name).sort((a, b) => Number(b.held) - Number(a.held) || b.feet.y - a.feet.y || a.id - b.id);
   const fingerBox = finger ? { left: finger.x - PILL.finger / 2, top: finger.y - PILL.finger / 2, right: finger.x + PILL.finger / 2, bottom: finger.y + PILL.finger / 2 } : null;
   const kept = new Map<number, Rect>();
   for (const c of order) {
@@ -97,13 +98,22 @@ export class Nameplates {
 
   constructor() {
     this.root.setAttribute('aria-hidden', 'true');
+    // Names fitted in a fallback font are fitted again once the pill's own font arrives.
+    document.fonts?.addEventListener('loadingdone', () => this.refit());
   }
 
-  /** This frame's named kids; `now` is ms. An empty list (or the setting off) clears every pill. */
-  update(candidates: readonly Candidate[], band: Rect, exclusions: readonly Rect[], finger: { x: number; y: number } | null, now: number): void {
+  /** Measure afresh: every pill's text is fitted again on its next frame. */
+  refit(): void {
+    this.font = '';
+    for (const p of this.pills.values()) p.name = '';
+  }
+
+  /** This frame's kids (pills for the named ones); `now` is ms. The setting off clears every pill. */
+  update(kids: readonly Candidate[], band: Rect, exclusions: readonly Rect[], finger: { x: number; y: number } | null, now: number): void {
+    const candidates = kids.filter((c) => c.name);
     const widths = new Map<number, number>();
     for (const c of candidates) widths.set(c.id, this.width(c));
-    const placed = layoutNameplates(candidates, (c) => widths.get(c.id)!, band, exclusions, finger);
+    const placed = layoutNameplates(kids, (c) => widths.get(c.id)!, band, exclusions, finger);
     for (const c of candidates) if (!placed.has(c.id)) this.blocked.set(c.id, now);
     const live = new Set(candidates.map((c) => c.id));
     for (const id of this.blocked.keys()) if (!live.has(id)) this.blocked.delete(id);
