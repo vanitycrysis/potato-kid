@@ -1,33 +1,51 @@
-# Session handoff (2026-10-18, for the next Claude session)
+# Session handoff (2026-10-29, for the next Claude session)
 
-**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-075..D-084**), `docs/TASKS.md`, and `docs/GUI_MVP.md` §§23–26 (Codex's ROUND3-DESIGN).
+**To start:** tell Claude "Resume from docs/HANDOFF.md". Read this first, then `CLAUDE.md`, `docs/PROJECT_BRIEF.md` ("Current arrangement"), `docs/DECISIONS.md` (especially **D-085..D-095**), `docs/TASKS.md`, and `docs/GUI_MVP.md` §27 (Codex's ROUND4-DESIGN).
 
-**If a session ends abruptly**, the state can be rebuilt without this file: `gh pr list` (open PRs), each PR's last comment (the last Codex round posted), `git log` of each `claude/` worktree, and the Codex plugin's job results in `~/.claude/plugins/data/codex-openai-codex/state/<worktree>/jobs/*.json`. A review that finished but was never posted is there. That is how the 2026-10-14 shutdown was recovered on 2026-10-18.
+**If a session ends abruptly**, the state can be rebuilt without this file: `gh pr list` (open PRs), each PR's last comment (the last Codex round posted), `git log` of each `claude/` worktree, and the Codex plugin's job results in `~/.claude/plugins/data/codex-openai-codex/state/<worktree>/jobs/*.json`. A review that finished but was never posted is there.
 
 ## Where we are
 
-- **`main` has all of the owner's third gate-4 round (D-075..D-084).** Merged:
-  - MAP-HALF (#102), OFFLINE-UNCAPPED (#101), ROUND3-DESIGN (#100, Codex), DRAG-HOVER (#103), TIER-NAMES (#104);
-  - SPROUT-OVERFLOW (#106, D-084), ICON-HUD (#105, 11 Codex rounds), TUTORIAL (#107, 5 Codex rounds).
-- **The gate-4 build is with the owner** (third round, sent 2026-10-18). Wait for their feedback; turn each point into a decision in `DECISIONS.md` and a `TASKS.md` row before building.
+- **`main` has all of the owner's fourth gate-4 round (D-085..D-095).** Merged:
+  - TOP-EDGE-TAP (#110), HAPPY-SUN (#111), ROUND4-ART (#112, Codex), ROUND4-DESIGN (#113, Codex);
+  - NAME-TOGGLE (#114), TAP-HARVEST (#115), FARM-ANIM (#118);
+  - SPARKLE-ANIM (#116: portraits, 6 Codex rounds) and SPARKLE-MAP (#119: the map too, D-095, the owner's call);
+  - NEW-KID-POPUP (#117, 7 rounds), TUTORIAL-SPLIT (#120, 6 rounds), DECORATIONS (#121, 8 rounds);
+  - CI-POPUP-TIMING (#122): two popup tests timed in the page, since CI was red on `main` after #117.
+  - CI-BENCH-EDGE (#124): the full-bench decorations test (#121) dropped a kid inside the 56 px edge-scroll zone, so the map panned by timing and the next drop missed the bench (a timeout on #123's CI).
+- **Next: the fourth gate-4 build for the owner**, once `main`'s CI is green. Builds go out as CI artifacts (D-060): the web zip and the debug APK from the run on `main`.
 - **Codex has no open design task.** TROPHY-MAP (D-064) and ANIM-POLISH wait until after gate 4.
 - **Full access, no permission questions** (memory file `no-permission-asks`), but still stop at owner gates and real design choices.
-- **Force pushes are blocked** by the auto-mode classifier. To bring a pushed branch up to date, merge `main` into it (a fast-forward push), don't rebase.
+- **Force-pushing `claude/` branches is approved** (D-093, `--force-with-lease`), never `main` or `chatgpt/`.
 
 ## Open work at handoff
 
-1. **The owner's gate-4 feedback** on the third-round build (what to try is in the chat message and below).
-2. **Small follow-ups (not blocking):**
-   - The 96 px rare card portrait's sparkle envelope (GUI_MVP §16.2).
-   - The drawn-position obstacle source and the drag's captured food have no killing tests (explained in #90).
-3. **Polish notes** (owner's polish pass, not now): Seashell Kid reads closer to a teapot at 55 px; the farm and map paths are quite rectilinear; Water's wiggle hood is the weakest case.
+1. **The owner's feedback on the fourth gate-4 build.**
+2. **Notes for Codex (art, minor):** the picnic blanket's bottom-edge marks read a little like legs. The kid card's line for a decoration's happiness ("From a decoration: no planting bonus.") is Claude's wording; Codex may want its own.
+3. **Earlier polish notes** (owner's polish pass, not now): Seashell Kid reads closer to a teapot at 55 px; the farm and map paths are quite rectilinear; Water's wiggle hood is the weakest case.
 
-**What to try (third round):** the half-size map; the icon HUD (tap a chip for its bubble; hold a tray icon for its name; Notebook → Icon guide); the first-run tutorial (it opens once on the first launch after updating, even with an existing save; replay from Settings or the Icon guide); a long absence (no offline cap); the Special and Rare badges; dragging a kid over others (it floats; a partner is marked; the recipe window); a ripe plot on a full map (its sprout still comes up).
+**What to try (fourth round):**
+
+- A new save: three welcome cards. Then, after the first fusion discovery, one quiet lesson note at a time as each mechanic becomes affordable. Replay any of them from Notebook → Settings or the Icon guide → Replay tutorial.
+- New kinds: a big waving popup ("… wandered in!", "… sprouted!"); after a long absence, one per new kind before the summary.
+- A ripe plot glows; tap it to meet the sprout (popup).
+- Farming kids stomp.
+- Settings → Show nicknames on the map.
+- The Happy sun sits top right.
+- Rare sparkles move on cards, lists and the map.
+- Drop a kid on a bench, the bird bath, the pond, the sitting log or the picnic blanket; kids also go there on their own.
+- A kid at the very top of the screen opens its card.
 
 ## Decisions I made this session (engine and UI rules are Claude's)
 
-- **ICON-HUD (#105):** the centred 156 px tray is clamped inside ML…W−MR (`left: clamp(...)`, no transform). The name bubble's Close names itself like the tray icons (hover, focus, 450 ms hold), just below the ×.
-- **TUTORIAL (#107):** the HUD's measure pass calls `tutorial.relayout()` after its own layout (no separate resize listener). It also sets `--ui-banner` (the banner's height + 8), which the card's max height subtracts. A compact column is `justify-content: safe center`. Each page starts scrolled to its top.
+- **Presentation queue (#117):** arrivals and return summaries waiting live in the game state (`presentation`, schema 11), saved with the births they show. Acknowledging one saves. The save after a fusion/purchase runs as a step listener after the HUD's.
+- **Lessons (#120):** `GameState.lessons` (schema 12). A save from before adopts them from the old tutorial record and its own evidence. Notes are evaluated after each step, at load, and four times a second.
+- **Decorations (#121, rules in D-090):** a visit is the kid's activity (schema 13). The numbers:
+  - ×1.25 happiness for 10 min, never over a food's, no planting bonus (`plantsHappy`);
+  - one walker in five that stops sets off for a slot within 700 units;
+  - 20 s to get there, a stay of 30–75 s, then a 180 s cooldown;
+  - a slot is offered only if the kid's box there clears every grounded kid (`seatClear`).
+- **Map sparkle (#119, D-095):** the map sleeve plays the portrait's §27.7 loop in place of its old opacity breathing.
 
 ## How we work (D-027, D-035, D-036: owner instructions)
 
@@ -38,7 +56,7 @@
   with `run_in_background`. Include the task's `TASKS.md` entry. For review rounds, append Claude's PR review verbatim.
 - **Codex's worktree** is `C:\Users\Adria\potato-kid-chatgpt` (`chatgpt/` branches). Its sandbox has **no git and no network**: Claude commits its files unchanged with `git -c user.name=ChatGPT -c user.email=noreply@openai.com commit` and pushes.
 - **Codex reviews** of every Claude PR, before merging:
-  - in the review worktree `../potato-kid-review-50` (it has `node_modules`): `git fetch origin && git checkout --detach origin/<branch>`; or, if it is gone, `git worktree add --detach ../potato-kid-review-N <branch>`, then `npm ci` in it;
+  - in a review worktree (`../potato-kid-review-82`, `-83` or `-84`; each has `node_modules`): `git fetch origin && git checkout --detach origin/<branch>`; or, if it is gone, `git worktree add --detach ../potato-kid-review-N <branch>`, then `npm ci` in it;
   - `node .../codex-companion.mjs review --wait --model gpt-6.1-sol --cwd <that dir> --base origin/main --scope branch`;
   - post the output to the PR verbatim, labelled as Codex's, then a reply per finding;
   - merge only after a clean Codex round **and** green CI.
@@ -54,6 +72,16 @@
 - It reports wall-clock milestones, levels, income by day, plots, plantings and sprouts, and specials on the map against capacity.
 - **Tuning runs side by side:** `PK_BALANCE='{"planting":{...}}'` merges over the balance one level deep, and `PK_SPECIALS=20` adds stand-in special kids (tier 5, in no recipe). Run each variant as **its own background command** with full paths; never share shell variables across `&`.
 - **Never edit `src/`, or run mutation tests, while it runs.** Its worker processes load `src/` as they start, so a mutant can silently corrupt some seeds.
+
+## Testing gotchas learned in the fourth round
+
+- **Keep e2e drags out of the edge-scroll zone** (56 CSS px, `EDGE_ZONE` in `scene.ts`). A drag that ends there pans the map for as long as it lasts, so later screen positions depend on timing (#124). At the decorations tests' zoom, 500 world units from the screen's centre is already inside it.
+- **CI's slower runners miss half-second animations.** Anything checked against a short clip (the popup's 500 ms wave) is sampled every frame inside the page, and a layout change is forced from the page (`debugArrivalLayout`), not with `setViewportSize` from the runner (#122).
+- **A frame "while a command is pending" can be staged:** `debugHoldSteps(true)` stops sim steps while frames go on, so a test sees only the scene's preview (#121). Release it after.
+- **Mutation-check with the real timing.** A test that sampled frames after a real tap passed with the bug too (the one wrong step fell between frames); and a tap held 150 ms didn't always reach the sim under 4 parallel workers. Wait for the sim state (`kids()[…].held`) rather than a fixed delay.
+- **A closing sheet that is put aside must leave at once** (`Sheets.close(…, instant)`): one still fading when the return brings it back doubles every locator in it (#117).
+- **TypeScript narrows `|| true` / `&& false` mutants** into compile errors. Mutate with something it can't see through (`kid.id < 0`, `box ? x : x`).
+- Pinch-to-zoom and some layout tests flake under full-suite load; rerun and repeat them (`--repeat-each`) before suspecting a change.
 
 ## Testing gotchas learned this session
 
