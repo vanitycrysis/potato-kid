@@ -43,6 +43,7 @@ The owner talks only to Claude. ChatGPT's role is filled by **OpenAI Codex**, wh
 - Codex works in its own git worktree (`../potato-kid-chatgpt`) on `chatgpt/` branches, committing as `ChatGPT`. Claude and Codex never edit the same folder at once. Codex's sandbox cannot push, so Claude pushes Codex's commits unchanged and posts Codex's reviews to the pull request verbatim, labelled as Codex's.
 - Disagreements still go in the pull request. If one round does not settle them, Claude brings both positions to the owner.
 - The check-in gates below are unchanged.
+- **Since 2026-11-11 (D-096): Claude draws the art, for now, and Codex reviews it.** This swaps the two roles for art only. Engineering, audio and the gates are unchanged. See `docs/ART.md`.
 
 ## Check-ins with me
 
