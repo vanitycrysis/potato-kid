@@ -1,12 +1,18 @@
 // Checks every kid costume against the drawing rules, in every pose, by rasterising the art
 // sources the way the engine composes them (docs/ART.md):
 //   bounds  nothing outside the body's lifetime box (D-043)
-//   grip    a prop in the right hand touches the right arm (D-098)
-//   face    nothing in front covers or crowds the eyes and smirk, on any face (D-045)
-//   join    parts of one object listed as `joined` in kid_checks.json overlap (D-098)
+//   grip    a prop in the right hand overlaps the right arm (D-098)
+//   join    parts of one object listed as `joined` in art/kid_checks.json overlap (D-098)
+//   under   for a pair listed as `under`, the first part never shows above the second
+//           (an umbrella's shaft must not poke through its canopy)
+//   face    nothing in front covers or crowds the eyes and smirk, on any face, with the face
+//           where it rests and where a glance moves it (D-045)
 // Usage: npm run art:kids [-- --types wizard,bee] [--all]
-// Without --types it checks the kids listed as `checked` in art/kid_checks.json; --all
-// checks the whole roster and only reports (older costumes predate the grip rule).
+// Without --types it checks the kids listed as `checked` in art/kid_checks.json; --all checks
+// the whole roster and only reports (older costumes predate the grip rule).
+//
+// What it cannot judge: whether a grip looks convincing, or how a costume reads. It is a
+// floor under the review, not the review (Codex's art review, PR #127).
 import { chromium } from '@playwright/test';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -33,16 +39,18 @@ const files = new Map();
 })(join(ROOT, 'art/src'));
 
 // The arms are the body frame's path drawn with relative strokes (`q` or `l`); feet use `Q`.
-// The right arm is its second stroke.
+// The right arm is its second stroke. A frame may wrap its paths in a translate group.
 const arms = {};
 for (const [b, body] of Object.entries(rig.bodies)) {
   arms[b] = {};
   for (const [f, frame] of Object.entries(body.frames)) {
-    const paths = [...files.get(frame.asset).matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
-    const arm = paths.find((d) => /^M[\d. ]+ [ql]/.test(d));
-    if (!arm) throw new Error(`${frame.asset}: no arm path found`);
-    const subs = arm.split(/(?=M)/).map((s) => s.trim());
-    arms[b][f] = subs[1];
+    const svg = files.get(frame.asset);
+    const hit = [...svg.matchAll(/<path d="([^"]+)"/g)].find((m) => /^M[\d. ]+ [ql]/.test(m[1]));
+    if (!hit) throw new Error(`${frame.asset}: no arm path found`);
+    const before = svg.slice(0, hit.index);
+    const open = before.lastIndexOf('<g transform="translate(');
+    const shift = open > before.lastIndexOf('</g>') ? before.slice(open).match(/translate\(([-\d.]+)[ ,]+([-\d.]+)\)/).slice(1, 3).map(Number) : [0, 0];
+    arms[b][f] = { d: hit[1].split(/(?=M)/)[1].trim(), shift };
   }
 }
 
@@ -54,8 +62,10 @@ const sources = Object.fromEntries([...needed].map((n) => [n, `data:image/svg+xm
 const browser = await chromium.launch();
 const page = await browser.newPage();
 const report = await page.evaluate(
-  async ({ rig, types, sources, arms, faceMargin, gripReach, joined }) => {
-    const S = 256;
+  async ({ rig, types, sources, arms, rules }) => {
+    // Twice the source size, so half a source pixel shows.
+    const K = 2;
+    const S = 256 * K;
     const images = {};
     await Promise.all(
       Object.entries(sources).map(async ([name, url]) => {
@@ -68,60 +78,66 @@ const report = await page.evaluate(
     const canvas = new OffscreenCanvas(S, S);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const mask = (draw) => {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, S, S);
+      ctx.setTransform(K, 0, 0, K, 0, 0);
+      ctx.clearRect(0, 0, 256, 256);
       draw();
       const { data } = ctx.getImageData(0, 0, S, S);
       const m = new Uint8Array(S * S);
-      for (let i = 0; i < m.length; i++) m[i] = data[i * 4 + 3] > 40 ? 1 : 0;
+      for (let i = 0; i < m.length; i++) m[i] = data[i * 4 + 3] > 16 ? 1 : 0;
       return m;
     };
-    // As KidRigView composes a part: the attachment (position, rotation, scale), then the
-    // part's fit for this body about its pivot.
-    const place = (asset, a, pivot, fit) => () => {
-      ctx.translate(a.position[0], a.position[1]);
+    // As KidRigView composes a part: the attachment (position plus any clip offset, rotation,
+    // scale), then the part's fit for this body about its pivot.
+    const place = (asset, a, pivot, fit, offset = [0, 0]) => () => {
+      ctx.translate(a.position[0] + offset[0], a.position[1] + offset[1]);
       ctx.rotate(((a.rotationDeg ?? 0) * Math.PI) / 180);
       ctx.scale(a.scale?.[0] ?? 1, a.scale?.[1] ?? 1);
       ctx.scale(fit[0], fit[1]);
       ctx.translate(-pivot[0], -pivot[1]);
-      ctx.drawImage(images[asset], 0, 0);
+      ctx.drawImage(images[asset], 0, 0, 256, 256);
     };
-    /** Grows a mask by `r` px (a square brush: slightly generous, which suits a clearance). */
+    /** Grows a mask by `r` source px (a square brush: slightly generous, which suits a clearance). */
     const grow = (m, r) => {
-      const out = new Uint8Array(m.length);
+      const n = Math.round(r * K);
+      const rows = new Uint8Array(m.length);
       for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
         if (!m[y * S + x]) continue;
-        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-          const [u, v] = [x + dx, y + dy];
-          if (u >= 0 && v >= 0 && u < S && v < S) out[v * S + u] = 1;
-        }
+        for (let dx = -n; dx <= n; dx++) if (x + dx >= 0 && x + dx < S) rows[y * S + x + dx] = 1;
+      }
+      const out = new Uint8Array(m.length);
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+        if (!rows[y * S + x]) continue;
+        for (let dy = -n; dy <= n; dy++) if (y + dy >= 0 && y + dy < S) out[(y + dy) * S + x] = 1;
       }
       return out;
     };
-    const touches = (a, b) => {
-      for (let i = 0; i < a.length; i++) if (a[i] && b[i]) return true;
-      return false;
+    /** Shared area of two masks, in source px². */
+    const shared = (a, b) => {
+      let n = 0;
+      for (let i = 0; i < a.length; i++) if (a[i] && b[i]) n++;
+      return n / (K * K);
     };
     const out = [];
     for (const type of types) {
       const costume = rig.costumes[type];
       if (!costume) continue;
       for (const [bodyId, body] of Object.entries(rig.bodies)) {
-        const [l, t, r, b] = body.boundsPx;
+        const [l, t, r, b] = body.boundsPx.map((v) => v * K);
         for (const [frameId, frame] of Object.entries(body.frames)) {
           const where = `${type} / ${bodyId} / ${frameId}`;
           const front = new Uint8Array(S * S);
+          const armOf = arms[bodyId][frameId];
           const arm = mask(() => {
+            ctx.translate(armOf.shift[0], armOf.shift[1]);
             ctx.lineWidth = 7.5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.strokeStyle = '#000';
-            ctx.stroke(new Path2D(arms[bodyId][frameId]));
+            ctx.stroke(new Path2D(armOf.d));
           });
           const masks = {};
           for (const c of costume.components) {
-            const a = frame.attachments[c.attachTo];
-            const m = mask(place(c.asset, a, c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]));
+            const m = mask(place(c.asset, frame.attachments[c.attachTo], c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]));
             masks[c.asset] = m;
             let over = 0;
             for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
@@ -129,23 +145,40 @@ const report = await page.evaluate(
               over = Math.max(over, l - x, t - y, x + 1 - r, y + 1 - b);
               if (c.layer === 'front') front[y * S + x] = 1;
             }
-            if (over > 0) out.push({ rule: 'bounds', where, part: c.asset, by: over });
+            if (over > 0) out.push({ rule: 'bounds', where, part: c.asset, by: over / K });
             if (c.attachTo === 'hand_right') {
-              // The gap between prop and arm, in px: 0 means they touch.
+              const area = shared(m, arm);
+              if (area >= rules.gripArea) continue;
+              // How far apart they are, in source px: 0 means they touch, but too little to hold.
               let gap = 0;
-              let grown = arm;
-              while (!touches(m, grown) && gap < gripReach) {
-                gap++;
-                grown = grow(arm, gap);
-              }
-              if (gap > 0) out.push({ rule: 'grip', where, part: c.asset, by: gap });
+              while (area === 0 && gap < rules.gripReach && shared(m, grow(arm, gap + 1)) === 0) gap++;
+              out.push({ rule: 'grip', where, part: c.asset, by: area > 0 ? 0 : gap + 1, note: area > 0 ? `only ${area.toFixed(1)} px² of contact` : '' });
             }
           }
-          for (const [a, b] of joined[type] ?? []) if (!touches(masks[a], masks[b])) out.push({ rule: 'join', where, part: `${a} + ${b}`, by: 0 });
+          for (const [a, c] of rules.joined[type] ?? []) {
+            const area = shared(masks[a], masks[c]);
+            if (area < rules.joinArea) out.push({ rule: 'join', where, part: `${a} + ${c}`, by: 0, note: `${area.toFixed(1)} px² of contact` });
+          }
+          for (const [a, c] of rules.under[type] ?? []) {
+            // In every column they share, the first part's top must not be above the second's.
+            let above = 0;
+            for (let x = 0; x < S; x++) {
+              let ta = -1;
+              let tc = -1;
+              for (let y = 0; y < S && (ta < 0 || tc < 0); y++) {
+                if (ta < 0 && masks[a][y * S + x]) ta = y;
+                if (tc < 0 && masks[c][y * S + x]) tc = y;
+              }
+              if (ta >= 0 && tc >= 0 && ta < tc) above = Math.max(above, tc - ta);
+            }
+            if (above > 0) out.push({ rule: 'under', where, part: `${a} above ${c}`, by: above / K });
+          }
           for (const [faceId, face] of Object.entries(rig.faces)) {
             for (const [state, asset] of Object.entries(face.states)) {
-              const f = grow(mask(place(asset, frame.attachments.face_centre, face.sourcePivot, [1, 1])), faceMargin);
-              if (touches(front, f)) out.push({ rule: 'face', where, part: `${faceId} ${state}`, by: 0 });
+              for (const dx of rules.faceShifts) {
+                const f = grow(mask(place(asset, frame.attachments.face_centre, face.sourcePivot, [1, 1], [dx, 0])), rules.faceMargin);
+                if (shared(front, f) > 0) out.push({ rule: 'face', where, part: `${faceId} ${state}${dx ? ` glancing ${dx > 0 ? 'right' : 'left'}` : ''}`, by: 0 });
+              }
             }
           }
         }
@@ -153,7 +186,25 @@ const report = await page.evaluate(
     }
     return out;
   },
-  { rig, types, sources, arms, faceMargin: 3, gripReach: 30, joined: checks.joined ?? {} },
+  {
+    rig,
+    types,
+    sources,
+    arms,
+    rules: {
+      // A hold is at least this much shared ink, in source px² (a touch at one pixel is not a
+      // grip). Whether a hold convinces is still the review's call.
+      gripArea: 12,
+      gripReach: 30,
+      joinArea: 12,
+      // Clear source px around the face, with the face at rest and at the widest glance a clip
+      // gives it (motion v1's look_around: 5 px).
+      faceMargin: 3,
+      faceShifts: [0, -5, 5],
+      joined: checks.joined ?? {},
+      under: checks.under ?? {},
+    },
+  },
 );
 await browser.close();
 
@@ -163,11 +214,11 @@ for (const p of report) {
   const key = `${p.rule}|${p.where.split(' / ')[0]}|${p.part}`;
   const g = groups.get(key) ?? { ...p, count: 0, wheres: [] };
   g.count++;
-  g.wheres.push(`${p.where.split(' / ').slice(1).join('/')}${p.by ? ` ${p.by}px` : ''}`);
+  g.wheres.push(`${p.where.split(' / ').slice(1).join('/')}${p.by ? ` ${p.by}px` : ''}${p.note ? ` (${p.note})` : ''}`);
   if (p.by >= g.by) Object.assign(g, { by: p.by, where: p.where });
   groups.set(key, g);
 }
-const said = { bounds: 'outside the lifetime box', grip: 'does not touch the right arm', face: 'crowds the face', join: 'do not touch each other' };
+const said = { bounds: 'outside the lifetime box', grip: 'is not held by the right arm', face: 'crowds the face', join: 'do not join', under: 'shows' };
 for (const g of groups.values()) {
   console.log(`${g.rule.padEnd(6)} ${g.where.split(' / ')[0]}: ${g.part} ${said[g.rule]} in ${g.count} pose(s)${g.by ? `, worst ${g.by} px` : ''}: ${g.wheres.slice(0, 8).join(', ')}${g.wheres.length > 8 ? ', …' : ''}`);
 }
