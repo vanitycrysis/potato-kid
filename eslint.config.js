@@ -10,7 +10,7 @@ export default tseslint.config(
     // art sources' generators (Codex's audio renderer).
     files: ['scripts/**/*.mjs', 'art/src/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly', URL: 'readonly', document: 'readonly', Image: 'readonly', DOMParser: 'readonly', btoa: 'readonly', unescape: 'readonly' },
+      globals: { process: 'readonly', Buffer: 'readonly', console: 'readonly', URL: 'readonly', document: 'readonly', Image: 'readonly', DOMParser: 'readonly', btoa: 'readonly', unescape: 'readonly', OffscreenCanvas: 'readonly', Path2D: 'readonly' },
     },
   },
 );

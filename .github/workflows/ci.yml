@@ -14,7 +14,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# The four jobs below run side by side. `ci` at the end is the one required check on
+# The jobs below run side by side. `ci` at the end is the one required check on
 # `main` (branch protection): it passes only when every other job passed.
 jobs:
   check:
@@ -73,6 +73,31 @@ jobs:
           path: test-results/
           retention-days: 14
 
+  # The art sources against the asset contract, and every checked costume against the drawing
+  # rules in every pose (docs/ART.md). Both rasterise in Chromium.
+  art:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npm run art:check
+      - run: npm run art:kids
+
   android:
     runs-on: ubuntu-latest
     steps:
@@ -100,12 +125,13 @@ jobs:
 
   ci:
     if: always()
-    needs: [check, e2e, android]
+    needs: [check, e2e, art, android]
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed
         run: |
-          echo "check: ${{ needs.check.result }}, e2e: ${{ needs.e2e.result }}, android: ${{ needs.android.result }}"
+          echo "check: ${{ needs.check.result }}, e2e: ${{ needs.e2e.result }}, art: ${{ needs.art.result }}, android: ${{ needs.android.result }}"
           test "${{ needs.check.result }}" = success
           test "${{ needs.e2e.result }}" = success
+          test "${{ needs.art.result }}" = success
           test "${{ needs.android.result }}" = success

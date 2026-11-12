@@ -9,6 +9,7 @@ How the tests are laid out, how to run them, and how CI runs them.
 | Unit | `src/**/*.test.ts` (Vitest) | `npm test` | The sim, content, save, render helpers and UI logic |
 | End to end | `tests/e2e/*.spec.ts` (Playwright, Pixel 7 profile) | `npm run e2e` | The built app in Chromium, driven through the `?debug=1` hooks (`window.__PK__`) |
 | Art checks | `scripts/export-art.mjs` | `npm run art:check` | Every art source against the asset contract |
+| Costume checks | `scripts/check-kids.mjs` | `npm run art:kids` | Each checked costume in every body and pose: inside the lifetime box, held props touching the arm, joined parts touching, the face clear. `-- --all` reports on the whole roster |
 | Art previews | `tests/preview/` | `npm run art:preview` | Review captures through the real engine. Not part of CI |
 
 ## End-to-end layout
@@ -26,11 +27,12 @@ The end-to-end suite is one spec file per area, with shared helpers in `tests/e2
 
 ## CI
 
-`.github/workflows/ci.yml` runs four kinds of job side by side on every pull request and on
+`.github/workflows/ci.yml` runs five kinds of job side by side on every pull request and on
 every push to `main`:
 
 - `check`: typecheck, lint, unit tests, build.
 - `e2e`: six runners, each taking one sixth of the spec files (`--shard=N/6`) with one worker.
+- `art`: `npm run art:check` and `npm run art:kids`.
 - `android`: the debug APK.
 - `ci`: passes only when all of the above passed.
 

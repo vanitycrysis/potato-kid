@@ -5,18 +5,18 @@ import { lookTable, rigCoverage, wildBox } from '../content/artRules';
 import { validateContent } from '../content/validate';
 import { Game } from './game';
 
-// The ten rares and twenty specials (D-072, D-073; Codex's kid_wild_v1): content, and each
+// The eleven rares (ten of D-072, and Star, D-104) and twenty specials (D-073; kid_wild_v1): content, and each
 // wild kid's own collision box.
 const looks = lookTable(kidRig!, kidWild);
 const bounds = { minX: 0, minY: 0, maxX: 4000, maxY: 4000 };
 const options = { bounds, spawnAt: { x: 2000, y: 2000 }, now: 0, looks };
 
 describe('the shipped wild kids (D-063, D-066, D-072)', () => {
-  it('twenty specials in the Special tier (tier 5) and ten rares in the Rare tier (tier 6), all valid content (D-082)', () => {
+  it('twenty specials in the Special tier (tier 5) and eleven rares in the Rare tier (tier 6), all valid content (D-082, D-104)', () => {
     const specials = content.kids.filter((k) => k.special);
     const rares = content.kids.filter((k) => k.rare);
     expect(specials).toHaveLength(20);
-    expect(rares).toHaveLength(10);
+    expect(rares).toHaveLength(11);
     expect(specials.every((k) => k.tier === 5)).toBe(true);
     expect(rares.every((k) => k.tier === 6)).toBe(true);
     for (const k of [...specials, ...rares]) {

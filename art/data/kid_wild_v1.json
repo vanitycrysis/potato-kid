@@ -53,7 +53,8 @@
     "seashell": "Keeping the quiet part of the shore.",
     "flying_saucer": "A visitor with very good parking manners.",
     "ring_planet": "An entire little world, taking its time.",
-    "wind_up_key": "A little more enthusiasm, saved for later."
+    "wind_up_key": "A little more enthusiasm, saved for later.",
+    "star": "Staying up to see who else is awake."
   },
   "clips": {
     "idle": {
@@ -1952,6 +1953,53 @@
         38,
         228,
         200
+      ],
+      "clips": [
+        "idle",
+        "walk",
+        "blink",
+        "look_around",
+        "sit_down",
+        "seated",
+        "sleep",
+        "wake",
+        "wave",
+        "pick_up",
+        "held",
+        "drop",
+        "spawn",
+        "fusion",
+        "discovery"
+      ]
+    },
+    "star": {
+      "name": "Star Kid",
+      "collection": "rare",
+      "tier": null,
+      "tierAuthority": "Claude simulator; null is a handoff placeholder, never valid shipping tier",
+      "concept": "A plump five-point star in butter yellow; the two lower points are its feet. One highlight stroke on the top point, well clear of the face.",
+      "frames": {
+        "stand": {
+          "asset": "kid_body_wildstar_stand",
+          "boundsPx": [
+            35,
+            43,
+            222,
+            220
+          ]
+        }
+      },
+      "faceAnchorPx": [
+        128,
+        136
+      ],
+      "faceScale": 0.82,
+      "faceClearance": "All four faces in all three states sit on opaque body fill; checked by render (Claude, newkids-2).",
+      "lifetimeBoundsPx": [
+        35,
+        40,
+        222,
+        220
       ],
       "clips": [
         "idle",
