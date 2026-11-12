@@ -1,6 +1,7 @@
 {
-  "note": "Kids whose costumes must pass every rule of scripts/check-kids.mjs in every pose. Costumes drawn before D-098 are checked with --all and only reported. joined: pairs of parts of one object that must overlap. under: pairs where the first part must never show above the second.",
+  "note": "Kids whose art must pass every rule of scripts/check-kids.mjs in every pose. Costumes drawn before D-098 are checked with --all and only reported. joined: pairs of parts of one object that must overlap. under: pairs where the tip of the first part must lie under the second. checkedWild: wild kids (their own body).",
   "checked": ["bee", "sleepy", "umbrella", "wizard"],
+  "checkedWild": ["star"],
   "joined": { "umbrella": [["kid_umbrella_front_handle", "kid_umbrella_front_canopy"]] },
   "under": { "umbrella": [["kid_umbrella_front_handle", "kid_umbrella_front_canopy"]] }
 }

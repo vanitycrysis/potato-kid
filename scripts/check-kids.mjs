@@ -3,8 +3,10 @@
 //   bounds  nothing outside the body's lifetime box (D-043)
 //   grip    a prop in the right hand overlaps the right arm (D-098)
 //   join    parts of one object listed as `joined` in art/kid_checks.json overlap (D-098)
-//   under   for a pair listed as `under`, the first part never shows above the second
-//           (an umbrella's shaft must not poke through its canopy)
+//   under   for a pair listed as `under`, the first part's tip is covered by the second
+//           (an umbrella's shaft must not poke through its canopy, or stand beside it)
+//   wild    a wild kid listed as `checkedWild` keeps inside its lifetime box, and every face
+//           sits on its body's fill with room to spare (D-045, D-072)
 //   face    nothing in front covers or crowds the eyes and smirk, on any face, with the face
 //           where it rests and where a glance moves it (D-045)
 // Usage: npm run art:kids [-- --types wizard,bee] [--all]
@@ -27,7 +29,10 @@ const arg = (name) => {
   return i < 0 ? undefined : process.argv[i + 1];
 };
 const all = process.argv.includes('--all');
-const types = arg('--types')?.split(',') ?? (all ? Object.keys(rig.costumes) : checks.checked);
+const wild = JSON.parse(readFileSync(join(ROOT, 'art/data/kid_wild_v1.json'), 'utf8'));
+const named = arg('--types')?.split(',');
+const types = (named ?? (all ? Object.keys(rig.costumes) : checks.checked)).filter((t) => !wild.types[t]);
+const wildTypes = (named ?? (all ? Object.keys(wild.types) : (checks.checkedWild ?? []))).filter((t) => wild.types[t]);
 
 const files = new Map();
 (function walk(d) {
@@ -57,12 +62,13 @@ for (const [b, body] of Object.entries(rig.bodies)) {
 const needed = new Set();
 for (const t of types) for (const c of rig.costumes[t]?.components ?? []) needed.add(c.asset);
 for (const f of Object.values(rig.faces)) for (const a of Object.values(f.states)) needed.add(a);
+for (const t of wildTypes) for (const f of Object.values(wild.types[t].frames)) needed.add(f.asset);
 const sources = Object.fromEntries([...needed].map((n) => [n, `data:image/svg+xml;base64,${Buffer.from(files.get(n) ?? '').toString('base64')}`]));
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
 const report = await page.evaluate(
-  async ({ rig, types, sources, arms, rules }) => {
+  async ({ rig, types, sources, arms, rules, wildKids }) => {
     // Twice the source size, so half a source pixel shows.
     const K = 2;
     const S = 256 * K;
@@ -160,16 +166,18 @@ const report = await page.evaluate(
             if (area < rules.joinArea) out.push({ rule: 'join', where, part: `${a} + ${c}`, by: 0, note: `${area.toFixed(1)} px² of contact` });
           }
           for (const [a, c] of rules.under[type] ?? []) {
-            // In every column they share, the first part's top must not be above the second's.
+            // The first part's tip (its top 12 px) must lie under the second: in each column of
+            // the tip, the cover starts at or above it. A column with no cover at all fails too.
+            let tip = S;
+            for (let i = 0; i < S * S && tip === S; i++) if (masks[a][i]) tip = Math.floor(i / S);
             let above = 0;
             for (let x = 0; x < S; x++) {
               let ta = -1;
+              for (let y = tip; y < Math.min(S, tip + 12 * K) && ta < 0; y++) if (masks[a][y * S + x]) ta = y;
+              if (ta < 0) continue;
               let tc = -1;
-              for (let y = 0; y < S && (ta < 0 || tc < 0); y++) {
-                if (ta < 0 && masks[a][y * S + x]) ta = y;
-                if (tc < 0 && masks[c][y * S + x]) tc = y;
-              }
-              if (ta >= 0 && tc >= 0 && ta < tc) above = Math.max(above, tc - ta);
+              for (let y = 0; y < S && tc < 0; y++) if (masks[c][y * S + x]) tc = y;
+              above = Math.max(above, tc < 0 ? 12 * K : tc - ta);
             }
             if (above > 0) out.push({ rule: 'under', where, part: `${a} above ${c}`, by: above / K });
           }
@@ -184,10 +192,33 @@ const report = await page.evaluate(
         }
       }
     }
+    // Wild kids: one body of their own with the shared face on it.
+    for (const [type, w] of wildKids) {
+      const [l, t, r, b] = w.lifetimeBoundsPx.map((v) => v * K);
+      for (const [frameId, frame] of Object.entries(w.frames)) {
+        const where = `${type} / own body / ${frameId}`;
+        const body = mask(() => ctx.drawImage(images[frame.asset], 0, 0, 256, 256));
+        let over = 0;
+        for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (body[y * S + x]) over = Math.max(over, l - x, t - y, x + 1 - r, y + 1 - b);
+        if (over > 0) out.push({ rule: 'bounds', where, part: frame.asset, by: over / K });
+        const anchor = { position: w.faceAnchorPx, rotationDeg: 0, scale: [w.faceScale, w.faceScale] };
+        for (const [faceId, face] of Object.entries(rig.faces)) {
+          for (const [state, asset] of Object.entries(face.states)) {
+            for (const dx of rules.faceShifts) {
+              const f = grow(mask(place(asset, anchor, face.sourcePivot, [1, 1], [dx * w.faceScale, 0])), rules.faceMargin);
+              let off = 0;
+              for (let i = 0; i < f.length; i++) if (f[i] && !body[i]) off++;
+              if (off > 0) out.push({ rule: 'wild', where, part: `${faceId} ${state}${dx ? ` glancing ${dx > 0 ? 'right' : 'left'}` : ''}`, by: 0 });
+            }
+          }
+        }
+      }
+    }
     return out;
   },
   {
     rig,
+    wildKids: wildTypes.map((t) => [t, wild.types[t]]),
     types,
     sources,
     arms,
@@ -218,10 +249,10 @@ for (const p of report) {
   if (p.by >= g.by) Object.assign(g, { by: p.by, where: p.where });
   groups.set(key, g);
 }
-const said = { bounds: 'outside the lifetime box', grip: 'is not held by the right arm', face: 'crowds the face', join: 'do not join', under: 'shows' };
+const said = { bounds: 'outside the lifetime box', grip: 'is not held by the right arm', face: 'crowds the face', join: 'do not join', under: 'shows', wild: 'is not wholly on the body' };
 for (const g of groups.values()) {
   console.log(`${g.rule.padEnd(6)} ${g.where.split(' / ')[0]}: ${g.part} ${said[g.rule]} in ${g.count} pose(s)${g.by ? `, worst ${g.by} px` : ''}: ${g.wheres.slice(0, 8).join(', ')}${g.wheres.length > 8 ? ', …' : ''}`);
 }
 const failing = [...groups.values()].filter((g) => !all || checks.checked.includes(g.where.split(' / ')[0]));
-console.log(`\n${types.length} kid(s) checked in every body and pose: ${groups.size === 0 ? 'no problems' : `${groups.size} problem(s)`}.`);
+console.log(`\n${types.length + wildTypes.length} kid(s) checked in every body and pose: ${groups.size === 0 ? 'no problems' : `${groups.size} problem(s)`}.`);
 if (failing.length && !all) process.exit(1);
