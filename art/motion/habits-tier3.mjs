@@ -202,8 +202,9 @@ export const tier3 = {
     ],
   })),
 
-  /** Blacksmith Kid: hammer up, hammer down, twice, with sparks at each blow. (The hammer is tall and sits
-   * beside the face, so it rises and falls; a swing would cross the eyes or leave the box.) */
+  // The hammer is tall and sits beside the face, so it rises and falls: a swing would cross the
+  // eyes or leave the box.
+  /** Blacksmith Kid: hammer up, hammer down, twice, with sparks at each blow. */
   blacksmith: bake(2.4, (t) => {
     const swing = keys([[0, 0], [0.35, -12, 'out'], [0.5, 5, 'in'], [0.7, -2, 'out'], [1.0, -12, 'out'], [1.15, 5, 'in'], [1.4, -2, 'out'], [1.8, 0, 'inOut']])(t);
     const hit = (t0) => keys([[t0 - 0.01, 1], [t0 + 0.06, 0.94, 'out'], [t0 + 0.25, 1.01, 'out']])(t);
