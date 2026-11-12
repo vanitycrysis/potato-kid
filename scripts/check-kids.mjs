@@ -76,8 +76,12 @@ const report = await page.evaluate(
       for (let i = 0; i < m.length; i++) m[i] = data[i * 4 + 3] > 40 ? 1 : 0;
       return m;
     };
-    const place = (asset, at, pivot, fit) => () => {
-      ctx.translate(at[0], at[1]);
+    // As KidRigView composes a part: the attachment (position, rotation, scale), then the
+    // part's fit for this body about its pivot.
+    const place = (asset, a, pivot, fit) => () => {
+      ctx.translate(a.position[0], a.position[1]);
+      ctx.rotate(((a.rotationDeg ?? 0) * Math.PI) / 180);
+      ctx.scale(a.scale?.[0] ?? 1, a.scale?.[1] ?? 1);
       ctx.scale(fit[0], fit[1]);
       ctx.translate(-pivot[0], -pivot[1]);
       ctx.drawImage(images[asset], 0, 0);
@@ -117,7 +121,7 @@ const report = await page.evaluate(
           const masks = {};
           for (const c of costume.components) {
             const a = frame.attachments[c.attachTo];
-            const m = mask(place(c.asset, a.position, c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]));
+            const m = mask(place(c.asset, a, c.sourcePivot, c.fitByBody[bodyId] ?? [1, 1]));
             masks[c.asset] = m;
             let over = 0;
             for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
@@ -140,7 +144,7 @@ const report = await page.evaluate(
           for (const [a, b] of joined[type] ?? []) if (!touches(masks[a], masks[b])) out.push({ rule: 'join', where, part: `${a} + ${b}`, by: 0 });
           for (const [faceId, face] of Object.entries(rig.faces)) {
             for (const [state, asset] of Object.entries(face.states)) {
-              const f = grow(mask(place(asset, frame.attachments.face_centre.position, face.sourcePivot, [1, 1])), faceMargin);
+              const f = grow(mask(place(asset, frame.attachments.face_centre, face.sourcePivot, [1, 1])), faceMargin);
               if (touches(front, f)) out.push({ rule: 'face', where, part: `${faceId} ${state}`, by: 0 });
             }
           }

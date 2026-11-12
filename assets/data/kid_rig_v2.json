@@ -7388,10 +7388,10 @@
           "asset": "kid_bee_back_wing_left",
           "status": "review",
           "layer": "back",
-          "attachTo": "torso",
+          "attachTo": "head_top",
           "sourcePivot": [
             128,
-            166
+            55
           ],
           "fitByBody": {
             "round": [
@@ -7400,15 +7400,15 @@
             ],
             "tall": [
               0.86,
-              1
+              0.9
             ],
             "squat": [
               1.08,
               1
             ],
             "bean": [
-              0.78,
-              0.92
+              1,
+              1
             ]
           }
         },
@@ -7416,10 +7416,10 @@
           "asset": "kid_bee_back_wing_right",
           "status": "review",
           "layer": "back",
-          "attachTo": "torso",
+          "attachTo": "head_top",
           "sourcePivot": [
             128,
-            166
+            55
           ],
           "fitByBody": {
             "round": [
@@ -7428,14 +7428,14 @@
             ],
             "tall": [
               0.86,
-              1
+              0.9
             ],
             "squat": [
               1.08,
               1
             ],
             "bean": [
-              1,
+              0.8,
               1
             ]
           }
