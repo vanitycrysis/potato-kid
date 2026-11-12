@@ -3,7 +3,7 @@ import { content } from '../content';
 import type { Content } from '../content/types';
 import { Game, type GameEvent } from './game';
 import { createRng } from './rng';
-import { addKid, defaultBox } from './world';
+import { addKid, defaultBox, type Kid } from './world';
 import { gaps, kidRect } from './space';
 
 const bounds = { minX: 0, minY: 0, maxX: 1000, maxY: 1000 };
@@ -438,7 +438,10 @@ describe('appearance and rests (ART-V2)', () => {
         const kind = k.activity.kind;
         if (kind === 'walk') stillFor.delete(k.id);
         else if (kind === 'pause') stillFor.set(k.id, (stillFor.get(k.id) ?? 0) + 0.1);
-        else if (stillFor.has(k.id)) {
+        else if (kind === 'wave' && k.activity.toward !== undefined) {
+          // A greeting (D-101): the kid greeted waves back at once, whatever it was waiting for.
+          stillFor.delete(k.id);
+        } else if (stillFor.has(k.id)) {
           // The ambient started: it was preceded by at least the minimum stationary wait.
           expect(stillFor.get(k.id)!).toBeGreaterThanOrEqual(2 - 1e-6);
           stillFor.delete(k.id);
@@ -447,6 +450,102 @@ describe('appearance and rests (ART-V2)', () => {
       }
     }
     expect(ambients).toBeGreaterThan(0);
+  });
+
+  it('a kid that waves greets a kid resting close by, which waves back; each turns to the other (D-101)', () => {
+    const c = structuredClone(content);
+    c.balance.wander = { ...c.balance.wander, idleChancePerSecond: 5, speed: 0 };
+    c.balance.spawn = { ...c.balance.spawn, startingKids: 2, intervalSeconds: 1e9, tutorialSpawns: 0 };
+    const ambient = {
+      weights: { look: 0, wave: 1, sit: 0, sleep: 0 },
+      chance: 1,
+      stationaryDelay: [0.5, 0.5] as [number, number],
+      lookSeconds: 1,
+      waveSeconds: 1,
+      sitSeconds: (h: number) => h,
+      sleepSeconds: (h: number) => h,
+      seatedHold: [1, 1] as [number, number],
+      sleepHold: [1, 1] as [number, number],
+    };
+    const game = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 }, ambient }, 4);
+    const [a, b] = game.state.world.kids as [Kid, Kid];
+    // Side by side, a little apart: well within two kid-widths.
+    [a.x, a.y, b.x, b.y] = [900, 1000, 900 + (a.box.right - a.box.left) + 20, 1000];
+    let greeted = false;
+    for (let s = 0; s < 200 && !greeted; s++) {
+      game.step([]);
+      if (a.activity.kind === 'wave' && b.activity.kind === 'wave') {
+        greeted = true;
+        // Both at once, for the same time, facing each other: a is on the left.
+        expect(a.activity.toward).toBe(1);
+        expect(b.activity.toward).toBe(-1);
+        expect(a.activity.left).toBeCloseTo(b.activity.left, 5);
+      } else {
+        // Never one waving at the other while the other stands by.
+        expect(a.activity.kind === 'wave' && b.activity.kind === 'pause').toBe(false);
+      }
+    }
+    expect(greeted).toBe(true);
+    // Far apart, a wave is to nobody.
+    const far = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 }, ambient }, 4);
+    const [p, q] = far.state.world.kids as [Kid, Kid];
+    [p.x, p.y, q.x, q.y] = [300, 300, 1800, 1700];
+    let waves = 0;
+    for (let s = 0; s < 200; s++) {
+      far.step([]);
+      for (const k of [p, q]) {
+        if (k.activity.kind !== 'wave') continue;
+        waves++;
+        expect(k.activity.toward).toBeUndefined();
+      }
+    }
+    expect(waves).toBeGreaterThan(0);
+  });
+
+  it("a kid does its type's habit for as long as the clip lasts; a type without one never does (D-099)", () => {
+    const c = structuredClone(content);
+    c.balance.wander = { ...c.balance.wander, idleChancePerSecond: 5 };
+    const ambient = {
+      weights: { look: 1, wave: 0, sit: 0, sleep: 0, habit: 100 },
+      habitSeconds: { plain: 1.5 },
+      chance: 1,
+      stationaryDelay: [0.5, 0.5] as [number, number],
+      lookSeconds: 1,
+      waveSeconds: 1,
+      sitSeconds: (h: number) => h,
+      sleepSeconds: (h: number) => h,
+      seatedHold: [1, 1] as [number, number],
+      sleepHold: [1, 1] as [number, number],
+    };
+    const game = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 }, ambient }, 4);
+    const starts: number[] = [];
+    const doing = new Set<number>();
+    for (let s = 0; s < 600; s++) {
+      game.step([]);
+      for (const k of game.state.world.kids) {
+        if (k.activity.kind !== 'habit') {
+          doing.delete(k.id);
+          continue;
+        }
+        expect(k.type).toBe('plain');
+        if (!doing.has(k.id)) starts.push(k.activity.left);
+        doing.add(k.id);
+      }
+    }
+    expect(starts.length).toBeGreaterThan(0);
+    // Seen in the step it began: the whole of the clip's 1.5 s is still ahead.
+    for (const left of starts) expect(left).toBeCloseTo(1.5, 5);
+    // A type without a habit gives it no weight at all: with sitting the only other choice,
+    // however heavy the habit, such a kid always sits (and never falls back to looking about).
+    const none = new Game(c, { bounds: world, spawnAt: { x: 1080, y: 1120 }, ambient: { ...ambient, weights: { look: 0, wave: 0, sit: 1, sleep: 0, habit: 1000 }, habitSeconds: {} } }, 4);
+    const kinds = new Set<string>();
+    for (let s = 0; s < 600; s++) {
+      none.step([]);
+      for (const k of none.state.world.kids) kinds.add(k.activity.kind);
+    }
+    expect(kinds.has('habit')).toBe(false);
+    expect(kinds.has('look')).toBe(false);
+    expect(kinds.has('sit')).toBe(true);
   });
 });
 

@@ -105,5 +105,8 @@ export function migrations(content: Content): Record<number, Migration> {
     // Schema 13 (D-090): kids may visit decorations and be a little happy from one. Nothing
     // changes in an older save; the bump keeps a visit away from a build that can't read it.
     12: (state) => state,
+    // Schema 14 (D-099): a kid may be in the middle of its habit. Nothing changes in an older
+    // save; the bump keeps a habit away from a build that can't read it.
+    13: (state) => state,
   };
 }

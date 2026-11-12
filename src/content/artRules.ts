@@ -1,7 +1,7 @@
 import { activityEffects } from './artData';
 import type { Ambient, LookTable } from '../sim/game';
 import type { Obstacle, Site } from '../sim/world';
-import type { BoundsPx, DecorationData, FarmData, KidRig, MapData, MapInstance, UiData, WildData } from './artData';
+import type { BoundsPx, DecorationData, EventEffect, FarmData, KidRig, MapData, MapInstance, MotionData, UiData, WildData } from './artData';
 import type { KidDef } from './types';
 
 // Pure derivations from ChatGPT/Codex's art data into what the simulation needs.
@@ -10,6 +10,38 @@ import type { KidDef } from './types';
 /** Source px → world units for a kid of appearance scale 1. */
 export function kidScale(rig: KidRig): number {
   return rig.worldCanvasSize / rig.canvas[0];
+}
+
+/** A lifetime box grown by the motion margin. A function declaration: artData calls withMotion while this module is still loading. */
+function grown(b: BoundsPx, m: MotionData['marginPx']): BoundsPx {
+  return [b[0] - m[0], b[1] - m[1], b[2] + m[2], b[3] + m[3]];
+}
+
+/**
+ * The rig with the motion sidecar laid over it (kid_motion_v1): same-named clips and effects
+ * are replaced, each kid type gets its habit, and every body's lifetime box grows by the
+ * margin motion needs, so kids in motion still never overlap (D-043).
+ */
+export function withMotion(rig: KidRig | undefined, m: MotionData | undefined): KidRig | undefined {
+  if (!rig || !m) return rig;
+  return {
+    ...rig,
+    bodies: Object.fromEntries(Object.entries(rig.bodies).map(([id, b]) => [id, { ...b, boundsPx: grown(b.boundsPx, m.marginPx) }])),
+    clips: { ...rig.clips, ...m.clips },
+    effects: { ...rig.effects, ...m.effects },
+    reducedMotion: { ...m.reducedMotion, ...rig.reducedMotion },
+    scheduler: { ...rig.scheduler, ambientWeights: { ...rig.scheduler.ambientWeights, ...m.ambientWeights } },
+    habits: m.habits,
+    marginPx: m.marginPx,
+    marksMinZoom: m.marksMinZoom,
+    meetSeconds: m.meetSeconds,
+  };
+}
+
+/** Wild kids with their lifetime boxes grown by the same margin. */
+export function wildWithMotion(wild: WildData | undefined, m: MotionData | undefined): WildData | undefined {
+  if (!wild || !m) return wild;
+  return { ...wild, types: Object.fromEntries(Object.entries(wild.types).map(([id, t]) => [id, { ...t, lifetimeBoundsPx: grown(t.lifetimeBoundsPx, m.marginPx) }])) };
 }
 
 /** A body's lifetime box (D-043) as world offsets from the ground point. */
@@ -47,7 +79,8 @@ export function ambientFrom(rig: KidRig, chance: number): Ambient {
   const w = rig.scheduler.ambientWeights;
   const down = len('sit_down');
   return {
-    weights: { look: w.look_around ?? 0, wave: w.wave ?? 0, sit: w.sit_down ?? 0, sleep: w.sleep ?? 0 },
+    weights: { look: w.look_around ?? 0, wave: w.wave ?? 0, sit: w.sit_down ?? 0, sleep: w.sleep ?? 0, habit: w.habit ?? 0 },
+    habitSeconds: Object.fromEntries(Object.entries(rig.habits ?? {}).map(([type, clip]) => [type, len(clip)])),
     chance,
     stationaryDelay: rig.scheduler.stationaryDelaySeconds,
     lookSeconds: len('look_around'),
@@ -173,6 +206,13 @@ export function rigCoverage(rig: KidRig, kids: KidDef[], delivered: Set<string>,
     }
     if (!face.states.open) problems.push(`face "${id}" has no "open" state`);
     for (const [s, asset] of Object.entries(face.states)) need(`face "${id}" state "${s}"`, asset);
+  }
+  // Motion marks and event effects (kid_motion_v1, and the rig's own): every frame's art.
+  for (const [name, clip] of Object.entries(rig.clips)) {
+    for (const f of clip.frames) for (const m of f.marks ?? []) need(`clip "${name}" mark`, m.asset);
+  }
+  for (const [name, fx] of Object.entries(rig.effects)) {
+    if (name !== 'shadow') for (const f of (fx as EventEffect).frames ?? []) need(`effect "${name}"`, f.asset);
   }
   // The activity extension's effects (kid_activity_v1: the farming stamp, the splash).
   for (const [name, fx] of Object.entries(activityEffects)) need(`activity effect "${name}"`, fx.asset);

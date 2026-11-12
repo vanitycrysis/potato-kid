@@ -8,7 +8,7 @@ import type { PersistedState } from '../sim/game';
 // anything that parses but can't be played.
 
 /** The save schema this build writes. Bump it with a migration for every format change. */
-export const SAVE_SCHEMA = 13;
+export const SAVE_SCHEMA = 14;
 
 /** The lesson ids a save may hold (GUI_MVP §27.2). */
 const LESSONS = new Set(['planting', 'potatokens', 'garden', 'capacity', 'naming', 'bias', 'fields', 'feeding', 'plot-space', 'field-space', 'compendium', 'returns']);
@@ -235,7 +235,7 @@ export function validateState(state: unknown, content: Content): string[] {
   if (typeof w !== 'object' || w === null || !Array.isArray(w.kids) || !whole(w.nextKidId)) return [...p, 'world is invalid'];
   const next = w.nextKidId as number;
   const seen = new Set<number>();
-  const kinds = new Set(['walk', 'pause', 'look', 'wave', 'sit', 'sleep', 'visit']);
+  const kinds = new Set(['walk', 'pause', 'look', 'wave', 'habit', 'sit', 'sleep', 'visit']);
   for (const raw of w.kids as unknown[]) {
     const k = raw as Record<string, unknown>;
     if (typeof k !== 'object' || k === null) {

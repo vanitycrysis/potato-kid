@@ -355,7 +355,9 @@ export interface LookTable {
 
 /** How long rest activities last; derived from the rig's scheduler and clip lengths. */
 export interface Ambient {
-  weights: { look: number; wave: number; sit: number; sleep: number };
+  weights: { look: number; wave: number; sit: number; sleep: number; habit?: number };
+  /** How long each kid type's own habit lasts (D-099); a type without one never picks it. */
+  habitSeconds?: Record<string, number>;
   /** Chance a rest is an ambient activity rather than a plain pause. */
   chance: number;
   /** The rig's stationary wait before an ambient pose may start (scheduler.stationaryDelaySeconds). */
@@ -669,7 +671,7 @@ export class Game {
       this.rng,
       this.content.balance.wander,
       dt,
-      (kid, phase) => (phase === 'stop' && maybeVisit(world, this.sites, kid, this.content.balance.decorations, this.rng)) || this.rest(phase),
+      (kid, phase) => (phase === 'stop' && maybeVisit(world, this.sites, kid, this.content.balance.decorations, this.rng)) || this.rest(phase, kid),
       (kid, x, y) => blockedByScenery(world, kid.box, x, y),
     );
     // Touching recipe pairs fuse first, so a kid dropped against its partner fuses.
@@ -1733,7 +1735,7 @@ export class Game {
    * What a kid does when it stops walking: a plain pause, or the rig's stationary wait
    * (Codex review, PR #14) after which an ambient pose begins. Cosmetic stream.
    */
-  private rest(phase: 'stop' | 'stationary'): Activity {
+  private rest(phase: 'stop' | 'stationary', kid?: Kid): Activity {
     const w = this.content.balance.wander;
     const a = this.ambient;
     const r = this.cosmetic;
@@ -1746,18 +1748,49 @@ export class Game {
       return { kind: 'pause', left: lo + r.next() * (hi - lo), thenAmbient: true };
     }
     if (!a) return { kind: 'walk' };
+    // Its own habit (D-099), if its type has one. A kid resting close by makes a greeting three
+    // times as likely, and is greeted back (D-101: kids notice each other).
+    const habit = kid ? (a.habitSeconds?.[kid.type] ?? 0) : 0;
+    const friend = kid ? this.restingNear(kid) : undefined;
     const pick = weighted(r, [
       { id: 'look' as const, weight: a.weights.look },
-      { id: 'wave' as const, weight: a.weights.wave },
+      { id: 'wave' as const, weight: a.weights.wave * (friend ? 3 : 1) },
       { id: 'sit' as const, weight: a.weights.sit },
       { id: 'sleep' as const, weight: a.weights.sleep },
+      { id: 'habit' as const, weight: habit > 0 ? (a.weights.habit ?? 0) : 0 },
     ]).id;
-    if (pick === 'look') return { kind: 'look', left: a.lookSeconds };
-    if (pick === 'wave') return { kind: 'wave', left: a.waveSeconds };
+    // A habit with no weight can only come up as the list's last-resort pick: look about instead.
+    if (pick === 'look' || (pick === 'habit' && habit <= 0)) return { kind: 'look', left: a.lookSeconds };
+    if (pick === 'habit') return { kind: 'habit', left: habit };
+    if (pick === 'wave') {
+      if (!kid || !friend) return { kind: 'wave', left: a.waveSeconds };
+      // Both wave for the same time: a friend later in this step's order still has this step
+      // taken off its rest, so it starts one step longer.
+      const kids = this.state.world.kids;
+      const later = kids.indexOf(friend) > kids.indexOf(kid);
+      friend.activity = { kind: 'wave', left: a.waveSeconds + (later ? STEP : 0), toward: kid.x < friend.x ? -1 : 1 };
+      return { kind: 'wave', left: a.waveSeconds, toward: friend.x < kid.x ? -1 : 1 };
+    }
     const range = pick === 'sit' ? a.seatedHold : a.sleepHold;
     const hold = range[0] + r.next() * (range[1] - range[0]);
     const total = pick === 'sit' ? a.sitSeconds(hold) : a.sleepSeconds(hold);
     return { kind: pick, left: total, total };
+  }
+
+  /**
+   * The nearest kid standing still within two kid-widths of `kid`, to be greeted: one that is
+   * only pausing or looking about, not held, sitting, asleep or busy with a decoration.
+   */
+  private restingNear(kid: Kid): Kid | undefined {
+    const reach = 2 * (kid.box.right - kid.box.left);
+    let best: Kid | undefined;
+    let bestD = reach;
+    for (const k of this.state.world.kids) {
+      if (k === kid || k.held || (k.activity.kind !== 'pause' && k.activity.kind !== 'look')) continue;
+      const d = Math.hypot(k.x - kid.x, k.y - kid.y);
+      if (d < bestD) [best, bestD] = [k, d];
+    }
+    return best;
   }
 
   private rollSpawnType(): KidId {

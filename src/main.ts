@@ -1,7 +1,7 @@
 import { watchedSleeves } from './ui/portrait';
 import { Application } from 'pixi.js';
 import { content } from './content';
-import { decorationData, farmData, gate4Data, kidRig, kidWild, mapData, uiData } from './content/artData';
+import { decorationData, farmData, gate4Data, mapData, mapRig, mapWild, uiData } from './content/artData';
 import { ambientFrom, decorationObstacles, decorationSites, fieldBaysFrom, lookTable, obstaclesFrom, rigCoverage, uiPaletteCoverage } from './content/artRules';
 import type { Content } from './content/types';
 import { handleBack } from './platform/back';
@@ -55,6 +55,12 @@ declare global {
       worldToScreen: (x: number, y: number) => { x: number; y: number };
       /** Only with `?debug=1`. */
       debugAdd?: (type: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => number;
+      /** Holds a kid on `clip` at `t` seconds (review captures); `clip` null lets it go. */
+      debugPose?: (kidId: number, clip: string | null, t?: number) => void;
+      /** What a kid's view draws now: its clip's offset, scale and rotation, body and face frames, marks. */
+      drawnOf?: (kidId: number) => { body: string; face: string; offset: [number, number]; scale: [number, number]; rotation: number; faceAt: [number, number]; parts: number; stamp: boolean; marks: number } | undefined;
+      /** Fusion parents still on screen, on their way together (D-101). */
+      ghosts?: () => number;
       /** Only with `?debug=1`: suspend, then resume as if `awayMs` passed; resolves after the save. */
       debugAway?: (awayMs: number) => Promise<void>;
       /** Only with `?debug=1`: sends a UI command straight to the sim (refusal tests). */
@@ -137,6 +143,9 @@ const back = handleBack();
 async function boot(): Promise<void> {
   // D-036: the engine never draws art of its own. If ChatGPT/Codex's art doesn't cover
   // the roster, stop with a clear message instead of inventing placeholders.
+  // The map and the sim use the rig with Claude's motion laid over it (kid_motion_v1).
+  const kidRig = mapRig;
+  const kidWild = mapWild;
   if (!kidRig || !mapData) throw new Error('Art data missing: run `npm run art:export` (kid_rig_v2.json, map_garden_v4.json).');
   const coverage = [...rigCoverage(kidRig, content.kids, exportedNames, kidWild), ...uiPaletteCoverage(uiData)];
   if (coverage.length) throw new Error(`Art coverage incomplete:\n${coverage.join('\n')}`);
@@ -317,6 +326,9 @@ async function boot(): Promise<void> {
     ...(params.get('debug') === '1'
       ? {
           debugAdd: (t: string, x: number, y: number, look?: { body?: string; face?: string; scale?: number }) => scene.debugAdd(t, x, y, look),
+          debugPose: (kidId: number, clip: string | null, t?: number) => scene.debugPose(kidId, clip, t),
+          drawnOf: (kidId: number) => scene.drawnOf(kidId),
+          ghosts: () => scene.ghostCount,
           debugAway: async (awayMs: number) => {
             scene.suspend();
             lastOffline = scene.resume(scene.game.state.accountedUntil + awayMs);
