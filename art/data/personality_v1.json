@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "personality-3-wild",
+  "revision": "personality-4-newkids",
   "status": "Claude review pending",
   "types": {
     "plain": {
@@ -754,6 +754,46 @@
       "hatedFood": "cocoa",
       "hates": "stiff drawers and being put away before the good part.",
       "hobbies": "Inventing gentle rhythms for opening the garden gate."
+    },
+    "bee": {
+      "description": "Wears small wings and a honey band, and is never in a hurry. Visits every flower in a row, then goes back for the first one again.",
+      "favouriteFood": "berry_jam",
+      "likes": "sweet sticky things and a clear line of flowers.",
+      "hatedFood": "pickle",
+      "hates": "sour surprises and afternoons too windy to hover in.",
+      "hobbies": "Counting petals, losing count, and starting over happily."
+    },
+    "sleepy": {
+      "description": "Carries a pillow everywhere, just in case. Under that nightcap is a kid who thinks any quiet spot is a fair place for a nap.",
+      "favouriteFood": "cheese",
+      "likes": "warm supper smells and blankets straight off the line.",
+      "hatedFood": "carrot",
+      "hates": "loud crunching and mornings that start too soon.",
+      "hobbies": "Ranking sunny patches by how long they stay warm."
+    },
+    "umbrella": {
+      "description": "Keeps a striped umbrella up in all weather, to be safe. Checks the sky often and is quietly pleased whenever one drop lands.",
+      "favouriteFood": "soup",
+      "likes": "puddles with tidy edges and a patter on the canopy.",
+      "hatedFood": "cracker",
+      "hates": "dry spells and gusts that turn things inside out.",
+      "hobbies": "Standing very still to hear the first drop."
+    },
+    "wizard": {
+      "description": "A bent hat and a star wand belong to a very serious beginner. Most spells so far have made a pleasant noise and nothing else.",
+      "favouriteFood": "mushroom",
+      "likes": "things that bubble and words with far too many syllables.",
+      "hatedFood": "toast",
+      "hates": "crumbs in a sleeve and being asked to do the trick again.",
+      "hobbies": "Practising one flourish until it looks accidental."
+    },
+    "star": {
+      "description": "A small star who came down to see what the garden was like. Stays up late out of habit and is always the last one to settle.",
+      "favouriteFood": "corn",
+      "likes": "clear evenings and being pointed at kindly.",
+      "hatedFood": "berries",
+      "hates": "cloudy nights and being mistaken for a biscuit.",
+      "hobbies": "Picking a different spot to stand in each evening."
     }
   }
 }

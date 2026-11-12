@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "revision": "specials-1",
+  "revision": "newkids-2",
   "status": "final",
   "delivery": {
     "scope": "first_playable_art",
@@ -7253,6 +7253,306 @@
             ],
             "bean": [
               1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "wizard": {
+      "status": "review",
+      "components": [
+        {
+          "asset": "kid_wizard_front_wand",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            199,
+            172
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.9,
+              0.95
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_wizard_front_hat",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "sleepy": {
+      "status": "review",
+      "components": [
+        {
+          "asset": "kid_sleepy_front_pillow",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            199,
+            172
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1
+            ],
+            "squat": [
+              0.92,
+              0.95
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_sleepy_front_cap",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "bee": {
+      "status": "review",
+      "components": [
+        {
+          "asset": "kid_bee_back_wing_left",
+          "status": "review",
+          "layer": "back",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              1
+            ],
+            "squat": [
+              1.08,
+              1
+            ],
+            "bean": [
+              0.78,
+              0.92
+            ]
+          }
+        },
+        {
+          "asset": "kid_bee_back_wing_right",
+          "status": "review",
+          "layer": "back",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.86,
+              1
+            ],
+            "squat": [
+              1.08,
+              1
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_bee_front_band",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "torso",
+          "sourcePivot": [
+            128,
+            166
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.8,
+              1
+            ],
+            "squat": [
+              1.2,
+              0.9
+            ],
+            "bean": [
+              1.02,
+              1
+            ]
+          }
+        },
+        {
+          "asset": "kid_bee_front_feelers",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "umbrella": {
+      "status": "review",
+      "components": [
+        {
+          "asset": "kid_umbrella_front_handle",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "hand_right",
+          "sourcePivot": [
+            199,
+            172
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              1,
+              1.14
+            ],
+            "squat": [
+              0.7,
+              0.98
+            ],
+            "bean": [
+              1,
+              1.02
+            ]
+          }
+        },
+        {
+          "asset": "kid_umbrella_front_canopy",
+          "status": "review",
+          "layer": "front",
+          "attachTo": "head_top",
+          "sourcePivot": [
+            128,
+            55
+          ],
+          "fitByBody": {
+            "round": [
+              1,
+              1
+            ],
+            "tall": [
+              0.92,
+              0.84
+            ],
+            "squat": [
+              1.08,
+              0.94
+            ],
+            "bean": [
+              0.97,
               1
             ]
           }

@@ -16,19 +16,21 @@ async function open(browser: Browser, w: number, h: number, query: string) {
 // grows. The grid sits where no scenery displaces a kid: a displaced kid can be pushed into
 // a recipe partner and fuse, so the test checks every kid stays where it was put.
 const PAGE = 20;
+/** Top-left of a patch of the v5 map where a 5 x 4 grid stands clear of scenery (probed 2026-11). */
+const GRID = { x: 1100, y: 3000 };
 const pages = Array.from({ length: Math.ceil(types.length / PAGE) }, (_, p) => types.slice(p * PAGE, (p + 1) * PAGE));
 for (const [name, w, h] of [['20x9', 412, 915], ['16x9', 360, 640]] as const) {
   pages.forEach((ids, p) => {
     const suffix = p === 0 ? '' : `-${p + 1}`;
     test(`every type, ${name}, page ${p + 1}, colour and grayscale`, async ({ browser }) => {
       const page = await open(browser, w, h, '?seed=31&debug=1&calm=1');
-      await page.evaluate((list) => {
-        window.__PK__!.centerOn(1280, 1872);
-        list.forEach((t, i) => window.__PK__!.debugAdd!(t, 848 + (i % 5) * 216, 1572 + Math.floor(i / 5) * 260));
-      }, ids);
+      await page.evaluate(({ list, GRID }) => {
+        window.__PK__!.centerOn(GRID.x + 432, GRID.y + 300);
+        list.forEach((t, i) => window.__PK__!.debugAdd!(t, GRID.x + (i % 5) * 216, GRID.y + Math.floor(i / 5) * 260));
+      }, { list: ids, GRID });
       await page.waitForTimeout(1200);
       const placed = await page.evaluate(() => window.__PK__!.kids().map((k) => ({ type: k.type, x: Math.round(k.x), y: Math.round(k.y) })));
-      expect(placed).toEqual(ids.map((type, i) => ({ type, x: 848 + (i % 5) * 216, y: 1572 + Math.floor(i / 5) * 260 })));
+      expect(placed).toEqual(ids.map((type, i) => ({ type, x: GRID.x + (i % 5) * 216, y: GRID.y + Math.floor(i / 5) * 260 })));
       await page.screenshot({ path: `${OUT}/types-${name}${suffix}.png` });
       await page.addStyleTag({ content: 'html{filter:grayscale(1)}' });
       await page.waitForTimeout(150);
@@ -66,11 +68,11 @@ for (const type of ['plain', 'water']) {
     const faces = Object.keys(rig.appearance.faceWeights);
     // One type per capture: neighbouring different types could be a recipe and fuse.
     await page.evaluate(
-      ([t, b, f]) => {
-        window.__PK__!.centerOn(1080, 1600);
-        f.forEach((face, row) => b.forEach((body, col) => window.__PK__!.debugAdd!(t, 760 + col * 210, 1150 + row * 260, { body, face, scale: 1 })));
+      ([t, b, f, g]) => {
+        window.__PK__!.centerOn(g.x + 315, g.y + 300);
+        f.forEach((face, row) => b.forEach((body, col) => window.__PK__!.debugAdd!(t, g.x + col * 210, g.y + row * 260, { body, face, scale: 1 })));
       },
-      [type, bodies, faces] as const,
+      [type, bodies, faces, GRID] as const,
     );
     await page.waitForTimeout(800);
     await page.screenshot({ path: `${OUT}/faces-${type}.png` });

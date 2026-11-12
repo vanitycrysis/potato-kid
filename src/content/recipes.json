@@ -56,5 +56,9 @@
   {"a": "lifeguard", "b": "lantern", "result": "rescue_station"},
   {"a": "ice_sculptor", "b": "aurora", "result": "sculpture_park"},
   {"a": "weather_vane", "b": "baker", "result": "windmill"},
-  {"a": "kiln", "b": "crystal", "result": "mosaic"}
+  {"a": "kiln", "b": "crystal", "result": "mosaic"},
+  {"a": "flower", "b": "wind", "result": "bee"},
+  {"a": "cocoa", "b": "snow", "result": "sleepy"},
+  {"a": "raincloud", "b": "kite", "result": "umbrella"},
+  {"a": "crystal", "b": "lantern", "result": "wizard"}
 ]
