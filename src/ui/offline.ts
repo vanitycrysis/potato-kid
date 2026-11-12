@@ -3,7 +3,7 @@ import { el, icon } from './dom';
 import { formatCount, formatDuration, formatExact } from './format';
 import type { Sheets } from './sheet';
 
-// The offline-return summary (docs/GUI_MVP.md §8, Codex's design, D-036). It reports what
+// The offline-return summary (docs/archive/GUI_MVP.md §8, Codex's design, D-036). It reports what
 // the catch-up already credited; dismissing it changes nothing.
 
 /**

@@ -6,7 +6,7 @@ import { el, tierName } from './dom';
 import { oddsLines } from './plantingNotes';
 import { portrait } from './portrait';
 
-// One kid into one plot, without dragging (D-061, docs/GUI_MVP.md §15.6, Codex's design):
+// One kid into one plot, without dragging (D-061, docs/archive/GUI_MVP.md §15.6, Codex's design):
 // Choose a plot, then "Add {name} to Plot {n}?" with the odds it makes, then one Add, into
 // that plot only. It never starts a plot growing. Shared by the Dex's live rows and the
 // kid card; each sends the add its own way and hears its own result.

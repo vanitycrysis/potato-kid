@@ -4,7 +4,7 @@ import type { Lessons } from '../sim/game';
 import { el, icon } from './dom';
 import { portrait } from './portrait';
 
-// The first-run introduction (D-086, docs/GUI_MVP.md §27.1, Codex's design and copy): three
+// The first-run introduction (D-086, docs/archive/GUI_MVP.md §27.1, Codex's design and copy): three
 // tiny cards, skippable at every page, needing no game action and changing nothing in the game.
 // Offered once when nothing else is in front, it resumes at its saved page, and can be previewed
 // from `Tutorial & lessons` without touching what is saved. The game keeps running beneath it;

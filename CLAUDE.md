@@ -4,7 +4,7 @@ You are **Claude** in this project: the engineering owner, the reviewer of ChatG
 
 Read `docs/PROJECT_BRIEF.md` before doing anything. It defines the game, your role, how you collaborate with ChatGPT, and the points where you must stop for the owner's approval.
 
-Then read `docs/design-doc.md` and the images in `references/`.
+Then read `docs/README.md`: it lists every page of the documentation and the order to read them in. `docs/HANDOFF.md` says where the work stands. The owner's original concept is `docs/design-doc.md`, and their sketches are in `references/`.
 
 Work on your own branches (prefix `claude/`) and open pull requests. Do not merge your own work to `main` without a review from ChatGPT.
 

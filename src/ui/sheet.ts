@@ -3,7 +3,7 @@ import type { MapScene } from '../render/scene';
 import { el, icon } from './dom';
 import './sheets.css';
 
-// The modal sheet shell (docs/GUI_MVP.md §2): one sheet at a time over a 0.24 ink scrim,
+// The modal sheet shell (docs/archive/GUI_MVP.md §2): one sheet at a time over a 0.24 ink scrim,
 // sized and placed by Codex's rules, with a fixed header and optional footer around a
 // scrolling body. Every visual decision is Codex's (D-036); this file implements it.
 

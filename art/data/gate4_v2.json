@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "revision": "plant-v2-design-2",
   "status": "Claude review pending",
-  "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract",
+  "spec": "docs/archive/GUI_MVP.md#14-gate-4-interaction-contract",
   "assets": {
     "fx_plant_plot": {
       "canvas": [

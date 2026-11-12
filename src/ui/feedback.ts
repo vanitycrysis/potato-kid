@@ -1,7 +1,7 @@
 import type { KidId } from '../content/types';
 import type { GameEvent, RejectReason } from '../sim/game';
 
-// Feedback cards from one sim step's events (docs/GUI_MVP.md §9). Pure: the HUD decides
+// Feedback cards from one sim step's events (docs/archive/GUI_MVP.md §9). Pure: the HUD decides
 // when and where to show them. Events arrive in the sim's order, so awards that follow a
 // fusion belong to that fusion's card until the next birth.
 

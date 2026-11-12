@@ -1,4 +1,4 @@
-// Kid names (D-057, docs/GUI_MVP.md §18.2): one rule for the sim, the save and the Name
+// Kid names (D-057, docs/archive/GUI_MVP.md §18.2): one rule for the sim, the save and the Name
 // page. A name is normalized (NFC, ends trimmed, inner runs of spaces collapsed to one),
 // then must be 1 to `maxLength` extended grapheme clusters of letters, combining marks,
 // decimal digits, inner spaces, apostrophes (straight or curly) and hyphens, with at

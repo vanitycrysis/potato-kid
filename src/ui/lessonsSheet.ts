@@ -4,7 +4,7 @@ import { lessonIcons, lessonTokens, type LessonItem } from './lessonNotes';
 import type { OpenSheet, Sheets } from './sheet';
 
 /**
- * `Tutorial & lessons` (D-086, docs/GUI_MVP.md §27.3, Codex's design and copy): the
+ * `Tutorial & lessons` (D-086, docs/archive/GUI_MVP.md §27.3, Codex's design and copy): the
  * introduction as a preview, then every lesson by name, each replayable on its own inside the
  * sheet. A replay changes nothing: no seen flag, no purchase, no reveal; no funds are needed.
  */

@@ -1,4 +1,4 @@
-// Number and time display (docs/GUI_MVP.md §3 "Number display"; engineering owns the
+// Number and time display (docs/archive/GUI_MVP.md §3 "Number display"; engineering owns the
 // algorithm, the rules are Codex's). Currency counters abbreviate; prices never do.
 
 const UNITS: [number, string][] = [

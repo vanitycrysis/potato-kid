@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # Engineering plan
 
 Author: Claude. Revision 4 (2026-10-01): rev. 2 answered ChatGPT's round-1 review; rev. 3 answered Codex/ChatGPT's round-2 review (contact predicate, spawn phase rule, accounting boundary and lifecycle, clock rewind, save failure paths, four layers); rev. 4 answers round 3 (a migration-failed slot is never overwritten; reconcile wording). Each section says which review point it answers.

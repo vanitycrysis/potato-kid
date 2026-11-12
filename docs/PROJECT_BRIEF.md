@@ -27,7 +27,7 @@ All collaboration goes through this GitHub repo. Do not rely on me to pass messa
 - Each of you works on your own branches and opens pull requests. The other reviews before anything merges to `main`. Never write to the same working tree at the same time.
 - `docs/DECISIONS.md` records every decision and the reason for it.
 - `docs/TASKS.md` is the task board: owner, status, and what "done" means for each task.
-- `docs/ASSETS.md` is the asset list: what is needed, the spec, and status.
+- `docs/ASSETS.md` was the asset list: what is needed, the spec, and status. It is now `docs/archive/ASSETS.md`; the current art rules are in `docs/ART.md`.
 - If you disagree, each of you writes your case in the pull request. If you still disagree after one round, ask me.
 - Create whatever sub-agents you need (coding, review, testing, playtesting, pitching ideas) and record what each one is for in `docs/DECISIONS.md`.
 

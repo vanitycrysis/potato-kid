@@ -1,6 +1,6 @@
 import type { SettingsStore } from '../save/settings';
 
-// Planting's success copy (D-061, docs/GUI_MVP.md §15.6): the first add in this profile
+// Planting's success copy (D-061, docs/archive/GUI_MVP.md §15.6): the first add in this profile
 // explains what planting does; later ones are short. Shared by the world card and the Dex's
 // inline status, so the explanation is given once, wherever it lands.
 

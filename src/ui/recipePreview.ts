@@ -4,7 +4,7 @@ import type { RecipeView } from '../render/scene';
 import { el } from './dom';
 import { portrait } from './portrait';
 
-// The recipe window (D-083, docs/GUI_MVP.md §25.2-25.3, Codex's design): while a held kid is
+// The recipe window (D-083, docs/archive/GUI_MVP.md §25.2-25.3, Codex's design): while a held kid is
 // over a partner, the two parents and the kid they make, as sprites, beside the finger. A
 // result the player hasn't found is an ink silhouette with no name. It never takes input and
 // never moves the camera; if no spot beside the finger is clear, a compact rail replaces the

@@ -8,7 +8,7 @@ import { el, icon, tierName } from './dom';
 import { portrait } from './portrait';
 import type { Sheets } from './sheet';
 
-// Food fields, their kids and the pantry (D-069, docs/GUI_MVP.md §22, Codex's FARM-DESIGN):
+// Food fields, their kids and the pantry (D-069, docs/archive/GUI_MVP.md §22, Codex's FARM-DESIGN):
 // the Garden's Fields section, a field's page, Choose food (with its change review), Pick
 // kids, and the Pantry. Each page opens in place of the sheet it came from, with its way
 // back. Every visual decision is Codex's (D-036); this file implements it.

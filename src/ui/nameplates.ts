@@ -1,7 +1,7 @@
 import { graphemes } from '../sim/names';
 import { el } from './dom';
 
-// Nicknames on the map (D-091, docs/GUI_MVP.md §27.7, Codex's design): a decorative paper
+// Nicknames on the map (D-091, docs/archive/GUI_MVP.md §27.7, Codex's design): a decorative paper
 // pill under each named kid, in a DOM layer over the world and under the HUD. Screen-sized at
 // every zoom. A pill that would cover another kid, a ripe plot's sign or the finger, or crowd
 // another pill, is left out; the kid card and lists always name the kid.

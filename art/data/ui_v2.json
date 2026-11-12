@@ -1676,7 +1676,7 @@
     "note": "GUI-MVP sources/layouts are final for Claude review. DOM implementation, behavioural/device acceptance and gate 4 remain pending. Review screens include all three viewport sizes; no additional Pixi textures."
   },
   "mvp": {
-    "spec": "docs/GUI_MVP.md",
+    "spec": "docs/archive/GUI_MVP.md",
     "referenceViewports": [
       [
         390,
@@ -1744,7 +1744,7 @@
         164
       ],
       "persistentBannerLayout": {
-        "spec": "docs/GUI_MVP.md#31-short-viewports-with-a-persistent-banner",
+        "spec": "docs/archive/GUI_MVP.md#31-short-viewports-with-a-persistent-banner",
         "activeStates": [
           "unsaved",
           "recovery"
@@ -2004,7 +2004,7 @@
     },
     "sendHome": {
       "revision": "send-home-1",
-      "spec": "docs/GUI_MVP.md#13-send-home",
+      "spec": "docs/archive/GUI_MVP.md#13-send-home",
       "authority": "owner-approved D-048 task handoff",
       "target": {
         "gardenInstanceId": "garden",
@@ -2146,12 +2146,12 @@
       },
       "newDecodedRasterBytes": 0,
       "newPixiTextureBytes": 0,
-      "supersededBy": "docs/GUI_MVP.md#14-gate-4-interaction-contract"
+      "supersededBy": "docs/archive/GUI_MVP.md#14-gate-4-interaction-contract"
     },
     "gate4": {
       "sidecar": "gate4_v2.json",
       "revision": "gate4-design-2",
-      "spec": "docs/GUI_MVP.md#14-gate-4-interaction-contract"
+      "spec": "docs/archive/GUI_MVP.md#14-gate-4-interaction-contract"
     },
     "layoutDesign": {
       "authority": "GUI_MVP sections 19-21 supersede historical layout/remove/retired variant copy",
@@ -2207,7 +2207,7 @@
     "round3": {
       "revision": "round3-design-2",
       "status": "Claude review pending",
-      "spec": "docs/GUI_MVP.md sections 23-26",
+      "spec": "docs/archive/GUI_MVP.md sections 23-26",
       "supersedes": [
         "sections 3/3.1/19 HUD and navigation",
         "section 14.1",
@@ -2935,7 +2935,7 @@
     "round4": {
       "revision": "round4-design-2",
       "status": "Claude review pending",
-      "contract": "docs/GUI_MVP.md §27",
+      "contract": "docs/archive/GUI_MVP.md §27",
       "intro": {
         "header": "Welcome · {n} of 3",
         "actions": {

@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # ChatGPT review of Claude's engineering proposal
 
 Reviewed: 2026-10-01. Proposal: https://github.com/vanitycrysis/potato-kid/pull/1. Review status: changes requested in a written PR comment; no engineering code exists yet. This review does not grant owner approval.

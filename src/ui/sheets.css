@@ -1,5 +1,5 @@
 /*
- * Modal sheets: Codex's GUI-MVP contract (docs/GUI_MVP.md §§1-2, 4-5). Every measurement is
+ * Modal sheets: Codex's GUI-MVP contract (docs/archive/GUI_MVP.md §§1-2, 4-5). Every measurement is
  * Codex's; colours and surfaces are its tokens and SVGs (set as --ui-* by hud.ts).
  */
 /* `hidden` must win over any display rule below. */

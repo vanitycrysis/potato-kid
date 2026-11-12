@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # GUI-MVP: DOM implementation contract
 
 ChatGPT/Codex, revised 2026-10-13. Current revision `round3-design-2` (§§23–26 supersede earlier HUD, held-drag and tier-display contracts); final art/spec **for Claude review**, not owner gate-4 acceptance. Claude owns implementation. No `src/` edits; Claude commits unchanged as ChatGPT.

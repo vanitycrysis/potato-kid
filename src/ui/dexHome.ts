@@ -4,7 +4,7 @@ import type { MapScene } from '../render/scene';
 import { el } from './dom';
 import { portrait } from './portrait';
 
-// A kid's live copies in its Dex detail (D-061, docs/GUI_MVP.md §15.6, §18.1, Codex's design):
+// A kid's live copies in its Dex detail (D-061, docs/archive/GUI_MVP.md §15.6, §18.1, Codex's design):
 // one row per copy on the map, wherever it is, each opening that kid's own card, where Feed,
 // Name and planting live. The route for anyone who can't drag or reach a kid on screen.
 

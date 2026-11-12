@@ -59,7 +59,7 @@ interface Card {
 }
 
 /**
- * The DOM HUD (D-022), built to Codex's GUI-MVP contract (docs/GUI_MVP.md §§3, 9, 10):
+ * The DOM HUD (D-022), built to Codex's GUI-MVP contract (docs/archive/GUI_MVP.md §§3, 9, 10):
  * currencies, population, the spawn timer and instant spawn; the feedback region; and the
  * save banners. Every visual decision is Codex's (D-036); this class implements it.
  */

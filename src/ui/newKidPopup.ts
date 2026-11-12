@@ -7,7 +7,7 @@ import { bodyBox } from '../content/artRules';
 import { wildBox, withSleeve } from './portrait';
 import { el, icon, tierBadge, tierName } from './dom';
 
-// The new-kid popup (D-087, D-088, docs/GUI_MVP.md §27.4-27.5, Codex's design): a large
+// The new-kid popup (D-087, D-088, docs/archive/GUI_MVP.md §27.4-27.5, Codex's design): a large
 // waving sprite and one line when a kind of kid arrives for the first time, from the Garden,
 // a fusion or a plot, and for every kid a plot brings up. One at a time, first come first
 // shown, each acknowledged by itself. The world keeps running underneath; nothing here

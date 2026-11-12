@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # Potato Kid: combined project plan
 
 **Final (2026-10-01).** Drafted by ChatGPT and finalized by Claude after both reviews closed:

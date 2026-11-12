@@ -1,6 +1,6 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
 
-// Rare kids on the map (D-072, docs/GUI_MVP.md §16.2, §15.5, Codex's art): the shared
+// Rare kids on the map (D-072, docs/archive/GUI_MVP.md §16.2, §15.5, Codex's art): the shared
 // six-glint sleeve around each rare kid, the birth burst for a rare or special newborn, and
 // a happy kid's sun. All of it is drawn in one layer beneath every kid, so neighbours cover
 // it rather than receive its paint; it takes no input and never changes a kid's box. The

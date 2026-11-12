@@ -11,7 +11,7 @@ import type { PlantingNotes } from './plantingNotes';
 import { LazyPortraits, portrait } from './portrait';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
-// Garden, Capacity, Spawn bias and Compendium sheets (docs/GUI_MVP.md §§4-6, Codex's design, D-036).
+// Garden, Capacity, Spawn bias and Compendium sheets (docs/archive/GUI_MVP.md §§4-6, Codex's design, D-036).
 // Each sheet is built once and updated in place every frame, so focus is never lost; the
 // command a sheet sent is kept, because refusals carry no context (GUI_MVP §9).
 

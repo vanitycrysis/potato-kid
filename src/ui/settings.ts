@@ -3,7 +3,7 @@ import { replayButton } from './notebook';
 import { el, icon } from './dom';
 import type { Sheets } from './sheet';
 
-// The Settings sheet (docs/GUI_MVP.md §11, Codex's design, D-036). Choices apply and are
+// The Settings sheet (docs/archive/GUI_MVP.md §11, Codex's design, D-036). Choices apply and are
 // stored at once; every way of closing keeps them. There is no audio yet, so nothing plays.
 
 export function openSettings(sheets: Sheets, store: SettingsStore, launcher: HTMLElement | null, scrollTop = 0, replay?: (launcher: HTMLElement) => void): void {

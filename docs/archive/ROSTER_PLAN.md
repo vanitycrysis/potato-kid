@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # Roster plan
 
 ## WILD-ART: planting-only rare kids and special bodies (2026-10-09)

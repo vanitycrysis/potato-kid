@@ -1,7 +1,7 @@
 import type { Balance } from '../content/types';
 import type { Game, GameEvent, LessonId, Lessons } from '../sim/game';
 
-// The affordability lessons (D-086, docs/GUI_MVP.md §27.2-27.3, Codex's design and copy): one
+// The affordability lessons (D-086, docs/archive/GUI_MVP.md §27.2-27.3, Codex's design and copy): one
 // quiet note per mechanic, queued when it first becomes relevant, only after the player's first
 // fusion discovery. These are the rules; the notes themselves are drawn by `lessonNotes.ts`.
 

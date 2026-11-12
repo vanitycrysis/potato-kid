@@ -10,7 +10,7 @@ import { formatRate } from './format';
 import { LazyPortraits, portrait, withSleeve } from './portrait';
 import { SCROLLER_CHANGE, type OpenSheet, type Sheets } from './sheet';
 
-// The Potato-Dex (docs/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
+// The Potato-Dex (docs/archive/GUI_MVP.md §7, Codex's design, D-036): Kids, Recipes and the
 // Compendium in one modal. Undiscovered kids and recipes are uniform packets: nothing in
 // them (tier, name, order mark or parent) gives away what they are.
 

@@ -13,7 +13,7 @@ import { chosenPlotRefusal, kindMark, plotRoute } from './plotRoute';
 import { portrait, withSleeve } from './portrait';
 import type { OpenSheet, Sheets } from './sheet';
 
-// The kid card (D-056, D-057, D-058; docs/GUI_MVP.md §17-18, Codex's design): one live
+// The kid card (D-056, D-057, D-058; docs/archive/GUI_MVP.md §17-18, Codex's design): one live
 // kid's sheet, opened by tapping it. The card shows who it is (its look, tier, income, rare
 // profile, happiness and personality) and holds three actions: Feed and Name in its footer,
 // each a page of the same sheet, and planting (§15.6). Nothing is optimistic: every change

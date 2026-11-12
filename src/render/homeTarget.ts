@@ -1,4 +1,4 @@
-// The Send home drop target (D-048, docs/GUI_MVP.md §13.1, Codex's design): a fixed
+// The Send home drop target (D-048, docs/archive/GUI_MVP.md §13.1, Codex's design): a fixed
 // rectangle over the Garden, armed only by a continuous dwell of the raw pointer while the
 // camera holds still. Pure, so its rules are unit-tested.
 

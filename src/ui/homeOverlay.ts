@@ -2,7 +2,7 @@ import { uiData } from '../content/artData';
 import type { HomeView } from '../render/scene';
 import { el, icon } from './dom';
 
-// The planting overlay (D-061, docs/GUI_MVP.md §15.1, Codex's design; it began as Send
+// The planting overlay (D-061, docs/archive/GUI_MVP.md §15.1, Codex's design; it began as Send
 // home's, §13.1): the target over the Garden, the pointer mark, and the label that explains
 // each state. It never takes input and never moves the camera; the scene draws the tether
 // beneath the kids.

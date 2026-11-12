@@ -2,7 +2,7 @@ import { kidWild, type Attachment, type KidRig, type WildData } from '../content
 import type { KidId } from '../content/types';
 import { assetUrl, trimOf } from '../render/art';
 
-// Kid portraits for the DOM GUI (docs/GUI_MVP.md §7 "Portrait contract"): the same
+// Kid portraits for the DOM GUI (docs/archive/GUI_MVP.md §7 "Portrait contract"): the same
 // exported layers the world uses, composed with the rig's own transforms. Neutral
 // exemplar: round body standing, classic face open, scale 1.00; the whole 256 canvas
 // scales uniformly into the requested size. No new art and no Pixi render target.

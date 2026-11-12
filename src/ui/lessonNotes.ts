@@ -3,7 +3,7 @@ import type { LessonId, Lessons } from '../sim/game';
 import { el, icon } from './dom';
 import { markSeen } from './lessons';
 
-// The automatic lessons on screen (D-086, docs/GUI_MVP.md §27.3, Codex's design and copy): a
+// The automatic lessons on screen (D-086, docs/archive/GUI_MVP.md §27.3, Codex's design and copy): a
 // quiet notebook note above the tray, one at a time, nonmodal. It never takes focus, never
 // blocks the map, and steps out of the way of any gesture or sheet; what to show and when is
 // decided here, from the saved queue (`lessons.ts`).

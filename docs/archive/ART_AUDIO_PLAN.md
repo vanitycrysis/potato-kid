@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # Art and audio plan
 
 ## FARM-DESIGN addendum (2026-10-09; round 2, Claude review pending)

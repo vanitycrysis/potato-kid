@@ -1,3 +1,5 @@
+> **The owner's original concept.** The game has grown since (planting, farming, feeding, decorations, no building timers). The game as built is `docs/GAME.md`.
+
 # Potato Kid — Game Design Doc (Handoff)
 
 **Genre:** Mobile idle / ambient ecosystem with discovery-breeding

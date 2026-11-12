@@ -1,6 +1,6 @@
 import { el } from './dom';
 
-// How every icon names itself (D-077, docs/GUI_MVP.md §23.2, Codex's design). A HUD stat opens
+// How every icon names itself (D-077, docs/archive/GUI_MVP.md §23.2, Codex's design). A HUD stat opens
 // a name bubble on one tap: its name, full value and what it's for. An icon-only control shows
 // its name on hover (300 ms), keyboard focus (at once) or a touch hold (450 ms); a recognised
 // hold doesn't also activate it.

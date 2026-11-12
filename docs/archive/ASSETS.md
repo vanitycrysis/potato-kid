@@ -1,3 +1,5 @@
+> **Archived.** This was true when written and is kept for its detail. The current state is in the pages listed in `docs/README.md`.
+
 # Asset list
 
 ## ROUND3-DESIGN delivery (2026-10-13; Claude review pending)

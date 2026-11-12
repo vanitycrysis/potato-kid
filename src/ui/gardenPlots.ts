@@ -11,7 +11,7 @@ import { kindMark } from './plotRoute';
 import { portrait } from './portrait';
 import type { OpenSheet } from './sheet';
 
-// The Garden's plots (D-061, docs/GUI_MVP.md §15.2-15.4, Codex's design): the Plots section
+// The Garden's plots (D-061, docs/archive/GUI_MVP.md §15.2-15.4, Codex's design): the Plots section
 // of the Garden sheet, a plot's detail with Start growing, and the picker that adds 1 to 5
 // kids at once. All three live in the Garden's sheet: detail and picker take over its body
 // and footer, and Back returns to the overview. Every change goes to the sim as a command
