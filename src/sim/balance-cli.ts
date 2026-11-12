@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { ambientFrom, decorationObstacles, decorationSites, fieldBaysFrom, lookTable, obstaclesFrom, withFarmRelocations } from '../content/artRules';
-import type { DecorationData, FarmData, KidRig, MapData, WildData } from '../content/artData';
+import { ambientFrom, decorationObstacles, decorationSites, fieldBaysFrom, lookTable, obstaclesFrom, wildWithMotion, withFarmRelocations, withMotion } from '../content/artRules';
+import type { DecorationData, FarmData, KidRig, MapData, MotionData, WildData } from '../content/artData';
 import { content } from '../content';
 import { median, simulate, type Report, type Scenario } from './balance';
 import type { GameOptions } from './game';
@@ -16,8 +16,10 @@ const v5 = JSON.parse(readFileSync('art/data/map_garden_v5.json', 'utf8')) as Ma
 const replaced = new Set(v5.activityDecorations?.sceneryOverrideIds ?? []);
 const map = withFarmRelocations({ ...v5, instances: v5.instances.filter((i) => !replaced.has(i.id)) }, farm);
 const decorations = JSON.parse(readFileSync('art/data/decorations_v1.json', 'utf8')) as DecorationData;
-const rig = JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig;
-const wild = JSON.parse(readFileSync('art/data/kid_wild_v1.json', 'utf8')) as WildData;
+// With the motion sidecar, as main.ts sets up: its margin grows every lifetime box.
+const motion = JSON.parse(readFileSync('art/data/kid_motion_v1.json', 'utf8')) as MotionData;
+const rig = withMotion(JSON.parse(readFileSync('art/data/kid_rig_v2.json', 'utf8')) as KidRig, motion)!;
+const wild = wildWithMotion(JSON.parse(readFileSync('art/data/kid_wild_v1.json', 'utf8')) as WildData, motion)!;
 const [w, h] = map.worldSize;
 export const options: GameOptions = {
   bounds: { minX: 0, minY: 0, maxX: w, maxY: h },

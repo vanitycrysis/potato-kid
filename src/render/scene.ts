@@ -149,6 +149,9 @@ interface Drag {
  * Owns the Pixi stage for the map. Runs the fixed-step game, turns pointer
  * input into commands, and interpolates kid positions between steps.
  */
+/** How much of the way to the child's spot a fusion's parents travel before the puff takes them. */
+const GHOST_REACH = 0.8;
+
 export class MapScene {
   readonly game: Game;
   private paused = false;
@@ -183,6 +186,11 @@ export class MapScene {
   private readonly views = new Map<number, KidRigView>();
   /** Kids whose costume is still loading: their view, and what it should play, come after. */
   private readonly pendingViews = new Map<number, ((v: KidRigView) => void)[]>();
+  /**
+   * The parents of a fusion, for the moment they stay on screen (D-101, rig `meetSeconds`):
+   * gone from the sim, their views slide together into the puff and are then destroyed.
+   */
+  private readonly ghosts: { view: KidRigView; from: { x: number; y: number }; to: { x: number; y: number }; t: number }[] = [];
   /** Loaded costume types with no kid on the map, and since when (wall ms). */
   private readonly absentSince = new Map<KidId, number>();
   /** Types kept loaded however long they are absent: the Garden spawns them all the time. */
@@ -678,6 +686,20 @@ export class MapScene {
     return kid.id;
   }
 
+  /** Debug hook (`?debug=1`): kids held on a clip frame for review captures (kid id → pose). */
+  private readonly posed = new Map<number, { clip: string; t: number }>();
+
+  /** Debug/test hook: hold kid `kidId` on `clip` at `t` seconds; `clip` null lets it go. */
+  debugPose(kidId: number, clip: string | null, t = 0): void {
+    if (clip === null) this.posed.delete(kidId);
+    else this.posed.set(kidId, { clip, t });
+  }
+
+  /** Test hook: what a kid's view is drawing now (its clip's transform, body and face frames, marks). */
+  drawnOf(kidId: number): KidRigView['drawn'] | undefined {
+    return this.views.get(kidId)?.drawn;
+  }
+
   /** Test hook: the clip a kid is showing and its running effects. */
   presentationOf(kidId: number): { clip: string; effects: string[] } | undefined {
     return this.views.get(kidId)?.presenting;
@@ -688,7 +710,17 @@ export class MapScene {
    * (rig: discovery onComplete → toast). Immediately under reduced motion.
    */
   get discoveryToastDelayMs(): number {
-    return this.art.reducedMotion ? 0 : clipLength(this.art.rig, 'discovery') * 1000;
+    return this.art.reducedMotion ? 0 : (this.meetSeconds + clipLength(this.art.rig, 'discovery')) * 1000;
+  }
+
+  /** How long a fusion's parents stay on screen before the child shows (D-101); 0 under reduced motion. */
+  private get meetSeconds(): number {
+    return this.art.reducedMotion ? 0 : (this.art.rig.meetSeconds ?? 0);
+  }
+
+  /** Test hook: the fusion parents still on screen, on their way together. */
+  get ghostCount(): number {
+    return this.ghosts.length;
   }
 
   /** Test hook: world → screen for an arbitrary world point. */
@@ -1011,6 +1043,44 @@ export class MapScene {
     this.views.get(kidId)?.destroy();
     this.views.delete(kidId);
     this.prev.delete(kidId);
+  }
+
+  /**
+   * A fusion's parent leaves the sim but stays on screen for `meetSeconds` (D-101): its view
+   * becomes a ghost that slides from where it was drawn toward the child's spot. A ghost is
+   * decoration: it takes no press, and nothing else knows it.
+   */
+  private ghostView(kidId: number, to: { x: number; y: number }): void {
+    const view = this.views.get(kidId);
+    if (!view || this.meetSeconds <= 0) {
+      this.removeView(kidId);
+      return;
+    }
+    const from = this.drawn.get(kidId) ?? { x: view.root.position.x, y: view.root.position.y };
+    this.pendingViews.delete(kidId);
+    this.drawn.delete(kidId);
+    this.views.delete(kidId);
+    this.prev.delete(kidId);
+    view.root.eventMode = 'none';
+    this.ghosts.push({ view, from: { x: from.x, y: from.y }, to, t: 0 });
+    view.updateGhost(from.x, from.y, 0);
+  }
+
+  /** Moves the fusion ghosts together and ends the ones whose moment is over. */
+  private updateGhosts(dt: number): void {
+    const total = this.meetSeconds;
+    for (let i = this.ghosts.length - 1; i >= 0; i--) {
+      const g = this.ghosts[i]!;
+      g.t += dt;
+      if (total <= 0 || g.t >= total) {
+        g.view.destroy();
+        this.ghosts.splice(i, 1);
+        continue;
+      }
+      // Slow off the mark, fast into the puff; they stop a little short of each other.
+      const k = (g.t / total) ** 2 * GHOST_REACH;
+      g.view.updateGhost(g.from.x + (g.to.x - g.from.x) * k, g.from.y + (g.to.y - g.from.y) * k, g.t);
+    }
   }
 
   // --- Input -------------------------------------------------------------
@@ -1613,9 +1683,18 @@ export class MapScene {
     this.fieldsView?.update(this.game.state.fields, dt);
     this.updateHome();
     this.decorationsView?.hideSplashes();
+    // Motion marks only when the player is zoomed in enough to read them (D-100).
+    const marks = this.zoomFactor >= (this.art.rig.marksMinZoom ?? 0);
     for (const k of kids) {
       const view = this.views.get(k.id);
       if (!view) continue;
+      view.marksShown = marks;
+      const pose = this.posed.get(k.id);
+      if (pose) {
+        const at = drawn.get(k.id) ?? k;
+        view.updatePosed(at.x, at.y, pose.clip, pose.t);
+        continue;
+      }
       if (this.drag?.kidId === k.id) {
         view.update(this.drag.spot.x, this.drag.spot.y, k.activity, true, dt);
         continue;
@@ -1660,6 +1739,7 @@ export class MapScene {
       }
     }
     this.rareLayer.update(rares, this.cam.zoom, this.clock, alive);
+    this.updateGhosts(dt);
     for (const fn of this.frameListeners) fn();
   }
 
@@ -1763,16 +1843,19 @@ export class MapScene {
         this.addView(e.kid);
         break;
       case 'fused': {
-        // Parents are consumed at once, never fading or converging (rig: fusion onStart);
-        // the child is born where the sim resolved it, with the fusion effect behind it.
+        // The sim consumes the parents at once. On screen they stay a moment (D-101, motion v1):
+        // they hop together into the puff, and the child, born where the sim resolved it,
+        // stretches up out of it. Under reduced motion, or with a rig that has no such
+        // moment, the parents vanish and the child is simply born (rig: fusion onStart).
+        const meet = this.meetSeconds;
         for (const p of e.parents) {
           if (this.drag?.kidId === p.id) this.endHeld();
-          this.removeView(p.id);
+          this.ghostView(p.id, { x: e.child.x, y: e.child.y });
         }
         const child = this.addView(e.child);
-        child.play('spawn');
+        child.play(meet > 0 && this.art.rig.clips.fusion_child ? 'fusion_child' : 'spawn');
         child.startEffect('fusion');
-        if (e.firstDiscovery) child.startEffect('discovery');
+        if (e.firstDiscovery) child.startEffect('discovery', meet);
         break;
       }
       default:

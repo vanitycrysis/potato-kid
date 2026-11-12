@@ -39,7 +39,10 @@ export type Activity =
   /** Standing still. With `thenAmbient`, it's the rig's stationary wait before an ambient pose. */
   | { kind: 'pause'; left: number; thenAmbient?: boolean }
   | { kind: 'look'; left: number }
-  | { kind: 'wave'; left: number }
+  /** The arm wiggle. `toward`: the side (-1 left, 1 right) of the kid it greets, if it noticed one (D-101). */
+  | { kind: 'wave'; left: number; toward?: -1 | 1 }
+  /** Its own habit (D-099): the rig's `habit_<type>` clip, once through. */
+  | { kind: 'habit'; left: number }
   | { kind: 'sit'; left: number; total: number }
   | { kind: 'sleep'; left: number; total: number }
   /**

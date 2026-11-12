@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { boot, price, respawnPrice, openTool, frames } from './helpers';
 
+// Where these tests stand their kids: a patch of the map clear of scenery, below the pair
+// `built` places. Elsewhere scenery moves a kid as it is placed, sometimes onto a recipe partner.
+// (1100, 3500), written out where it is used: page.evaluate cannot see this file's constants.
+
 test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)', () => {
   const garden = (page: Page) => page.locator('[data-nav=garden]');
   const zeroMaterials = (page: Page) => page.evaluate(() => window.__PK__!.debugGive!({ materials: -window.__PK__!.wallet().materials }));
@@ -273,7 +277,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await built(page);
     await page.evaluate(() => {
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
-      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 606 + (i % 4) * 260, 2028 + Math.floor(i / 4) * 300));
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 1100 + (i % 4) * 260, 3500 + Math.floor(i / 4) * 300));
     });
     await openTool(page, 'Compendium');
     await expect(page.locator('.comp-card')).toHaveCount(14);
@@ -319,7 +323,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await built(page);
     await page.evaluate(() => {
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite'];
-      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 606 + (i % 4) * 260, 2028 + Math.floor(i / 4) * 300));
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 1100 + (i % 4) * 260, 3500 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
@@ -354,7 +358,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.setViewportSize({ width: 568, height: 200 });
     await built(page);
     await page.evaluate(() => {
-      ['water', 'snow', 'wind', 'stone', 'chef', 'sprout'].forEach((t, i) => window.__PK__!.debugAdd!(t, 606 + (i % 4) * 260, 2028 + Math.floor(i / 4) * 300));
+      ['water', 'snow', 'wind', 'stone', 'chef', 'sprout'].forEach((t, i) => window.__PK__!.debugAdd!(t, 1100 + (i % 4) * 260, 3500 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await expect.poll(() => page.evaluate(() => document.documentElement.dataset.hudFit)).toBe('page');
@@ -371,7 +375,7 @@ test.describe('Compendium, offline summary and Settings (GUI_MVP §§6, 8, 11)',
     await page.setViewportSize({ width: 568, height: 320 });
     await page.evaluate(() => {
       const types = ['water', 'snow', 'wind', 'stone', 'chef', 'sprout', 'sail', 'kite', 'builder', 'forge', 'steam', 'hero'];
-      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 606 + (i % 4) * 260, 2028 + Math.floor(i / 4) * 300));
+      types.forEach((t, i) => window.__PK__!.debugAdd!(t, 1100 + (i % 4) * 260, 3500 + Math.floor(i / 4) * 300));
       window.__PK__!.debugSaveStatus!({ unsaved: true, recovery: false, readOnly: false });
     });
     await openTool(page, 'Compendium');

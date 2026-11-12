@@ -46,7 +46,8 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
   await expect
     .poll(() => page.evaluate(() => window.__PK__!.kids().map((k) => k.type)), { timeout: 3000 })
     .toContain('firefighter');
-  // The child is born with the fusion effect, and this first discovery adds its spark.
+  // The child comes up out of the fusion's puff (D-101: no spawn puff of its own), and this
+  // first discovery adds its spark once the child shows.
   const child = await page.evaluate(() => window.__PK__!.kids().find((k) => k.type === 'firefighter')!.id);
   const seen = new Set<string>();
   await expect
@@ -57,7 +58,7 @@ test('dragging a plain kid onto a water kid makes a firefighter (R1)', async ({ 
       },
       { timeout: 2000, intervals: [20] },
     )
-    .toEqual(['discovery', 'fusion', 'spawn']);
+    .toEqual(['discovery', 'fusion']);
   const ids = await page.evaluate(() => window.__PK__!.kids().map((k) => k.id));
   expect(ids).not.toContain(plain);
   expect(ids).not.toContain(water);

@@ -95,6 +95,9 @@ jobs:
         run: npx playwright install --with-deps chromium
       - if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+      # The baked motion data matches its scripts; then the art contract; then every kid's
+      # drawings in every pose and every frame of the clips it lives in.
+      - run: npm run motion:check
       - run: npm run art:check
       - run: npm run art:kids
 

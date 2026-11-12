@@ -1,10 +1,12 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import { activityEffects, type Attachment, type Clip, type ClipFrame, type ComponentTransform, type KidRig, type Vec2, type WildData, type WildFrame } from '../content/artData';
+import { activityEffects, type Attachment, type Clip, type ClipFrame, type ComponentTransform, type KidRig, type MarkFrame, type Vec2, type WildData, type WildFrame } from '../content/artData';
 import type { Activity, Kid } from '../sim/world';
 import { ClipPicker, EffectTracks, type OneShot } from './presentation';
 
 const DEG = Math.PI / 180;
 const OPEN = 'open';
+/** How far a greeting kid's face shifts toward the kid it greets, in source px. */
+const GLANCE_PX = 4;
 /** A wild kid's frame when its clip has none of its own: the stand, still (kid_wild_v1 fallbackTiming). */
 const WILD_STAND: WildFrame = { durationMs: 0, frame: 'stand', offsetPx: [0, 0], faceState: 'inherit', opacity: 1 };
 /** Farming (D-089, Codex's kid_activity_v1): the stomp clip and its soil stamp. */
@@ -17,15 +19,18 @@ const SEATED: Activity = { kind: 'pause', left: 1 };
  * transform order exactly with nested containers:
  *
  *   root (world ground point) → scale (appearance × worldCanvasSize/256)
- *     → shadow, effects behind the kid
- *     → rig (clip offset/rotation/opacity about the ground) → canvas (−groundAnchor)
+ *     → shadow, effects and marks behind the kid
+ *     → rig (clip offset/rotation/scale/opacity about the ground) → canvas (−groundAnchor)
  *       → back components, body, face, front components
- *     → effects above the kid
+ *     → marks and effects above the kid (marks in canvas coordinates, outside the rig
+ *       transform: a z does not squash with the kid)
  *   component: attachment (position+offset, rotation, scale) → delta (clip component
  *   transform) → sprite (anchor = sourcePivot, scale = fitByBody)
  *
- * No motion is invented here (D-041): every pose and wiggle comes from authored clips,
- * and which clip plays is decided by `ClipPicker` from the rig's scheduler priority.
+ * No motion is invented here (D-041): every pose and wiggle comes from authored clips
+ * (Codex's frame-swaps, or Claude's motion v1 baked at 12 fps), and which clip plays is
+ * decided by `ClipPicker` from the rig's scheduler priority. The one layered touch is a
+ * greeting's glance toward the kid it greets.
  */
 export class KidRigView {
   readonly root = new Container();
@@ -37,11 +42,20 @@ export class KidRigView {
   private readonly body = new Sprite();
   private readonly faceAttach = new Container();
   private readonly face = new Sprite();
-  private readonly parts: { attachTo: string; asset: string; attach: Container; delta: Container; sprite: Sprite }[] = [];
+  private readonly parts: { attachTo: string; asset: string; attach: Container; delta: Container; sprite: Sprite; pivot: Vec2; fit: Vec2 }[] = [];
   private readonly shadow: Sprite;
   private readonly fxBehind = new Container();
   private readonly fxAbove = new Container();
   private readonly fxSprites = new Map<string, Sprite>();
+  /** Motion marks (D-100), pooled: behind and above the kid, in canvas coordinates. */
+  private readonly marksBehind = new Container();
+  private readonly marksAbove = new Container();
+  private readonly markPool: Sprite[] = [];
+  private marksUsed = 0;
+  /** Where this frame's body puts each attachment, for marks anchored to one. */
+  private anchors: Record<string, Vec2> = {};
+  /** Whether marks are drawn: the scene turns them off when zoomed out (rig.marksMinZoom). */
+  marksShown = true;
   private readonly picker: ClipPicker;
   private readonly effects: EffectTracks;
   private blinkIn: number;
@@ -51,6 +65,8 @@ export class KidRigView {
    * anchor, and the sidecar's bob clips; no costume, and no shared body's frames.
    */
   private readonly wildType: WildData['types'][string] | undefined;
+  /** A wild kid has no attachments: marks anchor to points of its lifetime box and its face. */
+  private wildAnchors: Record<string, Vec2> = {};
 
   constructor(
     private readonly kid: Kid,
@@ -63,6 +79,13 @@ export class KidRigView {
     this.scaled.scale.set(k);
     this.canvas.position.set(-rig.groundAnchor[0], -rig.groundAnchor[1]);
     this.wildType = wild?.types[kid.type];
+    if (this.wildType) {
+      // From the drawing's own box: the lifetime box less the margin motion added to it.
+      const m = rig.marginPx ?? [0, 0, 0, 0];
+      const [l, t, r, b] = [this.wildType.lifetimeBoundsPx[0] + m[0], this.wildType.lifetimeBoundsPx[1] + m[1], this.wildType.lifetimeBoundsPx[2] - m[2], this.wildType.lifetimeBoundsPx[3] - m[3]];
+      const cx = (l + r) / 2;
+      this.wildAnchors = { head_top: [cx, t + 14], torso: [cx, (t + b) / 2 + 20], hand_right: [r - 16, (t + b) / 2 + 20], face_centre: this.wildType.faceAnchorPx };
+    }
     // A wild body replaces every shared body and costume layer: no legacy prop over it.
     const costume = this.wildType ? undefined : rig.costumes[kid.type];
     const face = rig.faces[kid.look.face]!;
@@ -82,7 +105,7 @@ export class KidRigView {
       const attach = new Container();
       delta.addChild(sprite);
       attach.addChild(delta);
-      this.parts.push({ attachTo: c.attachTo, asset: c.asset, attach, delta, sprite });
+      this.parts.push({ attachTo: c.attachTo, asset: c.asset, attach, delta, sprite, pivot: c.sourcePivot, fit: [fit[0], fit[1]] });
       return attach;
     };
     // Layer order back → body → face → front; within a layer, the authored array order.
@@ -101,9 +124,13 @@ export class KidRigView {
     this.shadow.eventMode = 'none';
     this.fxBehind.eventMode = 'none';
     this.fxAbove.eventMode = 'none';
-    this.scaled.addChild(this.shadow, this.fxBehind, this.rigC, this.fxAbove);
+    for (const c of [this.marksBehind, this.marksAbove]) {
+      c.eventMode = 'none';
+      c.position.set(-rig.groundAnchor[0], -rig.groundAnchor[1]);
+    }
+    this.scaled.addChild(this.shadow, this.fxBehind, this.marksBehind, this.rigC, this.marksAbove, this.fxAbove);
     this.root.addChild(this.scaled);
-    this.picker = new ClipPicker(rig);
+    this.picker = new ClipPicker(rig, rig.habits?.[kid.type]);
     this.effects = new EffectTracks(rig);
     this.blinkIn = this.blinkDelay();
   }
@@ -127,8 +154,8 @@ export class KidRigView {
    * An effect-only clip on this kid (fusion, discovery). Reduced motion shows no effects
    * (rig reducedMotion: effect "none").
    */
-  startEffect(clipName: string): void {
-    if (!this.reducedMotion) this.effects.start(clipName);
+  startEffect(clipName: string, delay = 0): void {
+    if (!this.reducedMotion) this.effects.start(clipName, delay);
   }
 
   /** What is playing, for tests: the clip name and running effects. */
@@ -139,15 +166,18 @@ export class KidRigView {
   private lastClip = '';
 
   /** What is drawn now, for tests: body and face assets, the clip's offset, the face's place, costume parts. */
-  get drawn(): { body: string; face: string; offset: [number, number]; faceAt: [number, number]; parts: number; stamp: boolean } {
+  get drawn(): { body: string; face: string; offset: [number, number]; scale: [number, number]; rotation: number; faceAt: [number, number]; parts: number; stamp: boolean; marks: number } {
     const name = (t: Texture) => [...this.textures].find(([, v]) => v === t)?.[0] ?? '';
     return {
       body: name(this.body.texture),
       face: name(this.face.texture),
       offset: [this.rigC.position.x, this.rigC.position.y],
+      scale: [this.rigC.scale.x, this.rigC.scale.y],
+      rotation: this.rigC.rotation / DEG,
       faceAt: [this.faceAttach.position.x, this.faceAttach.position.y],
       parts: this.parts.length,
       stamp: this.stamp?.visible ?? false,
+      marks: this.markPool.filter((s) => s.visible).length,
     };
   }
 
@@ -158,11 +188,14 @@ export class KidRigView {
 
     const { clip, name, time, reverse } = this.picker.advance(activity, held, dt);
     this.lastClip = name;
-    const canBlink = !held && (name === 'walk' || name === 'idle' || name === 'look_around' || name === 'seated');
-    if (this.wildType) {
+    const canBlink = !held && (name === 'walk' || name === 'idle' || name === 'look_around' || name === 'seated' || name === 'habit' || name === 'wave');
+    // A greeting glances at the kid it greets (D-101): the face shifts that way.
+    const glance = name === 'wave' && activity.kind === 'wave' && activity.toward && !this.reducedMotion ? activity.toward * GLANCE_PX : 0;
+    if (this.wildType && !clip?.motion) {
       // The shared scheduler picks the clip and keeps its time; the wild sidecar only draws it.
       const fade = this.reducedMotion && name === 'spawn' ? this.spawnFade(time) : undefined;
       this.applyWild(this.wildFrame(name, time), canBlink ? this.blink(dt) : undefined, fade);
+      this.drawMarks(undefined);
       this.shadow.alpha = held ? this.rig.effects.shadow.heldOpacity : 1;
       this.drawEffects(dt);
       return;
@@ -174,9 +207,41 @@ export class KidRigView {
     }
 
     // Blink: a face-only secondary clip, only where the rig allows it to run concurrently.
-    this.apply(frame, canBlink ? this.blink(dt) : undefined);
+    this.apply(frame, canBlink ? this.blink(dt) : undefined, glance);
+    // Under reduced motion `frame` is the clip's still frame, which carries no marks.
+    this.drawMarks(frame.marks);
     this.shadow.alpha = held ? this.rig.effects.shadow.heldOpacity : 1;
     this.drawEffects(dt);
+  }
+
+  /**
+   * Debug and review captures: holds the kid on clip `clipName` at `t` seconds, marks and all.
+   * A wild kid shows a motion clip on its own body; any other clip it has no drawing for.
+   */
+  updatePosed(x: number, y: number, clipName: string, t: number): void {
+    this.root.position.set(x, y);
+    this.root.zIndex = y;
+    this.lastClip = clipName;
+    const clip = this.rig.clips[clipName];
+    if (!clip || (this.wildType && !clip.motion)) return;
+    const frame = frameAt(clip, t, false);
+    this.apply(frame, undefined, 0);
+    this.drawMarks(frame.marks);
+    this.shadow.alpha = 1;
+  }
+
+  /**
+   * A parent of a fusion on its way into the puff (D-101, motion v1 `fusion_parent`): no longer
+   * in the sim, it plays the clip once from `t` seconds while the scene slides it to its partner.
+   */
+  updateGhost(x: number, y: number, t: number): void {
+    this.root.position.set(x, y);
+    this.root.zIndex = y;
+    this.lastClip = 'fusion_parent';
+    const clip = this.rig.clips.fusion_parent;
+    if (clip) this.apply(frameAt(clip, t, false), undefined, 0);
+    this.drawMarks(undefined);
+    this.shadow.alpha = Math.max(0, this.rigC.alpha);
   }
 
   /**
@@ -201,6 +266,7 @@ export class KidRigView {
     }
     const frame = this.reducedMotion || !clip ? this.staticFrame(FARM_CLIP) : frameAt(clip, t, false);
     this.apply(frame, this.blink(dt));
+    this.drawMarks(undefined);
   }
 
   /**
@@ -229,6 +295,7 @@ export class KidRigView {
     }
     const frame = this.reducedMotion || !clip ? this.staticFrame(clipName) : frameAt(clip, t, false);
     this.apply(frame, this.blink(dt));
+    this.drawMarks(undefined);
     return index;
   }
 
@@ -313,6 +380,7 @@ export class KidRigView {
     this.body.texture = this.tex((t.frames[f.frame] ?? t.frames.stand)!.asset);
     this.rigC.position.set(f.offsetPx[0], f.offsetPx[1]);
     this.rigC.rotation = 0;
+    this.rigC.scale.set(1, 1);
     this.rigC.alpha = opacity ?? f.opacity;
     const explicit = f.faceState && f.faceState !== 'inherit' ? f.faceState : undefined;
     const faceState = explicit ?? blinkFace ?? OPEN;
@@ -325,15 +393,13 @@ export class KidRigView {
     return { ...(m.bodyFrame ? { bodyFrame: m.bodyFrame } : {}), ...(m.faceState ? { faceState: m.faceState } : {}) };
   }
 
-  private apply(frame: ClipFrame, blinkFace: string | undefined): void {
-    const body = this.rig.bodies[this.kid.look.body]!;
-    const bf = body.frames[frame.bodyFrame ?? 'stand'] ?? body.frames.stand!;
-    this.body.texture = this.tex(bf.asset);
-
+  private apply(frame: ClipFrame, blinkFace: string | undefined, glance = 0): void {
     const rig = frame.rig ?? {};
     const off = rig.offsetPx ?? [0, 0];
     this.rigC.position.set(off[0], off[1]);
     this.rigC.rotation = (rig.rotationDeg ?? 0) * DEG;
+    const sc = rig.scale ?? [1, 1];
+    this.rigC.scale.set(sc[0], sc[1]);
     // Clip opacity fades the kid's own layers only; effect opacity is independent (effects spec).
     this.rigC.alpha = rig.opacity ?? 1;
 
@@ -343,13 +409,52 @@ export class KidRigView {
     const faceState = explicit ?? blinkFace ?? OPEN;
     const face = this.rig.faces[this.kid.look.face]!;
     this.face.texture = this.tex(face.states[faceState] ?? face.states[OPEN]!);
-    setAttachment(this.faceAttach, bf.attachments.face_centre, offsets.face_centre);
+    const look = offsets.face_centre ?? [0, 0];
+    if (this.wildType) {
+      // A wild kid plays a motion clip on its one body: the rig transform, the face's state and
+      // its glance (scaled as its face is). Body frames, attachments and costume parts don't apply.
+      this.body.texture = this.tex(this.wildType.frames.stand!.asset);
+      this.anchors = this.wildAnchors;
+      const k = this.wildType.faceScale;
+      this.faceAttach.position.set(this.wildType.faceAnchorPx[0] + (look[0] + glance) * k, this.wildType.faceAnchorPx[1] + look[1] * k);
+      return;
+    }
+    const body = this.rig.bodies[this.kid.look.body]!;
+    const bf = body.frames[frame.bodyFrame ?? 'stand'] ?? body.frames.stand!;
+    this.body.texture = this.tex(bf.asset);
+    for (const name in bf.attachments) this.anchors[name] = bf.attachments[name]!.position;
+    setAttachment(this.faceAttach, bf.attachments.face_centre, glance ? [look[0] + glance, look[1]] : offsets.face_centre);
 
     const deltas = frame.componentTransforms ?? {};
     for (const p of this.parts) {
       setAttachment(p.attach, bf.attachments[p.attachTo], offsets[p.attachTo]);
-      setDelta(p.delta, deltas[p.asset]);
+      setDelta(p.delta, deltas[p.asset], p.pivot, p.fit);
     }
+  }
+
+  /** Shows this frame's motion marks (D-100), or none; hidden while the scene has them off. */
+  private drawMarks(marks: MarkFrame[] | undefined): void {
+    const list = this.marksShown && marks ? marks : [];
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i]!;
+      let s = this.markPool[i];
+      if (!s) {
+        s = new Sprite();
+        s.anchor.set(0.5);
+        this.markPool[i] = s;
+      }
+      const parent = m.behind ? this.marksBehind : this.marksAbove;
+      if (s.parent !== parent) parent.addChild(s);
+      s.texture = this.tex(m.asset);
+      const from: Vec2 = (m.anchor ? this.anchors[m.anchor] : undefined) ?? [0, 0];
+      s.position.set(from[0] + m.at[0], from[1] + m.at[1]);
+      s.rotation = (m.rotationDeg ?? 0) * DEG;
+      s.scale.set(m.scale ?? 1);
+      s.alpha = m.opacity ?? 1;
+      s.visible = true;
+    }
+    for (let i = list.length; i < this.marksUsed; i++) this.markPool[i]!.visible = false;
+    this.marksUsed = list.length;
   }
 
   private drawEffects(dt: number): void {
@@ -407,9 +512,16 @@ function setAttachment(c: Container, a: Attachment | undefined, offset: Vec2 | u
   c.scale.set(s[0], s[1]);
 }
 
-function setDelta(c: Container, t: ComponentTransform | undefined): void {
+/**
+ * A part's clip transform. It turns and scales about the point the part attaches to, or about
+ * `pivotPx` on the part's canvas: in the delta's space that is its offset from the part's own
+ * pivot, scaled by the part's fit for this body.
+ */
+function setDelta(c: Container, t: ComponentTransform | undefined, sourcePivot: Vec2, fit: Vec2): void {
   const o = t?.offsetPx ?? [0, 0];
-  c.position.set(o[0], o[1]);
+  const about: Vec2 = t?.pivotPx ? [(t.pivotPx[0] - sourcePivot[0]) * fit[0], (t.pivotPx[1] - sourcePivot[1]) * fit[1]] : [0, 0];
+  c.pivot.set(about[0], about[1]);
+  c.position.set(o[0] + about[0], o[1] + about[1]);
   c.rotation = (t?.rotationDeg ?? 0) * DEG;
   const s = t?.scale ?? [1, 1];
   c.scale.set(s[0], s[1]);

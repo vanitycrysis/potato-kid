@@ -2,7 +2,7 @@
 // ART_AUDIO_PLAN.md). These are art data: Claude only reads them, never edits them.
 // `npm run art:export` validates and copies them from art/data to assets/data.
 
-import { withFarmRelocations } from './artRules';
+import { wildWithMotion, withFarmRelocations, withMotion } from './artRules';
 
 export type Vec2 = [number, number];
 /** Absolute source-canvas box: [left, top, right, bottom] in pixels. */
@@ -47,17 +47,41 @@ export interface ComponentTransform {
   offsetPx?: Vec2;
   rotationDeg?: number;
   scale?: Vec2;
+  /**
+   * The point on the part's canvas it turns and scales about (motion v1: a wheel spins about
+   * its own middle). Absent: the point it attaches to.
+   */
+  pivotPx?: Vec2;
 }
 
 export interface ClipFrame {
   bodyFrame?: string;
   /** A face state name, or "inherit" to keep the current/blink-driven state. */
   faceState?: string;
-  rig?: { offsetPx?: Vec2; rotationDeg?: number; opacity?: number };
+  /** `scale` (squash and stretch) is about the ground point, like `rotationDeg` (motion v1). */
+  rig?: { offsetPx?: Vec2; rotationDeg?: number; scale?: Vec2; opacity?: number };
   attachmentOffsets?: Record<string, Vec2>;
   componentTransforms?: Record<string, ComponentTransform>;
   /** Zero-based frame of the clip's `effect` shown during this entry. */
   effectFrame?: number;
+  /** Motion marks drawn with this entry (D-100): z's, dust, sparks. Shown only when zoomed in. */
+  marks?: MarkFrame[];
+}
+
+/** One motion mark: an `fx_mark_*` drawing centred at `at` on the kid's canvas. */
+export interface MarkFrame {
+  asset: string;
+  at: Vec2;
+  rotationDeg?: number;
+  scale?: number;
+  opacity?: number;
+  /** Behind the kid instead of in front of it. */
+  behind?: boolean;
+  /**
+   * An attachment of the kid's body ('head_top', 'hand_right', 'torso', 'face_centre'): `at` is
+   * then an offset from it, so the mark sits right on every body shape. Absent: canvas px.
+   */
+  anchor?: string;
 }
 
 export interface Clip {
@@ -69,6 +93,8 @@ export interface Clip {
   effect?: string;
   /** Discovery: only on a recipe's first discovery. */
   firstDiscoveryOnly?: boolean;
+  /** Baked by motion v1: a wild kid plays it too, on its own body (its rig transform and face). */
+  motion?: boolean;
 }
 
 /** A transient event effect (spawn, fusion, discovery): shared by every kid type. */
@@ -125,6 +151,14 @@ export interface KidRig {
     /** Highest first: which presentation wins when several apply (e.g. pick-up over spawn). */
     priority: string[];
   };
+  /** Each kid's own habit clip, by type (D-099, motion v1). */
+  habits?: Record<string, string>;
+  /** The margin motion added to every lifetime box, [left, top, right, bottom] source px. */
+  marginPx?: [number, number, number, number];
+  /** Motion marks show at this camera zoom or closer (D-100). */
+  marksMinZoom?: number;
+  /** Seconds a fusion's parents stay on screen, coming together (D-101); 0 or absent: they vanish at once. */
+  meetSeconds?: number;
 }
 
 export interface MapInstance {
@@ -219,6 +253,30 @@ function withActivity(rig: KidRig | undefined, a: ActivityData | undefined): Kid
 
 export const kidRig = withActivity(pick<KidRig>('kid_rig_v2.json'), kidActivity);
 
+/**
+ * Claude's motion (kid_motion_v1.json, D-099..D-101; baked by `npm run motion:build` from
+ * art/motion): the clips the map plays, at 12 frames a second with squash and stretch, each
+ * kid's habit, the fusion's puff, and the margin motion needs around a kid's lifetime box.
+ */
+export interface MotionData {
+  /** Source px added to every lifetime box: [left, top, right, bottom]. */
+  marginPx: [number, number, number, number];
+  marksMinZoom: number;
+  meetSeconds: number;
+  ambientWeights: Record<string, number>;
+  effects: Record<string, EventEffect>;
+  clips: Record<string, Clip>;
+  habits: Record<string, string>;
+  reducedMotion: Record<string, ReducedMotionEntry>;
+}
+export const kidMotion = pick<MotionData>('kid_motion_v1.json');
+
+/**
+ * The rig the map and the sim use. The DOM portraits (Dex, cards, the new-kid popup) keep
+ * `kidRig`: they play Codex's frame-swap clips, which need no scale or marks.
+ */
+export const mapRig = withMotion(kidRig, kidMotion);
+
 /** The activity effects (kid_activity_v1): a farming stamp, a splash, on certain clip frames. */
 export const activityEffects = kidActivity?.effects ?? {};
 
@@ -269,6 +327,8 @@ export const kidWild: WildData | undefined = rawWild && {
   clips: { ...(kidActivity?.wild.clips as WildData['clips']), ...rawWild.clips },
   reducedMotion: { ...(kidActivity?.wild.reducedMotion as WildData['reducedMotion']), ...rawWild.reducedMotion },
 };
+/** Wild kids as the map and the sim use them: their lifetime boxes grown by the motion margin. */
+export const mapWild = wildWithMotion(kidWild, kidMotion);
 // The map at half its area (D-076), with its fields (farm_v2) and, from v5, its decorations
 // (D-090): the scenery they replace or clear is left out, never drawn twice (Codex's overlay).
 const v5 = pick<MapData>('map_garden_v5.json');

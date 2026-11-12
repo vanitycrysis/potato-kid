@@ -4,6 +4,9 @@ import { defineConfig } from '@playwright/test';
 // engine (not a second composer), into art/previews/ingame/. Not part of CI.
 export default defineConfig({
   testDir: 'tests/preview',
+  // Each capture is its own page: run them side by side.
+  fullyParallel: true,
+  workers: 4,
   use: { baseURL: 'http://localhost:4174' },
   webServer: {
     command: 'npm run preview -- --port 4174 --strictPort',

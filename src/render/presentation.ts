@@ -4,10 +4,13 @@ import type { Activity } from '../sim/world';
 // Which authored clip and effect frames a kid shows, from sim state plus presentation
 // events (pick-up, drop, birth). Pure and Pixi-free so the rules are unit-tested; the
 // rig view only draws what this decides. Every clip, timing and priority is Codex's
-// art data (D-041); nothing here invents motion.
+// or Claude's art data (D-041, D-096); nothing here invents motion.
 
-/** Event clips that play once over whatever the kid is doing. */
-export type OneShot = 'pick_up' | 'drop' | 'spawn';
+/**
+ * Event clips that play once over whatever the kid is doing. `fusion_child` is the birth of a
+ * fusion's child (motion v1, D-101): unseen while its parents meet, then up out of the puff.
+ */
+export type OneShot = 'pick_up' | 'drop' | 'spawn' | 'fusion_child';
 
 export interface ClipPick {
   name: string;
@@ -43,7 +46,11 @@ export class ClipPicker {
   private activityKind = '';
   private activityT = 0;
 
-  constructor(private readonly rig: KidRig) {}
+  /** `habit`: this kid's own habit clip (D-099), if the rig has one for its type. */
+  constructor(
+    private readonly rig: KidRig,
+    private readonly habit?: string,
+  ) {}
 
   /** Plays a one-shot unless something of higher priority (scheduler.priority) is playing. */
   play(name: OneShot): void {
@@ -112,6 +119,11 @@ export class ClipPicker {
         return { name: 'look_around', clip: clips.look_around, time: t, reverse: false };
       case 'wave':
         return { name: 'wave', clip: clips.wave, time: t, reverse: false };
+      // Its own habit (D-099); a kid without one just stands.
+      case 'habit': {
+        const clip = this.habit ? clips[this.habit] : undefined;
+        return clip ? { name: 'habit', clip, time: t, reverse: false } : { name: 'idle', clip: clips.idle, time: t, reverse: false };
+      }
       // On its way to, into or out of a decoration it walks; in its slot the scene draws it (D-090).
       case 'visit':
         return { name: 'walk', clip: clips.walk, time: t, reverse: false };
@@ -135,7 +147,8 @@ export class ClipPicker {
   }
 
   private rank(name: string): number {
-    const i = this.rig.scheduler.priority.indexOf(name);
+    // A fusion's child is born like any other.
+    const i = this.rig.scheduler.priority.indexOf(name === 'fusion_child' ? 'spawn' : name);
     return i < 0 ? Infinity : i;
   }
 }
@@ -155,9 +168,12 @@ export class EffectTracks {
     this.tracks.clear();
   }
 
-  /** Starts the effect driven by `clipName` (e.g. "fusion"); a clip without one is ignored. */
-  start(clipName: string): void {
-    if (this.rig.clips[clipName]?.effect) this.tracks.set(clipName, 0);
+  /**
+   * Starts the effect driven by `clipName` (e.g. "fusion"); a clip without one is ignored.
+   * `delay`: seconds before its first frame shows.
+   */
+  start(clipName: string, delay = 0): void {
+    if (this.rig.clips[clipName]?.effect) this.tracks.set(clipName, -Math.max(0, delay));
   }
 
   /** Advances by `dt` seconds and returns the frames to draw now. */
@@ -171,6 +187,7 @@ export class EffectTracks {
         continue;
       }
       this.tracks.set(name, t + dt);
+      if (t < 0) continue; // still waiting to start
       const def = this.rig.effects[clip.effect!] as EventEffect | undefined;
       const ef = clip.frames[i]!.effectFrame;
       const frame = ef === undefined ? undefined : def?.frames[ef];

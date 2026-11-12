@@ -12,7 +12,11 @@ test.describe('forgiving drop (D-051)', () => {
     return page.evaluate(([held, centre]) => {
       const pk = window.__PK__!;
       const look = { body: 'round', scale: 1 };
-      const water = pk.debugAdd!(centre, 996, 2828, look);
+      // On the patch of the map that is clear of scenery, in the middle of the screen: a kid
+      // moved by scenery as it is placed would spoil the ring, and one near the screen's edge
+      // would scroll the map while it is held (docs/TESTING.md).
+      pk.centerOn(1350, 3250);
+      const water = pk.debugAdd!(centre, 1400, 3150, look);
       const w = pk.kids().find((k) => k.id === water)!;
       const dx = w.box.right - w.box.left + 6;
       const dy = w.box.bottom - w.box.top + 6;
@@ -21,7 +25,10 @@ test.describe('forgiving drop (D-051)', () => {
       let i = 0;
       for (const sx of [-1, 0, 1])
         for (const sy of [-1, 0, 1]) if (sx || sy) ring.push(pk.debugAdd!(types[i++ % 3]!, w.x + sx * dx, w.y + sy * dy, look));
-      const plain = pk.debugAdd!(held, 706, 3228, look);
+      const plain = pk.debugAdd!(held, 1150, 3560, look);
+      // Every kid stands where it was put.
+      const at = (id: number) => pk.kids().find((k) => k.id === id)!;
+      if (at(water).x !== 1400 || at(plain).x !== 1150 || ring.some((id, n) => at(id).x !== w.x + [-1, -1, -1, 0, 0, 1, 1, 1][n]! * dx)) throw new Error('the crowd was moved as it was placed');
       return { plain, water, ring };
     }, [held, centre] as const);
   }
