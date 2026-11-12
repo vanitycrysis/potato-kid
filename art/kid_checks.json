@@ -1,0 +1,5 @@
+{
+  "note": "Kids whose costumes must pass every rule of scripts/check-kids.mjs (bounds, grip, face, join) in every pose. Costumes drawn before D-098 are checked with --all and only reported. joined: pairs of parts of one object that must overlap in every pose.",
+  "checked": ["bee", "sleepy", "umbrella", "wizard"],
+  "joined": { "umbrella": [["kid_umbrella_front_handle", "kid_umbrella_front_canopy"]] }
+}

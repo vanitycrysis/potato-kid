@@ -16,6 +16,7 @@
     "android": "npm run build && cap sync android",
     "art:export": "node scripts/export-art.mjs",
     "art:check": "node scripts/export-art.mjs --check-only",
+    "art:kids": "node scripts/check-kids.mjs",
     "art:preview": "npm run build && playwright test -c playwright.preview.config.ts",
     "balance": "node scripts/balance.mjs",
     "audio:build": "node scripts/build-audio.mjs"
